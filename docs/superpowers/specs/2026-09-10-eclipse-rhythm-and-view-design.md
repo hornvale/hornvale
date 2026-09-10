@@ -29,7 +29,8 @@ admitted moon and for each applicable eclipse family. It will cover:
 - eclipse-year length and draconic-month length;
 - the best bounded synodic/draconic return and its node-phase slip;
 - the estimated lifetime of that eclipse series;
-- the three-return exeligmos period and its accumulated longitude closure;
+- the three-return exeligmos period, its signed residual terrestrial
+  surface-longitude shift, and its separately named orbital node-phase slip;
 - the backward season-parade rate;
 - coincidence summaries for worlds with multiple moons.
 
@@ -59,10 +60,15 @@ The active eclipse wire contract becomes `scene/eclipses/v3`. This is a
 pre-alpha replacement of `scene/eclipses/v2`; no compatibility adapter is
 required.
 
-The v3 document remains a closed-window query with exact tick bounds. It adds
+The v3 document remains a closed-window query with exact tick bounds. Event
+enumeration uses those snapped wire bounds, so equal emitted windows have
+equal event sets. It adds
 structured recurrence records and an optional observer query. Each event
 contains its exact tick, moon index, body, kind, ground-track region where
-applicable, and the observer result when an observer was supplied.
+applicable, and the observer result when an observer was supplied. A solar
+track retains its signed unwrapped sweep and whether it covers every
+longitude; wrapped endpoints alone are not the region contract. The document
+also carries the query window's multi-moon coincidence-day summary.
 
 The contract must distinguish these three cases:
 
@@ -84,8 +90,10 @@ world seed and pins remain outside the observer parameters.
 The almanac will render the structured recurrence data without pretending that
 an approximate generated-world cycle is Earth's exact Saros. It will identify
 the moon and eclipse family where that distinction matters, include the
-exeligmos relation, and preserve an honest no-event result for an empty query
-window.
+exeligmos's surface closure separately from its node-phase slip, include the
+multi-moon coincidence count, and preserve an honest no-event result for an
+empty query window. Central-track observer prose is event-wide and does not
+present the event-midpoint side as the local passage side.
 
 The scene reference page will be rewritten for v3. It will define the time
 window, tick units, geographic coordinate convention, event ordering,

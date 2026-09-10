@@ -63,10 +63,28 @@ fn scene_eclipses_without_observer_omits_observer_results() {
     let document = json(&eclipses(&[]));
 
     assert_eq!(document["schema"], "scene/eclipses/v3");
+    assert!(
+        document["coincidence_days"].is_u64(),
+        "CLI must expose the window's structured multi-moon coincidence count"
+    );
+    assert!(
+        document["recurrences"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|record| {
+                record["exeligmos_node_slip_deg"].is_number()
+                    && record["exeligmos_surface_longitude_shift_deg"].is_number()
+            })
+    );
     assert!(document.get("observer").is_none());
     let events = document["events"].as_array().expect("events array");
     assert!(!events.is_empty());
     assert!(events.iter().all(|event| event.get("observer").is_none()));
+    for track in events.iter().filter_map(|event| event["track"].as_object()) {
+        assert!(track["sweep_deg"].is_number());
+        assert!(track["global_coverage"].is_boolean());
+    }
 }
 
 #[test]

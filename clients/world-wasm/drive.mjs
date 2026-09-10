@@ -59,6 +59,20 @@ const eclipseDoc = JSON.parse(eclipses);
 if (eclipseDoc.schema !== "scene/eclipses/v3") {
   fail("unobserved eclipse scene", `schema is ${eclipseDoc.schema}`);
 }
+if (!Number.isInteger(eclipseDoc.coincidence_days)) {
+  fail("unobserved eclipse scene", "coincidence_days is not an integer summary");
+}
+if (eclipseDoc.recurrences.some((record) =>
+  typeof record.exeligmos_node_slip_deg !== "number" ||
+  typeof record.exeligmos_surface_longitude_shift_deg !== "number"
+)) {
+  fail("unobserved eclipse scene", "exeligmos node slip or surface closure is missing");
+}
+if (eclipseDoc.events.some((event) => event.track &&
+  (typeof event.track.sweep_deg !== "number" || typeof event.track.global_coverage !== "boolean")
+)) {
+  fail("unobserved eclipse scene", "a ground track lost directed sweep or global coverage");
+}
 if ("observer" in eclipseDoc || eclipseDoc.events.some((event) => "observer" in event)) {
   fail("unobserved eclipse scene", "observer data was emitted without a query");
 }

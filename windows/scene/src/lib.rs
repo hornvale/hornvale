@@ -1510,7 +1510,7 @@ pub fn neighbors_json(scene: &NeighborsScene) -> String {
 pub const ECLIPSES_SCHEMA: &str = "scene/eclipses/v3";
 
 /// One solar eclipse's shadow band on the globe.
-/// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-2: duration_days)
+/// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-2: duration_days), pending(wave-1: sweep_deg), bare-ok(flag: global_coverage)
 #[derive(Debug, Serialize)]
 pub struct GroundTrackElem {
     /// Band-center latitude at mid-event, degrees.
@@ -1528,6 +1528,12 @@ pub struct GroundTrackElem {
     /// Crossing duration, standard days.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub duration_days: f64,
+    /// Signed, unwrapped longitude sweep, degrees. Positive is eastward and
+    /// negative is westward; magnitudes above 360 preserve completed turns.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub sweep_deg: f64,
+    /// Whether every surface longitude lies inside the directed sweep.
+    pub global_coverage: bool,
 }
 
 /// Optional geographic observer input for an eclipse query.
@@ -1549,7 +1555,8 @@ pub struct EclipseObserverQuery {
 /// type-audit: bare-ok(identifier-text: side), bare-ok(identifier-text: visibility)
 #[derive(Debug, Serialize)]
 pub struct EclipseObserverElem {
-    /// `"day"` or `"night"`.
+    /// `"day"` or `"night"` at the event midpoint. Central solar
+    /// visibility is event-wide and may occur away from that midpoint.
     pub side: String,
     /// Solar: `"whole-sun"`, `"burning-ring"`, `"bitten"`, or
     /// `"unseen"`; lunar: `"visible"` or `"unseen"`.
@@ -1573,7 +1580,7 @@ pub struct EclipseCycleElem {
 }
 
 /// The recurrence ladder for one moon and eclipse family.
-/// type-audit: bare-ok(index: moon_index), bare-ok(identifier-text: body), pending(wave-1: draconic_month_days), pending(wave-1: eclipse_year_days), bare-ok(count: series_returns), pending(wave-1: series_lifetime_days), pending(wave-1: exeligmos_period_days), pending(wave-1: exeligmos_node_slip_deg), pending(wave-1: parade_days_per_year)
+/// type-audit: bare-ok(index: moon_index), bare-ok(identifier-text: body), pending(wave-1: draconic_month_days), pending(wave-1: eclipse_year_days), bare-ok(count: series_returns), pending(wave-1: series_lifetime_days), pending(wave-1: exeligmos_period_days), pending(wave-1: exeligmos_node_slip_deg), pending(wave-1: exeligmos_surface_longitude_shift_deg), pending(wave-1: parade_days_per_year)
 #[derive(Debug, Serialize)]
 pub struct EclipseRecurrenceElem {
     /// Distance-sorted index into the system's moons.
@@ -1599,6 +1606,10 @@ pub struct EclipseRecurrenceElem {
     /// Node-phase slip accumulated over the exeligmos, degrees.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub exeligmos_node_slip_deg: f64,
+    /// Signed residual surface-longitude shift after the exeligmos, degrees.
+    /// Zero is exact rotational closure; positive is eastward.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub exeligmos_surface_longitude_shift_deg: f64,
     /// Backward eclipse-season migration through one civil year, standard
     /// days per year.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
@@ -1660,7 +1671,7 @@ pub struct EclipseElem {
 ///
 /// `from`/`until` are bare `i64` rather than `WorldTime` for the reason set
 /// out on [`EclipseElem`].
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(count: from), bare-ok(count: until)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(count: from), bare-ok(count: until), bare-ok(count: coincidence_days)
 #[derive(Debug, Serialize)]
 pub struct EclipsesScene {
     /// Always `scene/eclipses/v3`.
@@ -1674,6 +1685,8 @@ pub struct EclipsesScene {
     /// The normalized observer query. Omitted when no observer was supplied.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub observer: Option<EclipseObserverQuery>,
+    /// Integer days carrying admitted events from at least two moons.
+    pub coincidence_days: u32,
     /// Recurrence records in moon order, solar then lunar per moon.
     pub recurrences: Vec<EclipseRecurrenceElem>,
     /// The dated eclipses, day-ascending.
@@ -1731,6 +1744,18 @@ fn eclipse_observer_elem(result: hornvale_astronomy::EclipseObserverResult) -> E
     }
 }
 
+fn ground_track_elem(track: hornvale_astronomy::GroundTrack) -> GroundTrackElem {
+    GroundTrackElem {
+        center_lat_deg: track.center_lat_deg,
+        half_width_deg: track.half_width_deg,
+        start_lon_deg: track.start_lon_deg,
+        end_lon_deg: track.end_lon_deg,
+        duration_days: track.duration_days,
+        sweep_deg: track.sweep_deg,
+        global_coverage: track.global_coverage,
+    }
+}
+
 /// Build the `scene/eclipses/v3` scene for `world` over the closed
 /// `[from, until]` standard-day window and an optional geographic observer.
 /// Observer latitude must be finite and in `[-90, 90]`; finite longitude is
@@ -1748,6 +1773,10 @@ pub fn eclipses_scene(
     let until_ticks = WorldTime::from_std_days(until.get())
         .map_err(|e| SceneError::Build(e.to_string()))?
         .ticks();
+    let query_from = StdInstant::new(WorldTime::from_ticks(from_ticks).as_std_days())
+        .expect("an i64 tick is always a finite standard-day instant");
+    let query_until = StdInstant::new(WorldTime::from_ticks(until_ticks).as_std_days())
+        .expect("an i64 tick is always a finite standard-day instant");
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
     let system = sky.system();
     // StdInstant admits every finite point, while the wire contract is the
@@ -1771,10 +1800,14 @@ pub fn eclipses_scene(
             series_lifetime_days: recurrence.series_lifetime.get(),
             exeligmos_period_days: recurrence.exeligmos_period.get(),
             exeligmos_node_slip_deg: recurrence.exeligmos_node_slip_deg,
+            exeligmos_surface_longitude_shift_deg: recurrence.exeligmos_surface_longitude_shift_deg,
             parade_days_per_year: recurrence.parade_days_per_year,
         })
         .collect();
-    let mut events = hornvale_astronomy::eclipse_events(system, &calendar, from, until)
+    let domain_events =
+        hornvale_astronomy::eclipse_events(system, &calendar, query_from, query_until);
+    let coincidence_days = hornvale_astronomy::coincidence_days(&domain_events);
+    let mut events = domain_events
         .into_iter()
         .map(|event| {
             let track = hornvale_astronomy::ground_track(system, &calendar, &event);
@@ -1811,13 +1844,7 @@ pub fn eclipses_scene(
                 }
                 .to_string(),
                 region: region.to_string(),
-                track: track.map(|g| GroundTrackElem {
-                    center_lat_deg: g.center_lat_deg,
-                    half_width_deg: g.half_width_deg,
-                    start_lon_deg: g.start_lon_deg,
-                    end_lon_deg: g.end_lon_deg,
-                    duration_days: g.duration_days,
-                }),
+                track: track.map(ground_track_elem),
                 observer: observer_result,
             })
         })
@@ -1829,6 +1856,7 @@ pub fn eclipses_scene(
         from: from_ticks,
         until: until_ticks,
         observer,
+        coincidence_days,
         recurrences,
         events,
     })
@@ -2674,6 +2702,7 @@ mod tests {
         // Echoed back as exact ticks now, not quantized days (v2).
         assert_eq!(a.from, 0);
         assert_eq!(a.until, 2000 * WorldTime::TICKS_PER_STD_DAY);
+        assert_eq!(a.coincidence_days, 0);
         assert!(
             !a.events.is_empty(),
             "seed 42's moons eclipse within 2000 days"
@@ -2715,6 +2744,8 @@ mod tests {
                 let t = e.track.as_ref().expect("a solar event has a ground track");
                 assert!((-90.0..=90.0).contains(&t.center_lat_deg));
                 assert!((-180.0..180.0).contains(&t.start_lon_deg));
+                assert_ne!(t.sweep_deg, 0.0);
+                assert_eq!(t.global_coverage, t.sweep_deg.abs() >= 360.0);
             } else {
                 assert!(e.track.is_none(), "a lunar event has no ground track");
             }
@@ -2840,6 +2871,79 @@ mod tests {
             scene.from,
             scene.until
         );
+    }
+
+    /// Two caller bounds that emit the same tick must enumerate the same
+    /// events. Querying with their hidden sub-tick residues would let equal
+    /// v3 documents disagree about whether a boundary event exists.
+    #[test]
+    fn eclipse_event_enumeration_uses_the_emitted_tick_bounds() {
+        let w = mooned_world();
+        let broad = eclipses_scene(
+            &w,
+            StdInstant::new(0.0).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+            None,
+        )
+        .unwrap();
+        let boundary = broad.events[0].day;
+        let per_day = WorldTime::TICKS_PER_STD_DAY as f64;
+        let before = (boundary as f64 - 0.49) / per_day;
+        let after = (boundary as f64 + 0.49) / per_day;
+        assert_eq!(
+            WorldTime::from_std_days(before).unwrap().ticks(),
+            WorldTime::from_std_days(after).unwrap().ticks()
+        );
+
+        let before_scene = eclipses_scene(
+            &w,
+            StdInstant::new(before).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+            None,
+        )
+        .unwrap();
+        let after_scene = eclipses_scene(
+            &w,
+            StdInstant::new(after).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(before_scene.from, after_scene.from);
+        assert_eq!(
+            before_scene
+                .events
+                .iter()
+                .map(|event| (event.day, event.moon_index))
+                .collect::<Vec<_>>(),
+            after_scene
+                .events
+                .iter()
+                .map(|event| (event.day, event.moon_index))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// The v3 track keeps the direction and unwrapped magnitude that wrapped
+    /// endpoints cannot represent, including a full-world sweep.
+    #[test]
+    fn eclipse_track_wire_retains_directed_global_sweeps() {
+        let track = ground_track_elem(hornvale_astronomy::GroundTrack {
+            center_lat_deg: 12.0,
+            half_width_deg: 2.0,
+            start_lon_deg: 170.0,
+            end_lon_deg: 80.0,
+            duration_days: 0.25,
+            sweep_deg: -450.0,
+            global_coverage: true,
+        });
+
+        assert_eq!(track.sweep_deg, -450.0);
+        assert!(track.global_coverage);
+        let wire_track = serde_json::to_value(&track).unwrap();
+        assert_eq!(wire_track["sweep_deg"], -450.0);
+        assert_eq!(wire_track["global_coverage"], true);
     }
 
     #[test]

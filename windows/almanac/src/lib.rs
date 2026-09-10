@@ -420,10 +420,10 @@ pub fn render_eclipse_lines(
                 };
                 let sight = match observer.visibility {
                     EclipseVisibility::Solar(EclipseSight::WholeSun) => {
-                        format!("the whole sun is hidden on the {side} side")
+                        "the track passes this vantage and hides the whole sun".to_string()
                     }
                     EclipseVisibility::Solar(EclipseSight::BurningRing) => {
-                        format!("a burning ring remains on the {side} side")
+                        "the track passes this vantage and leaves a burning ring".to_string()
                     }
                     EclipseVisibility::Solar(EclipseSight::Bitten) => {
                         format!("the sun is bitten outside the central track on the {side} side")
@@ -457,6 +457,24 @@ pub fn render_eclipse_lines(
         lines.push("No lunar eclipse falls in this almanac window.".to_string());
     }
 
+    let has_multiple_moons = recurrences.first().is_some_and(|first| {
+        recurrences
+            .iter()
+            .any(|recurrence| recurrence.moon != first.moon)
+    });
+    if has_multiple_moons {
+        let dated_events = events
+            .iter()
+            .map(|reading| reading.event)
+            .collect::<Vec<_>>();
+        let count = hornvale_astronomy::coincidence_days(&dated_events);
+        lines.push(if count == 1 {
+            "One day in this almanac window carries eclipses from more than one moon.".to_string()
+        } else {
+            format!("{count} days in this almanac window carry eclipses from more than one moon.")
+        });
+    }
+
     for recurrence in recurrences {
         let moon = ordinal(recurrence.moon);
         let family = match recurrence.body {
@@ -474,11 +492,21 @@ pub fn render_eclipse_lines(
         } else {
             ("forward", -recurrence.parade_days_per_year)
         };
+        let surface_shift = recurrence.exeligmos_surface_longitude_shift_deg;
+        let surface_closure = if surface_shift == 0.0 {
+            "returns to the same surface longitude".to_string()
+        } else {
+            format!(
+                "shifts its surface longitude by {:.2}° {}",
+                surface_shift.abs(),
+                if surface_shift > 0.0 { "east" } else { "west" }
+            )
+        };
         lines.push(format!(
             "The {moon} moon's {family} eclipse family has a {:.1}-day draconic month and \
              a {:.1}-day eclipse year. Its {}-synodic/{}-draconic return repeats every \
              {:.1} days; {saros}. Its three-return exeligmos spans {:.1} days and \
-             accumulates {:.2}° of node slip. The family lasts about {:.0} days across \
+             {surface_closure}, while accumulating {:.2}° of node slip. The family lasts about {:.0} days across \
              {} returns, while its seasons parade {parade_direction} by {:.1} days per year.",
             recurrence.draconic_month.get(),
             recurrence.eclipse_year.get(),
@@ -1713,6 +1741,7 @@ mod tests {
             series_lifetime: hornvale_astronomy::StdDays::new(period_days * 10.0).unwrap(),
             exeligmos_period: hornvale_astronomy::StdDays::new(period_days * 3.0).unwrap(),
             exeligmos_node_slip_deg: 0.6,
+            exeligmos_surface_longitude_shift_deg: 12.5,
             parade_days_per_year: 18.6,
         }
     }
@@ -1737,6 +1766,8 @@ mod tests {
                     start_lon_deg: -20.0,
                     end_lon_deg: 15.0,
                     duration_days: 0.1,
+                    sweep_deg: 35.0,
+                    global_coverage: false,
                 })
             }
             hornvale_astronomy::EclipseBody::Lunar => {
@@ -1800,8 +1831,41 @@ mod tests {
         let prose = render_eclipse_lines(true, &[], &recurrences).join("\n");
 
         assert!(prose.contains(
-            "three-return exeligmos spans 450.0 days and accumulates 0.60° of node slip"
+            "three-return exeligmos spans 450.0 days and shifts its surface longitude by 12.50° east, while accumulating 0.60° of node slip"
         ));
+    }
+
+    #[test]
+    fn multi_moon_almanac_reports_coincidence_days_once() {
+        let events = vec![
+            almanac_event(
+                0,
+                hornvale_astronomy::EclipseBody::Solar,
+                hornvale_astronomy::EclipseKind::Total,
+                None,
+            ),
+            almanac_event(
+                1,
+                hornvale_astronomy::EclipseBody::Lunar,
+                hornvale_astronomy::EclipseKind::Total,
+                None,
+            ),
+        ];
+        let mut events = events;
+        events[1].event.day = hornvale_astronomy::StdInstant::new(213.5).unwrap();
+        let recurrences = vec![
+            recurrence(0, hornvale_astronomy::EclipseBody::Solar, 12, 13, 150.0),
+            recurrence(1, hornvale_astronomy::EclipseBody::Lunar, 17, 19, 220.0),
+        ];
+
+        let prose = render_eclipse_lines(true, &events, &recurrences).join("\n");
+
+        assert!(
+            prose.contains(
+                "One day in this almanac window carries eclipses from more than one moon."
+            )
+        );
+        assert_eq!(prose.matches("more than one moon").count(), 1);
     }
 
     #[test]
@@ -1866,7 +1930,7 @@ mod tests {
     fn eclipse_observer_reading_renders_every_physical_visibility_tier() {
         use hornvale_astronomy::{EclipseBody, EclipseKind, EclipseSight, EclipseVisibility};
 
-        let events = vec![
+        let mut events = vec![
             almanac_event(
                 0,
                 EclipseBody::Solar,
@@ -1904,15 +1968,17 @@ mod tests {
                 Some(EclipseVisibility::Lunar { visible: false }),
             ),
         ];
+        events[0].observer.as_mut().unwrap().side = hornvale_astronomy::EclipseSide::Night;
 
         let prose = render_eclipse_lines(true, &events, &[]).join("\n");
 
-        assert!(prose.contains("the whole sun is hidden on the day side"));
-        assert!(prose.contains("a burning ring remains on the day side"));
+        assert!(prose.contains("the track passes this vantage and hides the whole sun"));
+        assert!(prose.contains("the track passes this vantage and leaves a burning ring"));
         assert!(prose.contains("the sun is bitten outside the central track on the day side"));
         assert!(prose.contains("this solar eclipse is unseen on the night side"));
         assert!(prose.contains("the eclipsed moon is visible on the night side"));
         assert!(prose.contains("the lunar eclipse is unseen on the day side"));
+        assert!(!prose.contains("whole sun is hidden on the night side"));
     }
 
     #[test]

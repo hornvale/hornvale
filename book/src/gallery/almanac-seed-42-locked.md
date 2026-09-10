@@ -39,13 +39,15 @@ On day 119, the first moon devours the sun whole along latitude -62°. At the al
 
 On day 270, the first moon devours the sun whole along latitude -59°. At the almanac's vantage, the sun is bitten outside the central track on the day side.
 
-The first moon's solar eclipse family has a 16.0-day draconic month and a 356.5-day eclipse year. Its 64-synodic/67-draconic return repeats every 1070.1 days; this is a world-specific recurrence, not Earth's 223/242 Saros. Its three-return exeligmos spans 3210.3 days and accumulates 2.07° of node slip. The family lasts about 64206 days across 60 returns, while its seasons parade backward by 11.6 days per year.
+0 days in this almanac window carry eclipses from more than one moon.
 
-The first moon's lunar eclipse family has a 16.0-day draconic month and a 356.5-day eclipse year. Its 64-synodic/67-draconic return repeats every 1070.1 days; this is a world-specific recurrence, not Earth's 223/242 Saros. Its three-return exeligmos spans 3210.3 days and accumulates 2.07° of node slip. The family lasts about 40664 days across 38 returns, while its seasons parade backward by 11.6 days per year.
+The first moon's solar eclipse family has a 16.0-day draconic month and a 356.5-day eclipse year. Its 64-synodic/67-draconic return repeats every 1070.1 days; this is a world-specific recurrence, not Earth's 223/242 Saros. Its three-return exeligmos spans 3210.3 days and returns to the same surface longitude, while accumulating 2.07° of node slip. The family lasts about 64206 days across 60 returns, while its seasons parade backward by 11.6 days per year.
 
-The second moon's solar eclipse family has a 32.6-day draconic month and a 379.6-day eclipse year. Its 287-synodic/314-draconic return repeats every 10249.9 days; this is a world-specific recurrence, not Earth's 223/242 Saros. Its three-return exeligmos spans 30749.7 days and accumulates 2.45° of node slip. The family lasts about 30750 days across 3 returns, while its seasons parade forward by 11.5 days per year.
+The first moon's lunar eclipse family has a 16.0-day draconic month and a 356.5-day eclipse year. Its 64-synodic/67-draconic return repeats every 1070.1 days; this is a world-specific recurrence, not Earth's 223/242 Saros. Its three-return exeligmos spans 3210.3 days and returns to the same surface longitude, while accumulating 2.07° of node slip. The family lasts about 40664 days across 38 returns, while its seasons parade backward by 11.6 days per year.
 
-The second moon's lunar eclipse family has a 32.6-day draconic month and a 379.6-day eclipse year. Its 287-synodic/314-draconic return repeats every 10249.9 days; this is a world-specific recurrence, not Earth's 223/242 Saros. Its three-return exeligmos spans 30749.7 days and accumulates 2.45° of node slip. The family lasts about 20500 days across 2 returns, while its seasons parade forward by 11.5 days per year.
+The second moon's solar eclipse family has a 32.6-day draconic month and a 379.6-day eclipse year. Its 287-synodic/314-draconic return repeats every 10249.9 days; this is a world-specific recurrence, not Earth's 223/242 Saros. Its three-return exeligmos spans 30749.7 days and returns to the same surface longitude, while accumulating 2.45° of node slip. The family lasts about 30750 days across 3 returns, while its seasons parade forward by 11.5 days per year.
+
+The second moon's lunar eclipse family has a 32.6-day draconic month and a 379.6-day eclipse year. Its 287-synodic/314-draconic return repeats every 10249.9 days; this is a world-specific recurrence, not Earth's 223/242 Saros. Its three-return exeligmos spans 30749.7 days and returns to the same surface longitude, while accumulating 2.45° of node slip. The family lasts about 20500 days across 2 returns, while its seasons parade forward by 11.5 days per year.
 
 ## The Calendar
 

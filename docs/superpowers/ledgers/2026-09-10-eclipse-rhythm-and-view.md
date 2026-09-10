@@ -90,6 +90,18 @@ Plan self-review found no placeholders, unresolved type-name mismatch, or requir
 
 **Capture actions:** Task 4 fix round runs the existing non-census artifact regeneration path once, inspects the complete diff, and updates only the dead spec link alongside required generated output.
 
+## #7 [G5] — campaign-wide contract review findings
+
+**Question:** Does the integrated Eclipse Rhythm and View contract preserve recurrence closure, long-track geometry, exact query semantics, multi-moon rhythm, and truthful observer prose across every surface?
+
+**Decision:** Extend the fix round to expose accumulated surface-longitude closure for exeligmos, preserve directed sweep magnitude and full-turn coverage in scene data, enumerate from snapped wire bounds, publish multi-moon coincidence summaries, and distinguish event-wide track visibility from midpoint side in almanac wording.
+
+**Why:** Cross-slice review found five inconsistencies that isolated task reviews could not see: node-phase slip was mislabeled as terrestrial closure; wrapped track endpoints discarded direction and turn count; identical emitted bounds could query different event sets; `coincidence_days` was unreachable; and long-track central visibility could be rendered as a contradictory night-side claim.
+
+**Alternatives discarded:** Keeping node slip does not describe repeated shadow placement. Wrapped endpoints are insufficient for directed or global tracks. Hidden sub-tick residues violate exact wire semantics. Omitting coincidence summaries leaves the approved multi-moon observable unavailable. Midpoint wording cannot stand for an event-wide passage.
+
+**Capture actions:** A cross-slice fix worker will update the smallest shared domain/scene/almanac contracts and their tests, then regenerate affected examples and repeat the focused and campaign-wide review. Deferred astronomy seams remain deferred.
+
 ## Task 5 — local artifact review and verification
 
 The one full non-census artifact run exited 0. Its timing records are
@@ -119,3 +131,35 @@ The required local gates also exited 0:
 Task 5's campaign review and G6/Sluice work remain pending. This worker was
 explicitly instructed not to spawn subagents and not to submit, push, merge,
 or close the campaign.
+
+### Ledger #7 integrated fix evidence
+
+The final review round resolved all five campaign-wide findings without new
+genesis draws, stream allocation, epochs, save facts, or eclipse categories.
+The domain now keeps exeligmos surface-longitude closure separate from orbital
+node slip, and ground tracks carry a signed unwrapped sweep plus explicit
+global coverage. Scene v3 enumerates from its snapped `i64` bounds and exposes
+the existing deterministic multi-moon coincidence count. Almanac prose treats
+central passage as event-wide while retaining `side` as the event-midpoint
+hemisphere.
+
+The full non-census artifact run exited 0 in `365.861s` at `d143b15f2` and
+explicitly reported `censuses SKIPPED`. The changed artifacts are the scene v3
+fixture/gallery, both almanac examples, the type-audit report, and the Lot
+exhibit's eclipse-count lines. The Lot movement is now required output: those
+counts consume corrected directed ground-track membership. The scene fixture
+and gallery parse to identical JSON; their only byte difference is the
+gallery's established trailing newline.
+
+Focused and affected verification exited 0:
+
+- `cargo test -p hornvale-astronomy`: 286 unit and 45 integration tests passed.
+- `cargo test -p hornvale-scene`: 111 unit and 18 integration tests passed; one declared heavy test remained ignored.
+- `cargo test -p hornvale-almanac`: 73 unit and 25 integration tests passed.
+- `HV_TEST_OK=1 cargo test -p hornvale --test suite scene_eclipses_cli -- --nocapture`: 7 focused CLI tests passed.
+- `make docs-tests`: 75 prose-subject tests passed and 359 were skipped.
+- `make quick`: formatter, clippy, type audit, placement audit, plumb, and report-freshness checks passed in `40.719s`.
+- `make world-check`: native/WASM scene byte identity and observer/error checks passed in `70.751s`; WASM measured 471,112 bytes gzipped and 1,240,416 raw.
+- Foreground `make gate-commit`: all four argv-safe subfloor chunks passed in `147.722s`; the terminal chunk reported 445 passed and 5,834 skipped.
+
+No census, Sluice submission, push, merge, or campaign close was performed.

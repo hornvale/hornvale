@@ -291,7 +291,7 @@ pub fn sub_solar_longitude_deg(calendar: &Calendar, t: StdInstant) -> f64 {
 
 /// A solar eclipse's shadow geometry: a latitude band swept across
 /// longitudes as the world turns under the shadow.
-/// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-1: duration_days)
+/// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-1: duration_days), pending(wave-1: sweep_deg), bare-ok(flag: global_coverage)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GroundTrack {
     /// Latitude of the band's center at mid-event, degrees: the sub-solar
@@ -306,6 +306,12 @@ pub struct GroundTrack {
     /// Crossing duration, standard days (the moon's synodic drift across
     /// the combined discs).
     pub duration_days: f64,
+    /// Signed, unwrapped surface-longitude sweep during the crossing,
+    /// degrees. Positive is eastward and negative is westward; magnitudes
+    /// greater than 360 retain every completed turn.
+    pub sweep_deg: f64,
+    /// Whether the sweep reaches every surface longitude at least once.
+    pub global_coverage: bool,
 }
 
 /// The ground track of a dated solar eclipse; `None` for a lunar event —
@@ -333,14 +339,16 @@ pub fn ground_track(
     let duration_days = combined_deg / (360.0 / synodic.0);
     let start_lon_deg =
         sub_solar_longitude_deg(calendar, StdInstant(event.day.0 - duration_days / 2.0));
-    let end_lon_deg =
-        sub_solar_longitude_deg(calendar, StdInstant(event.day.0 + duration_days / 2.0));
+    let sweep_deg = rotation_sweep_deg(calendar, duration_days);
+    let end_lon_deg = (start_lon_deg + sweep_deg + 180.0).rem_euclid(360.0) - 180.0;
     Some(GroundTrack {
         center_lat_deg,
         half_width_deg: TRACK_HALF_WIDTH_DEG,
         start_lon_deg,
         end_lon_deg,
         duration_days,
+        sweep_deg,
+        global_coverage: sweep_deg.abs() >= 360.0,
     })
 }
 
@@ -391,7 +399,9 @@ pub enum EclipseVisibility {
 /// One observer's derived result for one dated eclipse.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EclipseObserverResult {
-    /// Whether the observer is on the day or night side.
+    /// Whether the observer is on the day or night side at the event
+    /// midpoint. A central solar visibility tier is event-wide and may
+    /// describe a local passage away from this midpoint.
     pub side: EclipseSide,
     /// The applicable solar tier or lunar visibility.
     pub visibility: EclipseVisibility,
@@ -422,7 +432,7 @@ pub fn eclipse_observer_result(
             let track = ground_track(system, calendar, event)?;
             (
                 EclipseVisibility::Solar(solar_sight_in_region(
-                    calendar, event, latitude, longitude, side, track,
+                    event, latitude, longitude, side, track,
                 )),
                 EclipseRegion::GroundTrack(track),
             )
@@ -460,21 +470,32 @@ fn eclipse_side(calendar: &Calendar, day: StdInstant, longitude: f64) -> Eclipse
     }
 }
 
-fn longitude_in_track(calendar: &Calendar, longitude: f64, track: GroundTrack) -> bool {
+fn rotation_sweep_deg(calendar: &Calendar, duration_days: f64) -> f64 {
     let Some(day_length) = calendar.day_length() else {
-        return longitude_delta_deg(track.start_lon_deg, longitude).abs() <= f64::EPSILON;
+        return 0.0;
     };
-    let sweep_deg = track.duration_days / day_length.0 * 360.0;
-    if sweep_deg >= 360.0 {
+    let direction = if calendar.is_retrograde() { 1.0 } else { -1.0 };
+    direction * duration_days / day_length.0 * 360.0
+}
+
+fn longitude_in_track(longitude: f64, track: GroundTrack) -> bool {
+    if track.global_coverage {
         return true;
     }
-    let direction = if calendar.is_retrograde() { 1.0 } else { -1.0 };
+    if longitude_delta_deg(track.start_lon_deg, longitude).abs() <= f64::EPSILON
+        || longitude_delta_deg(track.end_lon_deg, longitude).abs() <= f64::EPSILON
+    {
+        return true;
+    }
+    if track.sweep_deg.abs() <= f64::EPSILON {
+        return longitude_delta_deg(track.start_lon_deg, longitude).abs() <= f64::EPSILON;
+    }
+    let direction = track.sweep_deg.signum();
     let offset_deg = (direction * (longitude - track.start_lon_deg)).rem_euclid(360.0);
-    offset_deg <= sweep_deg + f64::EPSILON
+    offset_deg <= track.sweep_deg.abs() + f64::EPSILON
 }
 
 fn solar_sight_in_region(
-    calendar: &Calendar,
     event: &EclipseEvent,
     latitude: f64,
     longitude: f64,
@@ -482,7 +503,7 @@ fn solar_sight_in_region(
     track: GroundTrack,
 ) -> EclipseSight {
     if (latitude - track.center_lat_deg).abs() <= track.half_width_deg
-        && longitude_in_track(calendar, longitude, track)
+        && longitude_in_track(longitude, track)
     {
         match event.kind {
             EclipseKind::Total => EclipseSight::WholeSun,
@@ -517,7 +538,6 @@ pub fn solar_eclipse_sight(
         return EclipseSight::Unseen;
     };
     solar_sight_in_region(
-        calendar,
         event,
         latitude,
         longitude,
@@ -566,7 +586,7 @@ pub struct EclipseCycle {
 }
 
 /// The recurrence ladder for one moon and eclipse family.
-/// type-audit: bare-ok(index: moon), bare-ok(count: series_returns), pending(wave-1: exeligmos_node_slip_deg), pending(wave-1: parade_days_per_year)
+/// type-audit: bare-ok(index: moon), bare-ok(count: series_returns), pending(wave-1: exeligmos_node_slip_deg), pending(wave-1: exeligmos_surface_longitude_shift_deg), pending(wave-1: parade_days_per_year)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EclipseRecurrence {
     /// Distance-sorted moon index.
@@ -587,6 +607,11 @@ pub struct EclipseRecurrence {
     pub exeligmos_period: StdDays,
     /// Node-phase slip accumulated across three returns.
     pub exeligmos_node_slip_deg: f64,
+    /// Signed residual surface-longitude shift after three returns, degrees
+    /// in `[-180, 180)`. Positive is eastward and negative is westward; zero
+    /// is exact terrestrial longitude closure. This rotational closure is
+    /// distinct from orbital node-phase slip.
+    pub exeligmos_surface_longitude_shift_deg: f64,
     /// Eclipse-season migration through one civil year.
     pub parade_days_per_year: f64,
 }
@@ -607,6 +632,9 @@ pub fn eclipse_recurrences(system: &StarSystem, calendar: &Calendar) -> Vec<Ecli
         let node_period = node_regression_period(year, moon.period, moon.inclination_deg);
         let eclipse_year = eclipse_year(year, node_period);
         let solar_threshold = solar_eclipse_threshold_deg(mean_sun, moon.angular_diameter_rel);
+        let exeligmos_period = StdDays(3.0 * cycle.period.0);
+        let exeligmos_surface_longitude_shift_deg =
+            (rotation_sweep_deg(calendar, exeligmos_period.0) + 180.0).rem_euclid(360.0) - 180.0;
         for (_, body) in syzygy_families() {
             let threshold = match body {
                 EclipseBody::Solar => solar_threshold,
@@ -621,8 +649,9 @@ pub fn eclipse_recurrences(system: &StarSystem, calendar: &Calendar) -> Vec<Ecli
                 cycle,
                 series_returns: returns,
                 series_lifetime: StdDays(returns as f64 * cycle.period.0),
-                exeligmos_period: StdDays(3.0 * cycle.period.0),
+                exeligmos_period,
                 exeligmos_node_slip_deg: 3.0 * cycle.node_slip_deg,
+                exeligmos_surface_longitude_shift_deg,
                 parade_days_per_year: parade_days_per_year(year, eclipse_year),
             });
         }
@@ -1261,6 +1290,15 @@ mod tests {
                 record.exeligmos_node_slip_deg,
                 3.0 * record.cycle.node_slip_deg
             );
+            assert!(
+                (-21.0..=-20.5).contains(&record.exeligmos_surface_longitude_shift_deg),
+                "the Luna fixture's bounded cycle closes about 20.7 degrees west, got {}",
+                record.exeligmos_surface_longitude_shift_deg
+            );
+            assert_ne!(
+                record.exeligmos_surface_longitude_shift_deg, record.exeligmos_node_slip_deg,
+                "surface-longitude closure and orbital node-phase slip are distinct observables"
+            );
         }
     }
 
@@ -1349,12 +1387,12 @@ mod tests {
         let four_hour_calendar = crate::calendar::calendar_of(&system);
         let solar = solar_event(&system, &four_hour_calendar);
         let track = ground_track(&system, &four_hour_calendar, &solar).unwrap();
-        let four_hour_sweep =
-            track.duration_days / four_hour_calendar.day_length().unwrap().0 * 360.0;
         assert!(
-            four_hour_sweep > 180.0,
-            "four-hour sweep: {four_hour_sweep}"
+            track.sweep_deg < -180.0,
+            "a prograde four-hour day sweeps west through more than 180 degrees: {}",
+            track.sweep_deg
         );
+        assert!(!track.global_coverage);
         for longitude in [track.start_lon_deg, track.end_lon_deg] {
             let result = eclipse_observer_result(
                 &system,
@@ -1376,9 +1414,12 @@ mod tests {
         };
         let one_hour_calendar = crate::calendar::calendar_of(&system);
         let one_hour_track = ground_track(&system, &one_hour_calendar, &solar).unwrap();
-        let one_turn_sweep =
-            one_hour_track.duration_days / one_hour_calendar.day_length().unwrap().0 * 360.0;
-        assert!(one_turn_sweep > 360.0, "one-hour sweep: {one_turn_sweep}");
+        assert!(
+            one_hour_track.sweep_deg < -360.0,
+            "one-hour sweep: {}",
+            one_hour_track.sweep_deg
+        );
+        assert!(one_hour_track.global_coverage);
         let result = eclipse_observer_result(
             &system,
             &one_hour_calendar,
