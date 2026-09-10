@@ -911,3 +911,57 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   Task5 now owns the visible window, playback pacing, authored shots/captions,
   controls and their actual moving visual evidence. Task6 retains explicit capture
   completion and failure recovery responsibilities. No final visual approval yet.
+
+
+## Task 5 — working inspection foundation and visual iteration
+
+- Foundation committed as `b9364d631a73827143854d41d82841b29ec320d0`.
+  Normal hook passed all four subfloor chunks in67.478s. Its initial refusal
+  required a structural claim-shape declaration on the frame-partition test;
+  the declaration and focused guard were corrected before the successful hook.
+  Task5 is still in progress, with independent task review and Stage2 pending.
+- Actual native eclipse export for the candidate inclusive interval0..3600ticks
+  (CLI standard-day arguments0..0.036) returned `scene/eclipses/v2`, seed42,
+  events[]. World SHA remains77168f2bc1a8db9c01b37b31b66ac4757e1133862f8249aa8d80bb0194285bf8.
+  A separate native probe sampled all300 frames plus endpoint, including native
+  solar angular diameter and eclipse thresholds. Moon0 minimum solar separation
+  50.514136657deg exceeds its maximum native threshold1.693434031deg; moon1
+  minimum solar92.810519168deg and anti-solar86.845548279deg exceed1.443120246deg.
+  All301 application astronomy payloads, ticks and bindings agreed with the
+  independent probe. This is selected-interval avoidance, not eclipse validation
+  or permission to invent physical stellar spheres/shadows.
+- Native evidence, reproducer, hashes and executable provenance live at
+  `/Users/nathan/Downloads/Hornvale Planetarium/task5-native-avoidance-01/`.
+  Native paths were clean at1e11630202fd5db21a54944ab5f460afc28889ff;
+  client implementation was in progress. The helper's initial compile error
+  concerned SceneError conversion and was resolved locally; no native code changed.
+- Real Computer Use review of the bundled app found and verified corrections
+  for Retina startup dimensions, quick scrub clicks, extreme dolly input and
+  inspection text/caption overlap. Actual target1920x1080 atscale2 was observed.
+  Body picking/focus, paused camera movement, authored reset, exact frame step,
+  play/pause, reverse and film toggle worked. Native window resize to3024x1832
+  and back retained readable controls. Approximately100fps on the overlay is
+  preliminary observation; Task9 still owes formal performance measurements.
+- Mouse dragging remains a live-input evidence limitation: the Computer Use
+  drag operation leaves the visible pointer at its start in two input versions.
+  Click and wheel delivery work. Orbit/pan geometry and pointer ownership have
+  app tests; they are not relabeled manually demonstrated drag behavior.
+- Preserved actual interaction evidence is in
+  `/Users/nathan/Downloads/Hornvale Planetarium/task5-inspection-02/`:
+  915 acknowledged PNGs and915 state-at-request records, all images checked
+  against declared dimensions, strictly increasing timestamps and no error records.
+  The100.727323708s sampled span includes798 images at1920x1080 and117 at3024x1832.
+  `controls.mp4` preserves variable cadence and aspect ratio,100.88s including
+  final hold; SHAeaab3e7e362be0cd84cfa0be354edaaf939bacebc08b493275c3511d1208d132.
+  Recording was stopped with no pending acknowledgement before clean window exit.
+- QuickTime input/playback now works through its actual file dialog. The control
+  movie played through100.88s, with intermediate changing states observed. Earlier
+  playback difficulty is resolved. A transient garbled player preview was checked
+  against both originalPNG and independently decodedMP4; both files were intact.
+  Visual alarms must be confirmed against actual artifact bytes before changing
+  renderer code, as the earlier caption-preview false alarm already established.
+- Current appearance remains under review. Softer water highlights help, but
+  the first cloud-fraction-driven cosmetic prototype was too sharp and busy and
+  was rejected. Source-driven static cloud appearance and a more revealing camera
+  angle are being refined; physical scale and source time remain unchanged.
+  This checkpoint approves no final visual result, package or merge.

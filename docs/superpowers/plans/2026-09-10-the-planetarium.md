@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 starting. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 inspection foundation committed and visual refinement in progress. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
