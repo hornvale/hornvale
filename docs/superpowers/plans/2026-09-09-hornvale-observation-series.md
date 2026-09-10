@@ -392,7 +392,7 @@ precise gap. A domain type or debug print alone never qualifies as existing.
 determinism is claimed; run the observation validator and `make
 observation-check`; verify every output path against the source tree.
 
-**Status:** Not Started
+**Status:** Blocked pending Task 10 raster backend
 
 **Files:** Create `observations/atlas/2026-09-opening-capability-matrix.md`;
 inspect `domains/astronomy/`, `domains/climate/`, `domains/terrain/`,
@@ -473,7 +473,7 @@ checksum when present, and final reviewed caption.
 validation, `make observation-check`, client checks, shellcheck,
 `git diff --check`, and a final `make gate-commit`.
 
-**Status:** Not Started
+**Status:** Blocked pending a supported Firefox executable
 
 - [ ] Render each package into a clean ignored directory under `observations/render-output/HV-00N/`.
 - [ ] Assemble a derived film when ffmpeg is available; otherwise record no-video verification without claiming a film exists.
@@ -499,15 +499,19 @@ names, malformed input, deterministic repeated output, viewport dimensions,
 and refusal when the raster backend is unavailable; `make observation-check`,
 Atlas checks, shellcheck, and `git diff --check`.
 
-**Status:** Not Started
+**Status:** Complete
 
 **Files:** Create `scripts/observation-render.sh` and
 `scripts/test-observation-render.sh`; modify `Makefile` to exercise the
 renderer without publishing; modify `observations/README.md` to distinguish
 HTML inspection from authoritative PNG frame output.
 
-- [ ] Identify the existing supported browser/raster backend and record its exact invocation; do not add a new dependency without repository precedent.
-- [ ] Write failing tests for one PNG per packet, contiguous names, viewport dimensions, malformed packet refusal, and deterministic reruns.
-- [ ] Implement the smallest local renderer that consumes the existing Atlas preview HTML and writes only declared frame outputs.
-- [ ] Run the renderer twice on HV-009 and compare the complete PNG sequence; distinguish byte identity from visual identity if the backend is platform-local.
-- [ ] Run shellcheck, focused Atlas tests, `make observation-check`, and `git diff --check`; commit `build: render observation frames locally`.
+- [x] Identify the existing supported browser/raster backend and record its exact invocation; do not add a new dependency without repository precedent.
+- [x] Write failing tests for one PNG per packet, contiguous names, viewport dimensions, malformed packet refusal, and deterministic reruns.
+- [x] Implement the smallest local renderer that consumes the existing Atlas preview HTML and writes only declared frame outputs.
+- [x] Run the renderer twice on HV-009 and compare the complete PNG sequence; distinguish byte identity from visual identity if the backend is platform-local.
+- [x] Run shellcheck, focused Atlas tests, `make observation-check`, and `git diff --check`; commit `build: render observation frames locally`.
+
+Task 10 completion: the local renderer is implemented and reviewed. It uses
+Firefox headless when available and refuses clearly when that backend is
+absent; no placeholder raster or video is accepted.

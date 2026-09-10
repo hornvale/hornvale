@@ -210,6 +210,22 @@ film assembler correctly refuses this state while ffmpeg is available. Add a
 bounded rasterization task before attempting video assembly; do not create
 placeholder images, claim a no-ffmpeg result, or change editorial statuses.
 
+## Task 10: complete
+
+- **Commit:** `172f1f78e`
+- **Result:** Added a bounded Firefox-backed HTML-to-PNG renderer with packet
+  identity checks, contiguous output validation, dimension checks, atomic
+  replacement, and clear backend refusal.
+- **Evidence:** Six raster tests, 40 Atlas tests, 20 film-assembly tests, and
+  the prose commit suite passed. The actual environment lacks Firefox, so the
+  renderer correctly refused and emitted no placeholder PNGs.
+- **Review:** Approved with no findings.
+
+Ruling: leave Task 9 blocked until a supported Firefox executable is installed
+or supplied through `HV_OBSERVATION_FIREFOX`. That is an environment
+prerequisite, not an editorial approval or a reason to change the package
+status.
+
 ## #3 [G5] — Task 10 headless-raster boundary
 
 - **Question:** Which existing local backend, if any, can turn the exact
