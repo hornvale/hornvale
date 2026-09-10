@@ -40,3 +40,5 @@ pub use timeline::{FilmClock, FrameSample, HISTORY_RESET_POLICY, PresentationTim
 pub mod lifecycle;
 
 mod scene;
+
+pub mod capture;

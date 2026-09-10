@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, Condvar, Mutex, mpsc},
     thread::{self, JoinHandle},
-    time::Instant,
+    time::{Duration, Instant},
 };
 #[derive(Default)]
 struct Slot {
@@ -34,8 +34,23 @@ pub struct Bridge {
 }
 impl Bridge {
     pub fn open(path: PathBuf, revision: String) -> Result<(Self, String), String> {
+        Self::open_with_timeout(path, revision, None)
+    }
+    /// Capture startup has a deadline; timeout permanently abandons this owner.
+    pub fn open_timeout(
+        path: PathBuf,
+        revision: String,
+        timeout: Duration,
+    ) -> Result<(Self, String), String> {
+        Self::open_with_timeout(path, revision, Some(timeout))
+    }
+    fn open_with_timeout(
+        path: PathBuf,
+        revision: String,
+        timeout: Option<Duration>,
+    ) -> Result<(Self, String), String> {
         let (tx, rx) = mpsc::sync_channel(1);
-        let bridge = Self::spawn(move || {
+        let mut bridge = Self::spawn(move || {
             let loaded = (|| {
                 let mut source = Source::open(&path, &revision, "planetarium-pilot")
                     .map_err(|e| e.to_string())?;
@@ -56,8 +71,37 @@ impl Bridge {
                 }
             }
         });
-        let initial = rx.recv().map_err(|e| e.to_string())??;
+        let initial = bridge.receive_initial(rx, timeout)?;
         Ok((bridge, initial))
+    }
+    fn receive_initial(
+        &mut self,
+        rx: mpsc::Receiver<Result<String, String>>,
+        timeout: Option<Duration>,
+    ) -> Result<String, String> {
+        let result = match timeout {
+            Some(timeout) => rx
+                .recv_timeout(timeout)
+                .map_err(|e| format!("source initialization timeout/disconnect: {e}")),
+            None => rx.recv().map_err(|e| e.to_string()),
+        }
+        .and_then(|r| r);
+        if result.is_err() {
+            self.abandon();
+        }
+        result
+    }
+    /// Native Rust work cannot be forcibly interrupted. Close publication and
+    /// detach only on terminal failure; the CLI then exits the process. A late
+    /// worker may finish privately but cannot publish or be reused.
+    fn abandon(&mut self) {
+        let (lock, wake) = &*self.shared;
+        let mut s = lock.lock().unwrap();
+        s.closed = true;
+        s.pending = None;
+        s.completed = None;
+        wake.notify_all();
+        self.worker.take();
     }
     fn spawn<F>(initialize: F) -> Self
     where
@@ -86,6 +130,9 @@ impl Bridge {
                     let elapsed = start.elapsed().as_micros();
                     let mut s = lock.lock().unwrap();
                     s.active = false;
+                    if s.closed {
+                        return Ok(());
+                    }
                     s.queries += 1;
                     s.last_query_micros = elapsed;
                     s.completed = Some(reply);
@@ -95,11 +142,13 @@ impl Bridge {
             let (lock, wake) = &*worker_shared;
             let mut s = lock.lock().unwrap();
             s.active = false;
-            s.closed = true;
-            if let Err(e) =
-                result.unwrap_or_else(|_| Err("source worker panicked/disconnected".into()))
-            {
-                s.completed = Some(Err(e));
+            if !s.closed {
+                s.closed = true;
+                if let Err(e) =
+                    result.unwrap_or_else(|_| Err("source worker panicked/disconnected".into()))
+                {
+                    s.completed = Some(Err(e));
+                }
             }
             wake.notify_all();
         });
@@ -134,6 +183,31 @@ impl Bridge {
     /// Drain earlier interactive work, then wait for this exact request. Exclusive
     /// access prevents interactive submissions from replacing an export frame.
     pub fn observe(&mut self, request: String) -> Result<String, String> {
+        self.observe_until(request, None)
+    }
+    /// One deadline covers both draining earlier work and this exact query.
+    pub fn observe_timeout(
+        &mut self,
+        request: String,
+        timeout: Duration,
+    ) -> Result<String, String> {
+        let deadline = Instant::now() + timeout;
+        let result = self.observe_until(request, Some(deadline));
+        let result = if Instant::now() >= deadline {
+            Err("source observation timeout".into())
+        } else {
+            result
+        };
+        if result.is_err() {
+            self.abandon();
+        }
+        result
+    }
+    fn observe_until(
+        &mut self,
+        request: String,
+        deadline: Option<Instant>,
+    ) -> Result<String, String> {
         let (lock, wake) = &*self.shared;
         let mut s = lock.lock().map_err(|_| "source worker state poisoned")?;
         loop {
@@ -147,7 +221,7 @@ impl Bridge {
             if !s.active && s.pending.is_none() {
                 break;
             }
-            s = wake.wait(s).map_err(|_| "source worker state poisoned")?;
+            s = wait_until(wake, s, deadline)?;
         }
         s.pending = Some(request);
         wake.notify_all();
@@ -159,7 +233,7 @@ impl Bridge {
             if s.closed {
                 return Err("source worker disconnected".into());
             }
-            s = wake.wait(s).map_err(|_| "source worker state poisoned")?;
+            s = wait_until(wake, s, deadline)?;
         }
     }
     pub fn diagnostics(&self) -> Diagnostics {
@@ -171,6 +245,29 @@ impl Bridge {
             active: s.active,
             last_query_micros: s.last_query_micros,
         }
+    }
+}
+fn wait_until<'a>(
+    wake: &Condvar,
+    state: std::sync::MutexGuard<'a, Slot>,
+    deadline: Option<Instant>,
+) -> Result<std::sync::MutexGuard<'a, Slot>, String> {
+    match deadline {
+        Some(deadline) => {
+            let remaining = deadline
+                .checked_duration_since(Instant::now())
+                .ok_or("source observation timeout")?;
+            let (state, result) = wake
+                .wait_timeout(state, remaining)
+                .map_err(|_| "source worker state poisoned")?;
+            if result.timed_out() {
+                return Err("source observation timeout".into());
+            }
+            Ok(state)
+        }
+        None => wake
+            .wait(state)
+            .map_err(|_| "source worker state poisoned".into()),
     }
 }
 type Observer = Box<dyn FnMut(&str) -> Result<String, String> + Send>;
@@ -190,6 +287,91 @@ impl Drop for Bridge {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn capture_timeout_closes_worker_without_waiting_for_blocked_query() {
+        let (release_tx, release_rx) = mpsc::channel();
+        let (finished_tx, finished_rx) = mpsc::channel();
+        let (started_tx, started_rx) = mpsc::channel();
+        let mut b = Bridge::spawn(move || {
+            Ok(Box::new(move |_| {
+                started_tx.send(()).unwrap();
+                release_rx.recv().unwrap();
+                finished_tx.send(()).unwrap();
+                Ok("late".into())
+            }))
+        });
+        b.submit("old interactive work".into()).unwrap();
+        started_rx.recv().unwrap();
+        let shared = b.shared.clone();
+        let result = b.observe_timeout("frame zero".into(), std::time::Duration::from_millis(10));
+        assert!(result.unwrap_err().contains("timeout"));
+        assert!(b.submit("next frame".into()).is_err());
+        drop(b); // Must not join the still-blocked worker.
+        release_tx.send(()).unwrap();
+        finished_rx
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .unwrap();
+        let (lock, wake) = &*shared;
+        let mut state = lock.lock().unwrap();
+        while state.active {
+            state = wake.wait(state).unwrap();
+        }
+        assert!(state.closed && state.pending.is_none() && state.completed.is_none());
+    }
+    #[test]
+    fn capture_exact_query_deadline_survives_spurious_wakeups() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let (release_tx, release_rx) = mpsc::channel();
+        let (started_tx, started_rx) = mpsc::channel();
+        let (result_tx, result_rx) = mpsc::channel();
+        let mut b = Bridge::spawn(move || {
+            Ok(Box::new(move |_| {
+                started_tx.send(()).unwrap();
+                release_rx.recv().unwrap();
+                Ok("late reply".into())
+            }))
+        });
+        let shared = b.shared.clone();
+        let stopped = Arc::new(AtomicBool::new(false));
+        let notifier_stop = stopped.clone();
+        let notifier = thread::spawn(move || {
+            while !notifier_stop.load(Ordering::Relaxed) {
+                shared.1.notify_all();
+                thread::yield_now();
+            }
+        });
+        let caller = thread::spawn(move || {
+            let result = b.observe_timeout("exact frame".into(), Duration::from_millis(100));
+            result_tx.send(result).unwrap();
+            drop(b); // The active native query has not been released yet.
+        });
+        let started = started_rx.recv_timeout(Duration::from_secs(5));
+        let result = result_rx.recv_timeout(Duration::from_secs(2));
+        stopped.store(true, Ordering::Relaxed);
+        notifier.join().unwrap();
+        // Release even on an assertion failure, so the test owns no orphan job.
+        let _ = release_tx.send(());
+        caller.join().unwrap();
+        assert!(started.is_ok());
+        assert!(result.unwrap().unwrap_err().contains("timeout"));
+    }
+    #[test]
+    fn capture_initialization_timeout_does_not_join_blocked_initializer() {
+        let (release_tx, release_rx) = mpsc::channel();
+        let (tx, rx) = mpsc::sync_channel(1);
+        let mut b = Bridge::spawn(move || {
+            release_rx.recv().unwrap();
+            let _ = tx.send(Ok("initial".into()));
+            Ok(Box::new(|_| Ok("late".into())))
+        });
+        assert!(
+            b.receive_initial(rx, Some(std::time::Duration::from_millis(10)))
+                .unwrap_err()
+                .contains("timeout")
+        );
+        drop(b);
+        release_tx.send(()).unwrap();
+    }
     #[test]
     fn scrub_flood_keeps_only_latest_unstarted_request() {
         let (started_tx, started_rx) = mpsc::channel();
@@ -247,7 +429,11 @@ mod tests {
             }))
         });
         for i in 0..20 {
-            assert_eq!(b.observe(i.to_string()).unwrap(), i.to_string());
+            assert_eq!(
+                b.observe_timeout(i.to_string(), Duration::from_secs(5))
+                    .unwrap(),
+                i.to_string()
+            );
         }
         assert_eq!(
             b.observe("bad".into()).unwrap_err(),

@@ -4,6 +4,7 @@
 )]
 //! Persistent GPU scene and synchronous draft witness; source ticks advance only
 //! after screenshot completion. Final film packaging belongs to the application.
+use crate::capture::{CaptureMachine, CaptureSettings, CaptureState};
 use crate::lifecycle::*;
 use crate::{Binding, CameraPose, ObservationMirror, ViewError};
 use bevy::{
@@ -49,6 +50,7 @@ pub struct Renderer {
     atmosphere_enabled: bool,
     caption: Entity,
     target: Handle<Image>,
+    diagnostic: Option<Entity>,
     catalog: SceneCatalog,
     binding: Binding,
     generation: u64,
@@ -134,6 +136,7 @@ impl Renderer {
             atmosphere_enabled: true,
             caption,
             target,
+            diagnostic: None,
             catalog,
             binding: reply.binding.clone(),
             generation: mirror.generation(),
@@ -162,6 +165,79 @@ impl Renderer {
             .world_mut()
             .entity_mut(self.camera)
             .remove::<AtmosphereSettings>();
+    }
+    /// Separate calibration scene: opaque quadrant colors, numeric counter and
+    /// a byte-valued center marker. Never enable this for study footage.
+    pub fn diagnostic_overlay(&mut self, frame: u32) {
+        let world = self.apps.main.world_mut();
+        if let Some(old) = self.diagnostic.take() {
+            world.despawn(old);
+        }
+        let root = world
+            .spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    width: percent(100.),
+                    height: percent(100.),
+                    ..default()
+                },
+                UiTargetCamera(self.camera),
+                GlobalZIndex(100),
+            ))
+            .id();
+        for (left, top, color) in [
+            (0., 0., Color::srgb_u8(255, 0, 0)),
+            (50., 0., Color::srgb_u8(0, 255, 0)),
+            (0., 50., Color::srgb_u8(0, 0, 255)),
+            (50., 50., Color::WHITE),
+        ] {
+            let child = world
+                .spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: percent(left),
+                        top: percent(top),
+                        width: percent(50.),
+                        height: percent(50.),
+                        ..default()
+                    },
+                    BackgroundColor(color),
+                ))
+                .id();
+            world.entity_mut(root).add_child(child);
+        }
+        let marker = world
+            .spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: percent(40.),
+                    top: percent(40.),
+                    width: percent(20.),
+                    height: percent(20.),
+                    ..default()
+                },
+                BackgroundColor(Color::srgb_u8(frame as u8, 128, 64)),
+            ))
+            .id();
+        world.entity_mut(root).add_child(marker);
+        let counter = world
+            .spawn((
+                Text::new(format!("FRAME {frame:06}")),
+                TextFont {
+                    font_size: FontSize::Px(12.),
+                    ..default()
+                },
+                TextColor(Color::BLACK),
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: percent(55.),
+                    top: percent(75.),
+                    ..default()
+                },
+            ))
+            .id();
+        world.entity_mut(root).add_child(counter);
+        self.diagnostic = Some(root);
     }
     pub fn set_caption_font(&mut self, bytes: Vec<u8>) -> Result<(), ViewError> {
         if bytes.len() < 12 {
@@ -218,7 +294,7 @@ impl Renderer {
         self.applied = Some(identity);
         Ok(())
     }
-    fn update(&mut self) -> Result<(), ViewError> {
+    fn update(&mut self, timeout: Duration) -> Result<(), ViewError> {
         self.apps.update();
         self.apps
             .main
@@ -227,30 +303,75 @@ impl Renderer {
             .wgpu_device()
             .poll(PollType::Wait {
                 submission_index: None,
-                timeout: Some(Duration::from_secs(60)),
+                timeout: Some(timeout),
             })
             .map_err(|e| ViewError::Capture(format!("GPU poll: {e}")))?;
         Ok(())
     }
     pub fn capture(&mut self, path: &Path) -> Result<(), ViewError> {
+        let mut machine = CaptureMachine::new(CaptureSettings {
+            width: self.width,
+            height: self.height,
+            frames: 1,
+            warmup_frames: 3,
+            timeout_seconds: 120,
+        })?;
+        let start = Instant::now();
+        machine.prepare(0)?;
+        self.capture_acknowledged(&mut machine, path, &start)
+    }
+    /// The scene lock spans preparation, warmup, readback, validation and durable write.
+    pub fn capture_acknowledged(
+        &mut self,
+        machine: &mut CaptureMachine,
+        path: &Path,
+        clock: &Instant,
+    ) -> Result<(), ViewError> {
+        let frame = match machine.state() {
+            CaptureState::AwaitingObservation { frame } => *frame,
+            _ => {
+                return Err(ViewError::Capture(
+                    "capture requires the next observation".into(),
+                ));
+            }
+        };
+        if (machine.settings().width, machine.settings().height) != (self.width, self.height) {
+            return Err(machine.fail("capture target dimensions differ from settings"));
+        }
         self.catalog.begin_capture(path, self.applied)?;
-        let result = self.capture_frame(path);
+        let result = self
+            .capture_frame(machine, frame, path, clock)
+            .map_err(|error| machine.fail(&error.to_string()));
         self.catalog.finish_capture(&result);
         result
     }
-    fn capture_frame(&mut self, path: &Path) -> Result<(), ViewError> {
-        if self.applied.is_none() {
-            return Err(ViewError::Capture("no complete observation applied".into()));
-        }
-        if path.exists() {
-            return Err(ViewError::Capture("capture refuses existing output".into()));
-        }
-        let start = Instant::now();
+    fn capture_update(
+        &mut self,
+        machine: &mut CaptureMachine,
+        clock: &Instant,
+    ) -> Result<(), ViewError> {
+        let now = clock.elapsed().as_millis() as u64;
+        machine.check_timeout(now)?;
+        self.update(Duration::from_millis(machine.remaining_ms(now).min(1000)))?;
+        machine.check_timeout(clock.elapsed().as_millis() as u64)
+    }
+    fn capture_frame(
+        &mut self,
+        machine: &mut CaptureMachine,
+        frame: u32,
+        path: &Path,
+        clock: &Instant,
+    ) -> Result<(), ViewError> {
+        crate::capture::validate_scene_assets(
+            self.apps.main.world(),
+            &self.catalog.meshes,
+            &self.catalog.textures,
+        )?;
         let mut extracted = 0;
         // Extraction and asset preparation precede pipeline readiness; an empty cache
         // before the scene was extracted is not readiness.
         loop {
-            self.update()?;
+            self.capture_update(machine, clock)?;
             extracted += 1;
             let render = self
                 .apps
@@ -305,33 +426,25 @@ impl Renderer {
                     break;
                 }
             }
-            if start.elapsed() > Duration::from_secs(120) {
-                return Err(ViewError::Capture(
-                    "asset/pipeline readiness timed out".into(),
-                ));
-            }
+        }
+        machine.observation_ready(frame, clock.elapsed().as_millis() as u64)?;
+        while matches!(machine.state(), CaptureState::Warming { .. }) {
+            self.capture_update(machine, clock)?;
+            machine.warmed(frame, clock.elapsed().as_millis() as u64)?;
         }
         self.apps.main.world_mut().resource_mut::<CaptureResult>().0 = None;
-        let path = path.to_owned();
         self.apps
             .main
             .world_mut()
             .spawn(Screenshot::image(self.target.clone()))
             .observe(
                 move |event: On<ScreenshotCaptured>, mut result: ResMut<CaptureResult>| {
-                    result.0 = Some(
-                        event
-                            .image
-                            .clone()
-                            .try_into_dynamic()
-                            .map_err(|e| e.to_string())
-                            .and_then(|img| img.to_rgb8().save(&path).map_err(|e| e.to_string())),
-                    );
+                    result.0 = Some((frame, Ok(event.image.clone())));
                 },
             );
         loop {
-            self.update()?;
-            if let Some(result) = self
+            self.capture_update(machine, clock)?;
+            if let Some((callback_frame, result)) = self
                 .apps
                 .main
                 .world_mut()
@@ -339,10 +452,13 @@ impl Renderer {
                 .0
                 .take()
             {
-                return result.map_err(ViewError::Capture);
-            }
-            if start.elapsed() > Duration::from_secs(180) {
-                return Err(ViewError::Capture("screenshot completion timed out".into()));
+                let status = result.as_ref().map(|_| ()).map_err(Clone::clone);
+                if machine.readback(callback_frame, status, clock.elapsed().as_millis() as u64)? {
+                    let image = result.map_err(ViewError::Capture)?;
+                    crate::capture::write_png(&image, path, self.width, self.height)?;
+                    machine.written(frame, clock.elapsed().as_millis() as u64)?;
+                    return Ok(());
+                }
             }
         }
     }

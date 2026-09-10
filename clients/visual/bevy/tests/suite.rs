@@ -9,3 +9,6 @@ mod surface;
 
 #[path = "suite/timeline.rs"]
 mod timeline;
+
+#[path = "suite/capture.rs"]
+mod capture;

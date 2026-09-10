@@ -26,7 +26,7 @@ struct StellarPoint {
     pub(crate) star_id: String,
 }
 #[derive(Resource, Default)]
-pub(crate) struct CaptureResult(pub(crate) Option<Result<(), String>>);
+pub(crate) struct CaptureResult(pub(crate) Option<(u32, Result<Image, String>)>);
 #[derive(Resource, Default)]
 pub(crate) struct PendingScene(pub(crate) Option<PreparedScene>);
 #[derive(Resource, Default)]

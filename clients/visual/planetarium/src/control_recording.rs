@@ -63,8 +63,34 @@ pub fn sample(world: &mut World, seconds: f64, record: serde_json::Value) {
     let index = state.next;
     state.next += 1;
     let directory = state.directory.clone();
-    world.spawn(Screenshot::primary_window()).observe(move |event:On<ScreenshotCaptured>,mut state:ResMut<ControlRecording>|{
-        let result=(||->Result<(),String>{let image=event.image.clone().try_into_dynamic().map_err(|e|e.to_string())?;image.to_rgb8().save(directory.join(format!("control-{index:05}.png"))).map_err(|e|e.to_string())?;let bytes=serde_json::to_vec_pretty(&serde_json::json!({"schema":"planetarium/interactive-control-frame/v1","seconds":seconds,"state_at_request":record,"width":image.width(),"height":image.height()})).map_err(|e|e.to_string())?;std::fs::write(directory.join(format!("control-{index:05}.json")),bytes).map_err(|e|e.to_string())?;Ok(())})();
-        state.pending=false;state.error=result.err();if let Some(e)=&state.error {eprintln!("control recording failed: {e}");}else{println!("control recording acknowledged frame={index}");}
-    });
+    world.spawn(Screenshot::primary_window()).observe(
+        move |event: On<ScreenshotCaptured>, mut state: ResMut<ControlRecording>| {
+            let result = (|| -> Result<(), String> {
+                let image = event
+                    .image
+                    .clone()
+                    .try_into_dynamic()
+                    .map_err(|e| e.to_string())?;
+                image
+                    .to_rgb8()
+                    .save(directory.join(format!("control-{index:05}.png")))
+                    .map_err(|e| e.to_string())?;
+                let bytes = serde_json::to_vec_pretty(&serde_json::json!({
+                    "schema":"planetarium/interactive-control-frame/v1", "seconds":seconds,
+                    "state_at_request":record,"width":image.width(),"height":image.height()
+                }))
+                .map_err(|e| e.to_string())?;
+                std::fs::write(directory.join(format!("control-{index:05}.json")), bytes)
+                    .map_err(|e| e.to_string())?;
+                Ok(())
+            })();
+            state.pending = false;
+            state.error = result.err();
+            if let Some(e) = &state.error {
+                eprintln!("control recording failed: {e}");
+            } else {
+                println!("control recording acknowledged frame={index}");
+            }
+        },
+    );
 }

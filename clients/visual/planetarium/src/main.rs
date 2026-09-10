@@ -32,5 +32,21 @@ fn run() -> Result<(), Box<dyn Error>> {
     let world = PathBuf::from(arg("--world")?);
     let revision = arg("--revision")?;
     let film: FilmDefinition = serde_json::from_slice(&std::fs::read(arg("--film")?)?)?;
-    match args.get(1).map(String::as_str){Some("inspect")=>planetarium::live::run(world,revision,film,arg("--record").ok().map(PathBuf::from)),Some("review")=>{let stride=arg("--stride").unwrap_or_else(|_|"5".into()).parse()?;let width=arg("--width").unwrap_or_else(|_|"1920".into()).parse()?;planetarium::review::run(world,revision,film,PathBuf::from(arg("--output")?),stride,width)},_=>Err("usage: planetarium inspect|review --world PATH --revision SHA --film PATH [--output NEW_DIRECTORY --stride 5 --width 1920]".into())}
+    match args.get(1).map(String::as_str) {
+        Some("inspect") => planetarium::live::run(world, revision, film, arg("--record").ok().map(PathBuf::from)),
+        Some("review") => {
+            let stride = arg("--stride").unwrap_or_else(|_| "5".into()).parse()?;
+            let width = arg("--width").unwrap_or_else(|_| "1920".into()).parse()?;
+            planetarium::review::run(world, revision, film, PathBuf::from(arg("--output")?), stride, width)
+        }
+        Some("capture") => {
+            let limit = if args.iter().any(|v| v == "--limit") {
+                Some(arg("--limit")?.parse()?)
+            } else {
+                None
+            };
+            planetarium::capture::run(world, revision, film, PathBuf::from(arg("--out")?), limit)
+        }
+        _ => Err("usage: planetarium inspect|review|capture --world PATH --revision SHA --film PATH [--out NEW_DIRECTORY --limit FRAMES]".into()),
+    }
 }
