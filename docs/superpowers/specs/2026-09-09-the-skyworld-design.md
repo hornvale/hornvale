@@ -1,7 +1,7 @@
 # The Skyworld — design
 
 **Campaign:** The Skyworld · **Branch:** `campaign/skyworld`  
-**Status:** design draft; G3 review pending  
+**Status:** G3 approved; Tasks 1–3 implemented and reviewed; Task 4 canonical stage submission remains pending
 **Predecessors:** The Stratum, The Wanderers, The Seedbed, and the existing
 climate/resource basis.
 
@@ -398,4 +398,3 @@ campaign:
 - surface, marine, and subterranean species that consume aether-derived
   products without accessing the aether field;
 - the multi-fragment archipelago successor case.
-

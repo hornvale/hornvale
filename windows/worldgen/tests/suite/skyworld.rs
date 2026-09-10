@@ -369,7 +369,9 @@ mod seams {
     }
 
     #[test]
-    fn surface_climate_axes_feed_distinct_overlay_values() {
+    fn ocean_fraction_changes_climate_and_overlay_together() {
+        // An integration perturbation, not evidence of independent axes.
+        // The source-module tests isolate copied inputs at consumption sites.
         let sparse = fixture_with_terrain_pins(
             42,
             TerrainPins {
@@ -1629,17 +1631,32 @@ fn skyworld_contract_has_no_build_or_save_surface() {
         .split_once("\n}")
         .expect("BuildDepth enum closes")
         .0;
-    let variants: Vec<_> = build_depth
-        .lines()
-        .filter_map(|line| {
-            let variant = line.trim().strip_suffix(',')?;
-            variant
-                .chars()
-                .all(|character| character.is_ascii_alphanumeric() || character == '_')
-                .then_some(variant)
-        })
-        .collect();
+    fn build_depth_variants(body: &str) -> Vec<&str> {
+        body.lines()
+            .map(str::trim)
+            // Keep every non-documentation line. Unknown syntax must fail
+            // closed, including payloads, discriminants and attributes.
+            .filter(|line| !line.is_empty() && !line.starts_with("///"))
+            .map(|line| line.strip_suffix(',').unwrap_or(line))
+            .collect()
+    }
+    let variants = build_depth_variants(build_depth);
     assert_eq!(variants, ["Astronomy", "Terrain", "Settlements", "Full"]);
+    for addition in [
+        "Sky,",
+        "Sky(u8),",
+        "Sky { detail: u8 },",
+        "Sky = 4,",
+        "Sky",
+        "#[cfg(feature = \"sky\")]\nSky(u8),",
+    ] {
+        let changed = format!("{build_depth}\n{addition}");
+        assert_ne!(
+            build_depth_variants(&changed),
+            variants,
+            "BuildDepth contract silently ignored {addition:?}"
+        );
+    }
 
     let fields: Vec<_> = source_body(WORLDGEN_LIB, "pub struct BuildArtifacts {")
         .lines()

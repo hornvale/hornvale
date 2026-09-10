@@ -1,7 +1,7 @@
 # Skyworld Seams — design
 
 **Campaign:** The Skyworld Seams · **Branch:** `campaign/skyworld`
-**Status:** G3 approved; Tasks 1–4 complete, including review-hardened seam contracts; awaiting the campaign's normal review and close process
+**Status:** G3 approved; Tasks 1–4 complete, including broad-review input, work-counter, and source-contract corrections; awaiting the campaign's normal review and close process
 
 ## 1. Purpose
 
@@ -143,3 +143,26 @@ requires them; censuses remain queued work and are not run locally.
    boundary, as specified here?
 3. Does the four-layer contract preserve the worldly model while still
    giving later realms a useful shared shape?
+
+## 10. Measured limits after broad review
+
+The independent experiments override copied values at actual consumption
+sites in test builds; generated terrain, climate, and `BiomeExpr` remain
+unchanged. Temperature reaches the ambient profile but currently does not
+feed stock or distribution calculations. Moisture feeds profile, cloud-water
+stocks, and distribution; elevation and storm propensity feed distribution.
+Wind and the freshly derived `ocean_current` drive movement. The cached
+`GeneratedClimate::current_at` field is not consumed by Skyworld propagation
+and is not an independence result.
+
+The cost target in §5 is measured within the existing finite configuration,
+not proved for every possible footprint size or radius. Generation performs
+fixed surface scans and constructs one propagation index, even for no active
+territories. Every PNG constructs two full surface maps and one render index;
+it does not reconstruct terrain or climate. Sample footprint expansion and
+territory-pair adjacency remain real additional work. Regional and Habitat
+PNGs perform the same traversals with different palettes. Sorting, index
+internals, allocation, formatting, and PNG encoding are outside the loop
+counter totals. See the dedicated seam ledger #5 for asserted counts, command
+results, and the configuration limits. No cache, dense runtime planet-by-time
+structure, census, Waterworld, or Underworld implementation was added.

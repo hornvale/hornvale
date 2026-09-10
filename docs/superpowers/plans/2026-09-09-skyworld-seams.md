@@ -39,7 +39,7 @@
 - Consumes: `GeneratedTerrain::{elevation_at,is_ocean,unrest_at,boundary_at,features}`, `GeneratedClimate::{mean_temperature_at,moisture_at,storm_propensity_at,current_at,biome_expr_at}`, the composition-root call to `hornvale_climate::prevailing_wind`, and `skyworld_from`.
 - Produces: deterministic test helpers that build the existing `Fixture`, sample a `Vertex`, and compare `SkyWorld` fields/stocks/footprints without mutating source artifacts. If production ownership is already clear through the existing typed arguments, this task produces no wrapper.
 
-- [ ] **Step 1: Add a fixture sampling helper and write the failing axis matrix tests.** Use the existing terrain-depth fixture and select vertices by ascending `Vertex` id. For each selected vertex, record a source tuple containing `is_ocean`, elevation, mean temperature, moisture, storm propensity, biome expression, and tectonic feature state; record the corresponding Skyworld field/territory output. Add tests named `surface_axis_is_a_read_only_substrate`, `environment_axes_have_non_vacuous_sources`, and `skyworld_outputs_change_only_through_dependent_axes`.
+- [x] **Step 1: Add a fixture sampling helper and write the failing axis matrix tests.** Use the existing terrain-depth fixture and select vertices by ascending `Vertex` id. For each selected vertex, record a source tuple containing `is_ocean`, elevation, mean temperature, moisture, storm propensity, biome expression, and tectonic feature state; record the corresponding Skyworld field/territory output. Add tests named `surface_axis_is_a_read_only_substrate`, `environment_axes_have_non_vacuous_sources`, and `skyworld_outputs_change_only_through_dependent_axes`.
 
   The test must assert the source-side facts first:
 
@@ -51,23 +51,23 @@
 
   Then assert that land/ocean remains a terrain fact, `BiomeExpr` remains the climate-owned taxonomy, and a surface input perturbation does not silently rewrite unrelated Skyworld axes.
 
-- [ ] **Step 2: Run the new tests and confirm the first red result is meaningful.**
+- [x] **Step 2: Run the new tests and confirm the first red result is meaningful.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld::seams`
 
   Expected: a focused failure naming either a missing probe helper or a genuinely unobservable/unchanged axis; do not accept a test that passes because its source perturbation was a no-op.
 
-- [ ] **Step 3: Inspect the failure against existing APIs before adding code.** Verify the source can be varied through existing `TerrainPins`, climate derivation, or a test-only copied value. Reject any proposed wrapper that only renames `&GeneratedTerrain` and `&GeneratedClimate`; retain direct typed inputs when they already express ownership. If a consumer cannot identify substrate ownership without duplicating access logic, add one small read-only `SkySurfaceSample`/accessor at `windows/worldgen/src/skyworld.rs`, with no cached mutable state and no dependency edge from `domains/terrain` or `domains/climate`.
+- [x] **Step 3: Inspect the failure against existing APIs before adding code.** Verify the source can be varied through existing `TerrainPins`, climate derivation, or a test-only copied value. Reject any proposed wrapper that only renames `&GeneratedTerrain` and `&GeneratedClimate`; retain direct typed inputs when they already express ownership. If a consumer cannot identify substrate ownership without duplicating access logic, add one small read-only `SkySurfaceSample`/accessor at `windows/worldgen/src/skyworld.rs`, with no cached mutable state and no dependency edge from `domains/terrain` or `domains/climate`.
 
-- [ ] **Step 4: Implement the minimum seam or test-only sampler and make the matrix green.** Keep all production derivation in `skyworld_from`; the seam may expose only the source values needed by the tests. Do not add a new `BuildDepth`, alter `BuildArtifacts`/`RungArtifacts`, or serialize the sample.
+- [x] **Step 4: Implement the minimum seam or test-only sampler and make the matrix green.** Keep all production derivation in `skyworld_from`; the seam may expose only the source values needed by the tests. Do not add a new `BuildDepth`, alter `BuildArtifacts`/`RungArtifacts`, or serialize the sample.
 
-- [ ] **Step 5: Run the complete focused suite and record the ownership map.**
+- [x] **Step 5: Run the complete focused suite and record the ownership map.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld`
 
   Expected: all existing Skyworld tests plus the seam tests pass, with nonempty land/ocean, altitude, moisture, temperature, wind, feature, radiation, and aether denominators. Record the measured source→field/stock/footprint ownership and any rejected wrapper in the ledger.
 
-- [ ] **Step 6: Commit the independently testable seam inventory.**
+- [x] **Step 6: Commit the independently testable seam inventory.**
 
   ```bash
   git add windows/worldgen/tests/suite/skyworld.rs windows/worldgen/src/skyworld.rs windows/worldgen/src/lib.rs docs/superpowers/ledgers/2026-09-09-the-skyworld.md
@@ -89,23 +89,23 @@
 - Consumes: Task 1’s fixture/sample seam, `skyworld_from`, `SkyFields::at_altitude`, existing `TerrainPins`, climate accessors, and terrain feature accessors.
 - Produces: a deterministic one-axis-at-a-time probe matrix covering substrate, climate, high-sky radiation, aether, and tectonic/environmental features.
 
-- [ ] **Step 1: Write the red perturbation tests.** Add `radiation_and_aether_are_independently_perturbable`, `surface_climate_axes_feed_distinct_overlay_values`, `tectonic_features_affect_distribution_without_authored_placement`, and `perturbations_preserve_surface_projection`. Each test must assert source inequality first, then compare only the dependent `SkyWorld` projection (fields, territory selection, stocks, footprint, or readout) and assert unchanged source/surface values where appropriate.
+- [x] **Step 1: Write the red perturbation tests.** Add `radiation_and_aether_are_independently_perturbable`, `surface_climate_axes_feed_distinct_overlay_values`, `tectonic_features_affect_distribution_without_authored_placement`, and `perturbations_preserve_surface_projection`. Each test must assert source inequality first, then compare only the dependent `SkyWorld` projection (fields, territory selection, stocks, footprint, or readout) and assert unchanged source/surface values where appropriate.
 
-- [ ] **Step 2: Run the matrix to identify real missing propagation.**
+- [x] **Step 2: Run the matrix to identify real missing propagation.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld::seams`
 
   Expected: FAIL for a missing dependency or no-op probe, not for nondeterministic ordering or a changed unrelated surface biome. Save the exact source and output counts in the test failure notes while iterating.
 
-- [ ] **Step 3: Make the smallest pure derivation change required by the red test.** Keep `derive_fields`, `distribution_score`, and stock derivation deterministic and composition-root-owned. Use existing climate/terrain values rather than adding a Skyworld-specific replacement for `BiomeExpr`; environmental features may bias coverage/distribution only through derived scores, never through fixed authored placements.
+- [x] **Step 3: Make the smallest pure derivation change required by the red test.** Keep `derive_fields`, `distribution_score`, and stock derivation deterministic and composition-root-owned. Use existing climate/terrain values rather than adding a Skyworld-specific replacement for `BiomeExpr`; environmental features may bias coverage/distribution only through derived scores, never through fixed authored placements.
 
-- [ ] **Step 4: Run all Skyworld tests and verify cross-seed variation remains real.**
+- [x] **Step 4: Run all Skyworld tests and verify cross-seed variation remains real.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld`
 
   Expected: same-seed identity, different-seed variation, radiation/aether independence, mixed land/ocean activation, surface preservation, and all one-axis dependency tests pass.
 
-- [ ] **Step 5: Commit the propagation matrix.**
+- [x] **Step 5: Commit the propagation matrix.**
 
   ```bash
   git add windows/worldgen/tests/suite/skyworld.rs windows/worldgen/src/skyworld.rs docs/superpowers/ledgers/2026-09-09-the-skyworld.md
@@ -129,23 +129,23 @@
 - Consumes: `TERRAIN_OF_CALLS`, `CLIMATE_FROM_CALLS`, `skyworld_from`, `trajectory_at`, `propagation_at`, and `render_skyworld_{png,readout,diagnostic_readout}`.
 - Produces: deterministic reuse and scaling probes; any added counter must be test-only or an explicit returned diagnostic, must not affect stream consumption, and must not become a saved world fact.
 
-- [ ] **Step 1: Write the red reuse tests.** Add `skyworld_generation_reuses_passed_substrate`, `rendering_does_not_reconstruct_substrate`, `queries_do_not_consume_randomness`, and `detail_changes_materialization_not_generation`. Reset the existing counters around generation, query, and rendering; assert zero additional `terrain_of`/`climate_from` calls after the fixture has supplied its artifacts, and compare generated Skyworld values before and after queries/renders.
+- [x] **Step 1: Write the red reuse tests.** Add `skyworld_generation_reuses_passed_substrate`, `rendering_does_not_reconstruct_substrate`, `queries_do_not_consume_randomness`, and `detail_changes_materialization_not_generation`. Reset the existing counters around generation, query, and rendering; assert zero additional `terrain_of`/`climate_from` calls after the fixture has supplied its artifacts, and compare generated Skyworld values before and after queries/renders.
 
-- [ ] **Step 2: Run the cost probes and inspect the first failing path.**
+- [x] **Step 2: Run the cost probes and inspect the first failing path.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld::cost`
 
   Expected: a failure identifies an actual reconstruction or missing observable bound. If integration tests cannot access the existing `#[cfg(test)]` counters, place the counter assertion in the worldgen crate’s existing unit-test module or add a narrowly scoped `#[cfg(test)]` helper rather than making counters part of the public runtime API.
 
-- [ ] **Step 3: Add only the required reuse fix or measurement hook.** Thread already-built `GeneratedTerrain`/`GeneratedClimate` references through any offending call path. Do not add a cache that changes ownership or output. For scaling, compare small/large `trajectory_samples`, territory counts, and render detail while asserting work is bounded by those requested quantities; do not introduce a full vertex×time field.
+- [x] **Step 3: Add only the required reuse fix or measurement hook.** Thread already-built `GeneratedTerrain`/`GeneratedClimate` references through any offending call path. Do not add a cache that changes ownership or output. For scaling, compare small/large `trajectory_samples`, territory counts, and render detail while asserting work is bounded by those requested quantities; do not introduce a full vertex×time field.
 
-- [ ] **Step 4: Run deterministic scaling and rendering checks.**
+- [x] **Step 4: Run deterministic scaling and rendering checks.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld`
 
   Expected: zero substrate reconstructions, byte-identical repeated queries and renders, stable stream behavior, and measured work that grows with active territories/samples/pixels rather than with all vertices multiplied by all times. Record actual counts and command output in the ledger.
 
-- [ ] **Step 5: Commit the cost evidence.**
+- [x] **Step 5: Commit the cost evidence.**
 
   ```bash
   git add windows/worldgen/src/lib.rs windows/worldgen/src/skyworld.rs windows/worldgen/src/skyworld_render.rs windows/worldgen/tests/suite/skyworld.rs docs/superpowers/ledgers/2026-09-09-the-skyworld.md
@@ -216,3 +216,21 @@
 - [x] The plan permits no-op production changes when direct typed inputs already satisfy the seam.
 - [x] Every task ends with a focused test cycle and a commit.
 - [x] The ledger and reconciliation record remain synchronized with the spec and plan paths.
+
+## Broad-review correction
+
+Tasks 1–3 and their recorded steps are complete. The broad-review fixes retain
+the production score-helper extraction at `4d9f3005b` and add only test-build
+input overrides and work diagnostics. The ocean-fraction integration probe
+is a joint perturbation; independent temperature, moisture, elevation, storm,
+wind, derived-current, and altitude probes live in the source-module tests.
+`GeneratedClimate::current_at` is not consumed by Skyworld propagation.
+
+Run both test locations with:
+`cargo test -p hornvale-worldgen --lib --test suite -- skyworld`.
+
+The dedicated seam ledger #5 records actual counts and limits: fixed surface
+and index work, sample-dependent footprint traversal, territory-pair adjacency,
+and detail-dependent overlay marks. It does not claim a universal complexity
+bound, a census, or another realm implementation. Campaign review/close remains
+pending.

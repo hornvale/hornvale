@@ -394,6 +394,16 @@ pub(crate) struct SkyWorldWork {
     pub(crate) trajectory_samples: usize,
     pub(crate) rasters: usize,
     pub(crate) raster_pixels: usize,
+    pub(crate) propagation_indexes: usize,
+    pub(crate) movement_candidates: usize,
+    pub(crate) physical_neighbors: usize,
+    pub(crate) expansion_neighbors: usize,
+    pub(crate) adjacency_pairs: usize,
+    pub(crate) render_surface_vertices: usize,
+    pub(crate) render_indexes: usize,
+    pub(crate) overlay_marks: usize,
+    pub(crate) occupied_vertices: usize,
+    pub(crate) stamp_candidates: usize,
 }
 
 #[cfg(test)]
@@ -405,6 +415,16 @@ thread_local! {
             trajectory_samples: 0,
             rasters: 0,
             raster_pixels: 0,
+            propagation_indexes: 0,
+            movement_candidates: 0,
+            physical_neighbors: 0,
+            expansion_neighbors: 0,
+            adjacency_pairs: 0,
+            render_surface_vertices: 0,
+            render_indexes: 0,
+            overlay_marks: 0,
+            occupied_vertices: 0,
+            stamp_candidates: 0,
         })
     };
 }
@@ -420,7 +440,7 @@ pub(crate) fn skyworld_work() -> SkyWorldWork {
 }
 
 #[cfg(test)]
-fn record_skyworld_work(update: impl FnOnce(&mut SkyWorldWork)) {
+pub(crate) fn record_skyworld_work(update: impl FnOnce(&mut SkyWorldWork)) {
     SKYWORLD_WORK.with(|work| {
         let mut current = work.get();
         update(&mut current);
@@ -535,7 +555,10 @@ fn derive_fields(
         .map(|v| {
             #[cfg(test)]
             record_surface_vertex();
-            climate.mean_temperature_at(v).get()
+            let temperature = climate.mean_temperature_at(v).get();
+            #[cfg(test)]
+            let temperature = tests::source(tests::SourceAxis::Temperature, temperature);
+            temperature
         })
         .sum::<f64>()
         / terrain.geosphere().vertex_count() as f64;
@@ -545,7 +568,10 @@ fn derive_fields(
         .map(|v| {
             #[cfg(test)]
             record_surface_vertex();
-            climate.moisture_at(v)
+            let moisture = climate.moisture_at(v);
+            #[cfg(test)]
+            let moisture = tests::source(tests::SourceAxis::Moisture, moisture);
+            moisture
         })
         .sum::<f64>()
         / terrain.geosphere().vertex_count() as f64;
@@ -553,6 +579,8 @@ fn derive_fields(
         .band_count()
         .map(|bands| hornvale_climate::prevailing_wind(terrain.geosphere(), vertex, bands))
         .unwrap_or([0.0; 3]);
+    #[cfg(test)]
+    let wind = wind.map(|value| tests::source(tests::SourceAxis::Wind, value));
     let wind_shear = climate.band_count().map_or(0.0, |bands| {
         terrain
             .geosphere()
@@ -560,6 +588,8 @@ fn derive_fields(
             .iter()
             .map(|&neighbor| {
                 let other = hornvale_climate::prevailing_wind(terrain.geosphere(), neighbor, bands);
+                #[cfg(test)]
+                let other = other.map(|value| tests::source(tests::SourceAxis::Wind, value));
                 ((wind[0] - other[0]).powi(2)
                     + (wind[1] - other[1]).powi(2)
                     + (wind[2] - other[2]).powi(2))
@@ -628,6 +658,8 @@ fn distribution_score(
         .derive(StreamLabel::dynamic(&key))
         .stream();
     let elevation = terrain.elevation_at(vertex).get();
+    #[cfg(test)]
+    let elevation = tests::source(tests::SourceAxis::Elevation, elevation);
     let coastal = terrain
         .geosphere()
         .neighbors(vertex)
@@ -635,8 +667,13 @@ fn distribution_score(
         .any(|&n| terrain.is_ocean(n) != terrain.is_ocean(vertex));
     let terrain_bias = if terrain.is_ocean(vertex) { 0.35 } else { 0.45 };
     let elevation_bias = (elevation / 8_000.0).clamp(-0.20, 0.35);
-    let climate_bias =
-        climate.moisture_at(vertex) * 0.20 + climate.storm_propensity_at(vertex) * 0.15;
+    let moisture = climate.moisture_at(vertex);
+    let storm = climate.storm_propensity_at(vertex);
+    #[cfg(test)]
+    let moisture = tests::source(tests::SourceAxis::Moisture, moisture);
+    #[cfg(test)]
+    let storm = tests::source(tests::SourceAxis::Storm, storm);
+    let climate_bias = moisture * 0.20 + storm * 0.15;
     let coastal_bias = if coastal { 0.25 } else { 0.0 };
     let non_tectonic_environment = terrain_bias + elevation_bias + climate_bias + coastal_bias;
     let (score, environment) = score_distribution_environment(
@@ -942,7 +979,7 @@ fn stocks_from_fields(fields: &SkyFields, orchard: bool) -> SkyStocks {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::{
         climate_from, propagation_at, render_skyworld_diagnostic_readout, render_skyworld_png,
@@ -965,6 +1002,278 @@ mod tests {
             trajectory_samples: 8,
             propagation_radius: 2,
         }
+    }
+
+    // Override copied values only at the real consumption sites. The providers
+    // and their biome projections remain intact; no runtime test API is added.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub(crate) enum SourceAxis {
+        Temperature,
+        Moisture,
+        Elevation,
+        Storm,
+        Wind,
+        Current,
+    }
+
+    thread_local! {
+        static SOURCE_AXIS: std::cell::Cell<Option<SourceAxis>> = const { std::cell::Cell::new(None) }; // lexicon: std::cell::Cell diagnostic idiom
+        static SOURCE_CHANGES: std::cell::Cell<[usize; 6]> = const { std::cell::Cell::new([0; 6]) }; // lexicon: std::cell::Cell diagnostic idiom
+    }
+
+    pub(crate) fn source(axis: SourceAxis, value: f64) -> f64 {
+        let changed = if SOURCE_AXIS.with(|selected| selected.get() == Some(axis)) {
+            match axis {
+                SourceAxis::Temperature => value + 10.0,
+                SourceAxis::Moisture | SourceAxis::Storm => value * 0.5,
+                SourceAxis::Elevation => value + 500.0,
+                SourceAxis::Wind | SourceAxis::Current => -value,
+            }
+        } else {
+            value
+        };
+        SOURCE_CHANGES.with(|counts| {
+            let mut next = counts.get();
+            next[axis as usize] += usize::from(value != changed);
+            counts.set(next);
+        });
+        changed
+    }
+
+    pub(crate) fn with_source<T>(axis: SourceAxis, action: impl FnOnce() -> T) -> T {
+        struct Reset;
+        impl Drop for Reset {
+            fn drop(&mut self) {
+                SOURCE_AXIS.with(|value| value.set(None));
+            }
+        }
+        SOURCE_CHANGES.with(|counts| counts.set([0; 6]));
+        SOURCE_AXIS.with(|value| assert!(value.replace(Some(axis)).is_none()));
+        let _reset = Reset;
+        let result = action();
+        let counts = SOURCE_CHANGES.with(|counts| counts.get());
+        assert!(
+            counts[axis as usize] > 0,
+            "VACUOUS: {axis:?} source never changed"
+        );
+        for (index, count) in counts.into_iter().enumerate() {
+            if index != axis as usize {
+                assert_eq!(count, 0, "perturbation changed an unrelated source axis");
+            }
+        }
+        result
+    }
+
+    #[derive(Debug, PartialEq)]
+    struct SurfaceSample {
+        elevation: hornvale_kernel::ReferenceElevation,
+        ocean: bool,
+        unrest: f64,
+        temperature: hornvale_kernel::Temperature,
+        moisture: f64,
+        storm: f64,
+        current: [f64; 3],
+        biome: hornvale_climate::BiomeExpr,
+    }
+
+    fn surface_projection(
+        terrain: &GeneratedTerrain,
+        climate: &GeneratedClimate,
+    ) -> Vec<SurfaceSample> {
+        terrain
+            .geosphere()
+            .vertices()
+            .map(|v| SurfaceSample {
+                elevation: terrain.elevation_at(v),
+                ocean: terrain.is_ocean(v),
+                unrest: terrain.unrest_at(v),
+                temperature: climate.mean_temperature_at(v),
+                moisture: climate.moisture_at(v),
+                storm: climate.storm_propensity_at(v),
+                current: climate.current_at(v),
+                biome: climate.biome_expr_at(v),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn surface_climate_axes_feed_distinct_overlay_values() {
+        let (world, terrain, climate) = fixture();
+        let surface = || surface_projection(&terrain, &climate);
+        let original_surface = surface();
+        let before = skyworld_from(&world, &terrain, &climate, config());
+        for axis in [
+            SourceAxis::Temperature,
+            SourceAxis::Moisture,
+            SourceAxis::Wind,
+        ] {
+            let mut after =
+                with_source(axis, || skyworld_from(&world, &terrain, &climate, config()));
+            match axis {
+                SourceAxis::Temperature => {
+                    assert!(
+                        (after.fields.temperature_c - before.fields.temperature_c - 10.0).abs()
+                            < 1e-8
+                    );
+                    assert_eq!(
+                        after.territories, before.territories,
+                        "temperature is not a stock or distribution input"
+                    );
+                    after.fields.temperature_c = before.fields.temperature_c;
+                }
+                SourceAxis::Moisture => {
+                    assert!(after.fields.moisture < before.fields.moisture);
+                    let low = stocks_from_fields(&after.fields.at_altitude(8_000.0), true);
+                    let high = stocks_from_fields(&before.fields.at_altitude(8_000.0), true);
+                    assert!(low.cloud_water < high.cloud_water);
+                    after.fields.moisture = before.fields.moisture;
+                }
+                SourceAxis::Wind => {
+                    assert_ne!(after.fields.wind, before.fields.wind);
+                    assert_eq!(after.fields.wind, before.fields.wind.map(|value| -value));
+                    after.fields.wind = before.fields.wind;
+                    // Sign reversal preserves shear magnitude.
+                }
+                _ => unreachable!(),
+            }
+            assert_eq!(
+                after.fields, before.fields,
+                "{axis:?} changed unrelated fields"
+            );
+            assert_eq!(
+                surface(),
+                original_surface,
+                "{axis:?} changed the provider projection"
+            );
+        }
+    }
+
+    #[test]
+    fn distribution_axes_are_individually_observable() {
+        let (world, terrain, climate) = fixture();
+        let original_surface = surface_projection(&terrain, &climate);
+        let scores = || {
+            let mut scores = Vec::new();
+            let mut altitudes = Vec::new();
+            for vertex in terrain.geosphere().vertices() {
+                distribution_score(
+                    &world,
+                    &terrain,
+                    &climate,
+                    &mut scores,
+                    &mut altitudes,
+                    vertex,
+                );
+            }
+            (scores, altitudes)
+        };
+        let before = scores();
+        let fields = derive_fields(&world, &terrain, &climate);
+        for axis in [
+            SourceAxis::Elevation,
+            SourceAxis::Storm,
+            SourceAxis::Moisture,
+        ] {
+            let after = with_source(axis, scores);
+            assert_ne!(
+                before.0, after.0,
+                "{axis:?} did not affect distribution scores"
+            );
+            assert_eq!(
+                before.1, after.1,
+                "{axis:?} changed independently drawn altitude"
+            );
+            if axis != SourceAxis::Moisture {
+                let after_fields = with_source(axis, || {
+                    // Include the score reads to prove the override was exercised.
+                    let _ = scores();
+                    derive_fields(&world, &terrain, &climate)
+                });
+                assert_eq!(after_fields, fields, "{axis:?} changed ambient fields");
+            }
+            assert_eq!(surface_projection(&terrain, &climate), original_surface);
+        }
+    }
+
+    #[test]
+    fn wind_and_derived_current_independently_drive_movement() {
+        let (world, terrain, climate) = fixture();
+        let original_surface = surface_projection(&terrain, &climate);
+        let fields = derive_fields(&world, &terrain, &climate);
+        let bands = climate.band_count().expect("fixture has circulation");
+        let vertex = terrain
+            .geosphere()
+            .vertices()
+            .find(|&v| {
+                hornvale_climate::ocean_current(
+                    terrain.geosphere(),
+                    &|v| terrain.is_ocean(v),
+                    v,
+                    bands,
+                ) != [0.0; 3]
+            })
+            .expect("VACUOUS: fixture has no ocean-current source");
+        for (axis, mobility) in [
+            (SourceAxis::Wind, SkyMobility::Drifting),
+            (SourceAxis::Current, SkyMobility::CurrentFollowing),
+        ] {
+            // Hold identity, origin, footprint, stocks and mobility fixed in
+            // both arms. Only the sampled flow value is perturbed.
+            let mut territory = make_territory(&world, &fields, vec![vertex], 8_000.0, false);
+            territory.phenotype.mobility = mobility;
+            let run = || {
+                let mut territories = vec![territory.clone()];
+                crate::skyworld_propagation::derive_movement_and_propagation(
+                    &world,
+                    &terrain,
+                    &climate,
+                    &fields,
+                    &SkyWorldConfig {
+                        trajectory_samples: 2,
+                        ..config()
+                    },
+                    &mut territories,
+                );
+                territories.remove(0)
+            };
+            let before = run();
+            let after = with_source(axis, run);
+            assert_ne!(
+                before.trajectory[1].position.surface, after.trajectory[1].position.surface,
+                "{axis:?} did not change the next surface"
+            );
+            assert_eq!(before.origin, after.origin);
+            assert_eq!(before.phenotype, after.phenotype);
+            assert_eq!(before.stocks, after.stocks);
+            assert_eq!(before.trajectory[0], after.trajectory[0]);
+            assert_eq!(
+                before.trajectory[1].position.altitude_m,
+                after.trajectory[1].position.altitude_m
+            );
+            assert_eq!(surface_projection(&terrain, &climate), original_surface);
+        }
+    }
+
+    #[test]
+    fn altitude_changes_profile_without_changing_independent_forcing() {
+        let (world, terrain, climate) = fixture();
+        let original_surface = surface_projection(&terrain, &climate);
+        let fields = derive_fields(&world, &terrain, &climate);
+        let lower = fields.at_altitude(4_000.0);
+        let upper = fields.at_altitude(8_000.0);
+        assert_ne!(lower.altitude_m, upper.altitude_m);
+        assert!(upper.temperature_c < lower.temperature_c);
+        assert!(upper.pressure < lower.pressure);
+        assert!(upper.density < lower.density);
+        assert!(upper.moisture < lower.moisture);
+        assert!(upper.high_sky_radiation > lower.high_sky_radiation);
+        assert!(upper.aether > lower.aether);
+        assert_ne!(upper.wind, lower.wind);
+        assert_eq!(upper.lapse_rate_c_per_km, lower.lapse_rate_c_per_km);
+        assert_eq!(upper.lunar_forcing, lower.lunar_forcing);
+        assert_eq!(upper.stellar_forcing, lower.stellar_forcing);
+        assert_eq!(derive_fields(&world, &terrain, &climate), fields);
+        assert_eq!(surface_projection(&terrain, &climate), original_surface);
     }
 
     fn reset_substrate_calls() {
@@ -1129,6 +1438,31 @@ mod tests {
             terrain.geosphere().vertex_count() * 2
         );
         assert_eq!(inactive_work.surface_vertices, 81_924);
+        assert_eq!(
+            inactive_work.propagation_indexes, 1,
+            "even an empty overlay builds the index"
+        );
+        assert_eq!(inactive_work.physical_neighbors, 0);
+        assert_eq!(inactive_work.expansion_neighbors, 0);
+
+        let single = SkyWorldConfig {
+            max_projected_fraction: 1.5 / terrain.geosphere().vertex_count() as f64,
+            trajectory_samples: 2,
+            ..config()
+        };
+        reset_skyworld_work();
+        let single_world = skyworld_from(&world, &terrain, &climate, single);
+        let single_work = skyworld_work();
+        assert_eq!(single_world.territories.len(), 1);
+        assert_eq!(single_work.territories, 1);
+        assert_eq!(single_work.trajectory_samples, 2);
+        assert_eq!(single_work.propagation_indexes, 1);
+        assert_eq!(single_work.surface_vertices, 122_886);
+        assert_eq!(single_work.physical_neighbors, 0);
+        assert!(single_work.expansion_neighbors > 0);
+        assert_eq!(single_work.adjacency_pairs, 2);
+        assert_eq!(single_work.movement_candidates, 6);
+        assert_eq!(single_work.expansion_neighbors, 240);
 
         reset_skyworld_work();
         let short_world = skyworld_from(&world, &terrain, &climate, short);
@@ -1142,6 +1476,13 @@ mod tests {
             short_world.territories.len() * 2
         );
         assert_eq!(short_work.trajectory_samples, 4);
+        assert_eq!(short_work.propagation_indexes, 1);
+        assert!(short_work.physical_neighbors > 0);
+        assert!(short_work.expansion_neighbors > single_work.expansion_neighbors);
+        assert_eq!(short_work.adjacency_pairs, 8);
+        assert_eq!(short_work.movement_candidates, 12);
+        assert_eq!(short_work.physical_neighbors, 7_514);
+        assert_eq!(short_work.expansion_neighbors, 19_824);
 
         reset_skyworld_work();
         let long_world = skyworld_from(&world, &terrain, &climate, long);
@@ -1159,18 +1500,40 @@ mod tests {
         );
         assert_eq!(long_work.surface_vertices, 122_886);
         assert_eq!(long_work.surface_vertices, short_work.surface_vertices);
+        assert_eq!(long_work.propagation_indexes, 1);
+        assert!(long_work.physical_neighbors > short_work.physical_neighbors);
+        assert!(long_work.expansion_neighbors > short_work.expansion_neighbors);
+        assert!(long_work.movement_candidates > short_work.movement_candidates);
+        assert!(long_work.movement_candidates <= 2 * 7 * 6);
+        assert_eq!(long_work.adjacency_pairs, 32);
+        assert_eq!(long_work.movement_candidates, 84);
+        assert_eq!(long_work.physical_neighbors, 30_063);
+        assert_eq!(long_work.expansion_neighbors, 79_296);
 
-        reset_skyworld_work();
-        for detail in [
-            crate::SkyWorldDetail::Planet,
-            crate::SkyWorldDetail::Regional,
-            crate::SkyWorldDetail::Habitat,
+        let mut render_counts = Vec::new();
+        for (detail, marks, stamps) in [
+            (crate::SkyWorldDetail::Planet, 736, 724),
+            (crate::SkyWorldDetail::Regional, 2_616, 1_060),
+            (crate::SkyWorldDetail::Habitat, 2_616, 1_060),
         ] {
+            reset_skyworld_work();
             let _ = render_skyworld_png(&long_world, &terrain, detail);
+            let work = skyworld_work();
+            assert_eq!(work.rasters, 1);
+            assert_eq!(work.raster_pixels, 32_768);
+            assert_eq!(work.render_surface_vertices, 81_924);
+            assert_eq!(work.render_indexes, 1);
+            assert_eq!(work.propagation_indexes, 0);
+            assert_eq!(work.trajectory_samples, 0);
+            assert_eq!(work.overlay_marks, marks);
+            assert_eq!(work.occupied_vertices, 2_598);
+            assert_eq!(work.stamp_candidates, stamps);
+            render_counts.push(work);
         }
-        let render_work = skyworld_work();
-        assert_eq!(render_work.rasters, 3);
-        assert_eq!(render_work.raster_pixels, 3 * 256 * 128);
-        assert_eq!(render_work.raster_pixels, 98_304);
+        assert!(render_counts[0].overlay_marks < render_counts[1].overlay_marks);
+        assert_eq!(
+            render_counts[1], render_counts[2],
+            "habitat PNG changes palette, not traversal"
+        );
     }
 }

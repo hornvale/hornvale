@@ -192,6 +192,8 @@ pub(crate) fn derive_movement_and_propagation(
     config: &SkyWorldConfig,
     territories: &mut [SkyTerritory],
 ) {
+    #[cfg(test)]
+    crate::skyworld::record_skyworld_work(|work| work.propagation_indexes += 1);
     let context = TrajectoryContext {
         world,
         terrain,
@@ -290,6 +292,10 @@ fn next_surface(
     let wind = bands
         .map(|count| prevailing_wind(geo, surface, count))
         .unwrap_or([0.0; 3]);
+    #[cfg(test)]
+    let wind = wind.map(|value| {
+        crate::skyworld::tests::source(crate::skyworld::tests::SourceAxis::Wind, value)
+    });
     let current = bands
         .map(|count| {
             ocean_current(
@@ -300,6 +306,10 @@ fn next_surface(
             )
         })
         .unwrap_or([0.0; 3]);
+    #[cfg(test)]
+    let current = current.map(|value| {
+        crate::skyworld::tests::source(crate::skyworld::tests::SourceAxis::Current, value)
+    });
     let driver = movement_driver(territory.phenotype.mobility, wind, current, time_slice);
     let here = geo.position(surface);
     let mut candidates: Vec<Vertex> = geo.neighbors(surface).to_vec();
@@ -307,6 +317,8 @@ fn next_surface(
     let mut best = surface;
     let mut best_score = f64::NEG_INFINITY;
     for candidate in candidates {
+        #[cfg(test)]
+        crate::skyworld::record_skyworld_work(|work| work.movement_candidates += 1);
         let there = geo.position(candidate);
         let direction = [there[0] - here[0], there[1] - here[1], there[2] - here[2]];
         let key = format!(
@@ -378,6 +390,8 @@ fn footprint_with_size(
         let current = frontier[cursor];
         cursor += 1;
         for &neighbor in terrain.geosphere().neighbors(current) {
+            #[cfg(test)]
+            crate::skyworld::record_skyworld_work(|work| work.physical_neighbors += 1);
             if projected.insert(neighbor) {
                 frontier.push(neighbor);
                 if projected.len() == target_size {
@@ -402,6 +416,8 @@ fn expand_footprint(
         let mut next = Vec::new();
         for current in frontier {
             for &neighbor in terrain.geosphere().neighbors(current) {
+                #[cfg(test)]
+                crate::skyworld::record_skyworld_work(|work| work.expansion_neighbors += 1);
                 if projected.insert(neighbor) {
                     next.push(neighbor);
                 }
@@ -458,6 +474,8 @@ fn derive_adjacency(territories: &mut [SkyTerritory]) {
                 .iter()
                 .enumerate()
                 .filter_map(|(other_index, other_samples)| {
+                    #[cfg(test)]
+                    crate::skyworld::record_skyworld_work(|work| work.adjacency_pairs += 1);
                     if other_index == territory_index {
                         return None;
                     }

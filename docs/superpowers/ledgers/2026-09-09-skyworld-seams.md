@@ -2,7 +2,7 @@
 
 **Campaign:** Skyworld Seams · **Branch:** `campaign/skyworld`
 **Parent campaign:** `docs/superpowers/ledgers/2026-09-09-the-skyworld.md`
-**Status:** Task 4 contract probes and seam-audit capture complete; awaiting
+**Status:** Tasks 1–4 complete with broad-review corrections; awaiting
 the campaign's normal review and close process.
 
 This ledger records the follow-up seam-audit campaign separately from the
@@ -35,8 +35,9 @@ planet-by-time atmospheric simulation would violate the bounded-work goal.
 
 ## #2 [G5] — Does the environmental propagation matrix prove its dependencies?
 
-**Decision:** accept the propagation matrix after two review-driven fix
-rounds. Surface/climate perturbations now prove source inequality before
+**Historical decision:** the scoped review accepted the propagation matrix
+after two fix rounds. Broad review found that the climate fixture still
+coupled several axes; #5 supplies the independent evidence. Surface/climate perturbations now prove source inequality before
 checking dependent overlay outputs; the preservation probe regenerates both
 fixtures and verifies terrain, climate, and `BiomeExpr` remain intact.
 
@@ -55,7 +56,9 @@ fact, stream roster, or cross-realm implementation was added.
 
 ## #3 [G5] — Does Skyworld work scale with requested materialization?
 
-**Decision:** accept the cost evidence after one review-driven fix round.
+**Historical decision:** the scoped review accepted the cost evidence after
+one fix round. Broad review found omitted work; #5 extends the counters and
+limits the claims to what they measure.
 Test-only loop counters now measure actual generation, trajectory, raster, and
 pixel-loop work; the probes compare inactive/active territory counts, low/high
 trajectory samples, and all three render details. The previous returned-state
@@ -108,6 +111,118 @@ the measured seam.
 implementation, does not add vents, currents, cave energy, aether bands, or
 new projection rules, and does not add organisms, species, lifecycle mutation,
 tethering, mutable atmosphere, a census, a build rung, or a save-format fact.
+
+
+## #5 [G5] — What did the four-finding broad review correct?
+
+**Inputs:** test-only overrides change copied values immediately after the
+real provider/function read. The helper asserts that the requested axis
+actually changed and all other hooked axes did not, before the caller may
+assert downstream differences. Every probe snapshots the surface projection,
+including terrain elevation/ocean/unrest and climate temperature, moisture,
+storm propensity, cached current, and `BiomeExpr`.
+
+| Isolated input | Perturbation | Observed dependency and preserved quantities |
+|---|---|---|
+| Mean temperature | +10 °C at each consumed vertex | Ambient temperature rises by 10 °C; all other fields and all territories remain equal |
+| Moisture | Halve each consumed value | Ambient moisture and altitude-derived cloud water fall; distribution scores change; unrelated ambient fields and drawn altitudes remain equal |
+| Terrain elevation | +500 m at the score input | Distribution scores change; independently drawn altitude and all ambient fields remain equal |
+| Storm propensity | Halve the score input | Distribution scores change; independently drawn altitude and all ambient fields remain equal |
+| Prevailing wind | Reverse the vector | Ambient wind reverses; shear magnitude and unrelated fields remain equal; a fixed drifting territory changes its next surface |
+| Derived ocean current | Reverse the vector | A fixed current-following territory changes its next surface; origin, phenotype, stocks, genesis sample, and sampled altitude remain equal |
+| Habitat altitude | 4,000 → 8,000 m | Temperature, pressure, density and moisture fall; radiation and aether rise; wind changes; lapse rate and astronomical forcing remain equal |
+
+The movement tests hold mobility, identity, starting footprint, origin and
+stocks fixed in both arms. They consume the real circulation functions over
+the same generated substrate. Radiation/aether isolation and the pure edifice
+score test remain in the existing suites.
+
+**Input non-results:** `GeneratedClimate::current_at` is not read by
+`next_surface`; it derives `ocean_current` from the mesh, ocean mask and
+band count instead. No cached-current independence is claimed. Temperature is
+currently a profile input, not a stock/distribution input. Terrain elevation
+does not set the independently drawn habitat altitude. These experiments
+isolate the Skyworld consumption seam, not the upstream physical consistency
+of a hypothetical regenerated climate. The renamed
+`ocean_fraction_changes_climate_and_overlay_together` remains a coupled
+integration probe.
+
+**Work:** `bounded_work_counts_generation_and_rendering_at_their_loops`
+asserts these values on the 40,962-vertex seed-42 unit fixture. The counters
+increment at actual loop bodies; index counts increment at the actual
+construction sites. Index-internal visits are not counted.
+
+| Configuration | Territories | Total samples | Surface-scan visits | Propagation indexes | Movement candidates | Physical neighbor visits | Expansion neighbor visits | Adjacency-pair checks |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Inactive, fraction 0 | 0 | 0 | 81,924 | 1 | 0 | 0 | 0 | 0 |
+| One vertex ceiling, 2 samples | 1 | 2 | 122,886 | 1 | 6 | 0 | 240 | 2 |
+| Fraction 0.10, 2 samples | 2 | 4 | 122,886 | 1 | 12 | 7,514 | 19,824 | 8 |
+| Fraction 0.10, 8 samples | 2 | 16 | 122,886 | 1 | 84 | 30,063 | 79,296 | 32 |
+
+The one-territory case sets fraction to `1.5 / vertex_count`, producing a
+one-vertex ceiling. All cases use propagation radius 2. Changing the fraction
+also changes footprint size, so the one-versus-two-territory comparison is
+not an isolated measurement of per-territory cost. The two-versus-eight-sample
+comparison holds territory count and coverage configuration fixed.
+
+| PNG detail, two territories/eight samples | Surface-map visits | Render indexes | Raster pixels | Overlay marks | Occupied-set input visits | Stamp candidates |
+|---|---:|---:|---:|---:|---:|---:|
+| Planet | 81,924 | 1 | 32,768 | 736 | 2,598 | 724 |
+| Regional | 81,924 | 1 | 32,768 | 2,616 | 2,598 | 1,060 |
+| Habitat | 81,924 | 1 | 32,768 | 2,616 | 2,598 | 1,060 |
+
+Each row is one raster and zero generation samples or propagation indexes.
+The original zero-terrain/zero-climate-reconstruction probes remain green.
+Regional and Habitat PNGs change palette, not traversal counts.
+
+**Cost scope:** generation retains fixed substrate work, including score
+sorting; each PNG builds two full surface maps plus an index. That is not a
+terrain/climate reconstruction, but it is real planet-size work per render.
+Footprint work depends on retained body size and expansion radius as well as
+samples; a sufficiently large radius can cover the globe. Adjacency compares
+territory pairs per sample (including the self check), and corridor membership
+can scan a sample-derived route. The counts do not establish a universal
+linear bound or exclude every possible future uninstrumented allocation.
+Index internals, sorting, set/map comparisons and copying, corridor membership,
+ordinary/diagnostic string formatting, and PNG encoding are outside these
+totals. No dense runtime planet-by-time structure or cache was introduced.
+
+**BuildDepth:** the readable source contract now keeps every nonempty,
+non-documentation line and compares it with the four approved unit variants.
+It rejects unknown syntax rather than filtering it away. Regression cases
+cover a new unit variant, tuple and struct payloads, an assignment, a missing
+trailing comma, and an attributed payload variant.
+
+**Documentation:** every completed Task 1–3 step is checked in the plan and
+local task briefs. Parent ledger #10 now acknowledges the production
+`score_distribution_environment` extraction at `4d9f3005b`. Plan, spec,
+briefs, this ledger and reconciliation point to the same evidence and limits.
+The local briefs remain untracked execution material; this ledger is durable.
+
+**Red evidence:** the new BuildDepth case failed on `Sky(u8),`; the identity
+perturbation helper failed with `VACUOUS: Temperature source never changed`;
+the uninstrumented propagation-index counter failed with actual 0, expected
+1. Hooks/counters were then implemented and the unit suite passed. The
+counter tables above are asserted values, not print-only measurements.
+
+**Verification:** final correction checks passed:
+
+- `cargo test -p hornvale-worldgen --lib --test suite -- skyworld`: 10 unit
+  tests and 35 integration tests passed, zero failures.
+- `cargo test -p hornvale --test suite -- docs_consistency`: 41 passed,
+  zero failures.
+- `HV_TIMINGS_LEDGER=/tmp/skyworld-review-fix.p5jXVV/timings.md timeout --foreground 3600s make gate-commit`:
+  exit 0, wall 119.546 s; formatting, workspace Clippy, audits and report
+  freshness passed; all four subfloor chunks passed (1,425 / 1,394 / 1,305 /
+  362 test executions). The timeout is 3,600,000 ms. Gate output is retained
+  in `/tmp/skyworld-review-fix.p5jXVV/gate-commit.log`.
+
+The existing timing override records this run separately so the pre-existing
+`docs/timings.md` drift stays byte-identical and unstaged.
+
+**Explicit non-results:** no census, new realm, lifecycle mutation, organisms,
+species, tethering, save fact, build rung, public runtime diagnostic API, or
+new seeded draw. Campaign review and close remain pending.
 
 ## Follow-ups
 

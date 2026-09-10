@@ -52,15 +52,15 @@
 - Consumes: `&World`, `&GeneratedTerrain`, `&GeneratedClimate`, the built geosphere, existing `Biome`/`BiomeExpr` projections, existing wind/current/climate accessors, and `Seed`-derived labeled streams.
 - Produces: `SkyWorldConfig`, `SkyWorld`, `SkyFields`, `SkyTerritory`, `SkyPhenotype`, `SkyLineage`, `SkyStocks`, `SkyPosition`, `SkyFootprint`, `SkyPropagation`, and `skyworld_from(world, terrain, climate, config) -> SkyWorld`.
 
-- [ ] **Step 1: Write the failing data-model tests.** Add tests that construct the same built fixture twice and assert that the future public result can support byte-stable comparison; assert that the test fixture exposes at least one land and one ocean projection candidate; assert that a coverage count can be compared against `floor(vertex_count * 0.10)` without replacing the underlying surface.
+- [x] **Step 1: Write the failing data-model tests.** Add tests that construct the same built fixture twice and assert that the future public result can support byte-stable comparison; assert that the test fixture exposes at least one land and one ocean projection candidate; assert that a coverage count can be compared against `floor(vertex_count * 0.10)` without replacing the underlying surface.
 
-- [ ] **Step 2: Run the focused tests and verify they fail for the missing module and entry point.**
+- [x] **Step 2: Run the focused tests and verify they fail for the missing module and entry point.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld`
 
   Expected: compilation failure identifying the not-yet-defined Skyworld module or public types.
 
-- [ ] **Step 3: Add stable stream labels and compact public types.** Define labels under the worldgen-owned stream roster, using names such as `SKYWORLD_COVERAGE`, `SKYWORLD_DISTRIBUTION`, `SKYWORLD_ATMOSPHERE`, `SKYWORLD_PHENOTYPE`, `SKYWORLD_LINEAGE`, and `SKYWORLD_MOVEMENT`, each with a versioned path and documentation explaining its independent concern. Define plain `Clone`, `Debug`, `PartialEq` data types with explicit scalar fields:
+- [x] **Step 3: Add stable stream labels and compact public types.** Define labels under the worldgen-owned stream roster, using names such as `SKYWORLD_COVERAGE`, `SKYWORLD_DISTRIBUTION`, `SKYWORLD_ATMOSPHERE`, `SKYWORLD_PHENOTYPE`, `SKYWORLD_LINEAGE`, and `SKYWORLD_MOVEMENT`, each with a versioned path and documentation explaining its independent concern. Define plain `Clone`, `Debug`, `PartialEq` data types with explicit scalar fields:
 
   ```rust
   pub struct SkyWorldConfig {
@@ -101,17 +101,17 @@
 
   Keep numeric fields in the project's existing raw-compute/quantize-at-emit style and use ordered vectors rather than hash iteration.
 
-- [ ] **Step 4: Implement pure field derivation.** Derive altitude bands, pressure/density/lapse proxies, high-sky radiation, aether concentration, moisture, wind, shear, and lunar/stellar forcing from existing climate and astronomy values plus the Skyworld atmosphere stream. Make the radiation filter and aether availability independently testable: lower bands can retain moisture while losing high-sky radiation, and aether must not be inferred from radiation.
+- [x] **Step 4: Implement pure field derivation.** Derive altitude bands, pressure/density/lapse proxies, high-sky radiation, aether concentration, moisture, wind, shear, and lunar/stellar forcing from existing climate and astronomy values plus the Skyworld atmosphere stream. Make the radiation filter and aether availability independently testable: lower bands can retain moisture while losing high-sky radiation, and aether must not be inferred from radiation.
 
-- [ ] **Step 5: Implement bounded, mixed coverage and territory draws.** Draw a coverage target below the configured ceiling; choose both clustered and isolated territory seeds using ordered vertex traversal and existing terrain/ocean classification; assign each territory a compact phenotype, lineage, movement regime, stability profile, and initial orchard stocks. Ensure the fixed surface `Biome`/`BiomeExpr` data is read-only input and is never mutated or replaced.
+- [x] **Step 5: Implement bounded, mixed coverage and territory draws.** Draw a coverage target below the configured ceiling; choose both clustered and isolated territory seeds using ordered vertex traversal and existing terrain/ocean classification; assign each territory a compact phenotype, lineage, movement regime, stability profile, and initial orchard stocks. Ensure the fixed surface `Biome`/`BiomeExpr` data is read-only input and is never mutated or replaced.
 
-- [ ] **Step 6: Run the focused tests and add property tests for bounds and variation.**
+- [x] **Step 6: Run the focused tests and add property tests for bounds and variation.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld`
 
   Expected: PASS for same-seed equality, different-seed variation, coverage ceiling, mixed land/ocean projections, clustered/isolated representation, intact surface data, and independent atmospheric fields.
 
-- [ ] **Step 7: Commit the stage.**
+- [x] **Step 7: Commit the stage.**
 
   ```bash
   git add windows/worldgen/src/skyworld.rs windows/worldgen/src/lib.rs windows/worldgen/src/streams.rs windows/worldgen/tests/suite.rs windows/worldgen/tests/suite/skyworld.rs docs/superpowers/ledgers/2026-09-09-the-skyworld.md
@@ -141,29 +141,29 @@
 - Consumes: Stage 1 `SkyWorld`, `SkyTerritory`, world time, existing prevailing winds/ocean currents where applicable, and `ResourceAxis`/`ResourceKind` semantics from `hornvale-kernel::ecology`.
 - Produces: the expanded `SkyStocks` beginning with `SkyStocks::plankton` as the productivity value, `SkyTrajectorySample`, `SkyFootprint`, the existing `SkyPropagation` struct's explicit `local`, `corridors`, and `events` channels, `SkyAdjacency`, `trajectory_at(territory_id, time_slice)`, and `propagation_at(territory_id, detail)`.
 
-- [ ] **Step 1: Write failing orchard-chain tests.** Assert that zero aether, zero high-sky radiation, or zero moisture independently prevents sky-plankton productivity; assert that positive values produce plankton, fungal/root support, soil fertility, canopy biomass, flowers, pollination, and fruit in dependency order; assert that stock quantities remain finite and bounded.
+- [x] **Step 1: Write failing orchard-chain tests.** Assert that zero aether, zero high-sky radiation, or zero moisture independently prevents sky-plankton productivity; assert that positive values produce plankton, fungal/root support, soil fertility, canopy biomass, flowers, pollination, and fruit in dependency order; assert that stock quantities remain finite and bounded.
 
-- [ ] **Step 2: Run the orchard tests to verify the prerequisite chain is absent.**
+- [x] **Step 2: Run the orchard tests to verify the prerequisite chain is absent.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld::orchard`
 
   Expected: compilation failure or failed assertions for the missing productivity and stock derivation.
 
-- [ ] **Step 3: Implement aggregate orchard stocks.** Add a fixed stock vector with named fields for plankton, fungal/root support, soil fertility, canopy biomass, flowers, pollination capacity, fruit, cloud water, detritus, seed/spore reserve, and animal forage. Derive each from the previous stage and the sampled atmospheric fields; use existing `Field`/`Stock` vocabulary in documentation and do not add individual microbe or plant entities.
+- [x] **Step 3: Implement aggregate orchard stocks.** Add a fixed stock vector with named fields for plankton, fungal/root support, soil fertility, canopy biomass, flowers, pollination capacity, fruit, cloud water, detritus, seed/spore reserve, and animal forage. Derive each from the previous stage and the sampled atmospheric fields; use existing `Field`/`Stock` vocabulary in documentation and do not add individual microbe or plant entities.
 
-- [ ] **Step 4: Write failing trajectory and footprint tests.** Assert that a territory’s sampled position is stable for the same `(world, territory, time slice)`, changes for a different seed or movement profile, remains ordered, and yields distinct physical, exchange, and influence footprints. Assert that vertical adjacency projects onto the current land or ocean cell while lateral adjacency is limited to reachable territory/corridor candidates.
+- [x] **Step 4: Write failing trajectory and footprint tests.** Assert that a territory’s sampled position is stable for the same `(world, territory, time slice)`, changes for a different seed or movement profile, remains ordered, and yields distinct physical, exchange, and influence footprints. Assert that vertical adjacency projects onto the current land or ocean cell while lateral adjacency is limited to reachable territory/corridor candidates.
 
-- [ ] **Step 5: Implement coarse deterministic movement.** Sample existing wind/current-like fields along a trajectory using the movement stream, with lunar and stellar forcing as modulation rather than a fluid solver. Store only requested trajectory samples; derive the physical projection at each sample from the geosphere’s nearest vertices. Use explicit vertex/id ordering and `f64::total_cmp` where a choice depends on floating-point scores.
+- [x] **Step 5: Implement coarse deterministic movement.** Sample existing wind/current-like fields along a trajectory using the movement stream, with lunar and stellar forcing as modulation rather than a fluid solver. Store only requested trajectory samples; derive the physical projection at each sample from the geosphere’s nearest vertices. Use explicit vertex/id ordering and `f64::total_cmp` where a choice depends on floating-point scores.
 
-- [ ] **Step 6: Implement the three bounded propagation forms.** Use the existing `SkyPropagation` struct's `local` channel for a bounded local kernel, its `corridors` channel for ordered wind corridors carrying seeds, spores, plankton, and routes, and its `events` channel for sparse bloom, storm, and collapse records. Do not broadcast a territory’s influence to every planet cell. Keep the channels explicit so consumers cannot confuse a corridor with a dense field.
+- [x] **Step 6: Implement the three bounded propagation forms.** Use the existing `SkyPropagation` struct's `local` channel for a bounded local kernel, its `corridors` channel for ordered wind corridors carrying seeds, spores, plankton, and routes, and its `events` channel for sparse bloom, storm, and collapse records. Do not broadcast a territory’s influence to every planet cell. Keep the channels explicit so consumers cannot confuse a corridor with a dense field.
 
-- [ ] **Step 7: Run focused tests and a small scaling probe.**
+- [x] **Step 7: Run focused tests and a small scaling probe.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld`
 
   Expected: PASS for prerequisite productivity, deterministic/cache-independent trajectory, footprint separation, adjacency, propagation-form separation, and a probe showing work grows with territory/sample count rather than full planet × time grid.
 
-- [ ] **Step 8: Commit the stage.**
+- [x] **Step 8: Commit the stage.**
 
   ```bash
   git add windows/worldgen/src/skyworld.rs windows/worldgen/src/skyworld_propagation.rs windows/worldgen/src/lib.rs windows/worldgen/tests/suite/skyworld.rs docs/superpowers/ledgers/2026-09-09-the-skyworld.md
@@ -194,27 +194,27 @@
 - Consumes: `&SkyWorld`, existing terrain/climate surface readouts, `SkyWorldDetail::{Planet, Regional, Habitat}`, and an observer-independent render request.
 - Produces: `render_skyworld_png(&SkyWorld, &GeneratedTerrain, detail) -> Vec<u8>`, `render_skyworld_readout(&SkyWorld, detail) -> String`, and a diagnostic-only readout that names atmospheric/resource fields separately from the ordinary phenomenon view.
 
-- [ ] **Step 1: Write failing render tests.** Assert that the same generated input yields byte-identical PNG and text output; assert that planet detail omits full orchard internals, regional detail includes physical projection and broad route/influence, and habitat detail includes phenotype, lifecycle, and stocks; assert that ordinary output contains consequences such as shadow/spores/rain/cloud contact only when present and does not contain raw aether/radiation causes.
+- [x] **Step 1: Write failing render tests.** Assert that the same generated input yields byte-identical PNG and text output; assert that planet detail omits full orchard internals, regional detail includes physical projection and broad route/influence, and habitat detail includes phenotype, lifecycle, and stocks; assert that ordinary output contains consequences such as shadow/spores/rain/cloud contact only when present and does not contain raw aether/radiation causes.
 
-- [ ] **Step 2: Run focused rendering tests and verify the renderer is absent.**
+- [x] **Step 2: Run focused rendering tests and verify the renderer is absent.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld::render`
 
   Expected: compilation failure for the missing render module or functions.
 
-- [ ] **Step 3: Implement the ordinary surface-plus-overlay renderer.** Reuse the existing equirectangular PNG and nearest-vertex conventions. Paint the ordinary land/sea base first, then the selected Skyworld physical footprint, then optional exchange/influence indicators according to detail. Keep palette selection exhaustive over phenotype/lifecycle projections and use ordered territory traversal.
+- [x] **Step 3: Implement the ordinary surface-plus-overlay renderer.** Reuse the existing equirectangular PNG and nearest-vertex conventions. Paint the ordinary land/sea base first, then the selected Skyworld physical footprint, then optional exchange/influence indicators according to detail. Keep palette selection exhaustive over phenotype/lifecycle projections and use ordered territory traversal.
 
-- [ ] **Step 4: Implement diagnostic and text readouts.** Expose a separate diagnostic view for pressure, radiation, aether, wind, moisture, stocks, and propagation form. The ordinary readout should describe visible consequences and the orchard’s projected presence without claiming that an observer sees hidden causal fields.
+- [x] **Step 4: Implement diagnostic and text readouts.** Expose a separate diagnostic view for pressure, radiation, aether, wind, moisture, stocks, and propagation form. The ordinary readout should describe visible consequences and the orchard’s projected presence without claiming that an observer sees hidden causal fields.
 
-- [ ] **Step 5: Add level-of-detail materialization.** At planet detail, rasterize coverage masks, centroids, broad corridors, and sparse events. At regional detail, materialize physical footprint, projection, local influence, and route. At habitat detail, include the compact orchard state. Avoid rebuilding unrelated territory geometry when one trajectory sample changes.
+- [x] **Step 5: Add level-of-detail materialization.** At planet detail, rasterize coverage masks, centroids, broad corridors, and sparse events. At regional detail, materialize physical footprint, projection, local influence, and route. At habitat detail, include the compact orchard state. Avoid rebuilding unrelated territory geometry when one trajectory sample changes.
 
-- [ ] **Step 6: Run focused render tests and inspect generated bytes.**
+- [x] **Step 6: Run focused render tests and inspect generated bytes.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld`
 
   Expected: PASS for byte identity, ordinary/diagnostic separation, detail-specific fields, preserved surface, and distinct footprint rendering.
 
-- [ ] **Step 7: Commit the stage.**
+- [x] **Step 7: Commit the stage.**
 
   ```bash
   git add windows/worldgen/src/skyworld_render.rs windows/worldgen/src/lib.rs windows/worldgen/tests/suite/skyworld.rs docs/superpowers/ledgers/2026-09-09-the-skyworld.md

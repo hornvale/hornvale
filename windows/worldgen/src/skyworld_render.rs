@@ -30,6 +30,8 @@ fn mark(
     color: [u8; 3],
 ) {
     for vertex in vertices {
+        #[cfg(test)]
+        crate::skyworld::record_skyworld_work(|work| work.overlay_marks += 1);
         colors.insert(vertex, color);
     }
 }
@@ -39,6 +41,8 @@ fn pixels(skyworld: &SkyWorld, terrain: &GeneratedTerrain, detail: SkyWorldDetai
     crate::skyworld::record_raster();
     let geo = terrain.geosphere();
     let base = VertexMap::from_fn(geo, |vertex| {
+        #[cfg(test)]
+        crate::skyworld::record_skyworld_work(|work| work.render_surface_vertices += 1);
         if terrain.is_ocean(vertex) {
             [24, 72, 112]
         } else {
@@ -133,7 +137,13 @@ fn pixels(skyworld: &SkyWorld, terrain: &GeneratedTerrain, detail: SkyWorldDetai
             }
         }
     }
-    let colors = base.map_indexed(|vertex, base| overlays.get(&vertex).copied().unwrap_or(*base));
+    let colors = base.map_indexed(|vertex, base| {
+        #[cfg(test)]
+        crate::skyworld::record_skyworld_work(|work| work.render_surface_vertices += 1);
+        overlays.get(&vertex).copied().unwrap_or(*base)
+    });
+    #[cfg(test)]
+    crate::skyworld::record_skyworld_work(|work| work.render_indexes += 1);
     let index = NearestVertexIndex::new(geo);
     let mut out = Vec::with_capacity((WIDTH * HEIGHT * 3) as usize);
     for py in 0..HEIGHT {
@@ -158,9 +168,15 @@ fn pixels(skyworld: &SkyWorld, terrain: &GeneratedTerrain, detail: SkyWorldDetai
                 .chain(t.exchange.projected.iter())
                 .chain(t.influence.local.iter())
                 .copied()
+                .inspect(|_| {
+                    #[cfg(test)]
+                    crate::skyworld::record_skyworld_work(|work| work.occupied_vertices += 1);
+                })
         })
         .collect();
     for (&vertex, &color) in &overlays {
+        #[cfg(test)]
+        crate::skyworld::record_skyworld_work(|work| work.stamp_candidates += 1);
         if detail != SkyWorldDetail::Planet && occupied.contains(&vertex) {
             continue;
         }

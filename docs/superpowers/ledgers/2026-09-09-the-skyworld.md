@@ -286,40 +286,38 @@ was made.
 
 ## #10 [G5] — Do the existing environmental derivations propagate independently?
 
-**Decision:** retain the existing pure Skyworld derivations unchanged. Task 2
-adds a one-axis-at-a-time test matrix over radiation, aether, surface climate,
-tectonic features, and altitude while preserving the read-only surface
-projection.
+**Decision:** retain the existing derivation behavior. Task 2 extracted the
+pure `score_distribution_environment` helper in `skyworld.rs` at
+`4d9f3005b`, passing the real `has_edifice` value and preserving draw order.
+This was a production source change, without a new public API.
 
-**Why:** the focused seam filter passed all seven probes on the first run.
-Radiation and aether independently change only their respective altitude
-fields; terrain-derived climate changes reach temperature and moisture while
-world-seeded aether remains stable; and the `plates=2` versus `plates=64`
-fixtures change tectonic-feature count and derived coverage without adding a
-fixed placement rule. An implementation change would therefore widen the
-composition root without correcting an observed missing dependency.
+**Why:** radiation and aether can be varied separately at the altitude-field
+seam, but ocean-fraction and plate-count fixtures change several terrain and
+climate values together. They remain joint integration probes. The broad-review
+fix supplies test-only overrides of copied temperature, moisture, elevation,
+storm, wind, and derived-current values at their actual consumption sites,
+checks dependent outputs individually, and preserves the provider projections.
+The dedicated seam ledger #5 records measurements and explicit non-results.
 
-**Alternatives discarded:** a Skyworld-local climate pin or replacement
-`BiomeExpr` would duplicate climate ownership; direct tectonic placement would
-turn environmental scoring into authored geography; a production seam wrapper
-would repeat Task 1's rejected abstraction.
+**Alternatives discarded:** a production climate pin, replacement `BiomeExpr`,
+public wrapper, or fixed tectonic placement would widen the model without
+fixing the evidence gap. The immutable provider references already express
+ownership; the test overrides are compiled only under `cfg(test)`.
 
-**Ideonomy passes / overturns:** one dependency-separation pass over surface,
-high-sky, and tectonic axes; no overturn. It confirmed that altitude fields
-are the independent high-sky input surface, while terrain pins remain the
-appropriate source of climate and tectonic perturbations.
+**Ideonomy passes / overturns:** the earlier dependency-separation pass
+identified altitude fields as the high-sky seam. Its suggestion that terrain
+pins prove climate independence was too broad; those pins support joint
+integration evidence only.
 
-**Fix-round evidence:** the tectonic probe now finds a shared vertex whose
-exact `hazard::has_edifice` value changes under the plate perturbation, then
-requires its low-coverage Skyworld selection to change. Replacing the
-production volcanic bias with zero makes that probe fail. The preservation
-probe now regenerates both terrain/climate/Skyworld fixtures, snapshots each
-terrain/climate/`BiomeExpr` projection around generation, and observes only
-the dependent overlay climate fields change.
+**Fix-round evidence:** the edifice helper proves the isolated `0.25`
+contribution. The plate fixture verifies integration but does not isolate
+edifice from coast, elevation, or climate. Likewise, the renamed
+`ocean_fraction_changes_climate_and_overlay_together` probe is explicitly
+coupled; source-module probes now supply the independent evidence.
 
-**Capture:** no `skyworld.rs`, `BuildDepth`, save fact, stream, domain, biome,
-organism, lifecycle, or census change was required. The matrix remains in the
-test-only seam sampler.
+**Capture:** `skyworld.rs` changed through the score-helper extraction and
+later `cfg(test)` probes. No `BuildDepth`, save fact, stream, domain, biome,
+organism, lifecycle, or census change was required.
 
 ## Rejected for this campaign
 
@@ -338,8 +336,9 @@ where they reset and read the existing counters without exposing runtime API.
 Generation, all exact trajectory/propagation queries, and every PNG/ordinary
 readout/diagnostic-readout detail path each recorded zero additional terrain
 or climate constructions; repeated queries and renders remained identical and
-left the generated `SkyWorld` equal to its snapshot. The focused cost command
-printed `territories=2 short_samples=4 long_samples=16 sparse_records=1094
+left the generated `SkyWorld` equal to its snapshot. The initial returned-state
+diagnostic (superseded by #12 and dedicated seam ledger #5) printed
+`territories=2 short_samples=4 long_samples=16 sparse_records=1094
 render_pixels=[32768, 32768, 32768]`: samples follow the requested two/eight
 per-territory count, sparse state remains below the 5,136 vertex-by-time
 comparison, and each detail materializes the fixed 256×128 requested raster
@@ -359,8 +358,9 @@ and that the existing direct references already establish ownership.
 **Capture:** `skyworld_generation_reuses_passed_substrate`,
 `rendering_does_not_reconstruct_substrate`,
 `queries_do_not_consume_randomness`, and
-`detail_changes_materialization_not_generation` are unit probes; the focused
-integration cost probe records the active territory/sample/pixel counts.
+`detail_changes_materialization_not_generation` are unit probes. The current
+work evidence is the loop-counter probe recorded in dedicated seam ledger #5;
+the old returned-state diagnostic is historical, not a work bound.
 
 ## #12 [G5] — Is bounded Skyworld work measured at actual loops?
 
@@ -371,7 +371,7 @@ and raster pixel loop body. The counter is compiled only under `cfg(test)`,
 has crate visibility solely for the propagation and renderer modules, and
 neither changes runtime output nor exposes an API.
 
-**Evidence:** the new unit probe first red-compiled with missing
+**Historical evidence (extended by dedicated seam ledger #5):** the new unit probe first red-compiled with missing
 `reset_skyworld_work`/`skyworld_work` helpers. Its green run independently
 asserts the seed-42 fixture's zero-territory configuration performs zero
 territory and trajectory work with 81,924 surface visits; its active
@@ -393,8 +393,11 @@ its reversibility (test-only, runtime, saved). It selected loop execution ×
 test-only as the only narrow, direct, reversible seam; no overturn.
 
 **Capture:** `skyworld::tests::bounded_work_counts_generation_and_rendering_at_their_loops`
-is the deterministic report: it asserts every ledger count directly, with no
-`println!` measurement claim remaining.
+now also asserts propagation-index construction, movement/footprint neighbor
+visits, adjacency comparisons, renderer surface-map visits, overlay marks,
+occupied-set visits, and stamp candidates. The dedicated seam ledger #5 is
+the current measurement and scope record; the earlier surface/pixel totals
+alone did not account for those loops.
 
 - A universal `sugar` renaming of world concepts.
 - Individual plankton or full atmospheric particles.
