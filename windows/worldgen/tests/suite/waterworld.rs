@@ -10,7 +10,7 @@ use hornvale_terrain::{GeneratedTerrain, TerrainPins, WaterKind};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, VentState, WaterSubstrate, WaterWorld, WaterWorldConfig,
     WaterWorldDetail, WaterWorldSnapshot, WorldComponents, build_world_to_with_artifacts,
-    climate_from, observe_waterworld, waterworld_from,
+    climate_from, observe_waterworld, observe_waterworld_snapshot, waterworld_from,
 };
 
 struct Fixture {
@@ -1568,4 +1568,106 @@ fn observation_keeps_ordinary_and_diagnostic_claims_distinct_and_pure() {
         diagnostic,
         observe_waterworld(&generated, WaterWorldDetail::Habitat, true)
     );
+}
+
+mod observation {
+    use super::*;
+
+    #[test]
+    fn snapshot_ordinary_reports_present_consequences_without_claiming_causes() {
+        let fixture = seed_42();
+        let source = active(&fixture);
+        let snapshot = source.at(&fixture.climate, hornvale_kernel::WorldTime::GENESIS);
+
+        let observation =
+            observe_waterworld_snapshot(&source, &snapshot, WaterWorldDetail::Habitat, false);
+
+        assert!(observation.text.contains("marine substrate:"));
+        assert!(observation.text.contains("present stocks:"));
+        assert!(observation.text.contains("current transport:"));
+        assert!(observation.text.contains("bloom"));
+        assert!(observation.text.contains("nutrients"));
+        assert!(observation.text.contains("reef/kelp"));
+        assert!(!observation.text.contains("source phase"));
+        assert!(!observation.text.contains("provenance"));
+        assert!(!observation.text.contains("inferred cause"));
+        assert_eq!(observation.counters.observation, source.substrate.len());
+    }
+
+    #[test]
+    fn snapshot_diagnostic_labels_provenance_inference_and_zero_cases() {
+        let fixture = seed_42();
+        let mut source = active(&fixture);
+        source.vents.truncate(3);
+        source.vent_candidate_rings.truncate(3);
+        for (vent, offset_days) in source.vents.iter_mut().zip([0_i64, 85, 20]) {
+            vent.phase_offset_ticks = offset_days * hornvale_kernel::WorldTime::TICKS_PER_STD_DAY;
+        }
+        let snapshot = source.at(&fixture.climate, hornvale_kernel::WorldTime::GENESIS);
+        assert_eq!(
+            snapshot.vent_states,
+            vec![VentState::Absent, VentState::Failed, VentState::Nascent]
+        );
+
+        let diagnostic =
+            observe_waterworld_snapshot(&source, &snapshot, WaterWorldDetail::Habitat, true);
+
+        assert!(
+            diagnostic
+                .text
+                .contains("source phase (derived, not directly observed):")
+        );
+        assert!(diagnostic.text.contains("provenance: stable vent source"));
+        assert!(diagnostic.text.contains("local/transported split:"));
+        assert!(
+            diagnostic
+                .text
+                .contains("inferred cause; uncertain at observation scale")
+        );
+        assert!(
+            diagnostic
+                .text
+                .contains("absent contribution (source remains admitted)")
+        );
+        assert!(
+            diagnostic
+                .text
+                .contains("failed contribution (source and seabed remain present)")
+        );
+        assert!(
+            diagnostic
+                .text
+                .contains("zero ambient baseline (measured value is zero)")
+        );
+        assert_eq!(
+            diagnostic.counters.observation,
+            source.substrate.len() + source.vents.len()
+        );
+    }
+
+    #[test]
+    fn snapshot_observation_is_exact_under_repetition_and_reordering() {
+        let fixture = seed_42();
+        let source = active(&fixture);
+        let snapshot = source.at(&fixture.climate, hornvale_kernel::WorldTime::GENESIS);
+        let source_before = source.clone();
+        let snapshot_before = snapshot.clone();
+
+        let ordinary_first =
+            observe_waterworld_snapshot(&source, &snapshot, WaterWorldDetail::Regional, false);
+        let diagnostic_first =
+            observe_waterworld_snapshot(&source, &snapshot, WaterWorldDetail::Regional, true);
+        let diagnostic_second =
+            observe_waterworld_snapshot(&source, &snapshot, WaterWorldDetail::Regional, true);
+        let ordinary_second =
+            observe_waterworld_snapshot(&source, &snapshot, WaterWorldDetail::Regional, false);
+
+        assert_eq!(ordinary_first, ordinary_second);
+        assert_eq!(diagnostic_first, diagnostic_second);
+        assert_ne!(ordinary_first.text, diagnostic_first.text);
+        assert_eq!(source, source_before);
+        assert_eq!(snapshot, snapshot_before);
+        assert!(ordinary_first.counters.observation > 0);
+        assert!(diagnostic_first.counters.observation > ordinary_first.counters.observation);
+    }
 }
