@@ -215,6 +215,8 @@ mod staple_d3_probe;
 mod staple_d3b_probe;
 #[path = "suite/staple_d4_probe.rs"]
 mod staple_d4_probe;
+#[path = "suite/staple_d5_probe.rs"]
+mod staple_d5_probe;
 #[path = "suite/stope_variety_probe.rs"]
 mod stope_variety_probe;
 #[path = "suite/subterranean_energy_probe.rs"]

@@ -49,3 +49,21 @@ second pass yet.
 
 **Capture actions:** The full probe branch table, denominator, recurrence rule,
 and evidence requirements remain to be specified before G3.
+
+## #3 [G5] — Task 1 and Task 2 implementation boundary
+
+**Decision:** Keep D5 reduction read-only and deterministic. Task 1's pure
+model preserves typed/provenance flow evidence, explicit unavailable channels,
+union-level source identity, and regime plurality. Task 2's probe owns only
+fixture/live reduction, per-seed denominators, stable ordering, and the ignored
+fixed-roster readout.
+
+**Result:** Task 1 final review approved with no findings. Task 2 focused probe
+tests pass (5/5); the roster readout remains ignored and no census or save
+artifact was generated. The probe reports underpowered rather than pooling
+missing, duplicate, zero, isolated, or coercive-only observations into a
+positive apex.
+
+**Capture actions:** Proceed to Task 3 mutation-oriented vacuity, save-inert,
+and attribution checks. Do not run the fixed-roster measurement or census at
+this boundary.
