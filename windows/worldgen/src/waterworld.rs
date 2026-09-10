@@ -6,7 +6,9 @@ use hornvale_kernel::{Vertex, World, WorldTime};
 use hornvale_terrain::landscape::FeatureId;
 use hornvale_terrain::{BoundaryKind, GeneratedTerrain, WaterKind};
 
-pub use crate::waterworld_propagation::{WaterPropagation, WaterTrajectorySample};
+pub use crate::waterworld_propagation::{
+    WaterPropagation, WaterTrajectorySample, WaterWorkCounters,
+};
 
 use crate::waterworld_propagation::{build_vent_candidate_ring, select_vent_position};
 
@@ -26,6 +28,10 @@ const VENT_CYCLE_TICKS: i64 = VENT_ABSENT_TICKS
     + VENT_ACTIVE_TICKS
     + VENT_WEAKENING_TICKS
     + VENT_FAILED_TICKS;
+/// plumb: pending(wave-1)
+const TRANSPORT_HOP_LIMIT: usize = 3;
+/// plumb: pending(wave-1)
+const TRANSPORT_ATTENUATION: f64 = 0.5;
 
 /// Configuration for the compact Waterworld overlay.
 /// type-audit: bare-ok(flag: enabled)
@@ -175,7 +181,7 @@ pub enum VentState {
 }
 
 /// Bounded aggregate environmental stocks; no individual organisms are stored.
-/// type-audit: bare-ok(ratio: plankton), bare-ok(ratio: chemosynthetic_bloom), bare-ok(ratio: nutrients), bare-ok(ratio: kelp_reef)
+/// type-audit: bare-ok(ratio: plankton), bare-ok(ratio: chemosynthetic_bloom), bare-ok(ratio: nutrients), bare-ok(ratio: kelp_reef), bare-ok(ratio: local_source_influence), bare-ok(ratio: transported_influence)
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct WaterStocks {
     /// Photic plankton availability.
@@ -186,6 +192,10 @@ pub struct WaterStocks {
     pub nutrients: f64,
     /// Kelp/reef substrate suitability.
     pub kelp_reef: f64,
+    /// Aggregate influence produced at this exact substrate sample.
+    pub local_source_influence: f64,
+    /// Aggregate influence arriving from bounded current transport.
+    pub transported_influence: f64,
 }
 
 /// Read-only generated Waterworld state.
@@ -203,6 +213,8 @@ pub struct WaterWorld {
     pub vent_candidate_rings: Vec<Vec<Vertex>>,
     /// Bounded current and vertical propagation samples.
     pub propagation: WaterPropagation,
+    /// Work performed while building stable candidate rings.
+    pub counters: WaterWorkCounters,
 }
 
 /// Dynamic Waterworld readout at one exact world instant.
@@ -224,6 +236,8 @@ pub struct WaterWorldSnapshot {
     pub vent_positions: Vec<Option<Vertex>>,
     /// Present bounded propagation readout.
     pub propagation: WaterPropagation,
+    /// Work performed by the finite snapshot loops.
+    pub counters: WaterWorkCounters,
 }
 
 impl WaterWorld {
@@ -242,21 +256,24 @@ impl WaterWorld {
             self.vent_candidate_rings.len(),
             "Waterworld vents and candidate rings must remain aligned"
         );
-        let mut fields = self
-            .substrate
-            .iter()
-            .map(|sample| {
-                WaterFields::from_substrate(
-                    sample,
-                    climate.insolation(),
-                    climate.temperature_at(sample.vertex, time).get(),
-                    climate.current_at(sample.vertex),
-                )
-            })
-            .collect::<Vec<_>>();
+        let mut counters = WaterWorkCounters {
+            candidate_ring: self.counters.candidate_ring,
+            ..WaterWorkCounters::default()
+        };
+        let mut fields = Vec::with_capacity(self.substrate.len());
+        for sample in &self.substrate {
+            counters.refresh += 1;
+            fields.push(WaterFields::from_substrate(
+                sample,
+                climate.insolation(),
+                climate.temperature_at(sample.vertex, time).get(),
+                climate.current_at(sample.vertex),
+            ));
+        }
         let mut vent_states = Vec::with_capacity(self.vents.len());
         let mut vent_phase_positions = Vec::with_capacity(self.vents.len());
         let mut vent_positions = Vec::with_capacity(self.vents.len());
+        let mut local_influence = vec![0.0_f64; self.substrate.len()];
         for (vent, ring) in self.vents.iter().zip(&self.vent_candidate_rings) {
             let phase = vent_phase(vent, time);
             let position = select_vent_position(ring, phase.state, phase.cycle_index);
@@ -268,18 +285,41 @@ impl WaterWorld {
                 let chemistry = (vent.chemistry * local_strength).clamp(0.0, 1.0);
                 fields[sample_index].chemistry +=
                     (1.0 - fields[sample_index].chemistry) * chemistry;
+                local_influence[sample_index] =
+                    (local_influence[sample_index] + local_strength).clamp(0.0, 1.0);
             }
             vent_states.push(phase.state);
             vent_phase_positions.push(phase.position);
             vent_positions.push(position);
         }
+        let propagation = WaterPropagation::transport(
+            climate.geosphere(),
+            &self.substrate,
+            &fields,
+            &local_influence,
+            TRANSPORT_HOP_LIMIT,
+            TRANSPORT_ATTENUATION,
+        );
+        let mut stocks = Vec::with_capacity(self.substrate.len());
+        for (((sample, field), local), &transported) in self
+            .substrate
+            .iter()
+            .zip(&fields)
+            .zip(local_influence)
+            .zip(&propagation.transported_influence)
+        {
+            counters.stock += 1;
+            stocks.push(derive_stocks(sample, field, local, transported));
+        }
+        counters.propagation = propagation.counters.propagation;
         WaterWorldSnapshot {
             fields,
-            stocks: self.stocks.clone(),
+            stocks,
             vent_states,
             vent_phase_positions,
             vent_positions,
-            propagation: self.propagation.clone(),
+            propagation,
+            counters,
         }
     }
 }
@@ -446,6 +486,7 @@ pub fn waterworld_from(
         .collect::<Vec<_>>();
     let mut vents = Vec::new();
     let mut vent_candidate_rings = Vec::new();
+    let mut candidate_ring_count = 0;
     for sample in substrate.iter().filter(|sample| sample.is_seabed) {
         let source_exists = sample.has_edifice || sample.seafloor_boundary.is_some();
         if !source_exists {
@@ -476,21 +517,13 @@ pub fn waterworld_from(
             terrain.geosphere(),
             &marine_vertices,
             sample.vertex,
+            &mut candidate_ring_count,
         ));
     }
     let stocks = substrate
         .iter()
         .zip(&fields)
-        .map(|(sample, field)| WaterStocks {
-            plankton: (field.light / (field.light + 1.0)).clamp(0.0, 1.0),
-            chemosynthetic_bloom: field.chemistry.clamp(0.0, 1.0),
-            nutrients: ((sample.terrain_features.len() as f64) / 4.0).clamp(0.0, 1.0),
-            kelp_reef: if sample.is_seabed && (field.temperature_c > -2.0) {
-                1.0
-            } else {
-                0.0
-            },
-        })
+        .map(|(sample, field)| derive_stocks(sample, field, 0.0, 0.0))
         .collect::<Vec<_>>();
     let propagation = WaterPropagation::from_substrate(&substrate, &fields);
     WaterWorld {
@@ -500,6 +533,40 @@ pub fn waterworld_from(
         vents,
         vent_candidate_rings,
         propagation,
+        counters: WaterWorkCounters {
+            candidate_ring: candidate_ring_count,
+            ..WaterWorkCounters::default()
+        },
+    }
+}
+
+fn derive_stocks(
+    sample: &WaterSubstrate,
+    field: &WaterFields,
+    local_source_influence: f64,
+    transported_influence: f64,
+) -> WaterStocks {
+    let plankton = (field.light / (field.light + 1.0)).clamp(0.0, 1.0);
+    let chemosynthetic_bloom = field.chemistry.clamp(0.0, 1.0);
+    let terrain_nutrients = (sample.terrain_features.len() as f64 / 4.0).clamp(0.0, 1.0);
+    let nutrients =
+        (terrain_nutrients + 0.35 * local_source_influence + 0.2 * transported_influence)
+            .clamp(0.0, 1.0);
+    let thermal_suitability = (1.0 - (field.temperature_c - 15.0).abs() / 40.0).clamp(0.0, 1.0);
+    let chemistry_suitability = (1.0 - (field.chemistry - 0.35).abs() / 0.65).clamp(0.0, 1.0);
+    let kelp_reef = if sample.is_seabed {
+        (0.35 * thermal_suitability + 0.25 * chemistry_suitability + 0.25 * nutrients + 0.15)
+            .clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    WaterStocks {
+        plankton,
+        chemosynthetic_bloom,
+        nutrients,
+        kelp_reef,
+        local_source_influence,
+        transported_influence,
     }
 }
 

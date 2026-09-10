@@ -258,8 +258,12 @@ mod seams {
 
         assert_eq!(generated, stable_before);
         assert_eq!(snapshot.fields.len(), generated.fields.len());
-        assert_eq!(snapshot.stocks, generated.stocks);
-        assert_eq!(snapshot.propagation, generated.propagation);
+        assert_eq!(snapshot.stocks.len(), generated.stocks.len());
+        assert_eq!(
+            snapshot.propagation.transported_influence.len(),
+            generated.substrate.len()
+        );
+        assert!(snapshot.propagation.samples.len() <= generated.vents.len() * 3);
         assert_eq!(snapshot.vent_states.len(), generated.vents.len());
         assert_eq!(snapshot.vent_positions.len(), generated.vents.len());
     }
@@ -719,6 +723,397 @@ mod fields {
         );
         assert_eq!(failed_after_source_change.vent_positions[vent.id], None);
         assert_eq!(failed_after_source_change.fields, failed.fields);
+    }
+}
+
+mod stocks {
+    use super::*;
+
+    fn seabed_index(world: &WaterWorld, vertex: Vertex) -> usize {
+        world
+            .substrate
+            .iter()
+            .position(|sample| sample.vertex == vertex && sample.is_seabed)
+            .expect("stock witness has a seabed sample")
+    }
+
+    fn ring_has_open_chemistry(world: &WaterWorld, vent_id: usize, indices: &[usize]) -> bool {
+        indices.iter().all(|&ring_index| {
+            let vertex = world.vent_candidate_rings[vent_id][ring_index];
+            !world.substrate[seabed_index(world, vertex)].has_edifice
+        })
+    }
+
+    fn assert_bounded(stock: hornvale_worldgen::WaterStocks) {
+        for value in [
+            stock.plankton,
+            stock.chemosynthetic_bloom,
+            stock.nutrients,
+            stock.kelp_reef,
+            stock.local_source_influence,
+            stock.transported_influence,
+        ] {
+            assert!(value.is_finite() && (0.0..=1.0).contains(&value));
+        }
+    }
+
+    /// Catches snapshot stocks that remain copied from genesis when the
+    /// consumed depth source changes present light.
+    #[test]
+    fn changed_light_source_changes_plankton_stock() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let mut changed = generated.clone();
+        let index = generated
+            .substrate
+            .iter()
+            .position(|sample| !sample.is_seabed && sample.depth_m > 0.0)
+            .expect("VACUOUS: no lit water-column stock witness");
+        changed.substrate[index].depth_m += 500.0;
+        assert_ne!(
+            changed.substrate[index].depth_m, generated.substrate[index].depth_m,
+            "VACUOUS: depth perturbation did not change the consumed light source"
+        );
+
+        let before = generated.at(&fixture.climate, WorldTime::GENESIS);
+        let after = changed.at(&fixture.climate, WorldTime::GENESIS);
+        assert_ne!(before.fields[index].light, after.fields[index].light);
+        assert_ne!(before.stocks[index].plankton, after.stocks[index].plankton);
+        assert_bounded(before.stocks[index]);
+        assert_bounded(after.stocks[index]);
+    }
+
+    /// Catches a chemosynthetic stock that ignores the present local
+    /// chemistry contribution from its stable vent source.
+    #[test]
+    fn changed_chemistry_source_changes_chemosynthetic_bloom() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let mut changed = generated.clone();
+        let vent = generated
+            .vents
+            .iter()
+            .find(|vent| {
+                vent.chemistry < 0.75
+                    && generated.vent_candidate_rings[vent.id].len() >= 2
+                    && ring_has_open_chemistry(&generated, vent.id, &[1])
+            })
+            .copied()
+            .expect("VACUOUS: no vent chemistry source has perturbation headroom");
+        changed.vents[vent.id].chemistry += 0.2;
+        assert_ne!(changed.vents[vent.id].chemistry, vent.chemistry);
+        let time =
+            WorldTime::from_ticks(35 * WorldTime::TICKS_PER_STD_DAY - vent.phase_offset_ticks);
+        let before = generated.at(&fixture.climate, time);
+        let after = changed.at(&fixture.climate, time);
+        let index = seabed_index(&generated, before.vent_positions[vent.id].unwrap());
+        assert_ne!(
+            before.fields[index].chemistry,
+            after.fields[index].chemistry
+        );
+        assert_ne!(
+            before.stocks[index].chemosynthetic_bloom,
+            after.stocks[index].chemosynthetic_bloom
+        );
+        assert_bounded(before.stocks[index]);
+        assert_bounded(after.stocks[index]);
+    }
+
+    /// Catches a nutrient reserve copied from genesis instead of derived from
+    /// the present substrate nutrient input.
+    #[test]
+    fn changed_nutrient_input_changes_nutrient_reserve() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let mut changed = generated.clone();
+        let index = generated
+            .substrate
+            .iter()
+            .position(|sample| !sample.terrain_features.is_empty())
+            .expect("VACUOUS: no substrate nutrient-input witness");
+        changed.substrate[index].terrain_features.clear();
+        assert_ne!(
+            changed.substrate[index].terrain_features.len(),
+            generated.substrate[index].terrain_features.len()
+        );
+
+        let before = generated.at(&fixture.climate, WorldTime::GENESIS);
+        let after = changed.at(&fixture.climate, WorldTime::GENESIS);
+        assert_ne!(
+            before.stocks[index].nutrients,
+            after.stocks[index].nutrients
+        );
+        assert_bounded(before.stocks[index]);
+        assert_bounded(after.stocks[index]);
+    }
+
+    /// Catches reef/kelp suitability that ignores its present substrate,
+    /// temperature, and chemistry inputs.
+    #[test]
+    fn changed_substrate_temperature_and_chemistry_change_reef_kelp_suitability() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let vent = generated
+            .vents
+            .iter()
+            .find(|vent| {
+                generated.vent_candidate_rings[vent.id].len() >= 3
+                    && ring_has_open_chemistry(&generated, vent.id, &[1, 2])
+            })
+            .copied()
+            .expect("VACUOUS: no migrating vent stock witness");
+        let zero = -vent.phase_offset_ticks;
+        let active_time = WorldTime::from_ticks(zero + 35 * WorldTime::TICKS_PER_STD_DAY);
+        let weakening_time = WorldTime::from_ticks(zero + 75 * WorldTime::TICKS_PER_STD_DAY);
+        let active_snapshot = generated.at(&fixture.climate, active_time);
+        let weakening_snapshot = generated.at(&fixture.climate, weakening_time);
+        let active_vertex = active_snapshot.vent_positions[vent.id].unwrap();
+        let weakening_vertex = weakening_snapshot.vent_positions[vent.id].unwrap();
+        let active_index = seabed_index(&generated, active_vertex);
+        let weakening_index = seabed_index(&generated, weakening_vertex);
+        assert_ne!(
+            active_vertex, weakening_vertex,
+            "VACUOUS: substrate source did not change"
+        );
+        assert_ne!(
+            active_snapshot.fields[active_index].temperature_c,
+            weakening_snapshot.fields[weakening_index].temperature_c,
+            "VACUOUS: temperature source did not change"
+        );
+        assert_ne!(
+            active_snapshot.fields[active_index].chemistry,
+            weakening_snapshot.fields[weakening_index].chemistry,
+            "VACUOUS: chemistry source did not change"
+        );
+        assert_ne!(
+            active_snapshot.stocks[active_index].kelp_reef,
+            weakening_snapshot.stocks[weakening_index].kelp_reef
+        );
+        assert_bounded(active_snapshot.stocks[active_index]);
+        assert_bounded(weakening_snapshot.stocks[weakening_index]);
+    }
+}
+
+mod memory {
+    use super::*;
+
+    /// Decides whether present fields already distinguish the three declining
+    /// consequences; a failure here would earn one analytical residue term.
+    #[test]
+    fn instantaneous_stocks_distinguish_active_weakening_and_failed() {
+        let fixture = seed_42();
+        let mut generated = active(&fixture);
+        let mut vent = generated.vents[0];
+        let ring = generated.vent_candidate_rings[vent.id].clone();
+        vent.id = 0;
+        generated.vents = vec![vent];
+        generated.vent_candidate_rings = vec![ring];
+        let zero = -vent.phase_offset_ticks;
+        let snapshots = [35, 75, 85].map(|day| {
+            generated.at(
+                &fixture.climate,
+                WorldTime::from_ticks(zero + day * WorldTime::TICKS_PER_STD_DAY),
+            )
+        });
+        assert_eq!(snapshots[0].vent_states[vent.id], VentState::Active);
+        assert_eq!(snapshots[1].vent_states[vent.id], VentState::Weakening);
+        assert_eq!(snapshots[2].vent_states[vent.id], VentState::Failed);
+        let local = snapshots.map(|snapshot| {
+            snapshot.vent_positions[vent.id]
+                .and_then(|vertex| {
+                    generated
+                        .substrate
+                        .iter()
+                        .position(|sample| sample.is_seabed && sample.vertex == vertex)
+                })
+                .map(|index| snapshot.stocks[index].local_source_influence)
+                .unwrap_or(0.0)
+        });
+        assert!(local[0] > local[1] && local[1] > local[2]);
+        assert_eq!(local[2], 0.0);
+    }
+}
+
+mod transport {
+    use super::*;
+    use hornvale_worldgen::waterworld::WaterPropagation;
+
+    /// Catches transport that ignores the consumed current or rewrites stable
+    /// substrate/source identity while redistributing aggregate influence.
+    #[test]
+    fn current_source_changes_transport_without_moving_identity() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let stable_substrate = generated.substrate.clone();
+        let stable_sources = generated.vents.clone();
+        let snapshot = generated.at(&fixture.climate, WorldTime::GENESIS);
+        let local = snapshot
+            .stocks
+            .iter()
+            .map(|stock| stock.local_source_influence)
+            .collect::<Vec<_>>();
+        let source_index = local
+            .iter()
+            .enumerate()
+            .find(|(index, influence)| {
+                if **influence <= 0.0 || snapshot.fields[*index].current == [0.0; 3] {
+                    return false;
+                }
+                let mut one_source = vec![0.0; local.len()];
+                one_source[*index] = **influence;
+                let mut reversed = snapshot.fields.clone();
+                reversed[*index].current = reversed[*index].current.map(|value| -value);
+                WaterPropagation::transport(
+                    fixture.climate.geosphere(),
+                    &generated.substrate,
+                    &snapshot.fields,
+                    &one_source,
+                    3,
+                    0.5,
+                )
+                .transported_influence
+                    != WaterPropagation::transport(
+                        fixture.climate.geosphere(),
+                        &generated.substrate,
+                        &reversed,
+                        &one_source,
+                        3,
+                        0.5,
+                    )
+                    .transported_influence
+            })
+            .map(|(index, _)| index)
+            .expect("VACUOUS: no active source has a current-sensitive marine path");
+        let mut changed_fields = snapshot.fields.clone();
+        changed_fields[source_index].current[0] += 1.0;
+        assert_ne!(
+            changed_fields[source_index].current, snapshot.fields[source_index].current,
+            "VACUOUS: current perturbation was a no-op"
+        );
+
+        let before = WaterPropagation::transport(
+            fixture.climate.geosphere(),
+            &generated.substrate,
+            &snapshot.fields,
+            &local,
+            3,
+            0.5,
+        );
+        let after = WaterPropagation::transport(
+            fixture.climate.geosphere(),
+            &generated.substrate,
+            &changed_fields,
+            &local,
+            3,
+            0.5,
+        );
+        assert_ne!(before.transported_influence, after.transported_influence);
+        assert_eq!(generated.substrate, stable_substrate);
+        assert_eq!(generated.vents, stable_sources);
+    }
+}
+
+mod cost {
+    use super::*;
+    use hornvale_worldgen::waterworld::WaterPropagation;
+
+    #[test]
+    fn actual_loop_counters_obey_source_and_hop_bounds() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let snapshot = generated.at(&fixture.climate, WorldTime::GENESIS);
+        let mut one_source = vec![0.0; snapshot.stocks.len()];
+        let source_indices = snapshot
+            .stocks
+            .iter()
+            .enumerate()
+            .filter(|(_, stock)| stock.local_source_influence > 0.0)
+            .map(|(index, _)| index)
+            .take(2)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            source_indices.len(),
+            2,
+            "VACUOUS: fewer than two active sources"
+        );
+        one_source[source_indices[0]] = 1.0;
+        let mut two_sources = one_source.clone();
+        two_sources[source_indices[1]] = 1.0;
+        let low = WaterPropagation::transport(
+            fixture.climate.geosphere(),
+            &generated.substrate,
+            &snapshot.fields,
+            &one_source,
+            1,
+            0.5,
+        );
+        let high = WaterPropagation::transport(
+            fixture.climate.geosphere(),
+            &generated.substrate,
+            &snapshot.fields,
+            &two_sources,
+            3,
+            0.75,
+        );
+        eprintln!(
+            "waterworld work counters: low={:?} high={:?} snapshot={:?}",
+            low.counters, high.counters, snapshot.counters
+        );
+        assert!(low.counters.propagation > 0);
+        assert!(high.counters.propagation > low.counters.propagation);
+        assert!(low.samples.len() <= 1);
+        assert!(high.samples.len() <= 2 * 3);
+        assert_eq!(snapshot.counters.refresh, generated.substrate.len());
+        assert_eq!(snapshot.counters.stock, generated.substrate.len());
+        assert!(snapshot.counters.candidate_ring > 0);
+        assert_eq!(snapshot.counters.observation, 0);
+
+        let disabled = waterworld_from(
+            &fixture.world,
+            &fixture.terrain,
+            &fixture.climate,
+            WaterWorldConfig { enabled: false },
+        )
+        .at(&fixture.climate, WorldTime::GENESIS);
+        assert_eq!(disabled.counters, Default::default());
+    }
+}
+
+mod purity {
+    use super::*;
+    use hornvale_worldgen::waterworld::WaterPropagation;
+
+    #[test]
+    fn snapshots_and_transport_are_reordered_query_pure() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let stable = generated.clone();
+        let time = WorldTime::from_ticks(47 * WorldTime::TICKS_PER_STD_DAY);
+        let snapshot = generated.at(&fixture.climate, time);
+        let local = snapshot
+            .stocks
+            .iter()
+            .map(|stock| stock.local_source_influence)
+            .collect::<Vec<_>>();
+        let first = WaterPropagation::transport(
+            fixture.climate.geosphere(),
+            &generated.substrate,
+            &snapshot.fields,
+            &local,
+            3,
+            0.5,
+        );
+        let _other = generated.at(&fixture.climate, WorldTime::GENESIS);
+        let repeated = WaterPropagation::transport(
+            fixture.climate.geosphere(),
+            &generated.substrate,
+            &snapshot.fields,
+            &local,
+            3,
+            0.5,
+        );
+        assert_eq!(first, repeated);
+        assert_eq!(generated, stable);
     }
 }
 

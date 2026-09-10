@@ -259,3 +259,42 @@ the fixed cycle range, without adding a draw or changing stream order. The
 second review found no remaining implementation issue; it required this
 ledger correction so the durable record names the actual source inputs and
 the corrected evidence.
+
+## Task 3 — bounded temporal stocks and current transport
+
+Snapshot stocks are now derived from present fields and stable substrate
+inputs as four separate bounded aggregates: plankton from light,
+chemosynthetic bloom from chemistry, nutrient reserve from terrain features
+plus local and transported availability, and reef/kelp suitability from
+seabed identity, temperature, chemistry, and nutrients. Local source
+influence and transported influence remain separate aligned values. The four
+source-first reds first proved that depth, vent chemistry, terrain nutrients,
+and the substrate/temperature/chemistry witness changed; with snapshot stocks
+still copied from genesis, their downstream values remained respectively
+`0.378...`, `0`, `0.25`, and `1` on both sides. The production derivation made
+each downstream assertion change while retaining finite `[0, 1]` bounds.
+
+The required memory probe compared one stable source in active, weakening,
+and failed states. Its instantaneous local stock strictly declined and reached
+zero at failed, so present stocks already distinguish all three states. No
+analytical residue term, cache, or additional stream was earned.
+
+Current transport is an analytical snapshot pass, not a fluid solver or event
+queue. Each active source follows existing current fields through a stable
+neighbour order for at most three hops with `0.5` attenuation. The source
+perturbation test first changes an actual current vector, then requires the
+transported aggregate to change while substrate and vent identities remain
+equal. Repeated and reordered snapshot/transport queries remain pure.
+
+Counters are incremented at the candidate-neighbour inspection, ambient-field
+refresh, stock derivation, and propagation-neighbour inspection loops.
+Observation remains zero because Task 4 owns that loop. The bounded cost probe
+measured one source/one hop at 6 propagation inspections and two sources/three
+hops at 36, with accepted samples bounded by `sources * hops`; the active
+snapshot refreshed and derived exactly one row per substrate row, while the
+disabled overlay reported all-zero counters.
+
+The focused command
+`cargo test -p hornvale-worldgen --test suite waterworld::` reported 26 passed,
+0 failed, 0 ignored. The stream-manifest diff exited 0 with empty output, so
+no stream label or draw-order change was introduced.
