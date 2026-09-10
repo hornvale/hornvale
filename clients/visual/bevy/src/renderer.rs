@@ -9,10 +9,9 @@ use crate::{Binding, CameraPose, ObservationMirror, ViewError};
 use bevy::{
     app::{AppLabel, SubApps},
     asset::RenderAssetUsages,
-    camera::{Exposure, RenderTarget, visibility::RenderLayers},
-    core_pipeline::tonemapping::Tonemapping,
+    camera::RenderTarget,
     light::Atmosphere,
-    pbr::{AtmosphereMode, AtmosphereSettings},
+    pbr::AtmosphereSettings,
     prelude::*,
     render::{
         RenderApp, RenderPlugin,
@@ -101,18 +100,8 @@ impl Renderer {
         let target = world.resource_mut::<Assets<Image>>().add(target);
         let camera = world
             .spawn((
-                Camera3d::default(),
-                bevy::camera::ShadowLodOrigin,
+                crate::camera::camera_components(&crate::camera::ViewSettings::default()),
                 RenderTarget::Image(target.clone().into()),
-                Transform::IDENTITY,
-                Exposure { ev100: 13.3 },
-                Tonemapping::AcesFitted,
-                Msaa::Off,
-                AtmosphereSettings {
-                    rendering_method: AtmosphereMode::Raymarched,
-                    ..default()
-                },
-                RenderLayers::from_layers(&[0, 1]),
             ))
             .id();
         let mut catalog = SceneCatalog::default();

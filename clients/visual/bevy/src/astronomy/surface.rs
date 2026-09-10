@@ -132,6 +132,18 @@ pub fn anchor_texture(t: &Tiles) -> Image {
             let ocean = mix(ocean, ice_color, ice);
             let coverage = ((altitude as f32 + 30.0) / 60.0).clamp(0.0, 1.0);
             let c = mix(ocean, land, coverage);
+            // Stable cosmetic pigment grain, bounded to ±12%; never relief or a source fact.
+            let lon = u * std::f64::consts::TAU;
+            let lat = (0.5 - v) * std::f64::consts::PI;
+            let p = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+            let grain = 0.55 * noise(p.map(|v| v * 95.), 42)
+                + 0.3 * noise(p.map(|v| v * 240.), 43)
+                + 0.15 * noise(p.map(|v| v * 510.), 44);
+            let pigment = 1.0
+                + (grain as f32 - 0.5)
+                    * (2. * crate::camera::ViewSettings::default().pigment_variation)
+                    * coverage;
+            let c = c.map(|v| v * pigment);
             pixels.extend(c.map(|x| (x.clamp(0.0, 1.0) * 255.0).round() as u8));
             pixels.push(255);
         }
@@ -150,8 +162,11 @@ pub fn anchor_roughness(t: &Tiles) -> Image {
             let elevation = sample(&t, &t.elevation_m, u, v) - t.sea_level_m;
             let snow = sample(&t, &t.snow_fraction, u, v).clamp(0.0, 1.0);
             let coverage = ((elevation + 30.0) / 60.0).clamp(0.0, 1.0);
-            let roughness =
-                (0.24 * (1.0 - coverage) + 0.86 * coverage) * (1.0 - snow) + 0.65 * snow;
+            let roughness = (f64::from(crate::camera::ViewSettings::default().water_roughness)
+                * (1.0 - coverage)
+                + 0.86 * coverage)
+                * (1.0 - snow)
+                + 0.65 * snow;
             pixels.extend([255, (roughness * 255.0).round() as u8, 0, 255]);
         }
     }
@@ -179,7 +194,31 @@ pub fn globe_mesh(t: &Tiles, radius_km: f64, km_per_unit: f64) -> Mesh {
                 .max(0.0)
                 / 1000.0;
             positions.push(n.map(|v| (v * (radius_km + relief) / km_per_unit) as f32));
-            normals.push(n.map(|v| v as f32));
+            // Derivatives of the very same source relief, with no elevation multiplier.
+            let u = x as f64 / w as f64;
+            let v = y as f64 / h as f64;
+            let du = 1. / w as f64;
+            let dv = 1. / h as f64;
+            let height = |u, v| ((sample(t, &t.elevation_m, u, v) - t.sea_level_m).max(0.)) / 1000.;
+            let east = Vec3::new(-lon.sin() as f32, lon.cos() as f32, 0.);
+            let north = Vec3::new(
+                (-lat.sin() * lon.cos()) as f32,
+                (-lat.sin() * lon.sin()) as f32,
+                lat.cos() as f32,
+            );
+            let dx = (height(u + du, v) - height(u - du, v))
+                / (2.
+                    * du
+                    * std::f64::consts::TAU
+                    * (radius_km + relief)
+                    * lat.cos().abs().max(1e-6));
+            let dy = (height(u, (v - dv).max(0.)) - height(u, (v + dv).min(1.)))
+                / (2. * dv * std::f64::consts::PI * (radius_km + relief));
+            normals.push(
+                (Vec3::from_array(n.map(|v| v as f32)) - east * dx as f32 - north * dy as f32)
+                    .normalize()
+                    .to_array(),
+            );
             uv.push([x as f32 / w as f32, y as f32 / h as f32]);
         }
     }

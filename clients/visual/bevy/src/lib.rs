@@ -28,7 +28,7 @@ pub mod coordinates;
 mod mirror;
 pub use mirror::ObservationMirror;
 pub mod astronomy;
-mod camera;
+pub mod camera;
 pub use camera::CameraPose;
 mod renderer;
 pub use bevy;

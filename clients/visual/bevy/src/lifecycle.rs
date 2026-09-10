@@ -5,7 +5,7 @@ use bevy::{
     light::{Atmosphere, atmosphere::ScatteringMedium},
     prelude::*,
 };
-pub(crate) const KM_PER_UNIT: f64 = 1000.;
+pub const KM_PER_UNIT: f64 = 1000.;
 #[derive(Component)]
 pub(crate) struct BodyVisual {
     pub(crate) binding: Binding,
@@ -37,6 +37,7 @@ pub(crate) struct PreparedScene {
     pub(crate) camera: Entity,
     pub(crate) atmosphere: Entity,
     pub(crate) fov: f32,
+    pub(crate) focus: f32,
     pub(crate) width: u32,
     pub(crate) height: u32,
 }
@@ -120,6 +121,7 @@ impl SceneCatalog {
             camera: target.camera,
             atmosphere: self.atmosphere.expect("populated"),
             fov: pose.vertical_fov_radians as f32,
+            focus: (pose.focus_distance_km / KM_PER_UNIT) as f32,
             width: target.width,
             height: target.height,
         });
@@ -315,7 +317,7 @@ impl SceneCatalog {
                     base_color_texture: Some(texture),
                     perceptual_roughness: roughness,
                     metallic_roughness_texture: roughness_map,
-                    reflectance: 0.35,
+                    reflectance: crate::camera::ViewSettings::default().reflectance,
                     ..default()
                 });
             materials.push(material.clone());
@@ -466,6 +468,9 @@ pub(crate) fn apply_pending_scene(world: &mut World) {
             ..default()
         }),
     ));
+    if let Some(mut focus) = world.get_mut::<bevy::post_process::dof::DepthOfField>(scene.camera) {
+        focus.focal_distance = scene.focus;
+    }
     let center = transforms["anchor"].translation;
     world
         .entity_mut(scene.atmosphere)
