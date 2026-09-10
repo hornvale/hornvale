@@ -280,3 +280,60 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   visual acceptance, publication approval nor authorization to merge.
 - Capture actions: spec status updated; detailed plan and four-stage tracker
   follow on this branch. No ideonomy pass applies to a direct human approval.
+
+## #7 [Q] — pinned renderer and visible-first sequencing
+
+- Question: which initial release and implementation order make the visual
+  risk visible without building a general engine first?
+- Decision: pin Bevy `=0.19.1`, retain Rust `1.96.1`, and build a real source-fed
+  moving draft in stage 1. Start with one persistent renderer, an image target
+  and one outstanding capture request; qualify the windowless path on the Mac,
+  retaining a window-hosted image target if necessary.
+- Why: the tagged Bevy Cargo.toml declares version 0.19.1 and rust-version
+  1.95.0. The tagged externally-driven renderer example uses an image target
+  and Screenshot::image; the headless-renderer example documents main/render
+  world latency. These are source precedents, not an executed GPU witness.
+  Hornvale's rust-toolchain.toml pins 1.96.1. Local system_profiler identifies
+  an Apple M1 Max, 32 GPU cores, Metal 3; ffmpeg -version reports 8.1.1.
+- Evidence: curl -fsSL fetched
+  https://raw.githubusercontent.com/bevyengine/bevy/v0.19.1/Cargo.toml and
+  examples/app/{headless_renderer,externally_driven_headless_renderer}.rs.
+  rg returned version = 0.19.1, rust-version = 1.95.0 and Screenshot::image.
+- Alternatives discarded: floating engine versions; writing custom GPU-copy
+  machinery before qualifying the built-in screenshot path; finishing controls
+  and provenance before seeing actual movement.
+- Ideonomy passes / overturns: two organon-construction passes using notation,
+  visibility and reversibility. First notation:
+  source(tick) -> applied state -> ready assets -> submitted capture(frame) ->
+  acknowledged image(frame) -> advance; reverse/seek -> discard history.
+  Making the hidden render latency explicit moved frame identity and the early
+  moving witness forward. Second pass inverted windowless/window-hosted and
+  preview/final paths: output dimensions and observations stay fixed while the
+  hosting choice stays reversible. No further material improvement; no engine
+  overturn.
+- Capture actions: these constraints go into the plan; multi-frame pipelining
+  is deferred until measurements justify its complexity.
+
+## #8 [Q] — physical anchor radius is absent
+
+- Question: how can the pilot preserve globe/moon size ratios when the source
+  has no anchor radius?
+- Evidence: domains/astronomy/src/anchor.rs::Anchor has mass, orbit, year,
+  rotation, obliquity and greenhouse_residual, with no physical radius.
+  domains/terrain/src/channel.rs explicitly describes the terrain unit sphere
+  and absent planet radius. Targeted Rust-source searches found no anchor/world
+  radius definition. Moon radius is already derived from mass and density.
+- Recommendation pending Nathan: include a simulation-side physical-radius
+  prerequisite with a documented model and scientific justification.
+- Alternatives: change to a moon-centered pilot; a cosmetic anchor sphere is
+  rejected because it violates the approved physical-ratio requirement.
+- Ideonomy passes / overturns: two notation/visibility/reversibility passes.
+  Writing radius -> mesh scale -> body-size/distance ratio exposed a missing
+  physical input, not a missing export. Moving the assumption from hidden
+  renderer constant to explicit source model improves visibility; trying an
+  isolated moon avoids the missing input but changes the approved subject.
+  The convergence pass found no third option preserving both the subject and
+  the existing source unchanged. This overturns the drafting assumption that
+  the anchor's physical dimensions could simply be exported.
+- Capture actions: async question sent during planning; dependent radius work
+  remains unapproved while independent plan work continues.
