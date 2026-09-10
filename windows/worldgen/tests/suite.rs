@@ -197,6 +197,8 @@ mod repose_exposure;
 mod repose_laws;
 #[path = "suite/reproductive.rs"]
 mod reproductive;
+#[path = "suite/skyworld.rs"]
+mod skyworld;
 #[path = "suite/social_projection.rs"]
 mod social_projection;
 #[path = "suite/social_readout.rs"]

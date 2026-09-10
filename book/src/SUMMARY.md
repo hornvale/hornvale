@@ -489,6 +489,7 @@
 - [The Murrain](./chronicle/the-murrain.md)
 - [The Seedbed](./chronicle/the-seedbed.md)
 - [The Census Tail](./chronicle/the-census-tail.md)
+- [Skyworld Seams](./chronicle/skyworld-seams.md)
 
 # Appendix: The Frontier
 

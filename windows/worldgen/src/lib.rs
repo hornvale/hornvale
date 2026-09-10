@@ -123,6 +123,9 @@ pub mod resolve;
 pub mod schedule;
 pub mod seed_sweep;
 pub mod settlement_pins;
+pub mod skyworld;
+mod skyworld_propagation;
+pub mod skyworld_render;
 pub mod social_projection;
 pub mod streams;
 pub mod traversal;
@@ -202,6 +205,18 @@ pub use reproductive::{
 };
 pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
 pub use settlement_pins::SettlementPins;
+pub use skyworld::skyworld_from;
+pub use skyworld::{
+    SkyAdjacency, SkyCorridor, SkyCorridorKind, SkyEcology, SkyEnergy, SkyEvent, SkyEventKind,
+    SkyExchangeMode, SkyFields, SkyFootprint, SkyLifecycle, SkyLineage, SkyMobility, SkyPhenotype,
+    SkyPosition, SkyPropagation, SkyPropagationDetail, SkyStability, SkyStocks, SkySubstrate,
+    SkyTerritory, SkyTrajectorySample, SkyWater, SkyWorld, SkyWorldConfig,
+};
+pub use skyworld_propagation::{propagation_at, trajectory_at};
+pub use skyworld_render::{
+    SkyWorldDetail, render_skyworld_diagnostic_readout, render_skyworld_png,
+    render_skyworld_readout,
+};
 pub use social_projection::{
     SocialProjection, SocialProjectionError, SocialProjectionPins, SocialReadout, SyntheticSociety,
     approved_lot_probe_projection, approved_lot_probe_projection_for, derive_social_readout,
