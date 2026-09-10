@@ -28,7 +28,7 @@ Detailed tasks: [implementation plan](docs/superpowers/plans/2026-09-10-the-plan
 Approved scope: [design](docs/superpowers/specs/2026-09-10-the-planetarium-design.md).
 
 The physical anchor-radius prerequisite is approved and included in Task 1.
-Execution is authorized; Stage 1 is complete; Task 4 is in its reviewed fix round. This section tracks The Planetarium only; the
+Execution is authorized; Stage 1 is complete; Task 4 is reviewed and complete, and Task 5 is starting. This section tracks The Planetarium only; the
 inherited tracker above remains unchanged.
 
 ## Stage 1: A source-backed moving visual witness

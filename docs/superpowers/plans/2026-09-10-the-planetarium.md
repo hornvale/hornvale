@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 fix round in progress. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 starting. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
@@ -427,7 +427,7 @@ than allowing float overflow or silently compressing distances.
 
 **Interfaces:** Consumes ObservationMirror and the wire contracts. Produces FilmClock and a source bridge that coalesces interactive requests but waits for exact export replies. `ObservationMirror::accept` implements the documented obsolete/invalid distinction.
 
-- [ ] Add exact endpoint/tie/overflow behavioral tests against a compiling error-returning clock seam:
+- [x] Add exact endpoint/tie/overflow behavioral tests against a compiling error-returning clock seam:
 
 ```rust
 #[test]
@@ -443,18 +443,18 @@ fn a_paused_simulation_still_has_a_presentation_timeline() {
 }
 ```
 
-- [ ] Implement checked i128 arithmetic. Reject zero frames/out-of-range indices and overflow; include exact half-tick ties in both directions and i64 boundary cases. No repeated addition or float seconds-to-ticks accumulation.
-- [ ] Implement one source-owning worker. A bounded channel/request slot prevents scrub floods from growing unbounded work; handle disconnect and worker errors in the visible application state. Coalesce only work not yet begun. Export disables coalescing for its outstanding frame.
-- [ ] Test requests A then B, replies B then A: B stays displayed; test world/scope/revision reset followed by the old reply: no old entities or data reappear. Reused IDs under a new binding must not preserve selection/material state. Test the empty rendered catalog immediately after a source reset and before its first reply, and a valid new source with no optional moons/wanderers. Old optional bodies must disappear; do not invent an anchorless astronomy document to exercise removal.
-- [ ] Separate simulation tick, presentation playhead and wall-clock diagnostics. Pause/reverse/seek updates a desired instant; the last committed observation can remain visible with an explicit pending indicator until its replacement arrives. Never label old physical state with the requested new tick.
-- [ ] Reset temporal history on discontinuity; record the reset policy as part of capture settings. Direct frame 150 and sequential playback to 150 must produce identical semantic JSON, camera input and caption selection. Pixel comparison is separately measured later.
+- [x] Implement checked i128 arithmetic. Reject zero frames/out-of-range indices and overflow; include exact half-tick ties in both directions and i64 boundary cases. No repeated addition or float seconds-to-ticks accumulation.
+- [x] Implement one source-owning worker. A bounded channel/request slot prevents scrub floods from growing unbounded work; handle disconnect and worker errors in the visible application state. Coalesce only work not yet begun. Export disables coalescing for its outstanding frame.
+- [x] Test requests A then B, replies B then A: B stays displayed; test world/scope/revision reset followed by the old reply: no old entities or data reappear. Reused IDs under a new binding must not preserve selection/material state. Test the empty rendered catalog immediately after a source reset and before its first reply, and a valid new source with no optional moons/wanderers. Old optional bodies must disappear; do not invent an anchorless astronomy document to exercise removal.
+- [x] Separate simulation tick, presentation playhead and wall-clock diagnostics. Pause/reverse/seek updates a desired instant; the last committed observation can remain visible with an explicit pending indicator until its replacement arrives. Never label old physical state with the requested new tick.
+- [x] Reset temporal history on discontinuity; record the reset policy as part of capture settings. Direct frame 150 and sequential playback to 150 must produce identical semantic JSON, camera input and caption selection. Pixel comparison is separately measured later.
 
 ```bash
 cargo test --manifest-path clients/visual/Cargo.toml -p hornvale-bevy-view
 cargo test --manifest-path clients/visual/Cargo.toml -p hornvale-visual-source
 ```
 
-- [ ] Commit after the applicable local gates; record measured query latency and pending behavior in the ledger.
+- [x] Commit after the applicable local gates; record measured query latency and pending behavior in the ledger.
 
 ### Task 5: direct the pilot and complete inspection controls
 

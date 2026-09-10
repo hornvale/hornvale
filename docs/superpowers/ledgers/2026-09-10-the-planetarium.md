@@ -894,3 +894,20 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   (actual0, expected999), then restoration passed. A first mutation exposed a
   test-cleanup deadlock; assertions were moved after releasing the fake worker,
   and the mutation then failed normally. No sleep-based ordering or bypass.
+
+
+## Task 4 — complete after one fix round
+
+- Fix `231ca8aefe20c47d937bb03de0b0f04e0cb4e1c9` moves the committed reply
+  conflict check ahead of pending-request classification. Compiling regression
+  now verifies an error preserves committed A and pending B. A queued-scene/reset
+  test also proves the deferred update cannot repopulate the cleared scene.
+- Independent scoped review approved both findings with no new findings.
+  39 view tests passed after the fix, fmt/clippy passed; normal hook44.473s,
+  all four chunks green. Earlier4source/5app tests passed; the fix touches no
+  bridge/source implementation. No extra gate rerun was substituted for review.
+- Reusable handoff: FilmClock/PresentationTimeline, ObservationState and bounded
+  Bridge, SceneCatalog/SceneTarget with real assets/selection/reset ownership.
+  Task5 now owns the visible window, playback pacing, authored shots/captions,
+  controls and their actual moving visual evidence. Task6 retains explicit capture
+  completion and failure recovery responsibilities. No final visual approval yet.
