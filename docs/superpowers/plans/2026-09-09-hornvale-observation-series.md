@@ -369,3 +369,106 @@ After this plan is complete, a separate plan may implement the first genuinely
 new observation surface or simulation extension selected from the atlas. That
 plan must begin with the exact phenomenon, object, scale, axis, falsifying case,
 and visual grammar. It must not be inferred from a caption request alone.
+
+---
+
+## Amendment: astronomical-to-surface opening
+
+The public pilot order is amended by the approved design's scale ladder. The
+existing underworld records remain useful as an internal production-path
+pilot, but they are not the public opening unless a later review explicitly
+promotes them.
+
+### Stage 6: Audit the opening capability cells
+
+**Goal:** Establish which astronomical, system, planetary, geographic, field,
+and habitat observations are authoritative and renderable.
+
+**Success Criteria:** A committed matrix names each candidate object, scale,
+axis, producer command, packet shape, renderer grammar, witness status, and
+precise gap. A domain type or debug print alone never qualifies as existing.
+
+**Tests:** Run every named producer command; compare repeated outputs when
+determinism is claimed; run the observation validator and `make
+observation-check`; verify every output path against the source tree.
+
+**Status:** Not Started
+
+**Files:** Create `observations/atlas/2026-09-opening-capability-matrix.md`;
+inspect `domains/astronomy/`, `domains/climate/`, `domains/terrain/`,
+`windows/worldgen/`, `windows/scene/`, `cli/src/observations.rs`, and
+`clients/atlas/src/observation.ts`.
+
+- [ ] Inventory candidate cells from astronomical neighborhood through habitat scale.
+- [ ] Record the exact object, axis, unit, command, client path, and evidence boundary for every row.
+- [ ] Run each command once and record observed output or refusal; do not infer support from symbol searches.
+- [ ] Mark `existing` only when an authoritative producer and compatible visual grammar both exist.
+- [ ] Mark `needs_observation_surface`, `needs_renderer`, or `needs_simulation_extension` at the precise failing boundary.
+- [ ] Run `git diff --check` and focused observation checks; commit `docs: audit opening observation cells`.
+
+### Stage 7: Build the first astronomical/system path
+
+**Goal:** Make the earliest public-scale observations reproducible and legible
+without changing simulation semantics merely for presentation.
+
+**Success Criteria:** At least one astronomical or system cell has a validated
+manifest, deterministic packets, phone/laptop render coverage, and a local
+assembly package. If no supported cell exists, produce the precise capability
+plan instead of a fabricated episode.
+
+**Tests:** Focused Rust packet tests, Atlas viewport tests, repeated checksum
+comparison, shell assembly tests, and `make observation-check`.
+
+**Status:** Not Started
+
+- [ ] Select the first supported cell using visual legibility and dependency coverage.
+- [ ] Write a failing test for its packet fields, unit, ordering, seed identity, and refusal boundary.
+- [ ] Implement the smallest observation-surface change, if the matrix requires one; preserve world artifacts and stream contracts.
+- [ ] Re-export twice and compare the complete packet sequence byte-for-byte.
+- [ ] Extend Atlas only for supplied packet fields; exercise 390×844 and 1440×900 previews.
+- [ ] Update the capability matrix only after command and checksum witnesses exist; commit producer and renderer changes separately.
+
+### Stage 8: Resequence the surface-facing batch
+
+**Goal:** Replace the public opening records with supported astronomical,
+system, world, region, and surface observations while retaining distinct
+settlement, occupation, population, and individual layers for later cells.
+
+**Success Criteria:** Eight draft records occupy independently justified atlas
+cells, begin at astronomical/system/world/surface scales, and do not imply
+unsupported temporal, relational, social, or close-reading behavior.
+
+**Tests:** Manifest validation, deterministic export, repeated checksums,
+phone/laptop renderer checks, local assembly, `git diff --check`, and focused
+Rust/client suites.
+
+**Status:** Not Started
+
+- [ ] Replace `observations/episodes/HV-001.json` through `HV-008.json` with supported opening cells from the capability matrix.
+- [ ] Rewrite matching caption drafts in Nathan's casual voice without adding unshown capabilities or roadmap language.
+- [ ] Record omitted settlement, occupation, population, temporal, relational, and close-reading cells as internal capability requirements.
+- [ ] Generate each candidate at least seven days before its intended review/publication window.
+- [ ] Keep all package statuses `draft` until exact video and copy review.
+- [ ] Commit `docs: reorder opening observation batch`.
+
+### Stage 9: Assemble and review the reserve
+
+**Goal:** Produce inspectable local packages and obtain the manual approvals
+required for publication readiness.
+
+**Success Criteria:** At least seven packages are individually reviewed and
+approved by Nathan; each contains its exact manifest, frame checksum, video
+checksum when present, and final reviewed caption.
+
+**Tests:** Exact frame/video inspection at both viewport classes, manifest
+validation, `make observation-check`, client checks, shellcheck,
+`git diff --check`, and a final `make gate-commit`.
+
+**Status:** Not Started
+
+- [ ] Render each package into a clean ignored directory under `observations/render-output/HV-00N/`.
+- [ ] Assemble a derived film when ffmpeg is available; otherwise record no-video verification without claiming a film exists.
+- [ ] Inspect video and caption together for object, scale, axis, labels, sentence, duration, and legibility.
+- [ ] Mark `reviewed` only after inspection and `approved` only after Nathan explicitly approves the exact package.
+- [ ] Record rejected or deferred packages without inflating the seven-package reserve.
+- [ ] Record the review boundary in the campaign ledger and keep generated local outputs out of the commit.
