@@ -545,3 +545,39 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   The 18,005,513-byte initial document includes source sea level -1820.2915m;
   elevations are reference-datum values, not heights above that sea level.
   This is preserved source evidence, not a film or accepted visual.
+
+## #15 [Q] — declare the globe's presentation elevation reference
+
+- Ruling: use the emitted physical bulk radius as the spherical sea-surface
+  reference for this view. Positive land displacement is exactly
+  `(elevation_m - sea_level_m) / 1000` kilometres, without an exaggeration
+  factor; ocean depth influences material color. This is a declared rendering
+  reference convention, not a source-modeled geoid or interior/terrain coupling.
+- Why: the approved plan requires physical radius, actual exported sea level
+  and unexaggerated relief. Terrain emits reference-datum elevations and a
+  separately derived sea threshold. Its raw zero is not sea level. No code
+  should silently use that raw zero as the visible sea surface.
+- Negated conventions × source relationship (discovery/invention and
+  predictability prompts):
+
+  ```text
+  convention                     radius origin       altitude treatment
+  emitted radius at sea          native fixed        native difference, 1:1
+  arbitrary display globe size   invented/tunable    relative only; rejected
+  raw elevation means sea height native fixed        wrong datum; rejected
+  flattened land                 native fixed        discards relief; rejected
+  exaggerated relief             native fixed        invented multiplier; rejected
+  new geoid/interior coupling     new source model    beyond this view's scope
+  ```
+
+- Ideonomy passes / overturns: two passes. Negating the nominal reference
+  exposed a false equivalence between isostatic zero and sea level; naming the
+  rendering convention keeps that difference explicit. The convergence pass
+  checked repeatability and ownership: the source radius/altitudes remain fixed,
+  while presentation never claims a new coupled shape model. No further option
+  improved the approved bounded spherical view.
+- Cost if wrong: the rendered reference surface needs rebinding when a native
+  geoid/shape contract exists. No simulation/save quantity is changed; the
+  current convention and limitation must appear in the production record.
+- Capture actions: Task 3 documents and tests this mapping. G6 carries the
+  convention alongside the radius model and other source limitations.
