@@ -162,4 +162,8 @@ Focused and affected verification exited 0:
 - `make world-check`: native/WASM scene byte identity and observer/error checks passed in `70.751s`; WASM measured 471,112 bytes gzipped and 1,240,416 raw.
 - Foreground `make gate-commit`: all four argv-safe subfloor chunks passed in `147.722s`; the terminal chunk reported 445 passed and 5,834 skipped.
 
+The integrated fix was committed as `47e8a8dfb`. Its commit hook repeated the
+four-chunk gate successfully in `121.152s`; that post-staging timing row is
+carried by the following documentation artifact commit.
+
 No census, Sluice submission, push, merge, or campaign close was performed.
