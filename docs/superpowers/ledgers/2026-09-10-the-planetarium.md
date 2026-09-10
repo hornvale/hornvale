@@ -1155,3 +1155,45 @@ client roster at this boundary covers the existing clients; adding the new
 Bevy client to that roster remains Task 8. Its scoped local checks are recorded
 separately. This report does not supply heavy, census, final package or visual
 acceptance. Task 7 continues; G6 remains the final visual and merge stop.
+
+
+## Task 7 — complete clean package, independently reviewed
+
+Task 7 is complete over `452d5cc0f..c2fe914b8`. Independent spec and quality
+review approved the implementation. The 72 client tests, final package corruption
+checks, scoped formatting/clippy and normal commit gates passed. The source
+inventory portability finding from Task 6 is fixed. Exact camera replay required
+the outboard serde_json float_roundtrip feature; both worker and controller
+compared all 300 astronomy objects to prior native-qualified output and found
+no numeric differences. This is a serialization correction, not a new model.
+
+The first clean encode correctly left FAILED without COMPLETE when ffmpeg omitted
+transfer and primaries metadata. A real one-frame probe established explicit frame
+setparams, followed by a regression and fresh clean capture. Failed output01 is
+preserved. Complete output is
+`/Users/nathan/Downloads/Hornvale Planetarium/task7-clean-300-02`, captured at
+`dd37a8e1899e6ac4ad0277f55a0eacb85a3ebefa` with fresh queries and a clean build.
+Later evidence commits do not relabel that revision. Manifest SHA is
+`e5b072af475082eb970df9b9a93a2bbeca64573a8128b33adfabb241a2767c77`; video SHA is
+`8682c28ec26b2de84c1456392e7a4413da45c62f98c3b379e39e6f8e59381a51`.
+
+Root independently decoded all 300 RGB 4K PNGs, checked hashes, bindings, exact
+request IDs/ticks/rational times, compared native astronomy, and played the actual
+full ten-second movie in QuickTime. All PNGs match the prior Task 6 qualification
+byte for byte. The 360-pixel review retains caption readability and limb spacing.
+The actual decoded MP4 frame209 has correct text; a garbled tool-preview caption
+was not treated as a renderer defect. Evidence is in `task7-controller-review-02`
+beside the package. Frames took 85.079 seconds; capture, encode and internal
+verification took 126.17 seconds. This is offline capture, not interactive p95.
+See [the package audit](../../audits/the-planetarium/package.md) for full records.
+
+Follow-up assigned to Task 9: add focused CPU cases for contradictory clean
+provenance (mismatched build revision, dirty build and dirty runtime), rehashing
+changed documents so rejection exercises semantics. Review found the existing
+condition correct; the real clean capture proves its positive case. This
+nonblocking test suggestion remains explicit until final reconciliation.
+
+Stage 3 awaits its canonical report. Task 8 integrates the reusable client gates;
+Task 9 still owns moon detail, interactive performance, repeat-render measurements
+and final G6 review. No visual acceptance, merge or publication is implied by
+package completion. No new design ruling was needed at this verification boundary.

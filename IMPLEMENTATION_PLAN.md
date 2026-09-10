@@ -28,7 +28,7 @@ Detailed tasks: [implementation plan](docs/superpowers/plans/2026-09-10-the-plan
 Approved scope: [design](docs/superpowers/specs/2026-09-10-the-planetarium-design.md).
 
 The physical anchor-radius prerequisite is approved and included in Task 1.
-Execution is authorized; Stages 1 and 2 are complete with green canonical reports. Task 6 capture is complete and Task 7 packaging is in progress. This section tracks The Planetarium only; the
+Execution is authorized; Stages 1 and 2 are complete with green canonical reports. Tasks 6–7 are complete after review; Stage 3 canonical verification follows while Task 8 integration begins. This section tracks The Planetarium only; the
 inherited tracker above remains unchanged.
 
 ## Stage 1: A source-backed moving visual witness
@@ -53,4 +53,4 @@ inherited tracker above remains unchanged.
 **Goal**: Integrate client checks, document the libraries, measure and refine the final film, close through G6.
 **Success Criteria**: CPU client gates integrated, performance and visual evidence delivered, final package reviewed, approved candidate landed through the queue.
 **Tests**: Plan Tasks 8–9: dependency guard, client checks, repeat-render variance, package verification, canonical gates and human visual review.
-**Status**: Not Started
+**Status**: In Progress

@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 complete; Stage 2 canonical report green; Task 6 capture complete after independent review; Task 7 packaging in progress. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 complete; Stage 2 canonical report green; Task 6 capture complete after independent review; Task 7 packaging complete after independent review; Stage 3 canonical submission follows and Task 8 integration begins. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
@@ -566,9 +566,9 @@ unless a change is recorded. Query fresh initial and observation documents;
 never relabel old frames. Record the exact film hash and executable hash with the
 actual build revision. No commit is expected to contain its own SHA (ledger #19).
 
-- [ ] Write CPU package tests that create a tiny fixture package, then remove a frame, duplicate an index, change an observation tick, alter a PNG byte, alter the video, and swap the world binding. Each must fail verification for the stated reason. Helpers generate disposable directories; do not mutate committed fixtures.
-- [ ] Require a freshly created output directory. Initial creation succeeds only when absent; interrupted output is preserved for diagnosis. A second run chooses a new directory. Refuse path traversal/symlink escapes while resolving manifest-listed files; all package members are relative to its root.
-- [ ] Use Rust `std::process::Command` with explicit argument arrays for ffmpeg/ffprobe, never interpolated shell. Candidate video command:
+- [x] Write CPU package tests that create a tiny fixture package, then remove a frame, duplicate an index, change an observation tick, alter a PNG byte, alter the video, and swap the world binding. Each must fail verification for the stated reason. Helpers generate disposable directories; do not mutate committed fixtures.
+- [x] Require a freshly created output directory. Initial creation succeeds only when absent; interrupted output is preserved for diagnosis. A second run chooses a new directory. Refuse path traversal/symlink escapes while resolving manifest-listed files; all package members are relative to its root.
+- [x] Use Rust `std::process::Command` with explicit argument arrays for ffmpeg/ffprobe, never interpolated shell. Candidate video command:
 
 ```bash
 ffmpeg -nostdin -v error -framerate 30 -start_number 0 \
@@ -583,10 +583,10 @@ Qualify RGB-to-video color handling against the captured PNGs; record the
 conversion metadata actually chosen. No HDR-delivery claim: this study's
 review MP4 is SDR. Preserve the original PNGs as the high-quality source.
 
-- [ ] Missing ffmpeg, nonzero encoder exit, missing codec, bad probe count/dimensions/rate or mismatched hash leave no COMPLETE marker. Verification checks content, identity and exact frame mapping independently from encoder success. Stub failed processes in CPU tests; run the real tools for the final package.
-- [ ] Write manifest last, verify the completed content, then atomically publish COMPLETE containing the manifest SHA-256. Public `verify` requires and validates the marker. Internal pre-completion verification uses the same checks with only the marker requirement deferred; do not create a temporary success marker to satisfy the verifier.
-- [ ] Test interruption after frame 299 but before encode, and after encode before marker; neither is complete. Reverify the actual 4K study with the standalone command and record its manifest/video hashes.
-- [ ] Commit implementation and package verification evidence after the applicable gates. Do not adapt old episode packet records by inventing correspondence to make its assembler accept these frames.
+- [x] Missing ffmpeg, nonzero encoder exit, missing codec, bad probe count/dimensions/rate or mismatched hash leave no COMPLETE marker. Verification checks content, identity and exact frame mapping independently from encoder success. Stub failed processes in CPU tests; run the real tools for the final package.
+- [x] Write manifest last, verify the completed content, then atomically publish COMPLETE containing the manifest SHA-256. Public `verify` requires and validates the marker. Internal pre-completion verification uses the same checks with only the marker requirement deferred; do not create a temporary success marker to satisfy the verifier.
+- [x] Test interruption after frame 299 but before encode, and after encode before marker; neither is complete. Reverify the actual 4K study with the standalone command and record its manifest/video hashes.
+- [x] Commit implementation and package verification evidence after the applicable gates. Do not adapt old episode packet records by inventing correspondence to make its assembler accept these frames.
 
 **Stage 3 boundary:** complete package plus actual moving review copies required. Submit the canonical stage gate and record its result. Packaging correctness does not award visual acceptance.
 
@@ -595,7 +595,7 @@ review MP4 is SDR. Preserve the original PNGs as the high-quality source.
 **Goal:** Make the libraries/client maintainable, demonstrate the final visual and performance result, and prepare the G6 review package.
 **Success Criteria:** Client CPU gates run in the canonical client phase; docs match behavior; the final moving package and measurements are reviewable; G6 decision is recorded before merge.
 **Tests:** Tasks 8–9; dependency mutation witnesses, scoped client gates, final package verification, canonical stage evidence and GPU review.
-**Status:** Not Started
+**Status:** In Progress
 
 ### Task 8: enforce reuse boundaries and integrate client checks
 
