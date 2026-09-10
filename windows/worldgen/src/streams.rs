@@ -452,4 +452,19 @@ hornvale_kernel::stream_labels! {
     /// Position-keyed, additive, a NEW label — see [`WEFT_SPRING`]'s own
     /// doc for the three properties this restates.
     WEFT_ERRATIC = "derived/erratic/v1" => "occurrence of a derived erratic at a walk facet, keyed on position";
+    /// Skyworld projected-coverage draw, conditioned by the deterministic
+    /// environment score and independent from territory properties.
+    SKYWORLD_COVERAGE = "skyworld/coverage/v1" => "seeded sky-habitat coverage draw conditioned by the deterministic environment score";
+    /// Skyworld's spatial distribution, clustering, and origin-altitude draws,
+    /// keyed on the stable surface vertex as `vertex/{id}`.
+    SKYWORLD_DISTRIBUTION = "skyworld/distribution/v1" => "sky-habitat distribution and origin altitude, keyed on the stable surface vertex as vertex/{id}";
+    /// Skyworld's stable atmospheric baseline and field profile.
+    SKYWORLD_ATMOSPHERE = "skyworld/atmosphere/v1" => "stable world-level sky atmospheric fields";
+    /// Skyworld territory phenotype and stability attributes.
+    SKYWORLD_PHENOTYPE = "skyworld/phenotype/v1" => "sky-territory phenotype and stability traits";
+    /// Skyworld territory lineage and lifecycle metadata.
+    SKYWORLD_LINEAGE = "skyworld/lineage/v1" => "sky-territory lineage and lifecycle metadata";
+    /// Skyworld movement-regime variation. Stage 1 stores this property but
+    /// does not derive trajectories from it.
+    SKYWORLD_MOVEMENT = "skyworld/movement/v1" => "sky-territory movement regime variation";
 }

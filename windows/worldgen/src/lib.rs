@@ -93,6 +93,7 @@ pub mod color_naming;
 pub mod components;
 pub mod d3b;
 pub mod d4;
+pub mod d5;
 pub mod delve_seating;
 mod descent;
 pub mod disposition;
@@ -123,6 +124,9 @@ pub mod resolve;
 pub mod schedule;
 pub mod seed_sweep;
 pub mod settlement_pins;
+pub mod skyworld;
+mod skyworld_propagation;
+pub mod skyworld_render;
 pub mod social_projection;
 pub mod streams;
 pub mod traversal;
@@ -154,6 +158,11 @@ pub use d4::{
     D4PortfolioProfile, D4PortfolioVector, D4ProfileError, D4ProfileSignature, D4RecurrenceClass,
     D4RegimeEvidence, D4RegimeVerdict, d4_normalize_profile, d4_profile_signature,
     d4_recurrence_class, d4_regime_verdict,
+};
+pub use d5::{
+    D5ApexVerdict, D5ControlValues, D5ConvergenceEvidence, D5EvidenceBranch, D5FlowProvenance,
+    D5FlowVector, D5ObservationAvailability, D5PhaseRecord, D5Recurrence, D5RegimeEvidence,
+    D5SettlementProfile, d5_apex_verdict, d5_compare_peers, d5_convergence_evidence,
 };
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
 pub use fieldpack::{FieldPack, field_pack_from};
@@ -202,6 +211,18 @@ pub use reproductive::{
 };
 pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
 pub use settlement_pins::SettlementPins;
+pub use skyworld::skyworld_from;
+pub use skyworld::{
+    SkyAdjacency, SkyCorridor, SkyCorridorKind, SkyEcology, SkyEnergy, SkyEvent, SkyEventKind,
+    SkyExchangeMode, SkyFields, SkyFootprint, SkyLifecycle, SkyLineage, SkyMobility, SkyPhenotype,
+    SkyPosition, SkyPropagation, SkyPropagationDetail, SkyStability, SkyStocks, SkySubstrate,
+    SkyTerritory, SkyTrajectorySample, SkyWater, SkyWorld, SkyWorldConfig,
+};
+pub use skyworld_propagation::{propagation_at, trajectory_at};
+pub use skyworld_render::{
+    SkyWorldDetail, render_skyworld_diagnostic_readout, render_skyworld_png,
+    render_skyworld_readout,
+};
 pub use social_projection::{
     SocialProjection, SocialProjectionError, SocialProjectionPins, SocialReadout, SyntheticSociety,
     approved_lot_probe_projection, approved_lot_probe_projection_for, derive_social_readout,

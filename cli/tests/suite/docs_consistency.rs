@@ -494,9 +494,18 @@ fn campaign_reconciliation_covers_every_campaign_record() {
     let mut duplicates = BTreeSet::new();
 
     for row in reconciliation_rows() {
-        for path in row.record_paths.into_iter().flatten() {
-            if !cited.insert(path.clone()) {
-                duplicates.insert(path);
+        for (column, paths) in row.record_paths.into_iter().enumerate() {
+            // Ledgers are evidence columns, not campaign-record population: a
+            // dedicated task ledger may cite a campaign without being an
+            // independently reconciled campaign record itself.
+            if column == 2 {
+                continue;
+            }
+
+            for path in paths {
+                if !cited.insert(path.clone()) {
+                    duplicates.insert(path);
+                }
             }
         }
     }
