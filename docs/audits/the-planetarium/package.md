@@ -64,3 +64,46 @@ one-frame reproduction demonstrated that appending explicit frame metadata with
 retains all four required probe tags. The conversion itself is unchanged. The
 encoder fixture now fails without this argument. The failed run is preserved;
 final qualification uses a fresh clean revision and fresh frames in another root.
+
+## Clean package qualification
+
+Fresh `task7-clean-300-02` completed at capture revision
+`dd37a8e1899e6ac4ad0277f55a0eacb85a3ebefa`. Both build and rendering source tree
+were clean. Apple M1 Max / Metal, Rust 1.96.1, Bevy 0.19.1,
+ffmpeg/ffprobe 8.1.1. Its executable is retained in neighboring
+`task7-evidence-02`; later evidence commits do not relabel this build.
+
+All 300 frames captured in 85.079 s; capture through real encode and internal
+verification took 126.17 s. Standalone `verify --out` run from `/tmp` passed
+in 30.18 s. All 300 astronomy documents match both the earlier Task6 observations
+and Task5 native samples exactly: zero differing values, maximum numeric
+change zero. The float-roundtrip parser feature introduced no measured model drift.
+
+Six full-resolution decoded frames (0, 89, 90, 209, 210, 299) measured RGB mean
+absolute channel errors 0.119–0.440 / 255; lit-region means 0.939–1.477,
+dark-region means 0.684–1.061, and 99th-percentile channel errors 2–3.
+Edge maxima 45–75 disclose the lossy/chroma-subsampled limit. All-frame coarse
+correspondence and required color tags passed. This qualifies SDR delivery while
+retaining original PNGs, and makes no HDR or lossless-video claim.
+
+SHA-256:
+
+- `manifest.json`: `e5b072af475082eb970df9b9a93a2bbeca64573a8128b33adfabb241a2767c77`
+- `study.mp4`: `8682c28ec26b2de84c1456392e7a4413da45c62f98c3b379e39e6f8e59381a51`
+- `film.json`: `a2397af4b158023f246ca119800ca1f78de54966a958f85a62dabf477f72009a`
+- `frames.jsonl`: `9045cea2d753c83f5caf9116af866d01f8394bc4b64f463ff37ffd382df082fe`
+- Capture executable: `025d920ce122f86f53923c3d9cd7edc2630979f48f390e3cdc1b475e0441d265`
+
+Artifacts live under `/Users/nathan/Downloads/Hornvale Planetarium/`.
+`task7-evidence-02/qualification.json` records complete hashes, measured color
+errors and the decode command; build, capture and standalone verify logs sit
+beside it. Native/source-model comparison is exact; the standalone media check
+is appropriately lossy. Controller moving review and Stage3 gate remain separate.
+
+Controller independent review also decoded all 300 PNGs and checked every
+manifest/record hash and observation identity. All 300 fresh PNGs are byte-identical
+to Task6 despite the new revision binding. Controller played the actual MP4 in
+QuickTime through 10 seconds and checked the phone-size caption composition.
+Evidence is `task7-controller-review-02/check.json`, playback screenshots and
+phone-size stills under the same Downloads parent. This is the moving witness;
+final moon detail and G6 visual acceptance remain Task9/controller decisions.
