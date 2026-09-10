@@ -134,6 +134,9 @@ pub mod underworld_readout;
 pub mod vestige;
 pub mod volcano;
 pub mod warp;
+pub mod waterworld;
+mod waterworld_propagation;
+pub mod waterworld_render;
 pub mod weft;
 pub use ablation::ChannelMask;
 pub use character::{
@@ -238,6 +241,11 @@ pub use warp::{
     MICRO_WORD_THRESHOLD, STEEP_HI, STEEP_LO, Steepness, Wetness, rock_word, steepness_sign,
     steepness_word, wetness_sign,
 };
+pub use waterworld::{
+    WaterFields, WaterStocks, WaterSubstrate, WaterVent, WaterWorld, WaterWorldConfig,
+    waterworld_from,
+};
+pub use waterworld_render::WaterWorldDetail;
 pub use weft::{
     WeftFeature, WeftKey, WeftKind, WeftWindow, all_features_at_cached, features_at_cached, occurs,
     prevalence, prevalence_with_weights,

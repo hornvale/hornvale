@@ -224,6 +224,7 @@ windows/worldgen/tests/suite/range_readout.rs	3	unmigrated:3
 windows/worldgen/tests/suite/repose_exposure.rs	1	identity:1
 windows/worldgen/tests/suite/soil_attribution_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/skyworld.rs	1	identity:1
+windows/worldgen/tests/suite/waterworld.rs	1	artifacts:1
 windows/worldgen/tests/suite/social_projection.rs	1	identity:1
 windows/worldgen/tests/suite/solitary_tongue.rs	1	unmigrated:1
 windows/worldgen/tests/suite/species_worlds.rs	5	unmigrated:5

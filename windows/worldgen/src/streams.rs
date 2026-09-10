@@ -467,4 +467,7 @@ hornvale_kernel::stream_labels! {
     /// Skyworld movement-regime variation. Stage 1 stores this property but
     /// does not derive trajectories from it.
     SKYWORLD_MOVEMENT = "skyworld/movement/v1" => "sky-territory movement regime variation";
+    // Waterworld Stage 1 is a pure terrain/climate projection and deliberately
+    // earns no stream label. The first stochastic source is Stage 2's vent
+    // admission; its label belongs here only after its behavior is tested.
 }
