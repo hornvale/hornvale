@@ -3,6 +3,7 @@
 //! ones; unsatisfiable pins fail loudly — the seed is the world's identity,
 //! never retried (decision 0007).
 
+use crate::stellar::StellarTopology;
 use crate::units::{Degrees, LocalDays};
 
 /// A graded moon request: `min` essential, `want` desired (spec §4).
@@ -52,6 +53,8 @@ impl MoonsPin {
 /// type-audit: bare-ok(count: wanderers)
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SkyPins {
+    /// Stellar-root topology; None = drawn.
+    pub topology: Option<StellarTopology>,
     /// Moon request: exact or graded; None = drawn.
     pub moons: Option<MoonsPin>,
     /// Rotation regime of the anchor world.
@@ -125,6 +128,17 @@ pub use hornvale_kernel::genesis::GenesisError;
 pub fn pin_strings(pins: &SkyPins) -> Vec<String> {
     let mut out = Vec::new();
 
+    if let Some(topology) = pins.topology {
+        out.push(format!(
+            "stellar-topology={}",
+            match topology {
+                StellarTopology::Single => "single",
+                StellarTopology::WideBinary => "wide-binary",
+                StellarTopology::CloseBinary => "close-binary",
+            }
+        ));
+    }
+
     if let Some(moons) = pins.moons {
         if moons.min() == moons.want() {
             out.push(format!("moons={}", moons.want()));
@@ -188,6 +202,18 @@ pub fn parse_pin(s: &str, pins: &mut SkyPins) -> Result<(), String> {
         .split_once('=')
         .ok_or_else(|| format!("malformed pin '{s}': expected key=value"))?;
     match key {
+        "stellar-topology" => {
+            pins.topology = Some(match value {
+                "single" => StellarTopology::Single,
+                "wide-binary" => StellarTopology::WideBinary,
+                "close-binary" => StellarTopology::CloseBinary,
+                other => {
+                    return Err(format!(
+                        "stellar-topology: unknown value '{other}' (expected single, wide-binary, or close-binary)"
+                    ));
+                }
+            });
+        }
         "moons" => {
             let moons = match value.split_once('+') {
                 Some((min_s, extra_s)) => {
@@ -302,6 +328,7 @@ mod tests {
     #[test]
     fn default_pins_pin_nothing() {
         let pins = SkyPins::default();
+        assert!(pins.topology.is_none());
         assert!(pins.moons.is_none());
         assert!(pins.rotation.is_none());
         assert!(pins.obliquity.is_none());
@@ -327,6 +354,7 @@ mod tests {
     #[test]
     fn pin_strings_round_trip_through_parse() {
         let pins = SkyPins {
+            topology: Some(StellarTopology::CloseBinary),
             moons: Some(MoonsPin::graded(1, 2).unwrap()),
             rotation: Some(RotationPin::Locked),
             obliquity: Some(Degrees::new(12.5).unwrap()),
@@ -347,6 +375,7 @@ mod tests {
     #[test]
     fn pin_strings_emits_one_string_per_pinned_field() {
         let pins = SkyPins {
+            topology: Some(StellarTopology::WideBinary),
             moons: Some(MoonsPin::exact(2).unwrap()),
             rotation: Some(RotationPin::Normal),
             obliquity: Some(Degrees::new(0.0).unwrap()),
@@ -357,7 +386,8 @@ mod tests {
             wanderers: Some(2),
         };
         let strings = pin_strings(&pins);
-        assert_eq!(strings.len(), 7);
+        assert_eq!(strings.len(), 8);
+        assert!(strings.contains(&"stellar-topology=wide-binary".to_string()));
         assert!(strings.contains(&"moons=2".to_string()));
         assert!(strings.contains(&"rotation=normal".to_string()));
         assert!(strings.contains(&"obliquity=none".to_string()));
@@ -498,6 +528,27 @@ mod tests {
         let mut rebuilt = SkyPins::default();
         parse_pin("forcing=zero", &mut rebuilt).unwrap();
         assert_eq!(rebuilt.forcing, Some(ForcingPin::Zero));
+    }
+
+    #[test]
+    fn every_stellar_topology_round_trips() {
+        for topology in [
+            StellarTopology::Single,
+            StellarTopology::WideBinary,
+            StellarTopology::CloseBinary,
+        ] {
+            let pins = SkyPins {
+                topology: Some(topology),
+                ..SkyPins::default()
+            };
+            let strings = pin_strings(&pins);
+            let mut rebuilt = SkyPins::default();
+            parse_pin(&strings[0], &mut rebuilt).unwrap();
+            assert_eq!(rebuilt.topology, Some(topology));
+        }
+        let mut pins = SkyPins::default();
+        let error = parse_pin("stellar-topology=trinary", &mut pins).unwrap_err();
+        assert!(error.contains("single, wide-binary, or close-binary"));
     }
 
     /// claim: invariant(forall pin-strings; false-positive seed-loop flag — the

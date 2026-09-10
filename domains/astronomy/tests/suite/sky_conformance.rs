@@ -1,6 +1,6 @@
 //! The sky-conformance battery: what a Hornvale sky *is*. Every generated
 //! sky, on every seed, in every rotation regime, at every hour, keeps four
-//! claims true — there is exactly one day-sky sun, nothing outranks it, it
+//! claims true — each stellar source has a day-sky sun, nothing outranks the primary, it
 //! is never retracted from the visible bodies, and any period it carries is
 //! the calendar's own day.
 //!
@@ -61,7 +61,7 @@ fn regimes() -> Vec<SkyPins> {
 /// claim: sanctioned-sweep(mixed-regime battery, 3 of 4 sub-regimes
 /// pinned — no census home for the pinned sub-regimes)
 #[test]
-fn every_sky_has_exactly_one_day_sky_sun() {
+fn every_stellar_source_has_a_day_sky_sun() {
     for pins in regimes() {
         for seed in 0..32u64 {
             let sky = GeneratedSky::new(generate(Seed(seed), &pins).unwrap());
@@ -71,7 +71,12 @@ fn every_sky_has_exactly_one_day_sky_sun() {
                     .iter()
                     .filter(|p| p.venue == Venue::DaySky && p.kind == SUN_KIND)
                     .collect();
-                assert_eq!(suns.len(), 1, "seed {seed} t {t}: exactly one day-sky sun");
+                let expected = 1 + usize::from(sky.system().stellar.companion.is_some());
+                assert_eq!(
+                    suns.len(),
+                    expected,
+                    "seed {seed} t {t}: one sun per stellar source"
+                );
                 // The sun keeps its registered concept and its rank: the
                 // registered kind, and the unique top salience.
                 assert_eq!(suns[0].kind, SUN_KIND);

@@ -485,12 +485,15 @@
 - [The Route Cache](./chronicle/the-route-cache.md)
 - [The Newel](./chronicle/the-newel.md)
 - [The Grammar](./chronicle/the-grammar.md)
+- [The Wanderers](./chronicle/the-wanderers.md)
 - [The Insulator](./chronicle/the-insulator.md)
 - [The Sett](./chronicle/the-sett.md)
 - [The Murrain](./chronicle/the-murrain.md)
 - [The Seedbed](./chronicle/the-seedbed.md)
 - [The Census Tail](./chronicle/the-census-tail.md)
 - [Skyworld Seams](./chronicle/skyworld-seams.md)
+- [The Observation Series](./chronicle/the-observation-series.md)
+- [The Vent](./chronicle/the-vent.md)
 
 # Appendix: The Frontier
 

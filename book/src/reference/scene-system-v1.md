@@ -23,6 +23,46 @@ incidental):
 | `star` | object | The central star, described below. |
 | `world` | object | The anchor world's orbital and rotational elements, described below. |
 | `moons` | array of object | Every moon's orbital elements, in generation order, described below. |
+| `stellar` | object | Topology-aware stellar root, appended after the legacy fields. |
+| `wanderers` | array of object | Astronomy-first sibling bodies, in orbital order. |
+
+The original `schema`, `seed`, `star`, `world`, and `moons` fields retain their
+meaning and order. The legacy `star` object remains the primary-star
+compatibility view. A topology-aware client uses `stellar` when it needs the
+binary root; a single-star consumer can ignore the appended fields.
+
+`stellar` is:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `topology` | string | `single`, `wide-binary`, or `close-binary`. |
+| `primary` | object | Primary mass, class, and luminosity. |
+| `companion` | object, absent for `single` | Secondary star and its bounded binary orbit. |
+| `combined_luminosity_rel` | number | Sum of the root stars' luminosities. |
+| `anchor_hz_inner_au`, `anchor_hz_outer_au` | number | Topology-aware anchor admission envelope, AU. |
+| `circumprimary_outer_limit_au` | number, absent except for wide binaries | Outer stability boundary for a circumprimary anchor. |
+| `circumbinary_inner_limit_au` | number, absent except for close binaries | Inner stability boundary for a circumbinary anchor. |
+
+Each stellar body has `class_name`, `mass_rel`, and `luminosity_rel`. A
+companion's `orbit` has `semi_major_axis_au`, `period_days`, and
+`phase_offset`. The binary orbit is circular and coplanar in this version;
+the close-binary positions use the two-body barycentric approximation, while
+wide-binary anchors remain circumprimary.
+
+Each entry in `wanderers` is:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `orbit_au` | number | Circular orbital radius in AU. |
+| `period_days` | number | Circular orbital period in standard days. |
+| `phase_offset` | number | Heliocentric phase at absolute day zero, in turns `[0, 1)`. |
+| `class` | string | `rock` or `giant`. |
+| `albedo` | number | Bond albedo used by the astronomy model. |
+| `synodic_period_days` | number | Synodic period against the anchor; non-finite means no finite recurrence. |
+| `max_elongation_deg` | number, absent for outer bodies | Geometric maximum elongation for an inner body. |
+
+The scene contains elements only: it contains no sampled position, current
+brightness, event list, or visibility result.
 
 `star` is:
 
@@ -155,6 +195,27 @@ Reusing `year_phase_offset` in the seasonal-temperature evaluator (or
 omitting it from `worldPhase`) is the single most likely mistake a client
 makes wiring these two documents together — they share a shape, not a
 value.
+
+For a wanderer `i`, the shared circular evaluator begins with:
+
+```
+wandererPhase(i, t) = frac(t / period_days + phase_offset)
+wandererPosition(i, t) = orbit_au · (cos(τ · wandererPhase), sin(τ · wandererPhase))
+```
+
+The apparent longitude is the angle of the wanderer's position minus the
+anchor position. Inner bodies are constrained by `max_elongation_deg`; outer
+bodies use opposition geometry. Conjunctions, oppositions, retrograde loops,
+and visibility are derived at query time from these positions. A hidden body
+is still present in `wanderers` and is never removed from the scene.
+
+For `stellar_positions_at`, a single system has the primary at the origin. A
+wide binary keeps the primary at the origin and evaluates the companion on
+the emitted circular binary orbit. A close binary evaluates both stars around
+their barycenter according to their emitted masses, separation, period, and
+phase. These are bounded circular/two-body approximations: eccentricity,
+inclination, arbitrary multiplicity, transits, and occultations are outside
+v1.
 
 ## Stability
 

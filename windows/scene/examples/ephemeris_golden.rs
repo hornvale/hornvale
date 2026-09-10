@@ -2,7 +2,7 @@
 //! phase, moon synodic phases, and world rotation phase at sample days, which
 //! goldengrove (the external three.js client, hornvale/goldengrove) must
 //! reproduce from the emitted elements.
-use hornvale_astronomy::units::StdInstant;
+use hornvale_astronomy::{stellar_positions_at, units::StdInstant, wanderer_phase_at};
 use hornvale_kernel::Seed;
 use hornvale_worldgen::{build_world, sky_of};
 
@@ -42,8 +42,26 @@ fn main() {
             .map(|p| format!("{p}"))
             .collect::<Vec<_>>()
             .join(",");
+        let wanderers = system
+            .wanderers
+            .iter()
+            .map(|w| hornvale_kernel::quantize(wanderer_phase_at(w, t)))
+            .map(|p| format!("{p}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        let stars = stellar_positions_at(system, t)
+            .iter()
+            .map(|p| {
+                format!(
+                    "{{\"x_au\":{},\"y_au\":{}}}",
+                    hornvale_kernel::quantize(p.x_au),
+                    hornvale_kernel::quantize(p.y_au)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
         rows.push(format!(
-            "{{\"t\":{d},\"world_phase\":{world_phase},\"rotation_phase\":{rotation_phase},\"moons\":[{moons_json}]}}"
+            "{{\"t\":{d},\"world_phase\":{world_phase},\"rotation_phase\":{rotation_phase},\"moons\":[{moons_json}],\"wanderers\":[{wanderers}],\"stars\":[{stars}]}}"
         ));
         d += 20.0;
     }

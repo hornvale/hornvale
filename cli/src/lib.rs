@@ -10,6 +10,7 @@ pub mod attest;
 pub mod audio;
 pub mod concepts;
 pub mod dictionary;
+pub mod observations;
 pub mod phonology;
 pub mod proto;
 pub mod provision;

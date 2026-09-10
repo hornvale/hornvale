@@ -161,12 +161,16 @@ pub fn class_concept_of_mass(mass: f64) -> &'static str {
 pub fn generate_star(astronomy_seed: Seed) -> Star {
     let mut stream = astronomy_seed.derive(streams::STAR_MASS).stream();
     let mass = SolarMasses(0.6 + stream.next_f64() * 0.8);
-    let luminosity = SolarLuminosities(math::powf(mass.0, 3.5));
-    let sqrt_l = luminosity.0.sqrt();
-    let class_name = class_name_of_mass(mass.0).to_string();
     let ceiling = t_ms_of_mass(mass.0).min(T_MAX.0);
     let age =
         Gyr((0.05 + astronomy_seed.derive(streams::STAR_AGE).stream().next_f64() * 0.90) * ceiling);
+    star_with_mass_and_age(mass, age)
+}
+
+pub(crate) fn star_with_mass_and_age(mass: SolarMasses, age: Gyr) -> Star {
+    let luminosity = SolarLuminosities(math::powf(mass.0, 3.5));
+    let sqrt_l = luminosity.0.sqrt();
+    let class_name = class_name_of_mass(mass.0).to_string();
     Star {
         mass,
         luminosity,

@@ -23,3 +23,16 @@ delegated workers repeatedly stopped before editing. That exception is in the
 campaign ledger. The implementation remains intentionally small: no 3-D fluid
 solver, dense planet-by-time cache, per-microbe simulation, species system, or
 universal habitat wrapper.
+
+At close, `origin/main` had advanced beyond the campaign base. The first
+merge-tree check exposed generated-report conflicts; the branch absorbed
+`origin/main` and regenerated those reports before queue submission. This was
+the campaign's first meeting with main after implementation began, so the
+stage-boundary absorption cadence was missed and is recorded here rather than
+silently treating the queue's merge as a substitute.
+
+Deferred minors were routed as follows: vent succession, reef fragmentation,
+full current networks, and signal distortion are registry rows; sea peoples
+and named marine consumers are a registry row; the species/metabolism/
+reproduction non-goal remains in the chronicle and ledger as a future design
+boundary. No deferred minor changes the shipped Waterworld slice.

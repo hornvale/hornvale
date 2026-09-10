@@ -14112,9 +14112,13 @@ mod tests {
         // The epidemiology/history bake changes the seed-42 settlement and
         // naming substrate; this remains the same metric claim, with the
         // exact value re-measured on the new deterministic world.
+        // THE WANDERERS re-pin (2026-09-09): 2.4285714285714284 ->
+        // 2.4242424242424243. Stellar topology and anchor generation change
+        // the seed-42 settlement/naming substrate; this is a fresh live
+        // measurement on the merged tree, not a change to the 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.4285714285714284)
+            MetricValue::Number(2.4242424242424243)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14349,9 +14353,12 @@ mod tests {
         // epidemiology/history bake changes the seed-42 settlement substrate
         // and therefore the named-site sample; the metric remains inside its
         // stated 2-3 target.
+        // THE WANDERERS re-pin (2026-09-09): 2.8 -> 2.8157894736842106.
+        // Stellar topology and anchor generation change the merged tree's
+        // seed-42 named-site sample; it remains inside the stated 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.8)
+            MetricValue::Number(2.8157894736842106)
         );
     }
 

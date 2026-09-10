@@ -4,6 +4,7 @@
 pub mod anchor;
 pub mod calendar;
 pub mod eclipses;
+pub mod ephemeris;
 pub mod facts;
 pub mod figures;
 pub mod forcing;
@@ -19,6 +20,7 @@ pub mod resonance;
 pub mod sky_position;
 pub mod star;
 pub mod starfield;
+pub mod stellar;
 pub mod streams;
 pub use streams::stream_labels;
 pub mod system;
@@ -26,7 +28,10 @@ pub mod units;
 pub mod wanderers;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
-pub use calendar::{Calendar, SkyBand, TWILIGHT_DEPTH_DEG, calendar_of};
+pub use calendar::{
+    Calendar, SkyBand, TWILIGHT_DEPTH_DEG, WandererCalendarMark, calendar_of,
+    wanderer_calendar_marks,
+};
 pub use eclipses::{
     EclipseBody, EclipseCycle, EclipseEvent, EclipseKind, EclipseSight, GroundTrack,
     LUNAR_SHADOW_FACTOR, TRACK_HALF_WIDTH_DEG, best_cycle, coincidence_days, draconic_month,
@@ -34,6 +39,12 @@ pub use eclipses::{
     moon_ecliptic_longitude_deg, node_crossing_chance, node_longitude_at, node_regression_period,
     parade_days_per_year, series_returns, solar_eclipse_sight, solar_eclipse_threshold_deg,
     sub_solar_longitude_deg, sun_angular_rel_at,
+};
+pub use ephemeris::{
+    OrbitalPosition, StellarIllumination, StellarLight, WandererAppearance, WandererEvent,
+    WandererEventKind, WandererVisibility, anchor_relative_longitude_at, stellar_illumination_at,
+    stellar_positions_at, wanderer_events, wanderer_phase_at, wanderer_position_at,
+    wanderer_recurrence, wanderer_visibility,
 };
 pub use figures::{
     FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,
@@ -58,6 +69,10 @@ pub use star::{
     planet_age,
 };
 pub use starfield::{FieldStar, starfield};
+pub use stellar::{
+    BinaryOrbit, CompanionStar, StellarConfiguration, StellarTopology, generate_stellar,
+    stellar_gravity_mass, stellar_luminosity_at,
+};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
     Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, Kelvin, LightYears, LocalDays,

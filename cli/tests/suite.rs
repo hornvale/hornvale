@@ -66,6 +66,8 @@ mod locale_cli;
 mod murrain_epidemiology;
 #[path = "suite/no_entity_id_values_in_prose.rs"]
 mod no_entity_id_values_in_prose;
+#[path = "suite/observations.rs"]
+mod observations;
 #[path = "suite/prose_is_not_a_contract.rs"]
 mod prose_is_not_a_contract;
 #[path = "suite/provision.rs"]

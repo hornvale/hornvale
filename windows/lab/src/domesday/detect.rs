@@ -1564,9 +1564,16 @@ mod tests {
         // observed |r| falls from 0.755 to inside its declared moderate band
         // — see `d5_direction` below, which is the other half of that same
         // metric's story.
+        // The replacement census artifact carries one additional strength
+        // finding: climate-displacement-events now tracks habitable-fraction
+        // at r = -0.200, weak against the declared moderate band. Main's
+        // older Domesday index still says 18; this witness belongs to the
+        // replacement census being delivered here. Keep it aligned with that
+        // artifact rather than changing the detector to preserve the older
+        // count.
         let d5_strength = f.iter().filter(|x| x.detector == "D5 strength").count();
         assert_eq!(
-            d5_strength, 18,
+            d5_strength, 19,
             "D5 strength hit count changed; investigate before re-pinning"
         );
         let d5_unmeasurable = f.iter().filter(|x| x.detector == "D5 unmeasurable").count();
