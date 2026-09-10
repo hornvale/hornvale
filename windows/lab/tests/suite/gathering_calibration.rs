@@ -204,8 +204,8 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // evidence for the Earth-contingent gradient claim (decision 0106's
     // circularity rule), exactly as the paragraph above says.
     assert!(
-        (mean - 18.0819).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.0819)"
+        (mean - 18.0469).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.0469)"
     );
 }
 
@@ -462,8 +462,8 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // which settlement populations carry the latitude weighting, moving the
     // measured mean to 17.4432. The below-uniform-sphere claim remains true.
     assert!(
-        (mean - 17.4432).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.4432)"
+        (mean - 17.4775).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.4775)"
     );
 }
 

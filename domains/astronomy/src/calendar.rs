@@ -3,9 +3,9 @@
 //! without that column — truthfully.
 
 use crate::anchor::Rotation;
-use crate::sky_position::{EquatorialCoord, ecliptic_of, equatorial_at};
+use crate::sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 use crate::system::StarSystem;
-use crate::units::{StdDays, StdInstant};
+use crate::units::{Degrees, StdDays, StdInstant};
 use hornvale_kernel::math;
 use hornvale_kernel::units::TickSpan;
 
@@ -627,7 +627,86 @@ pub fn calendar_of(system: &StarSystem) -> Calendar {
     }
 }
 
+/// A wanderer event rendered for an almanac without inventing a local day.
+/// type-audit: bare-ok(count: local_day), bare-ok(prose: description)
+#[derive(Debug, Clone, PartialEq)]
+pub struct WandererCalendarMark {
+    /// The physical event, retaining body index and absolute time.
+    pub event: crate::WandererEvent,
+    /// Local-day index when the anchor has a solar day.
+    pub local_day: Option<i64>,
+    /// Neutral vocabulary; body indices are identifiers, never proper names.
+    pub description: String,
+}
+
+/// Dated conjunction/opposition and complete-loop vocabulary for the requested span.
+pub fn wanderer_calendar_marks(
+    system: &StarSystem,
+    from: StdInstant,
+    until: StdInstant,
+) -> Vec<WandererCalendarMark> {
+    let cal = calendar_of(system);
+    crate::wanderer_events(system, from, until)
+        .into_iter()
+        .map(|event| {
+            let words = match event.kind {
+                crate::WandererEventKind::Conjunction => "is in conjunction".to_string(),
+                crate::WandererEventKind::Opposition => "stands at opposition".to_string(),
+                crate::WandererEventKind::Retrograde { until } => format!(
+                    "begins a retrograde loop, resuming forward motion at absolute day {:.2}",
+                    until.get()
+                ),
+            };
+            let description = format!(
+                "Wanderer {} {words} at absolute day {:.2}.",
+                event.wanderer + 1,
+                event.at.get()
+            );
+            WandererCalendarMark {
+                local_day: cal.local_day(event.at).map(|day| day.0),
+                event,
+                description,
+            }
+        })
+        .collect()
+}
+
 impl Calendar {
+    /// Project a coplanar sightline onto the local horizon at the reference
+    /// meridian. Longitude uses the calendar's solar/equinox convention.
+    /// `None` for locked worlds or an invalid latitude.
+    /// type-audit: pending(wave-1: latitude)
+    pub fn ecliptic_altitude_at(
+        &self,
+        t: StdInstant,
+        latitude: f64,
+        longitude: Degrees,
+    ) -> Option<Degrees> {
+        if !latitude.is_finite() || !(-90.0..=90.0).contains(&latitude) {
+            return None;
+        }
+        let fraction = self.local_day(t)?.1;
+        let direction = if self.retrograde { -1.0 } else { 1.0 };
+        let eq = equatorial_at(
+            &EclipticCoord {
+                lon_deg: longitude.get(),
+                lat_deg: 0.0,
+            },
+            self.forcing.obliquity_at(t.get()),
+            0.0,
+        );
+        let hour = std::f64::consts::TAU * (fraction - 0.5) * direction
+            + (self.solar_equatorial(t).ra_deg - eq.ra_deg).to_radians();
+        let (phi, delta) = (latitude.to_radians(), eq.dec_deg.to_radians());
+        Some(Degrees(
+            math::asin(
+                (math::sin(phi) * math::sin(delta)
+                    + math::cos(phi) * math::cos(delta) * math::cos(hour))
+                .clamp(-1.0, 1.0),
+            )
+            .to_degrees(),
+        ))
+    }
     /// Length of one local day as an exact tick span, if the world has one.
     ///
     /// The stored truth (The Foliot). Prefer this over [`Self::day_length`]

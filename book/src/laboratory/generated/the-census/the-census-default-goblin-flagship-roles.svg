@@ -11,11 +11,11 @@
 <rect x="66.7" y="230.0" width="120.7" height="6.0" fill="#5b8dd9" rx="2" />
 <text x="127.0" y="226.0" font-size="11" fill="currentColor" text-anchor="middle">30</text>
 <text x="127.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 127.0 252.0)">farmer,chief</text>
-<rect x="208.7" y="46.4" width="120.7" height="189.6" fill="#5b8dd9" rx="2" />
-<text x="269.0" y="42.4" font-size="11" fill="currentColor" text-anchor="middle">948</text>
+<rect x="208.7" y="46.6" width="120.7" height="189.4" fill="#5b8dd9" rx="2" />
+<text x="269.0" y="42.6" font-size="11" fill="currentColor" text-anchor="middle">947</text>
 <text x="269.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 269.0 252.0)">farmer,shaman,chief</text>
-<rect x="350.6" y="233.6" width="120.7" height="2.4" fill="#5b8dd9" rx="2" />
-<text x="411.0" y="229.6" font-size="11" fill="currentColor" text-anchor="middle">12</text>
+<rect x="350.6" y="233.4" width="120.7" height="2.6" fill="#5b8dd9" rx="2" />
+<text x="411.0" y="229.4" font-size="11" fill="currentColor" text-anchor="middle">13</text>
 <text x="411.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 411.0 252.0)">fisher,chief</text>
 <rect x="492.6" y="234.0" width="120.7" height="2.0" fill="#5b8dd9" rx="2" />
 <text x="553.0" y="230.0" font-size="11" fill="currentColor" text-anchor="middle">10</text>

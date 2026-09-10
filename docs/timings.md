@@ -6492,6 +6492,19 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T13:00:46Z | sluice:gate | 808.004 | 21478.867 | 513.871 | 27.22 | 0 | 6d9b07430 |  | lefford | 40 |
 | 2026-09-07T13:03:20Z | sluice:clients | 152.892 | 2430.480 | 227.215 | 17.38 | 0 | f74b0a6b7 |  | lefford | 40 |
 | 2026-09-07T13:11:28Z | sluice:heavy | 487.838 | 11439.838 | 162.537 | 23.78 | 0 | dad0feacb |  | lefford | 40 |
+| 2026-09-07T19:44:18Z | gate-commit | 25.508 | 58.711 | 4.765 | 2.49 | 0 | 46be27b98 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T19:45:09Z | gate-commit | 19.558 | 16.430 | 0.426 | 0.86 | 0 | 46be27b98 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T19:47:14Z | gate-commit | 23.740 | 20.192 | 0.578 | 0.87 | 0 | 46be27b98 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T19:58:26Z | gate-commit | 200.289 | 948.027 | 51.426 | 4.99 | 0 | 46be27b98 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T20:32:39Z | gate-commit | 109.847 | 492.975 | 41.446 | 4.87 | 0 | 66b17ee19 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T20:41:27Z | gate-commit | 47.126 | 105.232 | 38.451 | 3.05 | 0 | a2255bb47 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T20:46:08Z | gate-commit | 75.024 | 112.414 | 39.583 | 2.03 | 0 | 36f3c2ccb | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T21:10:17Z | gate-commit | 53.935 | 108.140 | 39.359 | 2.73 | 0 | d873664c5 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T21:11:41Z | gate-commit | 65.316 | 77.160 | 19.650 | 1.48 | 0 | d873664c5 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T21:12:41Z | gate-commit | 43.031 | 69.687 | 18.061 | 2.04 | 0 | d873664c5 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T21:13:27Z | gate-commit | 34.877 | 66.853 | 17.415 | 2.42 | 0 | 5eb03bc48 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T21:17:58Z | rebaseline | 190.802 | 394.121 | 16.503 | 2.15 | 0 | 5ea761770 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T21:22:43Z | world-check | 43.745 | 48.716 | 1.621 | 1.15 | 0 | 5ea761770 | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-08T15:18:36Z | gate-commit | 17.357 | 42.932 | 3.897 | 2.70 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |
 | 2026-09-08T15:20:10Z | gate-commit | 16.959 | 24.408 | 2.603 | 1.59 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |
 | 2026-09-08T15:20:57Z | gate-commit | 30.008 | 23.992 | 0.617 | 0.82 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |
@@ -6623,6 +6636,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T20:56:16Z | sluice:gate | 862.575 | 22634.861 | 625.738 | 26.97 | 0 | fdf902b81 |  | lefford | 40 |
 | 2026-09-07T20:59:11Z | sluice:clients | 174.069 | 2598.321 | 205.758 | 16.11 | 0 | 1c263eb7a |  | lefford | 40 |
 | 2026-09-07T21:07:04Z | sluice:heavy | 473.161 | 11387.808 | 161.678 | 24.41 | 0 | b38579539 |  | lefford | 40 |
+| 2026-09-07T22:09:23Z | gate-commit | 22.618 | 44.299 | 5.555 | 2.20 | 0 | 1258188c8 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T22:12:14Z | gate-commit | 137.607 | 767.106 | 48.596 | 5.93 | 0 | 1258188c8 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T23:43:02Z | gate-commit | 37.695 | 68.436 | 18.583 | 2.31 | 0 | f44dea969 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T23:43:44Z | gate-commit | 36.176 | 67.394 | 17.974 | 2.36 | 0 | f44dea969 | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-07T20:30:36Z | rebaseline | 232.920 | 487.206 | 20.553 | 2.18 | 0 | ca3ecf6da | campaign/the-sett | MacBookPro | 10 |
 | 2026-09-07T20:44:26Z | rebaseline | 156.244 | 434.746 | 17.556 | 2.89 | 0 | 4cd6052f6 | campaign/the-sett | MacBookPro | 10 |
 | 2026-09-07T20:52:22Z | game-check | 148.059 | 819.270 | 35.932 | 5.78 | 0 | 5553da774 | campaign/the-sett | MacBookPro | 10 |
@@ -6814,6 +6831,15 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T23:48:48Z | sluice:gate | 806.968 | 24199.571 | 746.968 | 30.91 | 0 | 071123fcd |  | lefford | 40 |
 | 2026-09-08T23:51:56Z | sluice:clients | 188.433 | 3130.761 | 319.969 | 18.31 | 0 | 4eec2d166 |  | lefford | 40 |
 | 2026-09-09T00:01:34Z | sluice:heavy | 577.160 | 12961.594 | 211.813 | 22.82 | 0 | 4e340af28 |  | lefford | 40 |
+| 2026-09-09T00:40:48Z | gate-commit | 108.454 | 641.749 | 46.273 | 6.34 | 0 | 865000166 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-09T01:53:46Z | gate-commit | 41.851 | 76.001 | 22.102 | 2.34 | 0 | 0f901813b | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-09T12:15:36Z | gate-commit | 51.376 | 71.944 | 19.740 | 1.78 | 0 | 893943296 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-09T13:40:12Z | gate-commit | 49.367 | 73.522 | 20.008 | 1.89 | 0 | 893943296 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-09T13:40:37Z | gate-commit | 65.044 | 73.742 | 20.450 | 1.45 | 0 | 893943296 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-09T13:42:25Z | gate-commit | 96.350 | 76.617 | 19.510 | 1.00 | 0 | 893943296 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-09T13:42:51Z | gate-commit | 108.480 | 76.904 | 19.538 | 0.89 | 0 | eced09c3a | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-09T16:17:19Z | gate-commit | 46.661 | 71.875 | 17.803 | 1.92 | 0 | 14e52b05d | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-09T16:19:08Z | gate-commit | 47.665 | 71.444 | 19.082 | 1.90 | 0 | 14e52b05d | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-09T00:16:05Z | gate-commit | 75.168 | 64.828 | 15.179 | 1.06 | 0 | 5e5185ba6 | campaign/the-staple-d4 | MacBookPro | 10 |
 | 2026-09-09T00:23:13Z | gate-commit | 376.725 | 987.041 | 59.574 | 2.78 | 0 | 5e5185ba6 | campaign/the-staple-d4 | MacBookPro | 10 |
 | 2026-09-09T01:02:30Z | gate-commit | 38.201 | 67.723 | 18.283 | 2.25 | 0 | 2ae088604 | campaign/the-staple-d4 | MacBookPro | 10 |
@@ -6908,6 +6934,17 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T20:46:51Z | sluice:gate | 864.744 | 25406.499 | 799.676 | 30.31 | 0 | a8b8995d8 |  | lefford | 40 |
 | 2026-09-09T20:50:23Z | sluice:clients | 211.429 | 3353.439 | 305.325 | 17.30 | 0 | 062e2dd9c |  | lefford | 40 |
 | 2026-09-09T21:00:12Z | sluice:heavy | 588.777 | 12958.498 | 195.346 | 22.34 | 0 | c1ca0f6e2 |  | lefford | 40 |
+| 2026-09-09T21:33:12Z | gate-commit | 456.960 | 859.250 | 58.699 | 2.01 | 0 | ce06113df | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-10T00:06:44Z | census-tail-chorus | 59.133 | 777.023 | 24.319 | 13.55 | 0 | 079f6963c |  | lefford | 40 |
+| 2026-09-10T00:18:39Z | census-study-the-census | 714.910 | 26704.825 | 158.913 | 37.58 | 0 | 079f6963c |  | lefford | 40 |
+| 2026-09-10T00:24:20Z | census-study-the-meeting | 341.504 | 12328.784 | 166.249 | 36.59 | 0 | 079f6963c |  | lefford | 40 |
+| 2026-09-10T00:24:22Z | census-tail-domesday | 1.213 | 1.091 | 0.123 | 1.00 | 0 | 079f6963c |  | lefford | 40 |
+| 2026-09-10T00:24:24Z | census-tail-anomalies | 1.067 | 0.935 | 0.132 | 1.00 | 0 | 079f6963c |  | lefford | 40 |
+| 2026-09-10T00:24:27Z | census | 1412.890 | 41780.847 | 439.477 | 29.88 | 0 | 079f6963c |  | lefford | 40 |
+| 2026-09-10T00:31:35Z | gnomon-injection | 416.456 | 4744.059 | 159.546 | 11.77 | 0 | 079f6963c |  | lefford | 40 |
+| 2026-09-10T01:05:10Z | gate-commit | 220.745 | 1169.922 | 50.910 | 5.53 | 0 | 270b9f8a7 |  | MacBookPro | 10 |
+| 2026-09-10T01:06:16Z | gate-commit | 38.644 | 72.681 | 10.304 | 2.15 | 0 | 270b9f8a7 |  | MacBookPro | 10 |
+| 2026-09-10T01:07:11Z | gate-commit | 35.940 | 49.869 | 10.986 | 1.69 | 0 | 270b9f8a7 |  | MacBookPro | 10 |
 | 2026-09-09T22:22:17Z | census-tail-chorus | 59.056 | 743.987 | 20.927 | 12.95 | 0 | 57856632d |  | lefford | 40 |
 | 2026-09-09T22:22:19Z | census-tail-domesday | 1.244 | 1.085 | 0.159 | 1.00 | 0 | 57856632d |  | lefford | 40 |
 | 2026-09-09T22:22:21Z | census-tail-anomalies | 1.090 | 0.948 | 0.143 | 1.00 | 0 | 57856632d |  | lefford | 40 |

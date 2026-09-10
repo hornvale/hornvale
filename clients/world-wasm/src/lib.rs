@@ -37,6 +37,7 @@ fn set_error(msg: &str) {
 
 /// Pin keys routed to `hornvale_astronomy::parse_pin`.
 const SKY_KEYS: &[&str] = &[
+    "stellar-topology",
     "moons",
     "wanderers",
     "rotation",
@@ -456,4 +457,18 @@ pub extern "C" fn hw_out_ptr() -> *const u8 {
 pub extern "C" fn hw_out_len() -> usize {
     let out_ptr = &raw const OUT;
     unsafe { (&(*out_ptr)).len() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stellar_topology_uses_the_shared_astronomy_pin_parser() {
+        let pins = parse_pins(br#"{"stellar-topology":"wide-binary"}"#).unwrap();
+        assert_eq!(
+            pins.sky.topology,
+            Some(hornvale_astronomy::StellarTopology::WideBinary)
+        );
+    }
 }

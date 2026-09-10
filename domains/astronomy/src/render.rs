@@ -359,16 +359,19 @@ mod tests {
     /// use (`calendar_with_moon`), routed through the public `calendar_of`
     /// since that helper's direct field access is private to `calendar.rs`.
     fn system_with_moon(sidereal_days: f64, year_days: f64) -> StarSystem {
+        let star = Star {
+            mass: SolarMasses::new(1.0).unwrap(),
+            luminosity: SolarLuminosities::new(1.0).unwrap(),
+            class_name: "yellow dwarf".to_string(),
+            habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
+                .unwrap(),
+            age: Gyr::new(4.5).unwrap(),
+            t_eff: Kelvin::new(5772.0).unwrap(),
+        };
+        let stellar = crate::stellar::StellarConfiguration::single(&star);
         StarSystem {
-            star: Star {
-                mass: SolarMasses::new(1.0).unwrap(),
-                luminosity: SolarLuminosities::new(1.0).unwrap(),
-                class_name: "yellow dwarf".to_string(),
-                habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
-                    .unwrap(),
-                age: Gyr::new(4.5).unwrap(),
-                t_eff: Kelvin::new(5772.0).unwrap(),
-            },
+            star,
+            stellar,
             anchor: Anchor {
                 mass: EarthMasses::new(1.0).unwrap(),
                 orbit: Au::new(1.0).unwrap(),

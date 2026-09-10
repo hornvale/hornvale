@@ -14,27 +14,27 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.43319244 | -0.17559921 | -0.11960487 | -0.057132041 | 0.44346153 | -0.1127422 |
+| -0.43319244 | -0.1766665 | -0.11849075 | -0.05632167 | 0.48007448 | -0.11196783 |
 
 ### `granary-raid-phase-concentration`
 
 Circular (Rayleigh-style) concentration R of this world's raid-caused occupation endings' day-of-year stamps (The Granary T8): the mean resultant length of the phases, 0 when uniformly spread around the year and approaching 1 as all raids land at one moment. Day-of-year is the fractional part of the record's bake-year `ended` stamp. Absent on a world with fewer than 5 raid-caused endings — below that floor the concentration statistic is noise, not signal.
 
-n = 987 present, 13 absent (of 1000 worlds)
+n = 986 present, 14 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.6635361 | 0.89157479 | 0.92562276 | 0.95099382 | 1 | 0.91797947 |
+| 0.49676964 | 0.88975643 | 0.9244322 | 0.95040837 | 1 | 0.91662215 |
 
 ### `granary-raids-in-depleted-half`
 
 Fraction of this world's raid-caused occupation endings whose day-of-year stamp falls in the DEPLETED half of the victim site's authored harvest curve (The Granary T8): the half-year starting half a year past the curve peak, where `Curve::at` returns exactly zero and a settlement lives off stores. The curve is keyed exactly as the bake keys it at open — `geo.coord(site).latitude` and `biome_class(climate.biome_map())` through `worldgen::harvest::Curve` — so the column measures the same seasonality the granary integrates. Uniform raids give 0.5; hunger-side clustering gives > 0.5. Absent under the same 5-ending floor as `granary-raid-phase-concentration`.
 
-n = 987 present, 13 absent (of 1000 worlds)
+n = 986 present, 14 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.31654676 | 0.50431034 | 0.70967742 | 1 | 0.50589727 |
+| 0 | 0.33014354 | 0.5108865 | 0.70967742 | 1 | 0.51104743 |
 
 ### `raid-attribution-unresolved`
 
@@ -54,9 +54,9 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.18975904 | 0.27193139 | 0.32177778 | 0.42581047 | 0.24440698 |
+| 0 | 0.18545455 | 0.2697937 | 0.32142857 | 0.42581047 | 0.2436652 |
 
-**Frozen claim** — *The prospect of retaliation deters attack, so most agents in a mixed population never initiate combat* (`sugarscape-1996` `sug-retaliation-deters`; Ch. III, 'Effect of Rule Changes on Emergent Structures' ('agents are deterred from racing forward to attack smaller agents ... by the presence of larger opposing agents within their vision')). Predicted median at most 0.5; measured 0.271931. GROWN. ([what this is](#frozen-claims))
+**Frozen claim** — *The prospect of retaliation deters attack, so most agents in a mixed population never initiate combat* (`sugarscape-1996` `sug-retaliation-deters`; Ch. III, 'Effect of Rule Changes on Emergent Structures' ('agents are deterred from racing forward to attack smaller agents ... by the presence of larger opposing agents within their vision')). Predicted median at most 0.5; measured 0.269794. GROWN. ([what this is](#frozen-claims))
 
 ### `raid-victim-rate`
 
@@ -66,7 +66,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.19061584 | 0.27706773 | 0.33283358 | 0.4532419 | 0.25162591 |
+| 0 | 0.18818514 | 0.2754333 | 0.33230294 | 0.4532419 | 0.25075852 |
 
 **Frozen claim** — *Combat between groups claims a real but minority share of the population; predation does not consume the society that practises it* (`sugarscape-1996` `sug-predation-is-bounded`; Appendix B, agent combat rule C(alpha); Ch. III, 'Combat'). Predicted at least 0.5 of worlds in [0.02, 0.5]; measured 0.969000. GROWN. ([what this is](#frozen-claims))
 
@@ -78,7 +78,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 53 | 85 | 116 | 240 | 85.377 |
+| 0 | 54 | 85 | 115 | 240 | 85.366 |
 
 **Frozen claim** — *Persistent asymmetric obligation is what makes a flat society hierarchical; without it no agent is subordinate to another* (`sugarscape-1996` `sug-credit-makes-hierarchy`; Appendix B, agent credit rule L(d,r); Ch. IV, 'Credit Networks and the Emergence of Hierarchy'). Predicted median at least 1; measured 85.000000. GROWN. ([what this is](#frozen-claims))
 

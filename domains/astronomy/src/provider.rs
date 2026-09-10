@@ -2,7 +2,7 @@
 //! a genesis outcome.
 
 use crate::anchor::Rotation;
-use crate::calendar::{Calendar, SkyBand, calendar_of};
+use crate::calendar::{Calendar, calendar_of};
 use crate::system::{GenesisOutcome, StarSystem};
 use crate::units::StdInstant;
 use crate::{CELESTIAL_BODY, SkyReport};
@@ -14,11 +14,150 @@ use hornvale_kernel::{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::calendar::SkyBand;
     use crate::pins::{MoonsPin, RotationPin, SkyPins};
     use crate::system::generate;
     use hornvale_kernel::{
         EntityId, GeoCoord, ObserverContext, PhenomenaSource, Seed, Venue, WorldTime,
     };
+
+    #[test]
+    fn binary_sky_names_two_sources_without_claiming_two_fixed_suns() {
+        let s = sky(SkyPins {
+            topology: Some(crate::StellarTopology::CloseBinary),
+            rotation: Some(RotationPin::Locked),
+            ..SkyPins::default()
+        });
+        let report = s.sky_at(WorldTime::GENESIS);
+        assert!(
+            report.description.contains("two suns"),
+            "{}",
+            report.description
+        );
+        assert!(!report.description.contains("motionless"));
+        assert_eq!(
+            s.phenomena(&ctx(0.0))
+                .iter()
+                .filter(|p| p.referent.concept == "sun" && p.kind == CELESTIAL_BODY)
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn hidden_binary_sky_does_not_name_the_companion_source() {
+        let s = sky(SkyPins {
+            topology: Some(crate::StellarTopology::CloseBinary),
+            ..SkyPins::default()
+        });
+        let report = s.sky_at_visibility(WorldTime::GENESIS, Visibility::new(0.0).unwrap());
+        assert!(!report.description.contains("two suns"));
+        assert!(
+            !report
+                .body_phrases
+                .iter()
+                .any(|(noun, _)| noun == "two suns")
+        );
+        assert!(!report.bodies.iter().any(|body| body == "the companion sun"));
+
+        let dimmed = s.sky_at_visibility(WorldTime::GENESIS, Visibility::new(0.4).unwrap());
+        assert!(!dimmed.description.contains("two suns"));
+        assert!(!dimmed.bodies.iter().any(|body| body == "the companion sun"));
+    }
+
+    #[test]
+    fn companion_sun_period_matches_the_anchor_rotation() {
+        let spinning = sky(SkyPins {
+            topology: Some(crate::StellarTopology::CloseBinary),
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            ..SkyPins::default()
+        });
+        let spinning_suns: Vec<_> = spinning
+            .phenomena(&ctx(0.0))
+            .into_iter()
+            .filter(|p| p.kind == CELESTIAL_BODY && p.referent.concept == "sun")
+            .collect();
+        assert_eq!(spinning_suns.len(), 2);
+        assert_eq!(spinning_suns[1].period_days, Some(1.0));
+
+        let locked = sky(SkyPins {
+            topology: Some(crate::StellarTopology::CloseBinary),
+            rotation: Some(RotationPin::Locked),
+            ..SkyPins::default()
+        });
+        let locked_suns: Vec<_> = locked
+            .phenomena(&ctx(0.0))
+            .into_iter()
+            .filter(|p| p.kind == CELESTIAL_BODY && p.referent.concept == "sun")
+            .collect();
+        assert_eq!(locked_suns.len(), 2);
+        assert_eq!(locked_suns[1].period_days, None);
+    }
+
+    #[test]
+    fn wanderer_almanac_carries_absolute_marks_even_without_a_local_day() {
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::Locked),
+            wanderers: Some(2),
+            ..SkyPins::default()
+        });
+        let marks = s.wanderer_almanac(
+            StdInstant(0.0),
+            StdInstant(2.0 * s.system.anchor.year.get()),
+        );
+        assert!(!marks.is_empty());
+        assert!(
+            marks
+                .iter()
+                .all(|m| m.local_day.is_none() && m.description.contains("Wanderer "))
+        );
+        assert!(marks.iter().all(|m| m.event.at.get() >= 0.0));
+    }
+
+    #[test]
+    fn placed_wanderer_words_and_phenomena_agree_in_twilight() {
+        let mut outcome = generate(
+            Seed(0),
+            &SkyPins {
+                topology: Some(crate::StellarTopology::Single),
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                obliquity: Some(crate::Degrees(0.0)),
+                forcing: Some(crate::ForcingPin::Zero),
+                wanderers: Some(2),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap();
+        let system = &mut outcome.value;
+        system.wanderers.truncate(1);
+        system.anchor.orbit = crate::Au(1.0);
+        system.anchor.year = crate::StdDays(8.0);
+        system.forcing.year_phase_offset = 0.0;
+        system.forcing.day_phase_offset = 0.0;
+        system.wanderers[0].orbit = crate::Au(0.5);
+        system.wanderers[0].period = crate::StdDays(2.0);
+        system.wanderers[0].phase_offset = 0.16;
+        let s = GeneratedSky::new(outcome);
+        let words = s.wanderer_lines_at(0.0, StdInstant(0.24));
+        assert_eq!(words.len(), 1);
+        assert!(words[0].contains("morning star"));
+        let obs = ObserverContext::at_position(
+            EntityId::new(1).unwrap(),
+            WorldTime::from_std_days(0.24).unwrap(),
+            GeoCoord {
+                latitude: 0.0,
+                longitude: 0.0,
+            },
+        );
+        assert_eq!(
+            s.phenomena(&obs)
+                .iter()
+                .filter(|p| p.kind == WANDERING_STAR)
+                .count(),
+            1
+        );
+        assert!(s.wanderer_lines_at(0.0, StdInstant(0.5)).is_empty());
+    }
 
     fn sky(pins: SkyPins) -> GeneratedSky {
         GeneratedSky::new(generate(Seed(42), &pins).unwrap())
@@ -373,16 +512,19 @@ mod tests {
             SolarLuminosities, SolarMasses, StdDays,
         };
 
+        let star = Star {
+            mass: SolarMasses::new(1.0).unwrap(),
+            luminosity: SolarLuminosities::new(1.0).unwrap(),
+            class_name: "yellow dwarf".to_string(),
+            habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
+                .unwrap(),
+            age: crate::units::Gyr::new(4.5).unwrap(),
+            t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
+        };
+        let stellar = crate::stellar::StellarConfiguration::single(&star);
         let system = StarSystem {
-            star: Star {
-                mass: SolarMasses::new(1.0).unwrap(),
-                luminosity: SolarLuminosities::new(1.0).unwrap(),
-                class_name: "yellow dwarf".to_string(),
-                habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
-                    .unwrap(),
-                age: crate::units::Gyr::new(4.5).unwrap(),
-                t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
-            },
+            star,
+            stellar,
             anchor: Anchor {
                 mass: EarthMasses::new(1.0).unwrap(),
                 orbit: Au::new(1.0).unwrap(),
@@ -457,16 +599,19 @@ mod tests {
             Au, Degrees, EarthMasses, HabitableZone, SolarLuminosities, SolarMasses,
         };
         let moon_phase_offsets = vec![0.0; moons.len()];
+        let star = Star {
+            mass: SolarMasses::new(1.0).unwrap(),
+            luminosity: SolarLuminosities::new(1.0).unwrap(),
+            class_name: "yellow dwarf".to_string(),
+            habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
+                .unwrap(),
+            age: crate::units::Gyr::new(4.5).unwrap(),
+            t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
+        };
+        let stellar = crate::stellar::StellarConfiguration::single(&star);
         let system = StarSystem {
-            star: Star {
-                mass: SolarMasses::new(1.0).unwrap(),
-                luminosity: SolarLuminosities::new(1.0).unwrap(),
-                class_name: "yellow dwarf".to_string(),
-                habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
-                    .unwrap(),
-                age: crate::units::Gyr::new(4.5).unwrap(),
-                t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
-            },
+            star,
+            stellar,
             anchor: Anchor {
                 mass: EarthMasses::new(1.0).unwrap(),
                 orbit: Au::new(1.0).unwrap(),
@@ -1150,25 +1295,10 @@ mod tests {
         );
     }
 
-    /// Night-sky stage 2, the inner-wanderer branch: seed 42's default pair
-    /// are both outer (no glare skip), so that coverage was silent. Seed 0
-    /// with `wanderers: Some(2)` draws an inner (rock, `max_elongation_deg` =
-    /// Some) wanderer at index 0 and an outer (giant) one at index 1 — found
-    /// by a one-off scan over seeds 0..64. Scanning latitude 35 across two of
-    /// the inner wanderer's synodic periods, the glare skip (elongation < 15°,
-    /// recomputed independently with the same formula the provider uses) must
-    /// hide that wanderer's phenomenon on every sample where it applies.
-    ///
-    /// **What this test no longer distinguishes.** It used to also assert that
-    /// an inner wanderer shows morning-star/evening-star wording in twilight,
-    /// and it told the two wanderers apart by their class words ("rock-pale"
-    /// versus "giant-bright"). Both lived only in the phenomenon's English
-    /// description, which no longer exists: every wanderer carries an
-    /// identical `Referent::of("star")`, so the referent can distinguish
-    /// neither inner from outer nor morning from evening. The glare skip
-    /// survives because the phenomenon's PERIOD is the wanderer's own synodic
-    /// period, which the two do not share (asserted below) — so a wanderer can
-    /// still be identified structurally, just not described.
+    /// Seed 0's inner body is identified by its distinct recurrence period.
+    /// Independent dot-product geometry checks that glare suppresses it;
+    /// the dense scan also witnesses a real twilight appearance. Morning and
+    /// evening words are tested separately from the text-free phenomenon.
     #[test]
     fn an_inner_wanderer_is_glare_skipped_near_conjunction() {
         let seed = Seed(0);
@@ -1190,9 +1320,7 @@ mod tests {
             .position(|w| w.max_elongation_deg.is_some())
             .expect("seed 0 must draw an inner wanderer for this test to mean anything");
         let inner = &s.system().wanderers[inner_index];
-        let e_max = inner.max_elongation_deg.expect("checked above");
         let synodic = inner.synodic_period.get();
-        let year_phase_offset = s.system().forcing.year_phase_offset;
 
         // The only field that still separates one wanderer's phenomenon from
         // another's. If the two ever rounded to the same period this test
@@ -1212,7 +1340,7 @@ mod tests {
         );
 
         let span = 2.0 * synodic;
-        let samples = 80;
+        let samples = 2400;
         let mut saw_the_inner_wanderer = false;
         for k in 0..samples {
             let t = k as f64 * span / samples as f64;
@@ -1224,9 +1352,19 @@ mod tests {
                     longitude: 0.0,
                 },
             );
-            let phase_w =
-                (t / synodic + (year_phase_offset + inner_index as f64 * 0.37).fract()).fract();
-            let elongation = e_max * math::sin(std::f64::consts::TAU * phase_w).abs();
+            // Independent vector geometry: dot(body-anchor, -anchor).
+            let a = std::f64::consts::TAU
+                * (t / s.system.anchor.year.get() + s.system.forcing.year_phase_offset);
+            let w = std::f64::consts::TAU * (t / inner.period.get() + inner.phase_offset);
+            let ax = s.system.anchor.orbit.get() * math::cos(a);
+            let ay = s.system.anchor.orbit.get() * math::sin(a);
+            let dx = inner.orbit.get() * math::cos(w) - ax;
+            let dy = inner.orbit.get() * math::sin(w) - ay;
+            let elongation = math::acos(
+                ((-dx * ax - dy * ay) / ((dx * dx + dy * dy).sqrt() * s.system.anchor.orbit.get()))
+                    .clamp(-1.0, 1.0),
+            )
+            .to_degrees();
 
             let inner_phenomenon = s
                 .phenomena(&obs)
@@ -1369,19 +1507,6 @@ fn eclipse_chance(sun_angular_rel: f64, moon_angular_rel: f64, inclination_deg: 
 
 fn round2(x: f64) -> f64 {
     (x * 100.0).round() / 100.0
-}
-
-/// An outer wanderer's right ascension from its ecliptic longitude
-/// `lam_deg` (declared approximation, night-sky stage 2: the wanderer is
-/// modeled at ecliptic latitude 0, so this is exactly
-/// [`Calendar::solar_equatorial`]'s own `atan2(sin·cos ε, cos)` projection,
-/// reused rather than duplicated with a different derivation).
-fn ecliptic_longitude_to_ra_deg(lam_deg: f64, obliquity_deg: f64) -> f64 {
-    let lam = lam_deg.to_radians();
-    let e = obliquity_deg.to_radians();
-    math::atan2(math::sin(lam) * math::cos(e), math::cos(lam))
-        .to_degrees()
-        .rem_euclid(360.0)
 }
 
 /// How far outside the daylight window (as a fraction of the local day)
@@ -1570,6 +1695,33 @@ const MOON_VISIBILITY: f64 = 0.25;
 const STAR_VISIBILITY: f64 = 0.75;
 
 impl GeneratedSky {
+    /// Derived event marks for almanacs, retaining absolute times on locked worlds.
+    pub fn wanderer_almanac(
+        &self,
+        from: StdInstant,
+        until: StdInstant,
+    ) -> Vec<crate::calendar::WandererCalendarMark> {
+        crate::calendar::wanderer_calendar_marks(&self.system, from, until)
+    }
+
+    /// Currently visible wanderers at the reference meridian, in neutral words.
+    /// type-audit: pending(wave-1: latitude), bare-ok(prose: return)
+    pub fn wanderer_lines_at(&self, latitude: f64, instant: StdInstant) -> Vec<String> {
+        crate::wanderer_visibility(&self.system, latitude, instant)
+            .into_iter()
+            .filter_map(|seen| {
+                let words = match seen.appearance? {
+                    crate::WandererAppearance::Morning => "appears as a morning star",
+                    crate::WandererAppearance::Evening => "appears as an evening star",
+                    crate::WandererAppearance::Opposition => {
+                        "stands near opposition in the night sky"
+                    }
+                    crate::WandererAppearance::Night => "crosses the night sky",
+                };
+                Some(format!("Wanderer {} {words}.", seen.wanderer + 1))
+            })
+            .collect()
+    }
     /// Wrap a genesis outcome as a live provider.
     pub fn new(outcome: GenesisOutcome<StarSystem>) -> GeneratedSky {
         let calendar = calendar_of(&outcome.value);
@@ -1637,6 +1789,37 @@ impl GeneratedSky {
     /// At [`Visibility::CLEAR`] this renders exactly the pre-occlusion sky,
     /// byte for byte.
     pub fn sky_at_visibility(&self, time: WorldTime, vis: Visibility) -> SkyReport {
+        let t = self.t(time);
+        let mut report = self.primary_sky_at_visibility(time, vis);
+        if self.system.stellar.topology != crate::StellarTopology::Single {
+            let light = crate::stellar_illumination_at(&self.system, t);
+            // This unplaced report describes the stellar root and its flux,
+            // never asserts that both sources clear a particular horizon.
+            let description = format!(
+                "This system has two suns, whose changing distances vary their combined illumination (unattenuated flux {:.2} relative to Earth).",
+                light.combined_flux_rel
+            );
+            if matches!(self.system.anchor.rotation, Rotation::Locked) {
+                report.description = format!(
+                    "The world has no solar day; {} moons and {} neighbor stars share its sky.",
+                    self.system.moons.len(),
+                    self.system.neighbors.len()
+                );
+                report.body_phrases.clear();
+            }
+            if vis.get() >= STAR_VISIBILITY {
+                report.description.push(' ');
+                report.description.push_str(&description);
+                report
+                    .body_phrases
+                    .push(("two suns".to_string(), description));
+                report.bodies.push("the companion sun".to_string());
+            }
+        }
+        report
+    }
+
+    fn primary_sky_at_visibility(&self, time: WorldTime, vis: Visibility) -> SkyReport {
         let t = self.t(time);
         let mut bodies = vec!["the sun".to_string()];
         match &self.system.anchor.rotation {
@@ -1815,6 +1998,24 @@ impl PhenomenaSource for GeneratedSky {
                     salience: 1.0,
                     venue: Venue::DaySky,
                 }),
+            }
+
+            if self.system.stellar.companion.is_some() {
+                let light = crate::stellar_illumination_at(&self.system, t);
+                let companion = &light.sources[1];
+                let period_days = match &self.system.anchor.rotation {
+                    Rotation::Spinning { day, .. } => Some(round2(day.as_std_days())),
+                    Rotation::Locked => None,
+                };
+                out.push(Phenomenon {
+                    kind: CELESTIAL_BODY.to_string(),
+                    referent: Referent::of("sun"),
+                    period_days,
+                    salience: round2(
+                        (companion.flux_rel / light.combined_flux_rel).clamp(0.0, 1.0),
+                    ),
+                    venue: Venue::DaySky,
+                });
             }
 
             // SKY-6: eclipses — pure geometry over quantities already
@@ -2059,52 +2260,15 @@ impl PhenomenaSource for GeneratedSky {
             }
         }
 
-        // Wandering stars (night-sky stage 2): same placed-and-spinning
-        // gating as the heliacal instrument above. Each wanderer's synodic
-        // phase reuses the genesis year-phase offset, rotated per wanderer
-        // index (`+ index * 0.37`) — a declared approximation that draws
-        // nothing new from the stream (model card entry at campaign
-        // close). Full daylight always drowns a wanderer out, like the
-        // fixed stars.
-        if let (true, Some(pos), Some(_day_length)) =
-            (spinning, ctx.position, self.calendar.day_length())
-        {
-            let band = self.calendar.sky_band(t, pos.latitude);
-            if !matches!(band, Some(SkyBand::Day)) {
-                let sun = self.calendar.solar_equatorial(t);
-                let obliquity_deg = self.system.forcing.obliquity_at(t.0);
-                for (index, wanderer) in self.system.wanderers.iter().enumerate() {
-                    let phase_w = (t.0 / wanderer.synodic_period.get()
-                        + (self.system.forcing.year_phase_offset + index as f64 * 0.37).fract())
-                    .fract();
-
-                    // Inner wanderers are lost in the sun's glare below 15°
-                    // of elongation; outer wanderers are lost in it below
-                    // 15° of RA separation. Either way the wanderer is not
-                    // seen, so no phenomenon is emitted.
-                    match wanderer.max_elongation_deg {
-                        Some(e_max) => {
-                            let elongation =
-                                e_max * math::sin(std::f64::consts::TAU * phase_w).abs();
-                            if elongation < 15.0 {
-                                continue;
-                            }
-                        }
-                        None => {
-                            let lam_deg = (360.0 * phase_w).rem_euclid(360.0);
-                            let wanderer_ra = ecliptic_longitude_to_ra_deg(lam_deg, obliquity_deg);
-                            let sep_deg = (wanderer_ra - sun.ra_deg).rem_euclid(360.0);
-                            let min_sep = sep_deg.min(360.0 - sep_deg);
-                            if min_sep < 15.0 {
-                                continue;
-                            }
-                        }
-                    }
-
+        // The same physical evaluator drives visible prose and phenomena.
+        if let Some(pos) = ctx.position {
+            for seen in crate::wanderer_visibility(&self.system, pos.latitude, t) {
+                if seen.visible {
                     out.push(Phenomenon {
                         kind: WANDERING_STAR.to_string(),
                         referent: Referent::of("star"),
-                        period_days: Some(round2(wanderer.synodic_period.get())),
+                        period_days: crate::wanderer_recurrence(&self.system, seen.wanderer)
+                            .map(|p| round2(p.get())),
                         salience: 0.65,
                         venue: Venue::NightSky,
                     });

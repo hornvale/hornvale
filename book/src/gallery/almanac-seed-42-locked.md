@@ -21,9 +21,9 @@ Salient phenomena, most attention-demanding first:
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 
-A giant wanderer rounds the sun every 4248 days.
+A giant wanderer rounds the sun every 4248 days. Wanderer 1 begins a retrograde loop, resuming forward motion at absolute day 197.20 at absolute day 76.25. Wanderer 1 stands at opposition at absolute day 136.73. Wanderer 1 is in conjunction at absolute day 338.21.
 
-A rock wanderer rounds the sun every 7527 days.
+A rock wanderer rounds the sun every 7527 days. Wanderer 2 begins a retrograde loop, resuming forward motion at absolute day 193.59 at absolute day 61.22. Wanderer 2 stands at opposition at absolute day 127.41. Wanderer 2 is in conjunction at absolute day 320.89.
 
 The sky holds 2 figures; 1 stands on the sun's road.
 

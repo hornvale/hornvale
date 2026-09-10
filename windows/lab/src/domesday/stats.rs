@@ -184,11 +184,11 @@ mod tests {
         // moved, because this is the metric the campaign exists to re-centre
         // and the census behind it was refreshed on the canonical box:
         //
-        //     median  -11.988568 -> -3.649021     (+8.34 K)
+        //     median  -11.988568 -> -3.541807     (+8.45 K)
         //     min     -47.151131 -> -35.378763
         //     max      23.141691 ->  21.844769
-        //     p25     -22.551606 -> -10.781073    (+11.77 K)
-        //     p75       2.037309 ->   4.502500
+        //     p25     -22.551606 -> -10.736280    (+11.82 K)
+        //     p75       2.037309 ->   4.683643
         //
         // The distribution did not merely shift, it TIGHTENED: the p25-p75
         // span narrows 24.59 -> 15.28 K and the min rises 11.77 K while the
@@ -199,7 +199,7 @@ mod tests {
         // The formula distinction this comment block was originally written
         // to defend is untouched; only the sample moved.
         assert!(
-            (s.median - (-3.649021)).abs() < 1e-4,
+            (s.median - (-3.5418074)).abs() < 1e-4,
             "median was {}",
             s.median
         );
@@ -207,8 +207,8 @@ mod tests {
         assert!((s.max - 21.844769).abs() < 1e-4, "max was {}", s.max);
         // p25/p75 are `percentile`'s nearest-rank formula (ceil(q·n)),
         // independently verified against the committed CSV.
-        assert!((s.p25 - (-10.781073)).abs() < 1e-4, "p25 was {}", s.p25);
-        assert!((s.p75 - 4.502500).abs() < 1e-4, "p75 was {}", s.p75);
+        assert!((s.p25 - (-10.73628)).abs() < 1e-4, "p25 was {}", s.p25);
+        assert!((s.p75 - 4.6836426).abs() < 1e-4, "p75 was {}", s.p75);
 
         // A second metric with a different distribution shape, so a
         // percentile formula that happens to land right on one metric

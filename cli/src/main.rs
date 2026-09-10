@@ -10,8 +10,9 @@ use hornvale_kernel::{EntityId, Facet, FacetId, Seed, World, WorldTime, math};
 use hornvale_worldgen as world_builder;
 use std::process::ExitCode;
 
-const SKY_FLAGS: &str =
-    "  [--moons N|MIN+K]                        pin the moon count, exact or graded
+const SKY_FLAGS: &str = "  [--stellar-topology single|wide-binary|close-binary]
+                                            pin the stellar-root topology
+  [--moons N|MIN+K]                        pin the moon count, exact or graded
   [--wanderers N]                          pin the wandering-planet count (0-4)
   [--rotation normal|locked]               pin the rotation regime
   [--day-hours F]                          pin the solar day length, in standard hours
@@ -331,6 +332,7 @@ fn cmd_observations(args: &[String]) -> Result<(), String> {
 fn parse_sky_args(args: &[String]) -> Result<SkyPins, String> {
     let mut pins = SkyPins::default();
     for (flag, key) in [
+        ("--stellar-topology", "stellar-topology"),
         ("--moons", "moons"),
         ("--wanderers", "wanderers"),
         ("--rotation", "rotation"),
@@ -2893,6 +2895,15 @@ mod tests {
     fn wanderers_flag_parses() {
         let pins = parse_sky_args(&args(&["--wanderers", "3"])).unwrap();
         assert_eq!(pins.wanderers, Some(3));
+    }
+
+    #[test]
+    fn stellar_topology_flag_parses() {
+        let pins = parse_sky_args(&args(&["--stellar-topology", "close-binary"])).unwrap();
+        assert_eq!(
+            pins.topology,
+            Some(hornvale_astronomy::StellarTopology::CloseBinary)
+        );
     }
 
     #[test]

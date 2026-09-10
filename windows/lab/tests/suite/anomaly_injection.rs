@@ -335,7 +335,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5333 over 120 pairs; tenth canonical reading, incomparable like the seventh, eighth, and ninth: The Murrain added five census columns and re-authored all six scored arms and both baselines; the scorer is unchanged, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5250 over 120 pairs; eleventh canonical reading, incomparable like the seventh through tenth: The Wanderers' binary-system admission re-seated the world and fixture inputs; the scorer is unchanged, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -688,18 +688,18 @@ fn h1_recall_at_10() {
 /// (+752/-192) across all six scored arms and both baselines. The scorer itself
 /// was unchanged.
 ///
-/// On that changed surface the witness reads **64/120 = 0.5333**, zero void
+/// On that changed surface the witness reads **63/120 = 0.5250**, zero void
 /// pairs. Arm for arm: geothermal 20/20, unconformity 2/20, aquifer 20/20,
-/// karst 2/20, pantheon 6/20, phonology 14/20. The bar is still 0.60 and this
+/// karst 2/20, pantheon 6/20, phonology 13/20. The bar is still 0.60 and this
 /// re-read does not move it.
 ///
-/// So 64/120 is the tenth canonical reading and the fourth consecutive
+/// So 63/120 is the eleventh canonical reading and the fifth consecutive
 /// **incomparable** one. The six-epoch series stays 0.5667 / 0.6083 / 0.6000 /
 /// 0.6083 / 0.6083 / 0.6000, and the verdict stays "cannot tell". This is not
 /// a new point in that comparable series: both the census surface and fixture
 /// inputs changed along with the committed world facts.
 ///
-/// claim: invariant(the committed battery scores exactly 64 hits over 120
+/// claim: invariant(the committed battery scores exactly 63 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
 #[test]
@@ -712,9 +712,9 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
             t.void_no_movement,
             t.void_unrankable_only
         ),
-        (64, 120, 0, 0),
+        (63, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's finding (recall@10 now reads 64/120 = 0.5333 against the \
+         Gnomon's finding (recall@10 now reads 63/120 = 0.5250 against the \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
          adjudicate; this ninth reading is incomparable to the six-epoch \
          series, as the seventh, eighth, and ninth were; its ablation is non-null in \

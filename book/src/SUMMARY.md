@@ -485,6 +485,7 @@
 - [The Route Cache](./chronicle/the-route-cache.md)
 - [The Newel](./chronicle/the-newel.md)
 - [The Grammar](./chronicle/the-grammar.md)
+- [The Wanderers](./chronicle/the-wanderers.md)
 - [The Insulator](./chronicle/the-insulator.md)
 - [The Sett](./chronicle/the-sett.md)
 - [The Murrain](./chronicle/the-murrain.md)
