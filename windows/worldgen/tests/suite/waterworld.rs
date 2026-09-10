@@ -8,9 +8,9 @@ use hornvale_climate::{BiomeExpr, GeneratedClimate, Realm, Stratum};
 use hornvale_kernel::{Seed, Vertex, World, WorldTime};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins, WaterKind};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, WaterSubstrate, WaterWorld, WaterWorldConfig, WaterWorldDetail,
-    WorldComponents, build_world_to_with_artifacts, climate_from, observe_waterworld,
-    waterworld_from,
+    BuildDepth, SettlementPins, VentState, WaterSubstrate, WaterWorld, WaterWorldConfig,
+    WaterWorldDetail, WaterWorldSnapshot, WorldComponents, build_world_to_with_artifacts,
+    climate_from, observe_waterworld, waterworld_from,
 };
 
 struct Fixture {
@@ -65,7 +65,7 @@ struct SourceSample {
     terrain_feature_count: usize,
 }
 
-fn source_at(fixture: &Fixture, vertex: Vertex) -> SourceSample {
+fn source_at(fixture: &Fixture, vertex: Vertex, time: WorldTime) -> SourceSample {
     let terrain_feature_count = fixture
         .terrain
         .features()
@@ -79,10 +79,7 @@ fn source_at(fixture: &Fixture, vertex: Vertex) -> SourceSample {
         .max(0.0),
         biome_expr: fixture.climate.biome_expr_at(vertex),
         column: fixture.climate.strata_at(vertex),
-        temperature_c: fixture
-            .climate
-            .temperature_at(vertex, WorldTime::GENESIS)
-            .get(),
+        temperature_c: fixture.climate.temperature_at(vertex, time).get(),
         insolation: fixture.climate.insolation(),
         current: fixture.climate.current_at(vertex),
         has_boundary: fixture.terrain.boundary_at(vertex).is_some(),
@@ -123,13 +120,21 @@ mod seams {
             .iter()
             .filter(|sample| seabed_depths[&sample.vertex] != sample.depth_m)
             .count();
+        let mut depth_bands = Vec::new();
+        for sample in &generated.substrate {
+            if !depth_bands.contains(&sample.depth_band) {
+                depth_bands.push(sample.depth_band);
+            }
+        }
+        let distinct_depth_bands = depth_bands.len();
 
         eprintln!(
-            "waterworld seam witnesses: substrate={} seabed={} column={} depth_distinctions={}",
+            "waterworld seam witnesses: substrate={} seabed={} column={} depth_distinctions={} depth_bands={}",
             generated.substrate.len(),
             seabed.len(),
             column.len(),
-            depth_distinctions
+            depth_distinctions,
+            distinct_depth_bands
         );
         assert!(
             !generated.substrate.is_empty(),
@@ -140,6 +145,10 @@ mod seams {
         assert!(
             depth_distinctions > 0,
             "VACUOUS: no vertex distinguishes a water-column depth from its seabed"
+        );
+        assert!(
+            distinct_depth_bands > 1,
+            "VACUOUS: projected column has no distinct marine depth bands"
         );
         assert!(seabed.iter().all(|sample| {
             sample.water_kind == WaterKind::Ocean
@@ -178,8 +187,15 @@ mod seams {
             .geosphere()
             .vertices()
             .filter(|&vertex| fixture.terrain.water_kind_at(vertex) == WaterKind::Ocean)
-            .map(|vertex| (vertex, source_at(&fixture, vertex)))
+            .map(|vertex| (vertex, source_at(&fixture, vertex, WorldTime::GENESIS)))
             .collect();
+        let non_marine = fixture
+            .terrain
+            .geosphere()
+            .vertices()
+            .find(|&vertex| fixture.terrain.water_kind_at(vertex) != WaterKind::Ocean)
+            .map(|vertex| (vertex, source_at(&fixture, vertex, WorldTime::GENESIS)))
+            .expect("VACUOUS: seed 42 has no non-marine source");
         let nonzero_currents = marine
             .iter()
             .filter(|(_, source)| source.current != [0.0; 3])
@@ -192,15 +208,24 @@ mod seams {
             .iter()
             .filter(|(_, source)| source.terrain_feature_count > 0)
             .count();
+        let edifice_witnesses = marine
+            .iter()
+            .filter(|(vertex, _)| fixture.terrain.has_edifice(*vertex))
+            .count();
 
         eprintln!(
-            "waterworld source witnesses: marine={} currents={} boundaries={} features={}",
+            "waterworld source witnesses: marine={} non_marine=1 currents={} boundaries={} edifices={} features={}",
             marine.len(),
             nonzero_currents,
             boundary_witnesses,
+            edifice_witnesses,
             feature_witnesses
         );
         assert!(!marine.is_empty(), "VACUOUS: seed 42 has no marine sources");
+        assert_ne!(
+            marine[0].1, non_marine.1,
+            "VACUOUS: marine and non-marine witnesses have identical sources"
+        );
         assert!(
             marine
                 .iter()
@@ -216,7 +241,26 @@ mod seams {
         );
         assert!(nonzero_currents > 0, "VACUOUS: no nonzero ocean current");
         assert!(boundary_witnesses > 0, "VACUOUS: no seafloor boundary");
+        assert!(edifice_witnesses > 0, "VACUOUS: no ocean edifice");
         assert!(feature_witnesses > 0, "VACUOUS: no ocean terrain feature");
+    }
+
+    #[test]
+    fn genesis_snapshot_preserves_the_static_readout_boundary() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let snapshot = generated.at(&fixture.climate, WorldTime::GENESIS);
+
+        assert_eq!(snapshot.fields, generated.fields);
+        assert_eq!(snapshot.stocks, generated.stocks);
+        assert_eq!(snapshot.propagation, generated.propagation);
+        assert_eq!(snapshot.vent_states.len(), generated.vents.len());
+        assert!(
+            snapshot
+                .vent_states
+                .iter()
+                .all(|state| *state == VentState::Active)
+        );
     }
 
     #[test]
@@ -237,8 +281,8 @@ mod seams {
             .geosphere()
             .vertices()
             .find_map(|vertex| {
-                let before = source_at(&sparse, vertex);
-                let after = source_at(&oceanic, vertex);
+                let before = source_at(&sparse, vertex, WorldTime::GENESIS);
+                let after = source_at(&oceanic, vertex, WorldTime::GENESIS);
                 (before.water_kind == WaterKind::Ocean
                     && after.water_kind == WaterKind::Ocean
                     && before != after)
@@ -265,16 +309,20 @@ mod seams {
             "changed source at {vertex:?} did not reach WaterSubstrate"
         );
     }
+}
+
+mod absent_overlay {
+    use super::*;
 
     #[test]
-    fn disabled_waterworld_preserves_the_existing_world_snapshot() {
+    fn disabled_waterworld_is_empty_and_preserves_existing_sources() {
         let fixture = seed_42();
         let before_world = fixture.world.to_json();
         let before_sources: Vec<SourceSample> = fixture
             .terrain
             .geosphere()
             .vertices()
-            .map(|vertex| source_at(&fixture, vertex))
+            .map(|vertex| source_at(&fixture, vertex, WorldTime::GENESIS))
             .collect();
 
         let disabled = waterworld_from(
@@ -288,11 +336,69 @@ mod seams {
             .terrain
             .geosphere()
             .vertices()
-            .map(|vertex| source_at(&fixture, vertex))
+            .map(|vertex| source_at(&fixture, vertex, WorldTime::GENESIS))
             .collect();
         assert!(disabled.substrate.is_empty());
+        let genesis = disabled.at(&fixture.climate, WorldTime::GENESIS);
+        let future = disabled.at(
+            &fixture.climate,
+            WorldTime::from_ticks(WorldTime::TICKS_PER_STD_DAY * 10),
+        );
+        assert_eq!(genesis, WaterWorldSnapshot::default());
+        assert_eq!(genesis, future);
         assert_eq!(fixture.world.to_json(), before_world);
         assert_eq!(after_sources, before_sources);
+    }
+}
+
+mod temporal_red {
+    use super::*;
+
+    /// Catches a snapshot path that accepts `WorldTime` but keeps reading the
+    /// genesis climate value. Stage 2 connects the temporal input and removes
+    /// this ignore only after the downstream inequality turns green.
+    #[test]
+    #[ignore = "probe: behavioral red until Stage 2 connects climate time to Waterworld fields"]
+    fn future_climate_temperature_reaches_the_present_field_readout() {
+        let fixture = seed_42();
+        let future = WorldTime::from_ticks(WorldTime::TICKS_PER_STD_DAY * 10);
+        let (vertex, genesis_source, future_source) = fixture
+            .terrain
+            .geosphere()
+            .vertices()
+            .filter(|&vertex| fixture.terrain.water_kind_at(vertex) == WaterKind::Ocean)
+            .find_map(|vertex| {
+                let genesis_source = source_at(&fixture, vertex, WorldTime::GENESIS);
+                let future_source = source_at(&fixture, vertex, future);
+                (genesis_source.temperature_c != future_source.temperature_c).then_some((
+                    vertex,
+                    genesis_source,
+                    future_source,
+                ))
+            })
+            .expect("VACUOUS: ten future days changed no consumed marine temperature source");
+
+        assert_ne!(
+            genesis_source.temperature_c, future_source.temperature_c,
+            "VACUOUS: climate-time witness did not change at {vertex:?}"
+        );
+        eprintln!(
+            "waterworld temporal source witness: vertex={} genesis_temperature_c={} future_temperature_c={}",
+            vertex.0, genesis_source.temperature_c, future_source.temperature_c
+        );
+
+        let stable = active(&fixture);
+        let sample_index = stable
+            .substrate
+            .iter()
+            .position(|sample| sample.vertex == vertex)
+            .expect("VACUOUS: temporal source vertex absent from Waterworld substrate");
+        let genesis = stable.at(&fixture.climate, WorldTime::GENESIS);
+        let later = stable.at(&fixture.climate, future);
+        assert_ne!(
+            genesis.fields[sample_index].temperature_c, later.fields[sample_index].temperature_c,
+            "static Waterworld field ignored the changed climate-time source at {vertex:?}"
+        );
     }
 }
 

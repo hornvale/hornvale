@@ -242,8 +242,8 @@ pub use warp::{
     steepness_word, wetness_sign,
 };
 pub use waterworld::{
-    WaterFields, WaterStocks, WaterSubstrate, WaterVent, WaterWorld, WaterWorldConfig,
-    waterworld_from,
+    VentState, WaterFields, WaterStocks, WaterSubstrate, WaterVent, WaterWorld, WaterWorldConfig,
+    WaterWorldSnapshot, waterworld_from,
 };
 pub use waterworld_render::{WaterWorldDetail, observe_waterworld};
 pub use weft::{

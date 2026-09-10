@@ -2,7 +2,7 @@
 
 use hornvale_climate::{BiomeExpr, GeneratedClimate, Realm, Stratum};
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{Vertex, World};
+use hornvale_kernel::{Vertex, World, WorldTime};
 use hornvale_terrain::landscape::FeatureId;
 use hornvale_terrain::{BoundaryKind, GeneratedTerrain, WaterKind};
 
@@ -115,6 +115,9 @@ impl WaterFields {
 }
 
 /// A sparse localized hydrothermal source, separate from ambient chemistry.
+///
+/// Every field here is stable source data. Temporal state belongs to a
+/// [`WaterWorldSnapshot`], never to the admitted source.
 /// type-audit: bare-ok(index: id), bare-ok(ratio: strength), bare-ok(diagnostic-value: temperature_delta), bare-ok(ratio: chemistry)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WaterVent {
@@ -132,6 +135,21 @@ pub struct WaterVent {
     /// Local chemical availability.
     /// type-audit: bare-ok(ratio: chemistry)
     pub chemistry: f64,
+}
+
+/// Present phase of one stable vent source.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VentState {
+    /// The source has no present hydrothermal contribution.
+    Absent,
+    /// The source is beginning a new active interval.
+    Nascent,
+    /// The source is at full activity.
+    Active,
+    /// The source contribution is declining.
+    Weakening,
+    /// The source remains identifiable after its contribution has failed.
+    Failed,
 }
 
 /// Bounded aggregate environmental stocks; no individual organisms are stored.
@@ -161,6 +179,39 @@ pub struct WaterWorld {
     pub vents: Vec<WaterVent>,
     /// Bounded current and vertical propagation samples.
     pub propagation: WaterPropagation,
+}
+
+/// Dynamic Waterworld readout at one exact world instant.
+///
+/// Vent states are aligned one-for-one with [`WaterWorld::vents`]. The
+/// stable substrate and source identities remain on [`WaterWorld`].
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct WaterWorldSnapshot {
+    /// Ambient fields aligned one-for-one with `WaterWorld::substrate`.
+    pub fields: Vec<WaterFields>,
+    /// Aggregate stocks aligned one-for-one with `WaterWorld::substrate`.
+    pub stocks: Vec<WaterStocks>,
+    /// Present states aligned one-for-one with `WaterWorld::vents`.
+    pub vent_states: Vec<VentState>,
+    /// Present bounded propagation readout.
+    pub propagation: WaterPropagation,
+}
+
+impl WaterWorld {
+    /// Read this stable overlay at an exact world instant.
+    ///
+    /// Stage 1 preserves the predecessor's genesis derivations byte-for-byte:
+    /// the climate and time parameters establish the pure query boundary, but
+    /// no temporal term is connected until Stage 2. This call draws no stream,
+    /// mutates no source, and populates no cache.
+    pub fn at(&self, _climate: &GeneratedClimate, _time: WorldTime) -> WaterWorldSnapshot {
+        WaterWorldSnapshot {
+            fields: self.fields.clone(),
+            stocks: self.stocks.clone(),
+            vent_states: vec![VentState::Active; self.vents.len()],
+            propagation: self.propagation.clone(),
+        }
+    }
 }
 
 /// Composition-root entry point for the Waterworld overlay.

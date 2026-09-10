@@ -125,3 +125,47 @@ independent absent-overlay compatibility task.
 root `IMPLEMENTATION_PLAN.md` remains untouched. Execution uses
 subagent-driven development with review checkpoints, local `make gate-commit`,
 and queued Sluice stage/merge requests only.
+
+## Task 1 — Temporal seam inventory and behavioral red
+
+The approved stable/dynamic boundary now exists without an additional
+execution ruling: `WaterWorld` retains stable substrate and admitted
+`WaterVent` source data, while the pure `WaterWorld::at` call returns a
+`WaterWorldSnapshot`. Stage 1 deliberately delegates to the predecessor's
+genesis-derived fields, stocks, vent activity, and propagation. It adds no
+draw, label, cache, temporal formula, or admission change. `VentState` names
+the five approved categorical states for Stage 2; the Stage 1 snapshot reports
+the predecessor's admitted vents as active.
+
+The seed-42 inventory produced these non-vacuous witnesses:
+
+- substrate 83,997; seabed 29,679; open column 54,318;
+- open-column/seabed depth distinctions 54,318 across 3 marine depth bands;
+- marine vertices 29,679, with a separate non-marine witness;
+- nonzero marine currents 29,677;
+- marine boundaries 2,219; edifices 403; terrain-feature contexts 29,667.
+
+The behavioral-red command was:
+
+```text
+cargo test -p hornvale-worldgen --test suite waterworld::temporal_red::future_climate_temperature_reaches_the_present_field_readout -- --ignored --nocapture
+```
+
+It exited 101 after compiling and running the assertion. The exact consumed
+source at vertex 0 changed from `22.777682501657186` °C at genesis to
+`22.78167180589651` °C at ten standard days, then the downstream assertion
+failed because both static snapshot fields remained `22.777682501657186` °C.
+This is the intended behavioral red; Stage 2 owns connecting that input and
+removing the ignore.
+
+The normal focused command was:
+
+```text
+cargo test -p hornvale-worldgen --test suite waterworld:: -- --nocapture
+```
+
+It exited 0 with 9 passed, 0 failed, and the one documented temporal red
+ignored. A preceding attempt did not count as the red because the newly added
+depth-band inventory used `BTreeSet<Stratum>` and failed to compile;
+`Stratum` is not `Ord`. Replacing that test-only set with stable first-seen
+vector membership produced the behavioral evidence above.
