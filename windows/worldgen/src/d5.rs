@@ -4,13 +4,14 @@
 //! validates, normalizes, compares, and classifies those values; it does not
 //! read world state, consume a stream, or assign a city label.
 
-/// Typed inbound and outbound flow magnitudes and their counterparty counts.
+/// Typed inbound and outbound flow magnitudes, counterparty counts, and
+/// channel availability.
 ///
 /// The two array positions preserve the existing D2/D4 flow kinds. Source and
 /// destination counts stay typed as well, so equal aggregate throughput does
 /// not erase flow composition.
-/// type-audit: bare-ok(diagnostic-value: inbound_magnitudes), bare-ok(diagnostic-value: outbound_magnitudes), bare-ok(count: inbound_source_counts), bare-ok(count: outbound_destination_counts)
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+/// type-audit: bare-ok(diagnostic-value: inbound_magnitudes), bare-ok(diagnostic-value: outbound_magnitudes), bare-ok(count: inbound_source_counts), bare-ok(count: inbound_distinct_source_count), bare-ok(count: outbound_destination_counts)
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct D5FlowVector {
     /// Inbound magnitude ordered by flow kind.
     pub inbound_magnitudes: [f64; 2],
@@ -18,8 +19,14 @@ pub struct D5FlowVector {
     pub outbound_magnitudes: [f64; 2],
     /// Distinct inbound source count ordered by flow kind.
     pub inbound_source_counts: [usize; 2],
+    /// Union-level distinct inbound source count across all flow kinds.
+    pub inbound_distinct_source_count: usize,
     /// Distinct outbound destination count ordered by flow kind.
     pub outbound_destination_counts: [usize; 2],
+    /// Availability of each typed inbound channel.
+    pub inbound_availability: [D5ObservationAvailability; 2],
+    /// Availability of each typed outbound channel.
+    pub outbound_availability: [D5ObservationAvailability; 2],
 }
 
 impl D5FlowVector {
@@ -29,7 +36,10 @@ impl D5FlowVector {
             inbound_magnitudes: [0.0; 2],
             outbound_magnitudes: [0.0; 2],
             inbound_source_counts: [0; 2],
+            inbound_distinct_source_count: 0,
             outbound_destination_counts: [0; 2],
+            inbound_availability: [D5ObservationAvailability::Available; 2],
+            outbound_availability: [D5ObservationAvailability::Available; 2],
         }
     }
 
@@ -59,8 +69,32 @@ impl D5FlowVector {
             inbound_magnitudes: self.inbound_magnitudes.map(|value| value / total),
             outbound_magnitudes: self.outbound_magnitudes.map(|value| value / total),
             inbound_source_counts: self.inbound_source_counts,
+            inbound_distinct_source_count: self.inbound_distinct_source_count,
             outbound_destination_counts: self.outbound_destination_counts,
+            inbound_availability: self.inbound_availability,
+            outbound_availability: self.outbound_availability,
         })
+    }
+
+    fn availabilities(self) -> [D5ObservationAvailability; 4] {
+        [
+            self.inbound_availability[0],
+            self.inbound_availability[1],
+            self.outbound_availability[0],
+            self.outbound_availability[1],
+        ]
+    }
+
+    fn all_channels_available(self) -> bool {
+        self.availabilities()
+            .iter()
+            .all(|availability| *availability == D5ObservationAvailability::Available)
+    }
+}
+
+impl Default for D5FlowVector {
+    fn default() -> Self {
+        Self::zero()
     }
 }
 
@@ -157,8 +191,6 @@ pub struct D5SettlementProfile {
     pub phase_records: Vec<D5PhaseRecord>,
     /// Voluntary, coercive, and protection-mediated provenance.
     pub provenance: D5FlowProvenance,
-    /// Availability of the joined settlement observation.
-    pub availability: D5ObservationAvailability,
 }
 
 /// Recurrence class of a settlement's ordered complete windows.
@@ -213,9 +245,11 @@ pub struct D5ConvergenceEvidence {
     pub settlement_id: u64,
     /// Unmodified typed observation.
     pub raw: D5FlowVector,
+    /// Unmodified provenance-separated typed observations and availability.
+    pub provenance: D5FlowProvenance,
     /// Typed composition normalized by total magnitude when non-zero.
     pub normalized: Option<D5FlowVector>,
-    /// Sum of typed voluntary inbound source counts.
+    /// Union-level distinct voluntary inbound source count.
     pub source_diversity: usize,
     /// Count of voluntary inbound flow kinds with observed positive flow.
     pub type_diversity: usize,
@@ -228,6 +262,14 @@ pub struct D5ConvergenceEvidence {
     pub recurrence: D5Recurrence,
     /// Explicit adequacy and refusal branches in deterministic order.
     pub branches: Vec<D5EvidenceBranch>,
+}
+
+/// Comparison-level regime plurality retained beside settlement evidence.
+/// type-audit: bare-ok(count: distinct_regimes)
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct D5RegimeEvidence {
+    /// Number of distinct preregistered regimes represented by adequate peers.
+    pub distinct_regimes: usize,
 }
 
 /// Per-seed comparative-apex verdict.
@@ -254,7 +296,8 @@ fn recurrence_of(records: &[D5PhaseRecord]) -> D5Recurrence {
         .iter()
         .map(|record| {
             (record.completeness == D5ObservationAvailability::Available
-                && record.raw.is_well_formed())
+                && record.raw.is_well_formed()
+                && record.raw.all_channels_available())
             .then(|| record.raw.normalized())
             .flatten()
         })
@@ -304,12 +347,7 @@ fn recurrence_of(records: &[D5PhaseRecord]) -> D5Recurrence {
 /// Coercive and protection-mediated flow remain visible in `raw` and the
 /// profile but cannot silently satisfy the voluntary evidence requirement.
 pub fn d5_convergence_evidence(profile: &D5SettlementProfile) -> D5ConvergenceEvidence {
-    let source_diversity = profile
-        .provenance
-        .voluntary
-        .inbound_source_counts
-        .iter()
-        .sum();
+    let source_diversity = profile.provenance.voluntary.inbound_distinct_source_count;
     let type_diversity = profile
         .provenance
         .voluntary
@@ -336,23 +374,56 @@ pub fn d5_convergence_evidence(profile: &D5SettlementProfile) -> D5ConvergenceEv
     let recurrence = recurrence_of(&profile.phase_records);
     let mut branches = Vec::new();
 
-    match profile.availability {
-        D5ObservationAvailability::Available => {}
-        D5ObservationAvailability::Incomplete => branches.push(D5EvidenceBranch::Incomplete),
-        D5ObservationAvailability::Unavailable => branches.push(D5EvidenceBranch::Unavailable),
+    let mut has_incomplete_channel = false;
+    let mut has_unavailable_channel = false;
+    for vector in [
+        profile.raw,
+        profile.provenance.voluntary,
+        profile.provenance.coercive,
+        profile.provenance.protection,
+    ]
+    .into_iter()
+    .chain(profile.phase_records.iter().map(|record| record.raw))
+    {
+        for availability in vector.availabilities() {
+            match availability {
+                D5ObservationAvailability::Available => {}
+                D5ObservationAvailability::Incomplete => has_incomplete_channel = true,
+                D5ObservationAvailability::Unavailable => has_unavailable_channel = true,
+            }
+        }
     }
+
+    let has_unavailable_window = profile
+        .phase_records
+        .iter()
+        .any(|record| record.completeness == D5ObservationAvailability::Unavailable);
+    let has_incomplete_window = profile.phase_records.is_empty()
+        || profile
+            .phase_records
+            .iter()
+            .any(|record| record.completeness == D5ObservationAvailability::Incomplete);
+    let has_zero_window = profile.phase_records.iter().any(|record| {
+        record.completeness == D5ObservationAvailability::Available
+            && record.raw.all_channels_available()
+            && record.raw.magnitude_total() == 0.0
+    });
+    if has_unavailable_channel || has_unavailable_window {
+        branches.push(D5EvidenceBranch::Unavailable);
+    }
+    if has_incomplete_channel || has_incomplete_window || has_zero_window {
+        branches.push(D5EvidenceBranch::Incomplete);
+    }
+
     if !well_formed {
         branches.push(D5EvidenceBranch::Malformed);
-    } else if normalized.is_none() {
-        branches.push(D5EvidenceBranch::Zero);
-    }
-    if profile.phase_records.is_empty()
-        || profile.phase_records.iter().any(|record| {
-            record.completeness != D5ObservationAvailability::Available
-                || record.raw.magnitude_total() == 0.0
-        })
+    } else if !has_incomplete_channel
+        && !has_unavailable_channel
+        && !has_incomplete_window
+        && !has_unavailable_window
+        && normalized.is_none()
     {
-        branches.push(D5EvidenceBranch::Incomplete);
+        branches.push(D5EvidenceBranch::Zero);
     }
     if profile.raw.inbound_source_counts.iter().sum::<usize>() == 0
         && profile
@@ -389,6 +460,7 @@ pub fn d5_convergence_evidence(profile: &D5SettlementProfile) -> D5ConvergenceEv
     D5ConvergenceEvidence {
         settlement_id: profile.settlement_id,
         raw: profile.raw,
+        provenance: profile.provenance,
         normalized,
         source_diversity,
         type_diversity,
@@ -470,7 +542,7 @@ fn control_ranks(profiles: &[&D5SettlementProfile]) -> [Vec<usize>; 6] {
 /// directional balance, and normalized typed composition. It deliberately
 /// does not sum these views into a score. Fewer than two adequate profiles is
 /// an explicit underpowered comparison. A control collapse is reported only
-/// when every preregistered control reproduces the complete structural rank
+/// when any preregistered control reproduces the complete structural rank
 /// ordering; an isolated large control value can never create adequacy.
 pub fn d5_compare_peers(profiles: &[D5SettlementProfile]) -> Vec<D5ConvergenceEvidence> {
     let mut evidence: Vec<_> = profiles.iter().map(d5_convergence_evidence).collect();
@@ -507,7 +579,7 @@ pub fn d5_compare_peers(profiles: &[D5SettlementProfile]) -> Vec<D5ConvergenceEv
     if structural_ranks.iter().any(|rank| *rank > 1)
         && control_ranks(&adequate_profiles)
             .iter()
-            .all(|ranks| ranks == &structural_ranks)
+            .any(|ranks| ranks == &structural_ranks)
     {
         for index in adequate_indices {
             evidence[index].branches = vec![D5EvidenceBranch::ControlCollapse];
@@ -517,8 +589,12 @@ pub fn d5_compare_peers(profiles: &[D5SettlementProfile]) -> Vec<D5ConvergenceEv
     evidence
 }
 
-/// Select the preregistered per-seed verdict from compared observations.
-pub fn d5_apex_verdict(evidence: &[D5ConvergenceEvidence]) -> D5ApexVerdict {
+/// Select the preregistered per-seed verdict from compared observations and
+/// comparison-level regime evidence.
+pub fn d5_apex_verdict(
+    evidence: &[D5ConvergenceEvidence],
+    regimes: D5RegimeEvidence,
+) -> D5ApexVerdict {
     if evidence.is_empty() {
         return D5ApexVerdict::MixedOrUnderpowered;
     }
@@ -572,6 +648,9 @@ pub fn d5_apex_verdict(evidence: &[D5ConvergenceEvidence]) -> D5ApexVerdict {
     {
         return D5ApexVerdict::NoRealizedApex;
     }
+    if regimes.distinct_regimes < 2 {
+        return D5ApexVerdict::MixedOrUnderpowered;
+    }
 
     let apex_recurrences: Vec<_> = ranked
         .iter()
@@ -611,7 +690,10 @@ mod tests {
             inbound_magnitudes,
             outbound_magnitudes,
             inbound_source_counts,
+            inbound_distinct_source_count: inbound_source_counts.iter().sum(),
             outbound_destination_counts: [0; 2],
+            inbound_availability: [D5ObservationAvailability::Available; 2],
+            outbound_availability: [D5ObservationAvailability::Available; 2],
         }
     }
 
@@ -643,8 +725,11 @@ mod tests {
                 completeness: D5ObservationAvailability::Available,
             }],
             provenance,
-            availability: D5ObservationAvailability::Available,
         }
+    }
+
+    fn regimes(distinct_regimes: usize) -> D5RegimeEvidence {
+        D5RegimeEvidence { distinct_regimes }
     }
 
     fn voluntary(raw: D5FlowVector) -> D5FlowProvenance {
@@ -682,6 +767,26 @@ mod tests {
     }
 
     #[test]
+    fn one_source_across_two_kinds_is_not_two_sources() {
+        // Break caught: summing per-kind counts treats one counterpart that
+        // supplies both kinds as two distinct inbound sources.
+        let raw = D5FlowVector {
+            inbound_magnitudes: [6.0, 4.0],
+            inbound_source_counts: [1, 1],
+            inbound_distinct_source_count: 1,
+            ..D5FlowVector::zero()
+        };
+        let evidence = d5_convergence_evidence(&profile(1, raw, voluntary(raw), controls(10.0)));
+
+        assert_eq!(evidence.source_diversity, 1);
+        assert!(
+            evidence
+                .branches
+                .contains(&D5EvidenceBranch::InsufficientSourceDiversity)
+        );
+    }
+
+    #[test]
     fn coercive_flow_cannot_supply_voluntary_convergence_evidence() {
         // Break caught: pooling coercive and voluntary provenance lets an
         // imposed hub satisfy the voluntary source/type requirements.
@@ -702,6 +807,42 @@ mod tests {
         assert_eq!(evidence.type_diversity, 0);
         assert!(evidence.branches.contains(&D5EvidenceBranch::CoerciveOnly));
         assert!(!evidence.branches.contains(&D5EvidenceBranch::Adequate));
+    }
+
+    #[test]
+    fn unavailable_channels_and_windows_are_not_observed_zeroes() {
+        // Break caught: reducing channel/window refusal to zero or incomplete
+        // loses both the unavailable branch and the exact refused channel.
+        let raw = flow([6.0, 4.0], [0.0; 2], [2, 2]);
+        let mut unavailable_channel = profile(1, raw, voluntary(raw), controls(10.0));
+        unavailable_channel
+            .provenance
+            .voluntary
+            .inbound_availability[1] = D5ObservationAvailability::Unavailable;
+        unavailable_channel.raw = D5FlowVector::zero();
+
+        let channel_evidence = d5_convergence_evidence(&unavailable_channel);
+        assert!(
+            channel_evidence
+                .branches
+                .contains(&D5EvidenceBranch::Unavailable)
+        );
+        assert!(!channel_evidence.branches.contains(&D5EvidenceBranch::Zero));
+
+        let mut unavailable_window = profile(2, raw, voluntary(raw), controls(10.0));
+        unavailable_window.phase_records[0].completeness = D5ObservationAvailability::Unavailable;
+
+        let window_evidence = d5_convergence_evidence(&unavailable_window);
+        assert!(
+            window_evidence
+                .branches
+                .contains(&D5EvidenceBranch::Unavailable)
+        );
+        assert!(
+            !window_evidence
+                .branches
+                .contains(&D5EvidenceBranch::Incomplete)
+        );
     }
 
     #[test]
@@ -762,11 +903,19 @@ mod tests {
         ] {
             let raw = flow([6.0, 4.0], [0.0; 2], [2, 2]);
             let mut missing = profile(3, raw, voluntary(raw), controls(10.0));
-            missing.availability = availability;
+            missing.provenance.voluntary.inbound_availability[0] = availability;
             let evidence = d5_convergence_evidence(&missing);
             assert!(evidence.branches.contains(&branch));
             assert!(!evidence.branches.contains(&D5EvidenceBranch::Adequate));
         }
+
+        let raw = flow([6.0, 4.0], [0.0; 2], [2, 2]);
+        let mut channel_missing = profile(4, raw, voluntary(raw), controls(10.0));
+        channel_missing.provenance.coercive.outbound_availability[1] =
+            D5ObservationAvailability::Unavailable;
+        let evidence = d5_convergence_evidence(&channel_missing);
+        assert!(evidence.branches.contains(&D5EvidenceBranch::Unavailable));
+        assert!(!evidence.branches.contains(&D5EvidenceBranch::Adequate));
     }
 
     #[test]
@@ -809,7 +958,10 @@ mod tests {
                 .contains(&D5EvidenceBranch::InsufficientSourceDiversity)
         );
         assert!(compared.iter().all(|evidence| evidence.peer_rank.is_none()));
-        assert_eq!(d5_apex_verdict(&compared), D5ApexVerdict::QualifiedFailure);
+        assert_eq!(
+            d5_apex_verdict(&compared, regimes(1)),
+            D5ApexVerdict::QualifiedFailure
+        );
     }
 
     #[test]
@@ -818,15 +970,79 @@ mod tests {
         // admits a singleton without an adequately observed peer.
         let apex_raw = flow([6.0, 4.0], [3.0, 2.0], [3, 2]);
         let peer_raw = flow([7.0, 3.0], [1.0, 1.0], [1, 1]);
-        let apex = profile(1, apex_raw, voluntary(apex_raw), controls(15.0));
-        let peer = profile(2, peer_raw, voluntary(peer_raw), controls(12.0));
+        let apex = profile(1, apex_raw, voluntary(apex_raw), controls(10.0));
+        let peer = profile(2, peer_raw, voluntary(peer_raw), controls(10.0));
 
         let compared = d5_compare_peers(&[apex, peer]);
 
         assert_eq!(compared[0].peer_rank, Some(1));
         assert_eq!(compared[1].peer_rank, Some(2));
         assert_eq!(compared[0].branches, vec![D5EvidenceBranch::Adequate]);
-        assert_eq!(d5_apex_verdict(&compared), D5ApexVerdict::TransientApex);
+        assert_eq!(
+            d5_apex_verdict(&compared, regimes(2)),
+            D5ApexVerdict::TransientApex
+        );
+    }
+
+    #[test]
+    fn candidate_requires_multiple_adequate_settlements() {
+        // Break caught: one structurally adequate settlement can receive a
+        // positive verdict without an adequate comparison settlement.
+        let raw = flow([6.0, 4.0], [3.0, 2.0], [3, 2]);
+        let compared = d5_compare_peers(&[profile(1, raw, voluntary(raw), controls(10.0))]);
+
+        assert_eq!(
+            compared[0].branches,
+            vec![D5EvidenceBranch::UnderpoweredPeers]
+        );
+        assert_eq!(
+            d5_apex_verdict(&compared, regimes(2)),
+            D5ApexVerdict::MixedOrUnderpowered
+        );
+    }
+
+    #[test]
+    fn candidate_requires_multiple_observed_regimes() {
+        // Break caught: two adequate settlements in one comparison regime
+        // are enough to produce a positive apex verdict.
+        let apex_raw = flow([6.0, 4.0], [3.0, 2.0], [3, 2]);
+        let peer_raw = flow([7.0, 3.0], [1.0, 1.0], [1, 1]);
+        let apex = profile(1, apex_raw, voluntary(apex_raw), controls(10.0));
+        let peer = profile(2, peer_raw, voluntary(peer_raw), controls(10.0));
+        let compared = d5_compare_peers(&[apex, peer]);
+
+        assert_eq!(
+            d5_apex_verdict(&compared, regimes(1)),
+            D5ApexVerdict::MixedOrUnderpowered
+        );
+    }
+
+    #[test]
+    fn any_single_explanatory_control_collapses_structural_ranks() {
+        // Break caught: requiring every control to reproduce the structural
+        // ranks lets a profile explained by any one preregistered control pass.
+        let apex_raw = flow([6.0, 4.0], [3.0, 2.0], [3, 2]);
+        let peer_raw = flow([7.0, 3.0], [1.0, 1.0], [1, 1]);
+        let vary_one: [fn(&mut D5ControlValues); 6] = [
+            |value| value.population = 200.0,
+            |value| value.density = 20.0,
+            |value| value.throughput = 20.0,
+            |value| value.catchment_size = 40.0,
+            |value| value.settlement_age = 10.0,
+            |value| value.relation_count = 8,
+        ];
+
+        for vary in vary_one {
+            let mut apex_controls = controls(10.0);
+            vary(&mut apex_controls);
+            let apex = profile(1, apex_raw, voluntary(apex_raw), apex_controls);
+            let peer = profile(2, peer_raw, voluntary(peer_raw), controls(10.0));
+
+            assert_eq!(
+                d5_apex_verdict(&d5_compare_peers(&[apex, peer]), regimes(2)),
+                D5ApexVerdict::MeasurementCollapse
+            );
+        }
     }
 
     #[test]
@@ -839,7 +1055,7 @@ mod tests {
         let flat_a = profile(1, apex_raw, voluntary(apex_raw), controls(15.0));
         let flat_b = profile(2, apex_raw, voluntary(apex_raw), controls(15.0));
         assert_eq!(
-            d5_apex_verdict(&d5_compare_peers(&[flat_a, flat_b])),
+            d5_apex_verdict(&d5_compare_peers(&[flat_a, flat_b]), regimes(1)),
             D5ApexVerdict::NoRealizedApex
         );
 
@@ -854,37 +1070,67 @@ mod tests {
         let collapsed_apex = profile(1, apex_raw, voluntary(apex_raw), collapsed_apex_controls);
         let collapsed_peer = profile(2, peer_raw, voluntary(peer_raw), collapsed_peer_controls);
         assert_eq!(
-            d5_apex_verdict(&d5_compare_peers(&[collapsed_apex, collapsed_peer])),
+            d5_apex_verdict(
+                &d5_compare_peers(&[collapsed_apex, collapsed_peer]),
+                regimes(2),
+            ),
             D5ApexVerdict::MeasurementCollapse
         );
 
-        let mut seasonal_apex = profile(1, apex_raw, voluntary(apex_raw), controls(15.0));
+        let mut seasonal_apex = profile(1, apex_raw, voluntary(apex_raw), controls(10.0));
         seasonal_apex.phase_records.push(D5PhaseRecord {
-            phase: 0,
-            window: 1,
-            raw: apex_raw,
-            completeness: D5ObservationAvailability::Available,
-        });
-        let mut seasonal_peer = profile(2, peer_raw, voluntary(peer_raw), controls(12.0));
-        seasonal_peer.phase_records.push(D5PhaseRecord {
-            phase: 0,
+            phase: 1,
             window: 1,
             raw: peer_raw,
             completeness: D5ObservationAvailability::Available,
         });
+        seasonal_apex.phase_records.push(D5PhaseRecord {
+            phase: 0,
+            window: 2,
+            raw: apex_raw,
+            completeness: D5ObservationAvailability::Available,
+        });
+        seasonal_apex.phase_records.push(D5PhaseRecord {
+            phase: 1,
+            window: 3,
+            raw: peer_raw,
+            completeness: D5ObservationAvailability::Available,
+        });
+        let mut seasonal_peer = profile(2, peer_raw, voluntary(peer_raw), controls(10.0));
+        seasonal_peer.phase_records.push(D5PhaseRecord {
+            phase: 1,
+            window: 1,
+            raw: apex_raw,
+            completeness: D5ObservationAvailability::Available,
+        });
+        seasonal_peer.phase_records.push(D5PhaseRecord {
+            phase: 0,
+            window: 2,
+            raw: peer_raw,
+            completeness: D5ObservationAvailability::Available,
+        });
+        seasonal_peer.phase_records.push(D5PhaseRecord {
+            phase: 1,
+            window: 3,
+            raw: apex_raw,
+            completeness: D5ObservationAvailability::Available,
+        });
         assert_eq!(
-            d5_apex_verdict(&d5_compare_peers(&[seasonal_apex, seasonal_peer])),
+            d5_apex_verdict(
+                &d5_compare_peers(&[seasonal_apex, seasonal_peer]),
+                regimes(2),
+            ),
             D5ApexVerdict::SeasonalApexCandidate
         );
 
-        let mut persistent_apex = profile(1, apex_raw, voluntary(apex_raw), controls(15.0));
+        let mut persistent_apex = profile(1, apex_raw, voluntary(apex_raw), controls(10.0));
         persistent_apex.phase_records.push(D5PhaseRecord {
             phase: 1,
             window: 1,
             raw: apex_raw,
             completeness: D5ObservationAvailability::Available,
         });
-        let mut persistent_peer = profile(2, peer_raw, voluntary(peer_raw), controls(12.0));
+        let mut persistent_peer = profile(2, peer_raw, voluntary(peer_raw), controls(10.0));
         persistent_peer.phase_records.push(D5PhaseRecord {
             phase: 1,
             window: 1,
@@ -892,10 +1138,16 @@ mod tests {
             completeness: D5ObservationAvailability::Available,
         });
         assert_eq!(
-            d5_apex_verdict(&d5_compare_peers(&[persistent_apex, persistent_peer])),
+            d5_apex_verdict(
+                &d5_compare_peers(&[persistent_apex, persistent_peer]),
+                regimes(2),
+            ),
             D5ApexVerdict::PersistentApexCandidate
         );
 
-        assert_eq!(d5_apex_verdict(&[]), D5ApexVerdict::MixedOrUnderpowered);
+        assert_eq!(
+            d5_apex_verdict(&[], regimes(0)),
+            D5ApexVerdict::MixedOrUnderpowered
+        );
     }
 }

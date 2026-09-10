@@ -158,8 +158,8 @@ pub use d4::{
 };
 pub use d5::{
     D5ApexVerdict, D5ControlValues, D5ConvergenceEvidence, D5EvidenceBranch, D5FlowProvenance,
-    D5FlowVector, D5ObservationAvailability, D5PhaseRecord, D5Recurrence, D5SettlementProfile,
-    d5_apex_verdict, d5_compare_peers, d5_convergence_evidence,
+    D5FlowVector, D5ObservationAvailability, D5PhaseRecord, D5Recurrence, D5RegimeEvidence,
+    D5SettlementProfile, d5_apex_verdict, d5_compare_peers, d5_convergence_evidence,
 };
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
 pub use fieldpack::{FieldPack, field_pack_from};
