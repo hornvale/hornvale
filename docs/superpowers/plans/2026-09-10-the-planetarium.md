@@ -559,6 +559,13 @@ limitations and whether the rendering source tree was clean. Final acceptance
 requires a clean, pinned revision. Draft dirty runs must be labeled and cannot
 claim the final source revision as their full provenance.
 
+The committed authored film may name an earlier, existing source revision. For
+final clean capture, explicitly freeze an external package-local film copy bound
+to the actual clean capture HEAD, retaining the chosen world/interval/direction
+unless a change is recorded. Query fresh initial and observation documents;
+never relabel old frames. Record the exact film hash and executable hash with the
+actual build revision. No commit is expected to contain its own SHA (ledger #19).
+
 - [ ] Write CPU package tests that create a tiny fixture package, then remove a frame, duplicate an index, change an observation tick, alter a PNG byte, alter the video, and swap the world binding. Each must fail verification for the stated reason. Helpers generate disposable directories; do not mutate committed fixtures.
 - [ ] Require a freshly created output directory. Initial creation succeeds only when absent; interrupted output is preserved for diagnosis. A second run chooses a new directory. Refuse path traversal/symlink escapes while resolving manifest-listed files; all package members are relative to its root.
 - [ ] Use Rust `std::process::Command` with explicit argument arrays for ffmpeg/ffprobe, never interpolated shell. Candidate video command:

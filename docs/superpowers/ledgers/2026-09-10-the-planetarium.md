@@ -808,3 +808,43 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 - Task 4 development proceeds against the reviewed source/view foundation while
   the queue works on the fixed Stage 1 SHA. Stage 1 remains In Progress until
   its actual report is inspected; a later green development test cannot replace it.
+
+
+## #19 [Q] — freeze the final film against the actual capture revision
+
+- Ruling: Task 5 commits a complete authored film referring to an already-existing
+  source revision. Once implementation is committed and the final capture tree
+  is clean, explicitly freeze a package-local copy against that actual full HEAD.
+  Keep world bytes, source/scope IDs, ticks, shots, appearance and assets fixed;
+  record any intentional change. Query fresh initial/observation documents with
+  that binding. Never relabel an earlier capture or silently rewrite its records.
+- Why: Source::open currently validates the caller's revision format and stores
+  it; it does not attest which code was compiled. A final package must record the
+  actual clean build/source revision, executable hash and exact film bytes.
+  The capture definition is an artifact, so it can live beside its output outside
+  Git while the reusable authored direction stays committed. No commit needs to
+  embed its own SHA. Spec sections 4/8 and the plan's clean final capture rule
+  remain intact; this sharpens the controller workflow, not the source protocol.
+- Source/visibility chart (combination):
+
+  ```text
+  origin                 committed authoring record      package-visible evidence
+  authored direction     complete film at existing SHA  exact copied shots/settings
+  actual clean build     source code and lockfile        full HEAD and executable hash
+  evaluated observation  producer implementation        freshly queried binding/time JSON
+  old draft              old provenance retained        never relabeled as final output
+  ```
+
+- Ideonomy passes / overturns: two. First combined where a value originates with
+  where its claim is visible: authoring data and runtime evidence have different
+  recording moments. Second combined content preservation with identity changes:
+  refreshing a revision requires fresh queries and re-verification, not a search
+  and replace in old observations. No additional producer abstraction or schema
+  is needed; the implementation already accepts explicit film paths and bindings.
+- Alternatives rejected: stamping an arbitrary old revision on a new build,
+  weakening film-binding validation, leaving final capture dirty, or adding an
+  unnecessary source-subtree attestation system. Final capture must instead use
+  exact, reviewable data from a clean existing revision.
+- Capture actions: Task 7/9 package instructions clarified. Any repin that changes
+  actual semantic observations or shot inputs triggers normal qualification and
+  visual review; the workflow does not predict that those outputs stay unchanged.
