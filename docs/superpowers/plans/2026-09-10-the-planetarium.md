@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 complete; Stage 2 canonical request running; Task 6 capture complete after independent review. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 complete; Stage 2 canonical report green; Task 6 capture complete after independent review; Task 7 packaging in progress. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
@@ -417,7 +417,7 @@ than allowing float overflow or silently compressing distances.
 **Goal:** Make the source-backed scene seekable and inspectable, and define the final edit without tying it to rendering speed.
 **Success Criteria:** Direct seek/playback equivalence, stale-reply rejection and scope resets pass; all camera/time controls work; the selected pilot and shot data are frozen.
 **Tests:** Tasks 4–5, including semantic clock/state tests and real interactive inspection.
-**Status:** In Progress
+**Status:** Complete
 
 ### Task 4: exact clocks and asynchronous observation state
 

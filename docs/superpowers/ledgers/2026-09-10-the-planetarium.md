@@ -1135,3 +1135,23 @@ COMPLETE; G6 owns final visual acceptance. No additional design ruling was neede
 at this verification boundary; ledger20 records the two-pass timeout decision.
 The Task5 compressed-action maintenance minor was addressed in the touched CLI
 and recording code. Manual drag input and final moon detail remain Task9 items.
+
+
+## Stage 2 — canonical report green
+
+Request `req-385df541db36-20260910T223202Z` tested submitted SHA
+`385df541db36399df046178c6a3c6c79681d5781`. The actual chamber report,
+retrieved with `make sluice-log JOB=sluice-385df541db36-20260910T224703Z`,
+finished 2026-09-10 at 23:10:54 UTC: all phases returned zero in 1432 seconds.
+Artifacts took 278.791 seconds, outboard 94.821, gate 840.496, and clients
+199.548. The tested merge product was
+`28883a4c09a79905801682139e7c01d5f5252f9f`; the final artifact-bearing tree was
+`9d99edb437587a6e7fcc8803e0216bdccff42aa0`.
+
+This was a stage request: nothing was pushed, and main remained at
+`cb033119272dac268f9b5fc78674dfaf9504ce74`. Together with the reviewed controls,
+seek and moving-image evidence above, this completes Stage 2. The canonical
+client roster at this boundary covers the existing clients; adding the new
+Bevy client to that roster remains Task 8. Its scoped local checks are recorded
+separately. This report does not supply heavy, census, final package or visual
+acceptance. Task 7 continues; G6 remains the final visual and merge stop.
