@@ -887,8 +887,9 @@ observation-check: ## Validate/export observation fixtures and test local film a
 	cmp observations/fixtures/HV-009/expected-frame-000.json observations/fixtures/HV-009/render-input.json; \
 	HV_OBSERVATION_FFMPEG=hornvale-no-ffmpeg bash scripts/observation-film.sh --manifest observations/episodes/HV-009.json --frames "$$tmp/neighbors-first" --out "$$tmp/neighbors-film"; \
 	test -s "$$tmp/neighbors-film/HV-009.sha256"; \
-	shellcheck scripts/observation-film.sh scripts/test-observation-film.sh; \
-	bash scripts/test-observation-film.sh
+	shellcheck scripts/observation-film.sh scripts/test-observation-film.sh scripts/observation-render.sh scripts/test-observation-render.sh; \
+	bash scripts/test-observation-film.sh; \
+	bash scripts/test-observation-render.sh
 
 wasm-vessel: ## Build the Casement wasm into book/src/gallery (deploy runs this too; never committed)
 	rustup target add wasm32-unknown-unknown 2>/dev/null || true

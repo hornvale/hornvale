@@ -209,3 +209,37 @@ Ruling: pause Task 9 at local assembly because the supported HV-009 export has
 film assembler correctly refuses this state while ffmpeg is available. Add a
 bounded rasterization task before attempting video assembly; do not create
 placeholder images, claim a no-ffmpeg result, or change editorial statuses.
+
+## #3 [G5] — Task 10 headless-raster boundary
+
+- **Question:** Which existing local backend, if any, can turn the exact
+  self-contained Atlas laptop HTML into the declared `1440×900` PNG sequence?
+- **Decision:** Use Firefox headless screenshotting when its executable is
+  available; otherwise the renderer must refuse. Do not use macOS Quick Look
+  as a substitute.
+- **Why:** Quick Look rendered the exact HTML deterministically but only as a
+  `1440×1440` thumbnail. Firefox 137.0.2 rendered the exact `1440×900` HTML
+  twice with matching local SHA-256 bytes, but its application bundle then
+  disappeared from the environment before a full HV-009 run completed. The
+  command now sees no Firefox and exits with the explicit unavailable-backend
+  error rather than inventing pixels.
+- **Alternatives discarded:** Resizing or cropping the Quick Look thumbnail
+  would misrepresent the Atlas viewport. A new browser dependency would exceed
+  the task's no-new-dependency boundary. Placeholder PNGs would falsely
+  unblock film assembly.
+- **Ideonomy passes / overturns:** One combination/graph pass over backend
+  autonomy and packet cardinality. It exposed backend persistence—not one
+  successful screenshot—as the decisive hub for a 900-frame sequence. No
+  overturn: Firefox remains the only exact candidate, with refusal required
+  when it is absent.
+- **Capture actions:** The ignored task report records commands, hashes, and
+  the current refusal. No editorial record changed; Task 9 remains blocked on
+  a stable local raster backend.
+
+## Task 10: complete
+
+- **Result:** Added the bounded renderer/refusal command, its six focused
+  checks, `observation-check` wiring, and the HTML-versus-PNG documentation.
+- **Evidence:** Shellcheck, 40 Atlas tests, 20 film checks, six renderer
+  checks, and `git diff --check` passed. The full HV-009 output is deliberately
+  absent because the only exact backend did not remain installed.

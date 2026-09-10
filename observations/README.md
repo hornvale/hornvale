@@ -15,8 +15,27 @@ cargo run -p hornvale -- observations export \
   --out observations/render-output/HV-001/frames
 ```
 
-After a renderer has written matching `frame-NNN.png` files beside the
-`frame-NNN.json` packets, assemble and verify the local package:
+The Atlas HTML preview is an inspectable review surface, not the authoritative
+visual frame sequence. On a host with Firefox's headless screenshot executable,
+render the existing self-contained Atlas laptop preview for every validated
+packet at its declared `1440×900` viewport:
+
+```bash
+scripts/observation-render.sh \
+  --manifest observations/episodes/HV-001.json \
+  --frames observations/render-output/HV-001/frames
+```
+
+The command discovers `firefox` on `PATH` or the macOS Firefox application
+bundle; set `HV_OBSERVATION_FIREFOX=/path/to/firefox` to name another local
+executable. It refuses rather than emitting a substitute image if no backend
+is available. Firefox's pixels are platform-local: compare repeat checksums on
+the rendering host, but do not treat cross-platform byte identity as a client
+contract.
+
+The resulting `frame-NNN.png` files beside the `frame-NNN.json` packets are
+the authoritative local visual output. Only after that raster sequence exists,
+assemble and verify the local package:
 
 ```bash
 scripts/observation-film.sh \
