@@ -1,15 +1,16 @@
 //! Per-seed D5 comparative-apex probe.
 #![allow(clippy::disallowed_methods)]
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    D5ApexVerdict, D5ControlValues, D5EvidenceBranch, D5FlowProvenance, D5FlowVector,
-    D5ObservationAvailability, D5PhaseRecord, D5RegimeEvidence, D5SettlementProfile,
-    SettlementPins, build_world, d5_apex_verdict, d5_compare_peers,
+    BakeId, D4Availability, D5ApexVerdict, D5ControlValues, D5EvidenceBranch, D5FlowProvenance,
+    D5FlowVector, D5ObservationAvailability, D5PhaseRecord, D5RegimeEvidence, D5SettlementProfile,
+    DiagnosticPortfolioPhase, DiagnosticPortfolioWitness, ExchangeTreatment, SettlementPins,
+    WorldComponents, build_world_with_exchange_treatment, d5_apex_verdict, d5_compare_peers,
 };
 
 const PROBE_SEEDS: std::ops::RangeInclusive<u64> = 1..=8;
@@ -19,6 +20,8 @@ struct JoinBranches {
     missing: Vec<u64>,
     duplicate: Vec<u64>,
     isolated: Vec<u64>,
+    orphan: Vec<u64>,
+    site_mismatch: Vec<u64>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -75,9 +78,10 @@ fn profile(id: u64, raw: D5FlowVector, phases: &[(u16, D5FlowVector)]) -> D5Sett
 fn summarize(
     seed: u64,
     denominator: usize,
-    profiles: Vec<D5SettlementProfile>,
+    mut profiles: Vec<D5SettlementProfile>,
     regimes: usize,
 ) -> Report {
+    profiles.sort_by_key(|profile| profile.settlement_id);
     let branches = JoinBranches {
         isolated: profiles
             .iter()
@@ -109,6 +113,189 @@ fn adequate_pair() -> Vec<D5SettlementProfile> {
         profile(1, apex, &[(0, apex)]),
         profile(2, peer, &[(0, peer)]),
     ]
+}
+
+fn d5_availability(availability: D4Availability) -> D5ObservationAvailability {
+    match availability {
+        D4Availability::Available => D5ObservationAvailability::Available,
+        D4Availability::Debt(_) => D5ObservationAvailability::Unavailable,
+    }
+}
+
+fn resource_index(resource: hornvale_worldgen::SubsistenceResource) -> usize {
+    match resource {
+        hornvale_worldgen::SubsistenceResource::A => 0,
+        hornvale_worldgen::SubsistenceResource::B => 1,
+    }
+}
+
+fn flow_from_phase(
+    community: BakeId,
+    phase: &DiagnosticPortfolioPhase,
+) -> (D5FlowVector, D5FlowProvenance) {
+    let coercive = phase.portfolio.coercive_transfer.unwrap_or([0.0; 2]);
+    let protection = phase.portfolio.protection_access.unwrap_or([0.0; 2]);
+    let mut source_sets = [BTreeSet::new(), BTreeSet::new()];
+    for attempt in &phase.exchange_attempts {
+        if attempt.requester == community
+            && let Some(counterparty) = attempt.counterparty
+        {
+            source_sets[resource_index(attempt.resource)].insert(counterparty);
+        }
+    }
+    let union_sources = source_sets.iter().flatten().collect::<BTreeSet<_>>().len();
+    let flow = D5FlowVector {
+        inbound_magnitudes: [
+            phase.portfolio.imports[0] + coercive[0] + protection[0],
+            phase.portfolio.imports[1] + coercive[1] + protection[1],
+        ],
+        outbound_magnitudes: phase.portfolio.voluntary_exchange,
+        inbound_source_counts: [source_sets[0].len(), source_sets[1].len()],
+        inbound_distinct_source_count: union_sources,
+        inbound_availability: [
+            d5_availability(phase.mechanism_availability.imports),
+            d5_availability(phase.mechanism_availability.imports),
+        ],
+        outbound_availability: [
+            d5_availability(phase.mechanism_availability.voluntary_exchange),
+            d5_availability(phase.mechanism_availability.voluntary_exchange),
+        ],
+        ..D5FlowVector::zero()
+    };
+    let provenance = D5FlowProvenance {
+        voluntary: D5FlowVector {
+            inbound_magnitudes: phase.portfolio.imports,
+            inbound_source_counts: flow.inbound_source_counts,
+            inbound_distinct_source_count: union_sources,
+            inbound_availability: [
+                d5_availability(phase.mechanism_availability.imports),
+                d5_availability(phase.mechanism_availability.imports),
+            ],
+            ..D5FlowVector::zero()
+        },
+        coercive: D5FlowVector {
+            inbound_magnitudes: coercive,
+            inbound_availability: [
+                d5_availability(phase.mechanism_availability.coercive_transfer),
+                d5_availability(phase.mechanism_availability.coercive_transfer),
+            ],
+            ..D5FlowVector::zero()
+        },
+        protection: D5FlowVector {
+            inbound_magnitudes: protection,
+            inbound_availability: [
+                d5_availability(phase.mechanism_availability.protection_access),
+                d5_availability(phase.mechanism_availability.protection_access),
+            ],
+            ..D5FlowVector::zero()
+        },
+    };
+    (flow, provenance)
+}
+
+fn profile_from_witness(witness: &DiagnosticPortfolioWitness) -> Option<D5SettlementProfile> {
+    let last = witness.phases.last()?;
+    let (raw, provenance) = flow_from_phase(witness.community, last);
+    let phase_records = witness
+        .phases
+        .iter()
+        .map(|phase| {
+            let (raw, _) = flow_from_phase(witness.community, phase);
+            D5PhaseRecord {
+                phase: phase.phase,
+                window: phase.phase as u32,
+                raw,
+                completeness: D5ObservationAvailability::Available,
+            }
+        })
+        .collect();
+    let throughput = raw
+        .inbound_magnitudes
+        .iter()
+        .chain(raw.outbound_magnitudes.iter())
+        .sum();
+    Some(D5SettlementProfile {
+        settlement_id: witness.community.0,
+        raw,
+        controls: D5ControlValues {
+            population: 0.0,
+            density: 0.0,
+            throughput,
+            catchment_size: 0.0,
+            settlement_age: 0.0,
+            relation_count: raw.inbound_distinct_source_count,
+        },
+        phase_records,
+        provenance,
+    })
+}
+
+fn live_report(seed: u64) -> Report {
+    let components = WorldComponents::assemble().expect("canonical components assemble");
+    let built = build_world_with_exchange_treatment(
+        Seed(seed),
+        &SkyPins::default(),
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        &components,
+        ExchangeTreatment::Enabled,
+    )
+    .expect("fixed D5 probe seed builds");
+    let live: BTreeMap<_, _> = built
+        .history
+        .records
+        .iter()
+        .filter(|record| record.core.is_alive())
+        .map(|record| (record.community, record.core.site))
+        .collect();
+    let mut witnesses: BTreeMap<_, Vec<_>> = BTreeMap::new();
+    for witness in &built.history.diagnostic_portfolios {
+        witnesses
+            .entry(witness.community)
+            .or_default()
+            .push(witness);
+    }
+    let mut branches = JoinBranches::default();
+    let mut profiles = Vec::new();
+    for (&community, &site) in &live {
+        let Some(rows) = witnesses.get(&community) else {
+            branches.missing.push(community.0);
+            continue;
+        };
+        if rows.len() != 1 {
+            branches.duplicate.push(community.0);
+            continue;
+        }
+        if rows[0].site != site {
+            branches.site_mismatch.push(community.0);
+            continue;
+        }
+        if let Some(profile) = profile_from_witness(rows[0]) {
+            profiles.push(profile);
+        } else {
+            branches.missing.push(community.0);
+        }
+    }
+    branches.orphan = witnesses
+        .keys()
+        .filter(|community| !live.contains_key(community))
+        .map(|community| community.0)
+        .collect();
+    let regimes = profiles
+        .iter()
+        .flat_map(|profile| profile.phase_records.iter().map(|record| record.phase))
+        .collect::<BTreeSet<_>>()
+        .len();
+    let mut report = summarize(seed, live.len(), profiles, regimes);
+    report.branches = branches;
+    if !report.branches.missing.is_empty()
+        || !report.branches.duplicate.is_empty()
+        || !report.branches.orphan.is_empty()
+        || !report.branches.site_mismatch.is_empty()
+    {
+        report.verdict = D5ApexVerdict::MixedOrUnderpowered;
+    }
+    report
 }
 
 #[test]
@@ -234,9 +421,60 @@ fn fixture_mixed_and_missing_join_denominators_do_not_pool_into_a_positive() {
 fn fixture_evidence_is_stably_ordered_by_settlement_identity() {
     let mut profiles = adequate_pair();
     profiles.reverse();
-    let evidence = d5_compare_peers(&profiles);
-    let ids: BTreeSet<_> = evidence.iter().map(|item| item.settlement_id).collect();
-    assert_eq!(ids, BTreeSet::from([1, 2]));
+    let evidence = summarize(6, 2, profiles, 2).evidence;
+    let ids: Vec<_> = evidence.iter().map(|item| item.settlement_id).collect();
+    assert_eq!(ids, vec![1, 2]);
+}
+
+#[test]
+fn fixture_covers_flat_and_control_collapse_verdicts() {
+    let raw = flow([6.0, 4.0], [3, 2], 5);
+    let flat = summarize(
+        4,
+        2,
+        vec![profile(1, raw, &[(0, raw)]), profile(2, raw, &[(0, raw)])],
+        2,
+    );
+    assert_eq!(flat.verdict, D5ApexVerdict::NoRealizedApex);
+
+    let mut collapsed = adequate_pair();
+    collapsed[0].controls.population = 200.0;
+    let report = summarize(5, 2, collapsed, 2);
+    assert_eq!(report.verdict, D5ApexVerdict::MeasurementCollapse);
+}
+
+#[test]
+fn fixture_covers_unavailable_and_malformed_refusals() {
+    let mut unavailable = profile(1, flow([6.0, 4.0], [3, 2], 5), &[]);
+    unavailable.raw.inbound_availability[0] = D5ObservationAvailability::Unavailable;
+    let unavailable_evidence = d5_compare_peers(&[unavailable])[0].clone();
+    assert!(
+        unavailable_evidence
+            .branches
+            .contains(&D5EvidenceBranch::Unavailable)
+    );
+
+    let malformed_raw = flow([f64::NAN, 4.0], [3, 2], 5);
+    let malformed = profile(2, malformed_raw, &[(0, malformed_raw)]);
+    let malformed_evidence = d5_compare_peers(&[malformed])[0].clone();
+    assert!(
+        malformed_evidence
+            .branches
+            .contains(&D5EvidenceBranch::Malformed)
+    );
+}
+
+#[test]
+fn live_d4_witness_join_has_a_per_seed_denominator() {
+    let report = live_report(1);
+    assert!(report.denominator > 0);
+    assert!(report.evidence.len() <= report.denominator);
+    assert!(report.branches.duplicate.is_empty());
+    assert_eq!(
+        report.evidence.len() + report.branches.missing.len(),
+        report.denominator
+    );
+    assert_eq!(report.verdict, D5ApexVerdict::MixedOrUnderpowered);
 }
 
 #[test]
@@ -245,17 +483,17 @@ fn fixture_evidence_is_stably_ordered_by_settlement_identity() {
 #[ignore = "probe: fixed-roster D5 readout; run only at the sanctioned campaign boundary"]
 fn staple_d5_fixed_roster_readout() {
     for seed in PROBE_SEEDS {
-        let world = build_world(
-            Seed(seed),
-            &SkyPins::default(),
-            &TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .expect("fixed D5 probe seed builds");
-        let settlements = world
-            .ledger
-            .find(hornvale_settlement::IS_SETTLEMENT)
-            .count();
-        println!("D5 seed={seed} alive_settlements={settlements} verdict=measurement-only");
+        let report = live_report(seed);
+        println!(
+            "D5 seed={} denominator={} joined={} missing={} duplicate={} orphan={} site_mismatch={} verdict={:?}",
+            report.seed,
+            report.denominator,
+            report.evidence.len(),
+            report.branches.missing.len(),
+            report.branches.duplicate.len(),
+            report.branches.orphan.len(),
+            report.branches.site_mismatch.len(),
+            report.verdict,
+        );
     }
 }

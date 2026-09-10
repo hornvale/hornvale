@@ -67,3 +67,15 @@ positive apex.
 **Capture actions:** Proceed to Task 3 mutation-oriented vacuity, save-inert,
 and attribution checks. Do not run the fixed-roster measurement or census at
 this boundary.
+
+## #4 [G5] — Task 2 review correction
+
+**Finding:** The first probe draft only counted live settlements in its ignored
+readout; it did not consume D4 witnesses or make join refusals load-bearing.
+
+**Resolution:** The probe now derives typed D5 profiles from existing D4 phase
+portfolios and exchange-attempt counterparties, joins each witness once by
+`BakeId` and `Vertex`, records missing/duplicate/orphan/site-mismatch rows,
+sorts before reduction, and forces an underpowered verdict on invalid joins.
+The fixed-roster path uses this same reducer and remains ignored. Focused
+probe coverage is 7/7; the task review remains pending after this correction.
