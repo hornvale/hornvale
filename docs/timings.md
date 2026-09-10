@@ -6886,3 +6886,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T00:57:45Z | sluice:gate | 808.241 | 24231.908 | 703.062 | 30.85 | 0 | da12d7bc7 |  | lefford | 40 |
 | 2026-09-10T01:01:10Z | sluice:clients | 204.365 | 3185.096 | 309.158 | 17.10 | 0 | efb020fb4 |  | lefford | 40 |
 | 2026-09-10T01:10:51Z | sluice:heavy | 580.390 | 12916.304 | 192.278 | 22.59 | 0 | a4769a3e2 |  | lefford | 40 |
+| 2026-09-09T23:50:40Z | census-tail-chorus | 24.185 | 173.153 | 6.647 | 7.43 | 0 | 6cec40067 | campaign/census-tail | MacBookPro | 10 |
+| 2026-09-09T23:50:40Z | census-tail-domesday | 0.380 | 0.327 | 0.032 | 0.94 | 0 | 6cec40067 | campaign/census-tail | MacBookPro | 10 |
+| 2026-09-09T23:50:40Z | census-tail-anomalies | 0.298 | 0.243 | 0.035 | 0.93 | 0 | 6cec40067 | campaign/census-tail | MacBookPro | 10 |
+| 2026-09-09T23:50:43Z | rebaseline | 128.227 | 420.424 | 19.064 | 3.43 | 0 | 6cec40067 | campaign/census-tail | MacBookPro | 10 |
+| 2026-09-09T23:51:27Z | gate-commit | 43.919 | 76.043 | 21.966 | 2.23 | 0 | 4c86ef0a9 | campaign/census-tail | MacBookPro | 10 |

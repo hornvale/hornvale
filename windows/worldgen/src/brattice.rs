@@ -1062,6 +1062,7 @@ mod tests {
     use super::*;
     use crate::character::Character;
     use crate::circuit::{DescentPlan, LengthClass, plan_descent};
+    use crate::seed_sweep;
     use hornvale_kernel::{Band, Seed, Vertex};
     use hornvale_terrain::CaveKind;
 
@@ -1380,7 +1381,12 @@ mod tests {
     #[test]
     #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn every_plan_is_solvable_across_the_sanctioned_sweep() {
-        for seed in 0..400u64 {
+        // Each plan is a pure function of its seed and the remaining loop
+        // coordinates. Assertions stay inside each seed's closure, preserving
+        // their full deterministic context; `map_seeds` re-raises any worker
+        // panic on this thread. Set `HV_SEED_SWEEP_THREADS=1` to reproduce the
+        // serial execution shape exactly.
+        let _: Vec<()> = seed_sweep::map_seeds(0..400u64, |seed| {
             for kind in [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst] {
                 for ch in [
                     Character::WildCave,
@@ -1412,11 +1418,11 @@ mod tests {
                     }
                 }
             }
-        }
+        });
         // The Plat: the Made population — a wild character with rung 1 cut —
         // is a plan shape no saved world has seen and the invariant must hold
         // on it too. 3 kinds × 4 vertices × 400 seeds = 4,800 plans.
-        for seed in 0..400u64 {
+        let _: Vec<()> = seed_sweep::map_seeds(0..400u64, |seed| {
             for kind in [CaveKind::LavaTube, CaveKind::Fracture, CaveKind::Karst] {
                 for vertex in [1u32, 7, 42, 1000] {
                     let p = plan_made_at(seed, vertex, kind, 1);
@@ -1442,7 +1448,7 @@ mod tests {
                     );
                 }
             }
-        }
+        });
     }
 
     /// claim: invariant(seed: 0..200) — a node holds at most one key and an

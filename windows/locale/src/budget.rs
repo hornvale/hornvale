@@ -265,7 +265,7 @@ mod tests {
     #![allow(clippy::disallowed_methods)]
     use super::*;
     use hornvale_kernel::Seed;
-    use hornvale_worldgen::{climate_of, terrain_of};
+    use hornvale_worldgen::{climate_of, seed_sweep, terrain_of};
 
     fn budget_for(
         seed: u64,
@@ -353,8 +353,12 @@ mod tests {
         // candidate reserves its single best-unclaimed vertex before the
         // blue-noise pass), so a global pairwise-spacing invariant is false
         // by design and is not asserted here.
-        for seed in 0..25 {
-            let (b, climate, terrain) = budget_for(seed);
+        // Each seed builds its own independent world on a worker, while
+        // `map_seeds` returns results in seed order. Assertions stay on this
+        // thread in the serial loop's exact order and retain the seed in
+        // every failure message.
+        let per_seed = seed_sweep::map_seeds(0..25, budget_for);
+        for (seed, (b, climate, terrain)) in (0..25).zip(per_seed) {
             let globe = terrain.globe();
             let land_count = climate
                 .geosphere()

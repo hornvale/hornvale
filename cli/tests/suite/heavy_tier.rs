@@ -774,6 +774,18 @@ const CO_SCHEDULE_SENSITIVE_MARKER: &str = "nextest: co-schedule-sensitive";
 /// nothing on its own — see [`map_seeds_callers`].
 const SIZED_SWEEP_MARKER: &str = "nextest: sized-sweep";
 
+/// The bounded-panel marker for the health control's four-seed sweep. It is
+/// separate from [`SIZED_SWEEP_MARKER`] because that class reserves thirty
+/// nextest slots for its widest members; this panel can spawn only four
+/// workers and therefore needs only four slots.
+const FOUR_SEED_SWEEP_MARKER: &str = "nextest: four-seed-sweep";
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+enum BoundedSweepClass {
+    Sized,
+    FourSeed,
+}
+
 /// The setting PREFIX shared by both forms `threads-required` can take —
 /// distinct from [`THREADS_REQUIRED`], which is the exact whole-runner
 /// STRING form. A `# class: sized-sweep` table's setting must start with
@@ -1079,6 +1091,13 @@ fn sized_filter_names() -> Vec<String> {
     pinned_filter_names_for_class("sized-sweep", ThreadsRequiredKind::Bounded)
 }
 
+/// The four-seed sweep class's pinned roster — separate from
+/// [`sized_filter_names`] so nextest reserves four slots for this panel, not
+/// the thirty required by the widest sized-sweep members.
+fn four_seed_filter_names() -> Vec<String> {
+    pinned_filter_names_for_class("four-seed-sweep", ThreadsRequiredKind::Bounded)
+}
+
 /// Every test that reserves the whole runner — the union of both
 /// `threads-required = "num-cpus"` classes above (The Governor, Task 1).
 /// Built from [`serialized_filter_names`] and [`budget_filter_names`]
@@ -1102,17 +1121,17 @@ fn front_loaded_filter_names() -> Vec<String> {
 }
 
 /// Every heavy/probe-tagged test whose body calls [`SWEEP_CALL`], paired
-/// with whether its doc comment ALSO carries [`SIZED_SWEEP_MARKER`] — the
+/// with the bounded reservation marker its doc comment carries, if any — the
 /// single scan [`internally_parallel_heavy_tests`] and
 /// [`sized_sweep_heavy_tests`] both build on (The Governor, Task 8), so the
-/// one subtle piece of state tracking here — the marker is written in the
+/// one subtle piece of state tracking here — a marker is written in the
 /// doc comment ABOVE `#[test]`/`#[ignore]`/`fn`, but must still be readable
 /// while scanning the test's BODY below `fn`, which is a different span than
 /// [`co_schedule_sensitive_heavy_tests`]'s marker (consumed immediately, at
-/// the `fn` line) — is written and gets-it-right exactly once. The marker is
-/// snapshotted into `current_is_sized` AT the `fn` line (alongside `current`
-/// itself), then the accumulating flag resets so a later, unrelated test's
-/// doc comment cannot inherit it.
+/// the `fn` line) — is written and gets-it-right exactly once. The selected
+/// class is snapshotted AT the `fn` line (alongside `current` itself), then
+/// the accumulating flags reset so a later, unrelated test's doc comment
+/// cannot inherit it.
 ///
 /// Line-oriented, matching `gate-full-heavy.sh`'s own grep-based discovery, so
 /// the two agree about what a heavy test is. A heavy `#[ignore]` tag sits
@@ -1132,22 +1151,26 @@ fn front_loaded_filter_names() -> Vec<String> {
 /// caller in this tree already uses. See
 /// [`the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel`]'s
 /// failure message, which names this before it names dropping the pin.
-fn map_seeds_callers() -> Vec<(String, bool)> {
+fn map_seeds_callers() -> Vec<(String, Option<BoundedSweepClass>)> {
     let mut sources = Vec::new();
     collect_rs(&repo_root(), &mut sources);
     sources.sort();
 
-    let mut found: Vec<(String, bool)> = Vec::new();
+    let mut found: Vec<(String, Option<BoundedSweepClass>)> = Vec::new();
     for path in sources {
         let text = fs::read_to_string(&path).expect("source file is utf8");
         let mut next_fn_is_heavy = false;
-        let mut marker_seen = false;
+        let mut sized_marker_seen = false;
+        let mut four_seed_marker_seen = false;
         let mut current: Option<String> = None;
-        let mut current_is_sized = false;
+        let mut current_bounded_class = None;
         for line in text.lines() {
             let trimmed = line.trim();
             if trimmed.contains(SIZED_SWEEP_MARKER) {
-                marker_seen = true;
+                sized_marker_seen = true;
+            }
+            if trimmed.contains(FOUR_SEED_SWEEP_MARKER) {
+                four_seed_marker_seen = true;
             }
             if trimmed.starts_with("#[test]") {
                 current = None;
@@ -1171,17 +1194,29 @@ fn map_seeds_callers() -> Vec<(String, bool)> {
             if let Some(rest) = trimmed.strip_prefix("fn ")
                 && let Some((name, _)) = rest.split_once('(')
             {
+                assert!(
+                    !(next_fn_is_heavy && sized_marker_seen && four_seed_marker_seen),
+                    "heavy/probe seed-sweep test {name} carries both bounded reservation \
+                     markers; choose exactly one panel-width class"
+                );
                 current = next_fn_is_heavy.then(|| name.to_string());
-                current_is_sized = marker_seen;
+                current_bounded_class = if four_seed_marker_seen {
+                    Some(BoundedSweepClass::FourSeed)
+                } else if sized_marker_seen {
+                    Some(BoundedSweepClass::Sized)
+                } else {
+                    None
+                };
                 next_fn_is_heavy = false;
-                marker_seen = false;
+                sized_marker_seen = false;
+                four_seed_marker_seen = false;
                 continue;
             }
             if line.contains(SWEEP_CALL)
                 && let Some(name) = &current
                 && !found.iter().any(|(n, _)| n == name)
             {
-                found.push((name.clone(), current_is_sized));
+                found.push((name.clone(), current_bounded_class));
             }
         }
     }
@@ -1197,7 +1232,7 @@ fn map_seeds_callers() -> Vec<(String, bool)> {
 fn internally_parallel_heavy_tests() -> Vec<String> {
     let mut found: Vec<String> = map_seeds_callers()
         .into_iter()
-        .filter(|(_, is_sized)| !is_sized)
+        .filter(|(_, bounded_class)| bounded_class.is_none())
         .map(|(name, _)| name)
         .collect();
     found.sort();
@@ -1212,7 +1247,20 @@ fn internally_parallel_heavy_tests() -> Vec<String> {
 fn sized_sweep_heavy_tests() -> Vec<String> {
     let mut found: Vec<String> = map_seeds_callers()
         .into_iter()
-        .filter(|(_, is_sized)| *is_sized)
+        .filter(|(_, bounded_class)| *bounded_class == Some(BoundedSweepClass::Sized))
+        .map(|(name, _)| name)
+        .collect();
+    found.sort();
+    found.dedup();
+    found
+}
+
+/// Every heavy/probe battery that calls [`SWEEP_CALL`] and opts into the
+/// exact four-slot bounded reservation with [`FOUR_SEED_SWEEP_MARKER`].
+fn four_seed_sweep_heavy_tests() -> Vec<String> {
+    let mut found: Vec<String> = map_seeds_callers()
+        .into_iter()
+        .filter(|(_, bounded_class)| *bounded_class == Some(BoundedSweepClass::FourSeed))
         .map(|(name, _)| name)
         .collect();
     found.sort();
@@ -1407,6 +1455,48 @@ fn the_sized_sweep_pin_names_exactly_the_batteries_marked_for_a_bounded_panel() 
          Left alone this does NOT redden on its own: nextest either schedules \
          an unpinned sized-sweep battery without any reservation at all, or \
          keeps reserving slots for a battery that no longer needs them."
+    );
+}
+
+/// A four-seed panel reserves four nextest slots, not the thirty-slot width
+/// shared by the larger bounded sweeps above. This keeps the scheduler's
+/// reservation proportional to the worker fan-out the test can actually use.
+#[test]
+fn the_four_seed_sweep_class_reserves_exactly_four_threads() {
+    let pinned = four_seed_filter_names();
+    let marked = four_seed_sweep_heavy_tests();
+    assert_eq!(
+        pinned, marked,
+        "the four-seed-sweep config roster must exactly match heavy/probe tests marked \
+         {FOUR_SEED_SWEEP_MARKER:?} that call {SWEEP_CALL:?}"
+    );
+    assert_eq!(
+        marked,
+        ["the_null_control_holds_across_a_seed_sweep"],
+        "the four-seed class currently contains only the health control's bounded panel"
+    );
+
+    let text = fs::read_to_string(repo_root().join(NEXTEST_CONFIG))
+        .expect(".config/nextest.toml is readable");
+    let lines: Vec<&str> = text.lines().collect();
+    let start = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| line.trim() == "[[profile.default.overrides]]")
+        .find(|(start, _)| {
+            let end = override_table_end(&lines, *start);
+            lines[*start..end]
+                .iter()
+                .any(|line| line.trim() == "# class: four-seed-sweep")
+        })
+        .map(|(start, _)| start)
+        .expect("the four-seed-sweep override table exists");
+    let end = override_table_end(&lines, start);
+    assert!(
+        lines[start..end]
+            .iter()
+            .any(|line| line.trim() == "threads-required = 4"),
+        "the four-seed-sweep class must reserve exactly four nextest slots"
     );
 }
 

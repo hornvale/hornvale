@@ -15,6 +15,8 @@
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
+use hornvale_worldgen::seed_sweep;
+
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -598,10 +600,20 @@ fn the_runner_returns_a_v2_snapshot_from_a_real_possession() {
 /// (decision 0093): this iterates the committed corpus's scenes, not seeds.
 #[test]
 fn every_founding_scene_passes_every_beat() {
-    for scene in load("the-founding.scene.json") {
-        let witness = resolve(&scene.selector).expect("a founding scene pins its world");
+    let scenes = load("the-founding.scene.json");
+    let results = seed_sweep::map_seeds(0..scenes.len() as u64, |index| {
+        let scene = &scenes[index as usize];
+        let witness = resolve(&scene.selector);
+        let evaluation = witness
+            .as_ref()
+            .map_or_else(|| Ok(()), |witness| evaluate(scene, witness));
+        (witness, evaluation)
+    });
+
+    for (scene, (witness, evaluation)) in scenes.iter().zip(results) {
+        let _witness = witness.expect("a founding scene pins its world");
         assert_eq!(
-            evaluate(&scene, &witness),
+            evaluation,
             Ok(()),
             "founding scene `{}` ({}) failed. These four are the instrument's \
              POSITIVE CONTROL: each was run and verified before the resolver \
@@ -648,7 +660,12 @@ fn a_beat_whose_assertion_does_not_hold_names_that_beat() {
 /// (decision 0093): this iterates the committed corpus's scenes, not seeds.
 #[test]
 fn no_scene_has_fallen_below_its_recorded_floor() {
-    for scene in every_committed_scene() {
+    let scenes = every_committed_scene();
+    let verdicts = seed_sweep::map_seeds(0..scenes.len() as u64, |index| {
+        verdict_of(&scenes[index as usize])
+    });
+
+    for (scene, got) in scenes.iter().zip(verdicts) {
         let floor = FLOORS
             .iter()
             .find(|(id, _)| *id == scene.id)
@@ -661,7 +678,6 @@ fn no_scene_has_fallen_below_its_recorded_floor() {
                 )
             })
             .1;
-        let got = verdict_of(&scene);
         assert_eq!(
             got.name(),
             floor,

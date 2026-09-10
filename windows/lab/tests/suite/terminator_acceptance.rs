@@ -72,7 +72,7 @@ use hornvale_kernel::Seed;
 use hornvale_religion::{Sentiment, beliefs_of, sentiment_tag};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, WorldComponents, build_world, build_world_to, sky_of,
+    BuildDepth, SettlementPins, WorldComponents, build_world, build_world_to, seed_sweep, sky_of,
 };
 
 /// Ascending-seed scan ceiling — mirrors the Task-2 probe's first window
@@ -132,7 +132,14 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-    let locked: Vec<u64> = (1..=SCAN_MAX).filter(|&s| is_locked(s, &wc)).collect();
+    // Every scan reads the same immutable registries, and `map_seeds` returns
+    // results in seed order. Set `HV_SEED_SWEEP_THREADS=1` to reproduce the
+    // serial execution shape exactly.
+    let locked: Vec<u64> =
+        seed_sweep::map_seeds(1..=SCAN_MAX, |seed| is_locked(seed, &wc).then_some(seed))
+            .into_iter()
+            .flatten()
+            .collect();
     assert!(
         locked.len() >= MIN_LOCKED,
         "locked-seed scan under-yielded ({} found in 1..={SCAN_MAX}, want >= {MIN_LOCKED}); \
@@ -142,7 +149,10 @@ fn locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix() {
 
     let (mut ambient, mut eternal, mut cyclic) = (0u32, 0u32, 0u32);
     let mut breakdown: Vec<(u64, &'static str)> = Vec::new();
-    for &seed in &locked {
+    // Full builds are likewise independent by seed. Keep counting and
+    // diagnostics on this thread so their order remains the ascending locked
+    // seed order returned by `map_seeds`.
+    let sentiments: Vec<Sentiment> = seed_sweep::map_seeds(locked.iter().copied(), |seed| {
         let world = build_world(
             Seed(seed),
             &SkyPins::default(),
@@ -154,8 +164,11 @@ fn locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix() {
         let first = beliefs
             .first()
             .unwrap_or_else(|| panic!("locked seed {seed} committed no beliefs"));
-        breakdown.push((seed, sentiment_tag(first.sentiment)));
-        match first.sentiment {
+        first.sentiment
+    });
+    for (seed, sentiment) in locked.iter().copied().zip(sentiments) {
+        breakdown.push((seed, sentiment_tag(sentiment)));
+        match sentiment {
             Sentiment::Ambient => ambient += 1,
             Sentiment::Eternal => eternal += 1,
             Sentiment::Cyclic => cyclic += 1,
