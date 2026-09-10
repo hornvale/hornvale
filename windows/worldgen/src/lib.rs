@@ -10289,8 +10289,11 @@ pub fn night_sky_lines(
         )]
     };
 
-    // Eclipses (Eclipse Seasons): dated events over the next two years,
-    // then the recurrence-ladder lines read off the innermost moon.
+    // Eclipses (Eclipse Rhythm and View): query the astronomy domain once,
+    // then hand its structured recurrence, region, and optional observer
+    // results to the almanac renderer. The first known place is the existing
+    // almanac vantage; an Astronomy-depth world has none and therefore asks
+    // no observer question.
     let year = calendar.year_length().get();
     let events = hornvale_astronomy::eclipse_events(
         system,
@@ -10298,78 +10301,45 @@ pub fn night_sky_lines(
         t,
         hornvale_astronomy::StdInstant::new(t.get() + 2.0 * year).unwrap(),
     );
-    let ordinal = |i: usize| {
-        ["first", "second", "third"]
-            .get(i)
-            .copied()
-            .unwrap_or("far")
-    };
-    let mut eclipses: Vec<String> = events
+    let observer_coord = hornvale_terrain::places(world)
+        .first()
+        .and_then(|place| place_coord(world, place.id));
+    let eclipse_readings = events
         .iter()
-        .take(6)
-        .map(|e| {
-            use hornvale_astronomy::{EclipseBody, EclipseKind};
-            match (e.body, e.kind) {
-                (EclipseBody::Lunar, _) => format!(
-                    "On day {:.0}, the full {} moon darkens to a bloodred coal.",
-                    e.day.get(),
-                    ordinal(e.moon)
-                ),
-                (EclipseBody::Solar, kind) => {
-                    let verb = match kind {
-                        EclipseKind::Total => "devours the sun whole",
-                        EclipseKind::Annular => "leaves a burning ring of the sun",
-                    };
-                    match hornvale_astronomy::ground_track(system, calendar, e) {
-                        Some(track) => format!(
-                            "On day {:.0}, the {} moon {} along latitude {:.0}°.",
-                            e.day.get(),
-                            ordinal(e.moon),
-                            verb,
-                            track.center_lat_deg
-                        ),
-                        None => format!(
-                            "On day {:.0}, the {} moon {}.",
-                            e.day.get(),
-                            ordinal(e.moon),
-                            verb
-                        ),
+        .map(|event| {
+            let observer = observer_coord.and_then(|coord| {
+                hornvale_astronomy::eclipse_observer_result(
+                    system,
+                    calendar,
+                    event,
+                    coord.latitude,
+                    coord.longitude,
+                )
+            });
+            let region = observer
+                .map(|result| result.region)
+                .or_else(|| match event.body {
+                    hornvale_astronomy::EclipseBody::Solar => {
+                        hornvale_astronomy::ground_track(system, calendar, event)
+                            .map(hornvale_astronomy::EclipseRegion::GroundTrack)
                     }
-                }
+                    hornvale_astronomy::EclipseBody::Lunar => {
+                        Some(hornvale_astronomy::EclipseRegion::NightHemisphere)
+                    }
+                });
+            hornvale_almanac::EclipseAlmanacEvent {
+                event: *event,
+                region,
+                observer,
             }
         })
-        .collect();
-    if eclipses.is_empty() && !system.moons.is_empty() {
-        eclipses.push("No eclipse will darken the sun for two years.".to_string());
-    }
-    // The recurrence ladder, read off the innermost moon.
-    if let (Some(moon), Some(synodic)) = (system.moons.first(), calendar.synodic_month(0)) {
-        let year_len = calendar.year_length();
-        let p_node =
-            hornvale_astronomy::node_regression_period(year_len, moon.period, moon.inclination_deg);
-        let ey = hornvale_astronomy::eclipse_year(year_len, p_node);
-        let parade = hornvale_astronomy::parade_days_per_year(year_len, ey);
-        eclipses.push(format!(
-            "The eclipse seasons parade backward through the year at {parade:.0} days a year."
-        ));
-        let draconic =
-            hornvale_astronomy::draconic_month(year_len, moon.period, moon.inclination_deg);
-        if let Some(cycle) = hornvale_astronomy::best_cycle(synodic, draconic) {
-            let sun_angular = hornvale_astronomy::sun_angular_rel_at(system, calendar, t);
-            let theta = hornvale_astronomy::solar_eclipse_threshold_deg(
-                sun_angular,
-                moon.angular_diameter_rel,
-            );
-            let returns = hornvale_astronomy::series_returns(&cycle, theta, moon.inclination_deg);
-            eclipses.push(format!(
-                "Eclipses of the first moon repeat every {:.0} days ({} months); \
-                 a family of them lives about {:.0} years.",
-                cycle.period.get(),
-                cycle.synodic_count,
-                returns as f64 * cycle.period.get() / 365.25
-            ));
-        }
-    }
+        .collect::<Vec<_>>();
+    let recurrences = hornvale_astronomy::eclipse_recurrences(system, calendar);
+    let eclipses = hornvale_almanac::render_eclipse_lines(
+        !system.moons.is_empty(),
+        &eclipse_readings,
+        &recurrences,
+    );
 
     // The founding sightline and its drift rate (The Long Count): rendered
     // only when a real settlement exists (to ensure the "From the first

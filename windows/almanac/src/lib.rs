@@ -353,6 +353,149 @@ pub fn render_weather_line(site: &str, sky: &str) -> String {
     format!("{site}: the sky is {sky}.")
 }
 
+/// One dated eclipse and the astronomy domain's already-derived physical
+/// region and optional observer result, ready for almanac rendering.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EclipseAlmanacEvent {
+    /// The dated eclipse.
+    pub event: hornvale_astronomy::EclipseEvent,
+    /// The event-scale physical region, when the domain produced one.
+    pub region: Option<hornvale_astronomy::EclipseRegion>,
+    /// One observer's physical sight result, absent when no coordinates were
+    /// supplied by the almanac context.
+    pub observer: Option<hornvale_astronomy::EclipseObserverResult>,
+}
+
+/// Render the astronomy domain's structured eclipse outputs as almanac lines.
+/// type-audit: bare-ok(flag: has_moons), bare-ok(prose: return)
+pub fn render_eclipse_lines(
+    has_moons: bool,
+    events: &[EclipseAlmanacEvent],
+    recurrences: &[hornvale_astronomy::EclipseRecurrence],
+) -> Vec<String> {
+    use hornvale_astronomy::{EclipseBody, EclipseSight, EclipseVisibility};
+
+    if !has_moons {
+        return Vec::new();
+    }
+
+    let ordinal = |moon: usize| {
+        ["first", "second", "third"]
+            .get(moon)
+            .copied()
+            .unwrap_or("far")
+    };
+    let mut lines = events
+        .iter()
+        .take(6)
+        .map(|reading| {
+            let event = reading.event;
+            let moon = ordinal(event.moon);
+            let mut line = match event.body {
+                EclipseBody::Lunar => format!(
+                    "On day {:.0}, the full {moon} moon darkens to a bloodred coal.",
+                    event.day.get()
+                ),
+                EclipseBody::Solar => {
+                    let verb = match event.kind {
+                        hornvale_astronomy::EclipseKind::Total => "devours the sun whole",
+                        hornvale_astronomy::EclipseKind::Annular => {
+                            "leaves a burning ring of the sun"
+                        }
+                    };
+                    match reading.region {
+                        Some(hornvale_astronomy::EclipseRegion::GroundTrack(track)) => format!(
+                            "On day {:.0}, the {moon} moon {verb} along latitude {:.0}°.",
+                            event.day.get(),
+                            track.center_lat_deg
+                        ),
+                        _ => format!("On day {:.0}, the {moon} moon {verb}.", event.day.get()),
+                    }
+                }
+            };
+            if let Some(observer) = reading.observer {
+                let side = match observer.side {
+                    hornvale_astronomy::EclipseSide::Day => "day",
+                    hornvale_astronomy::EclipseSide::Night => "night",
+                };
+                let sight = match observer.visibility {
+                    EclipseVisibility::Solar(EclipseSight::WholeSun) => {
+                        format!("the whole sun is hidden on the {side} side")
+                    }
+                    EclipseVisibility::Solar(EclipseSight::BurningRing) => {
+                        format!("a burning ring remains on the {side} side")
+                    }
+                    EclipseVisibility::Solar(EclipseSight::Bitten) => {
+                        format!("the sun is bitten outside the central track on the {side} side")
+                    }
+                    EclipseVisibility::Solar(EclipseSight::Unseen) => {
+                        format!("this solar eclipse is unseen on the {side} side")
+                    }
+                    EclipseVisibility::Lunar { visible: true } => {
+                        format!("the eclipsed moon is visible on the {side} side")
+                    }
+                    EclipseVisibility::Lunar { visible: false } => {
+                        format!("the lunar eclipse is unseen on the {side} side")
+                    }
+                };
+                line.push_str(&format!(" At the almanac's vantage, {sight}."));
+            }
+            line
+        })
+        .collect::<Vec<_>>();
+
+    if !events
+        .iter()
+        .any(|reading| reading.event.body == EclipseBody::Solar)
+    {
+        lines.push("No solar eclipse falls in this almanac window.".to_string());
+    }
+    if !events
+        .iter()
+        .any(|reading| reading.event.body == EclipseBody::Lunar)
+    {
+        lines.push("No lunar eclipse falls in this almanac window.".to_string());
+    }
+
+    for recurrence in recurrences {
+        let moon = ordinal(recurrence.moon);
+        let family = match recurrence.body {
+            EclipseBody::Solar => "solar",
+            EclipseBody::Lunar => "lunar",
+        };
+        let cycle = recurrence.cycle;
+        let saros = if cycle.synodic_count == 223 && cycle.draconic_count == 242 {
+            "this is the 223/242 Saros"
+        } else {
+            "this is a world-specific recurrence, not Earth's 223/242 Saros"
+        };
+        let (parade_direction, parade_days) = if recurrence.parade_days_per_year >= 0.0 {
+            ("backward", recurrence.parade_days_per_year)
+        } else {
+            ("forward", -recurrence.parade_days_per_year)
+        };
+        lines.push(format!(
+            "The {moon} moon's {family} eclipse family has a {:.1}-day draconic month and \
+             a {:.1}-day eclipse year. Its {}-synodic/{}-draconic return repeats every \
+             {:.1} days; {saros}. Its three-return exeligmos spans {:.1} days and \
+             accumulates {:.2}° of node slip. The family lasts about {:.0} days across \
+             {} returns, while its seasons parade {parade_direction} by {:.1} days per year.",
+            recurrence.draconic_month.get(),
+            recurrence.eclipse_year.get(),
+            cycle.synodic_count,
+            cycle.draconic_count,
+            cycle.period.get(),
+            recurrence.exeligmos_period.get(),
+            recurrence.exeligmos_node_slip_deg,
+            recurrence.series_lifetime.get(),
+            recurrence.series_returns,
+            parade_days,
+        ));
+    }
+
+    lines
+}
+
 /// Pluralize a people label naively (`goblin` → `goblins`), matching
 /// `history::pluralize` and `qualify::plural`: the biosphere roster has no
 /// irregular plurals. A third private copy rather than a shared export —
@@ -1546,6 +1689,230 @@ mod tests {
         let sky = doc.split("## The Calendar").next().unwrap();
         assert!(sky.contains("devours the sun whole"));
         assert!(sky.contains("parade backward"));
+    }
+
+    fn recurrence(
+        moon: usize,
+        body: hornvale_astronomy::EclipseBody,
+        synodic_count: u32,
+        draconic_count: u32,
+        period_days: f64,
+    ) -> hornvale_astronomy::EclipseRecurrence {
+        hornvale_astronomy::EclipseRecurrence {
+            moon,
+            body,
+            draconic_month: hornvale_astronomy::StdDays::new(27.2).unwrap(),
+            eclipse_year: hornvale_astronomy::StdDays::new(346.6).unwrap(),
+            cycle: hornvale_astronomy::EclipseCycle {
+                synodic_count,
+                draconic_count,
+                period: hornvale_astronomy::StdDays::new(period_days).unwrap(),
+                node_slip_deg: 0.2,
+            },
+            series_returns: 10,
+            series_lifetime: hornvale_astronomy::StdDays::new(period_days * 10.0).unwrap(),
+            exeligmos_period: hornvale_astronomy::StdDays::new(period_days * 3.0).unwrap(),
+            exeligmos_node_slip_deg: 0.6,
+            parade_days_per_year: 18.6,
+        }
+    }
+
+    fn almanac_event(
+        moon: usize,
+        body: hornvale_astronomy::EclipseBody,
+        kind: hornvale_astronomy::EclipseKind,
+        visibility: Option<hornvale_astronomy::EclipseVisibility>,
+    ) -> EclipseAlmanacEvent {
+        let event = hornvale_astronomy::EclipseEvent {
+            day: hornvale_astronomy::StdInstant::new(213.0 + moon as f64).unwrap(),
+            moon,
+            body,
+            kind,
+        };
+        let region = match body {
+            hornvale_astronomy::EclipseBody::Solar => {
+                hornvale_astronomy::EclipseRegion::GroundTrack(hornvale_astronomy::GroundTrack {
+                    center_lat_deg: 23.0,
+                    half_width_deg: 2.0,
+                    start_lon_deg: -20.0,
+                    end_lon_deg: 15.0,
+                    duration_days: 0.1,
+                })
+            }
+            hornvale_astronomy::EclipseBody::Lunar => {
+                hornvale_astronomy::EclipseRegion::NightHemisphere
+            }
+        };
+        let observer = visibility.map(|visibility| hornvale_astronomy::EclipseObserverResult {
+            side: match visibility {
+                hornvale_astronomy::EclipseVisibility::Solar(
+                    hornvale_astronomy::EclipseSight::Unseen,
+                )
+                | hornvale_astronomy::EclipseVisibility::Lunar { visible: true } => {
+                    hornvale_astronomy::EclipseSide::Night
+                }
+                hornvale_astronomy::EclipseVisibility::Lunar { visible: false } => {
+                    hornvale_astronomy::EclipseSide::Day
+                }
+                _ => hornvale_astronomy::EclipseSide::Day,
+            },
+            visibility,
+            region,
+        });
+        EclipseAlmanacEvent {
+            event,
+            region: Some(region),
+            observer,
+        }
+    }
+
+    #[test]
+    fn eclipse_rhythm_names_every_moon_and_family_without_overclaiming_saros() {
+        let recurrences = vec![
+            recurrence(0, hornvale_astronomy::EclipseBody::Solar, 12, 13, 150.0),
+            recurrence(0, hornvale_astronomy::EclipseBody::Lunar, 12, 13, 150.0),
+            recurrence(1, hornvale_astronomy::EclipseBody::Solar, 17, 19, 220.0),
+            recurrence(1, hornvale_astronomy::EclipseBody::Lunar, 17, 19, 220.0),
+        ];
+
+        let lines = render_eclipse_lines(true, &[], &recurrences);
+        let prose = lines.join("\n");
+
+        assert!(prose.contains("first moon's solar eclipse family"));
+        assert!(prose.contains("first moon's lunar eclipse family"));
+        assert!(prose.contains("second moon's solar eclipse family"));
+        assert!(prose.contains("second moon's lunar eclipse family"));
+        assert!(prose.contains("12-synodic/13-draconic return"));
+        assert!(prose.contains("17-synodic/19-draconic return"));
+        assert_eq!(prose.matches("not Earth's 223/242 Saros").count(), 4);
+    }
+
+    #[test]
+    fn eclipse_rhythm_states_the_three_return_exeligmos() {
+        let recurrences = vec![recurrence(
+            0,
+            hornvale_astronomy::EclipseBody::Solar,
+            12,
+            13,
+            150.0,
+        )];
+
+        let prose = render_eclipse_lines(true, &[], &recurrences).join("\n");
+
+        assert!(prose.contains(
+            "three-return exeligmos spans 450.0 days and accumulates 0.60° of node slip"
+        ));
+    }
+
+    #[test]
+    fn eclipse_rhythm_names_the_calibrated_saros_only_at_223_over_242() {
+        let recurrences = vec![recurrence(
+            0,
+            hornvale_astronomy::EclipseBody::Solar,
+            223,
+            242,
+            6585.3,
+        )];
+
+        let prose = render_eclipse_lines(true, &[], &recurrences).join("\n");
+
+        assert!(prose.contains("this is the 223/242 Saros"));
+        assert!(!prose.contains("not Earth's 223/242 Saros"));
+    }
+
+    #[test]
+    fn empty_eclipse_window_names_both_absent_families() {
+        let lines = render_eclipse_lines(true, &[], &[]);
+
+        assert_eq!(
+            &lines[..2],
+            [
+                "No solar eclipse falls in this almanac window.",
+                "No lunar eclipse falls in this almanac window.",
+            ]
+        );
+        assert!(render_eclipse_lines(false, &[], &[]).is_empty());
+
+        let solar_only = render_eclipse_lines(
+            true,
+            &[almanac_event(
+                0,
+                hornvale_astronomy::EclipseBody::Solar,
+                hornvale_astronomy::EclipseKind::Total,
+                None,
+            )],
+            &[],
+        )
+        .join("\n");
+        assert!(!solar_only.contains("No solar eclipse"));
+        assert!(solar_only.contains("No lunar eclipse"));
+
+        let lunar_only = render_eclipse_lines(
+            true,
+            &[almanac_event(
+                0,
+                hornvale_astronomy::EclipseBody::Lunar,
+                hornvale_astronomy::EclipseKind::Total,
+                None,
+            )],
+            &[],
+        )
+        .join("\n");
+        assert!(lunar_only.contains("No solar eclipse"));
+        assert!(!lunar_only.contains("No lunar eclipse"));
+    }
+
+    #[test]
+    fn eclipse_observer_reading_renders_every_physical_visibility_tier() {
+        use hornvale_astronomy::{EclipseBody, EclipseKind, EclipseSight, EclipseVisibility};
+
+        let events = vec![
+            almanac_event(
+                0,
+                EclipseBody::Solar,
+                EclipseKind::Total,
+                Some(EclipseVisibility::Solar(EclipseSight::WholeSun)),
+            ),
+            almanac_event(
+                1,
+                EclipseBody::Solar,
+                EclipseKind::Annular,
+                Some(EclipseVisibility::Solar(EclipseSight::BurningRing)),
+            ),
+            almanac_event(
+                2,
+                EclipseBody::Solar,
+                EclipseKind::Total,
+                Some(EclipseVisibility::Solar(EclipseSight::Bitten)),
+            ),
+            almanac_event(
+                0,
+                EclipseBody::Solar,
+                EclipseKind::Total,
+                Some(EclipseVisibility::Solar(EclipseSight::Unseen)),
+            ),
+            almanac_event(
+                1,
+                EclipseBody::Lunar,
+                EclipseKind::Total,
+                Some(EclipseVisibility::Lunar { visible: true }),
+            ),
+            almanac_event(
+                2,
+                EclipseBody::Lunar,
+                EclipseKind::Total,
+                Some(EclipseVisibility::Lunar { visible: false }),
+            ),
+        ];
+
+        let prose = render_eclipse_lines(true, &events, &[]).join("\n");
+
+        assert!(prose.contains("the whole sun is hidden on the day side"));
+        assert!(prose.contains("a burning ring remains on the day side"));
+        assert!(prose.contains("the sun is bitten outside the central track on the day side"));
+        assert!(prose.contains("this solar eclipse is unseen on the night side"));
+        assert!(prose.contains("the eclipsed moon is visible on the night side"));
+        assert!(prose.contains("the lunar eclipse is unseen on the day side"));
     }
 
     #[test]

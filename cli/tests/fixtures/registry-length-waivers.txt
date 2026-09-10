@@ -104,7 +104,6 @@ MEM-10
 MEM-8
 MEM-9
 ORRERY-pole-reconcile
-ORRERY-starfield-backdrop
 PERF-genesis-terrain-rebuilds
 PROC-11
 PROC-13
@@ -133,7 +132,6 @@ SKY-5
 SKY-6
 SKY-7
 SKY-binary-planet
-SKY-eclipse-seasons
 SKY-horseshoe-pair
 SKY-minimoon
 SKY-moon-individuation

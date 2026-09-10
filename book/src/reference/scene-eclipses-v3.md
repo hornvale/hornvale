@@ -120,6 +120,23 @@ from an omitted observer key. The former answers a supplied query; the latter
 records that no query was supplied. The observer object never contains
 `region` or `track`, which remain event-scale physical fields.
 
+## Almanac vocabulary
+
+The almanac reads the same astronomy outputs as this scene. Its two-year
+window prints at most six dated events, then one recurrence line for every
+moon and eclipse family. Each recurrence line names the draconic month,
+eclipse year, selected synodic/draconic return, series lifetime, exeligmos,
+node slip, and parade direction. A selected cycle is called the 223/242 Saros
+only when those counts match; every other generated-world cycle is identified
+as a world-specific recurrence rather than Earth's Saros.
+
+When a generated almanac has a known place, that place supplies its observer
+coordinates and each dated event states the corresponding v3 visibility tier.
+With no known place, it prints no observer claim. If either eclipse family has
+no event in the window, the almanac names that solar or lunar absence
+separately. These are physical readouts only: no mythology, omen, or social
+response is inferred from them.
+
 ## Determinism and fixture
 
 The producer is a pure read over the existing world ledger and astronomy
