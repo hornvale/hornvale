@@ -17,7 +17,7 @@ use hornvale_bevy_view::{
         render::RenderPlugin,
         window::{PrimaryWindow, WindowResolution},
     },
-    camera::{BodyBound, OrbitCamera, camera_components},
+    camera::{BodyBound, OrbitCamera, PickTarget, camera_components},
     lifecycle::{SceneCatalog, SceneTarget},
 };
 use std::{collections::BTreeMap, path::PathBuf};
@@ -70,6 +70,22 @@ pub fn bounds(m: &ObservationMirror) -> Vec<BodyBound> {
                     0.
                 },
             })
+        })
+        .collect()
+}
+/// Only entities rendered as physical bodies or unresolved wanderer markers are
+/// pickable; a light without a rendered stellar sphere is not a pick target.
+pub fn pick_targets(m: &ObservationMirror) -> Vec<PickTarget> {
+    m.current()
+        .expect("accepted observation")
+        .astronomy
+        .bodies
+        .iter()
+        .filter(|b| b.radius_km.is_some() || b.kind == "wanderer")
+        .map(|b| PickTarget {
+            id: b.id.clone(),
+            position_km: b.position_km,
+            physical_radius_km: b.radius_km,
         })
         .collect()
 }
@@ -366,6 +382,7 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
         recording.toggle();
     }
     let b = bounds(&l.observation.mirror);
+    let targets = pick_targets(&l.observation.mirror);
     if reset {
         l.free_camera = false;
         l.orbit.reset(
@@ -379,11 +396,11 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
         println!("control reset frame={}", l.committed_frame);
     }
     if focus
-        && let Some(body) = b
+        && let Some(body) = targets
             .iter()
             .find(|b| Some(b.id.as_str()) == l.catalog.selected())
     {
-        l.orbit.focus(body, &b).map_err(|e| e.to_string())?;
+        l.orbit.focus_target(body, &b).map_err(|e| e.to_string())?;
         l.free_camera = true;
         println!("control focus={}", body.id);
     }
@@ -466,7 +483,7 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
                     1. - f64::from(p.y / logical_height) * 2.,
                 ],
                 f64::from(width) / f64::from(height),
-                &b,
+                &targets,
                 0.02,
             )
         {
@@ -528,7 +545,7 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
         );
     }
     let info = format!(
-        "{}  |  frame {}/{}  |  {:.2}x{}\nSelected: {}    F Focus    R Reset\nDrag Orbit    Shift-drag / middle Pan    Wheel Dolly\n{}x{} physical; scale {:.2}; {:.1} fps mean\n{}",
+        "{}  |  frame {}/{}  |  {:.2}x{}\nSelected: {}    F Focus    R Reset\nDrag Orbit    Shift-drag / middle Pan    Wheel Dolly\n{}x{} physical; scale {:.2}; {:.1} fps mean\nSource: 100,000 ticks = 1 standard day; distances in km\nCamera: >= 2 x (radius + positive relief) from each body center\nCamera-origin distance <= 2,000,000,000 km\nCloud shapes / 12 km altitude and haze: static cosmetics\nF on unresolved marker: aim only; retain safe eye position\n{}",
         if l.playback.paused {
             "Paused"
         } else {
@@ -558,7 +575,7 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
                 )
             } else {
                 format!(
-                    "Tick {}; cosmetic haze/material; no eclipse shadows",
+                    "Tick {}; cosmetic materials; no eclipse shadows",
                     l.observation.mirror.current_ticks().unwrap_or(0)
                 )
             })

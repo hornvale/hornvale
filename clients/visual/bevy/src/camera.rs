@@ -66,6 +66,14 @@ pub struct BodyBound {
     pub position_km: [f64; 3],
     pub outer_radius_km: f64,
 }
+/// Selection geometry is independent of collision bounds. Absent radii remain
+/// screen-space markers and never acquire a physical size through picking.
+#[derive(Clone, Debug)]
+pub struct PickTarget {
+    pub id: String,
+    pub position_km: [f64; 3],
+    pub physical_radius_km: Option<f64>,
+}
 #[derive(Clone, Debug)]
 pub struct OrbitCamera {
     pub pose: CameraPose,
@@ -162,18 +170,34 @@ impl OrbitCamera {
         p.vertical_fov_radians = 0.8;
         self.commit(p, bounds)
     }
+    /// Resolved bodies use their physical bound. For unresolved points, keep the
+    /// safe eye position and aim/focus at the emitted position, without a radius.
+    pub fn focus_target(
+        &mut self,
+        target: &PickTarget,
+        bounds: &[BodyBound],
+    ) -> Result<(), ViewError> {
+        if let Some(body) = bounds.iter().find(|b| b.id == target.id) {
+            return self.focus(body, bounds);
+        }
+        let mut pose = self.pose.clone();
+        pose.target_km = target.position_km;
+        pose.focus_distance_km = bevy::math::DVec3::from_array(pose.eye_km)
+            .distance(bevy::math::DVec3::from_array(target.position_km));
+        self.commit(pose, bounds)
+    }
     /// Normalized screen coordinates, y up; resolve closest visible body/marker.
     pub fn pick(
         &self,
         screen: [f64; 2],
         aspect: f64,
-        bounds: &[BodyBound],
+        targets: &[PickTarget],
         marker_radius: f64,
     ) -> Option<String> {
         use bevy::math::DVec3;
         let (forward, right, up) = self.basis();
         let tangent = (self.pose.vertical_fov_radians / 2.).tan();
-        bounds
+        targets
             .iter()
             .filter_map(|b| {
                 let delta = DVec3::from_array(b.position_km) - DVec3::from_array(self.pose.eye_km);
@@ -185,7 +209,8 @@ impl OrbitCamera {
                     delta.dot(right) / (z * tangent * aspect),
                     delta.dot(up) / (z * tangent),
                 ];
-                let radius = (b.outer_radius_km / (z * tangent)).max(marker_radius);
+                let radius =
+                    (b.physical_radius_km.unwrap_or(0.) / (z * tangent)).max(marker_radius);
                 (((screen[0] - xy[0]) * aspect).hypot(screen[1] - xy[1]) <= radius)
                     .then_some((z, b.id.clone()))
             })

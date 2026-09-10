@@ -1,6 +1,6 @@
 use hornvale_bevy_view::{
     CameraPose,
-    camera::{BodyBound, OrbitCamera},
+    camera::{BodyBound, OrbitCamera, PickTarget},
 };
 use planetarium::controls::Playback;
 #[test]
@@ -54,10 +54,10 @@ fn orbit_pan_dolly_focus_keep_physical_bounds_and_reset_is_exact() {
 #[test]
 fn picking_uses_screen_markers_without_enlarging_bodies() {
     let c = OrbitCamera::new(pose());
-    let b = BodyBound {
+    let b = PickTarget {
         id: "anchor".into(),
         position_km: [0.; 3],
-        outer_radius_km: 10.,
+        physical_radius_km: Some(10.),
     };
     assert_eq!(
         c.pick([0., 0.], 16. / 9., &[b], 0.03).as_deref(),
@@ -89,4 +89,41 @@ fn extreme_outward_scroll_clamps_to_supported_camera_range() {
     camera.dolly(-10000., &bounds).unwrap();
     let distance = camera.pose.eye_km.iter().map(|x| x * x).sum::<f64>().sqrt();
     assert!(distance <= 2e9);
+}
+
+#[test]
+fn app_candidates_pick_radiusless_wanderer_and_focus_without_moving_eye() {
+    use hornvale_bevy_view::ObservationMirror;
+    let mut mirror =
+        ObservationMirror::new(include_str!("../../../bevy/tests/fixtures/initial.json")).unwrap();
+    let request: serde_json::Value = serde_json::from_str(&mirror.request(0).unwrap()).unwrap();
+    let mut reply: serde_json::Value =
+        serde_json::from_str(include_str!("../../../bevy/tests/fixtures/reply.json")).unwrap();
+    reply["request_id"] = request["request_id"].clone();
+    assert!(mirror.accept(&reply.to_string()).unwrap());
+    let bounds = planetarium::live::bounds(&mirror);
+    let targets = planetarium::live::pick_targets(&mirror);
+    let marker = targets.iter().find(|b| b.id == "wanderer:0").unwrap();
+    assert_eq!(marker.physical_radius_km, None);
+    assert!(!bounds.iter().any(|b| b.id == marker.id));
+    let mut camera = OrbitCamera::new(CameraPose {
+        eye_km: [0., -100000., 10000.],
+        target_km: marker.position_km,
+        ..pose()
+    });
+    assert_eq!(
+        camera.pick([0., 0.], 16. / 9., &targets, 0.02).as_deref(),
+        Some("wanderer:0")
+    );
+    let eye = camera.pose.eye_km;
+    camera.pose.target_km = [0.; 3];
+    camera.focus_target(marker, &bounds).unwrap();
+    assert_eq!(camera.pose.eye_km, eye);
+    assert_eq!(camera.pose.target_km, marker.position_km);
+    for b in bounds {
+        camera
+            .pose
+            .validate_body(b.position_km, b.outer_radius_km)
+            .unwrap();
+    }
 }
