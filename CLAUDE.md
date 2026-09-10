@@ -485,6 +485,29 @@ make doctor        # the repo self-map — run this first in a fresh session
 # builds. `SWEEP_DAYS` is namespaced because bare `DAYS` is already
 # `board-digest`'s, defined nowhere so its tool applies its own 14-day default.
 #
+# NOTHING RECYCLES OR REAPS THE SECOND POOL, AND THAT IS THE HAZARD `make
+# sweep` DOES NOT COVER (measured 2026-09-10). `worktree-take.sh` enumerates
+# correctly — from `git worktree list`, never `find` — and then filters to the
+# pool it owns (`case "$wt" in "$POOL"/*`), so the 29 worktrees under
+# `~/.config/superpowers/worktrees/` are outside any recycling or reaping
+# mechanism. 11 of them sit on merged branches holding ~161 GB. The Sexton's
+# rationale for the pool (73 branches in a month against 3 live worktrees, each
+# new one paying a measured 771 s cold build) applies to those 29 exactly and
+# does not reach them: `make worktree-take` will never recycle one, so a
+# campaign taking a worktree there always pays the cold build and always leaves
+# the corpse behind. `make sweep` now reclaims their dead GENERATIONS, which is
+# a different and smaller thing than reclaiming the worktrees.
+#
+# THE FIX IS NOT A SOURCE-SCAN RATCHET, AND THAT WAS CHECKED RATHER THAN
+# ASSUMED. A default-deny scan for a hardcoded pool prefix was specified and
+# abandoned on reading all 11 files it would cover: every enumerator already
+# derives from `git worktree list`, so the violation set is EMPTY and the
+# allowlist would be the whole population — and, decisively, such a scan could
+# not have caught the bug that motivated it, because `cargo sweep -r .`
+# hardcoded no pool path at all. What catches that class is an assertion that a
+# scope covers every worktree git reports, which is
+# `scripts/test-sweep-roots.sh`.
+#
 # AND DO NOT TRY TO SHARE OR CLONE A `target/` BETWEEN WORKTREES to avoid the
 # cost. It dedupes (cargo reports `Fresh` across two paths, one rlib) and it is
 # WRONG: `env!("CARGO_MANIFEST_DIR")`, `CARGO_TARGET_TMPDIR` and
