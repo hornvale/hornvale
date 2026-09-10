@@ -399,12 +399,16 @@ inspect `domains/astronomy/`, `domains/climate/`, `domains/terrain/`,
 `windows/worldgen/`, `windows/scene/`, `cli/src/observations.rs`, and
 `clients/atlas/src/observation.ts`.
 
-- [ ] Inventory candidate cells from astronomical neighborhood through habitat scale.
-- [ ] Record the exact object, axis, unit, command, client path, and evidence boundary for every row.
-- [ ] Run each command once and record observed output or refusal; do not infer support from symbol searches.
-- [ ] Mark `existing` only when an authoritative producer and compatible visual grammar both exist.
-- [ ] Mark `needs_observation_surface`, `needs_renderer`, or `needs_simulation_extension` at the precise failing boundary.
-- [ ] Run `git diff --check` and focused observation checks; commit `docs: audit opening observation cells`.
+- [x] Inventory candidate cells from astronomical neighborhood through habitat scale.
+- [x] Record the exact object, axis, unit, command, client path, and evidence boundary for every row.
+- [x] Run each command once and record observed output or refusal; do not infer support from symbol searches.
+- [x] Mark `existing` only when an authoritative producer and compatible visual grammar both exist.
+- [x] Mark `needs_observation_surface`, `needs_renderer`, or `needs_simulation_extension` at the precise failing boundary.
+- [x] Run `git diff --check` and focused observation checks; commit `docs: audit opening observation cells`.
+
+Task 6 completion: the capability matrix is committed at
+`observations/atlas/2026-09-opening-capability-matrix.md`; the producer and
+renderer boundaries were reviewed and approved.
 
 ### Task 7: Build the first astronomical/system path
 

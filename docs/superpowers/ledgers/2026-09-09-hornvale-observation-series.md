@@ -134,3 +134,13 @@ Ruling: proceed with Task 6. The amendment adds a release-order and capability
 audit slice without changing the established packet, renderer, or approval
 contracts. Its only planned cross-task handoff is the capability matrix, whose
 rows are evidence-backed before later tasks consume them.
+
+## Task 6: complete
+
+- **Commit:** `e42db32ee`
+- **Result:** Added the evidence-backed astronomical-to-habitat capability
+  matrix, including repeated producer witnesses, Atlas parser checks, and the
+  underworld-only observation-export refusal boundary.
+- **Evidence:** `make observation-check` passed; the task reviewer approved
+  spec compliance and quality with no findings.
+- **Review:** Approved; no fix round required.
