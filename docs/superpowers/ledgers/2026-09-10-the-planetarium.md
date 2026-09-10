@@ -467,3 +467,18 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   1.8.4 and xkbcommon 1.5.0. This does not claim a Linux build or stage pass.
 - Capture actions: carry readiness and offscreen ShadowLodOrigin findings into
   Task 3; keep production rendering and aesthetic evidence separate.
+
+## Task 1 — complete
+
+- Task 1: fix round 1/5 (1 addressed, 0 open — ambiguous frame equality;
+  commits 63c45db62..7a158eb7b). Independent scoped re-review approved spec
+  and quality, with no new breakage or out-of-scope observations.
+- Task 1: complete (commits d61ad3f99..7a158eb7b, review clean).
+- Evidence: 7 radius tests; astronomy 279 unit + 51 integration tests; existing
+  seed-42 golden; local commit hook passed all four subfloor chunks. The
+  prose fix hook passed 75/75. The controller retained the actual red/green,
+  command, hash and gate outputs in the task report; no repeated suite was
+  needed to resolve the review's execution-evidence qualification.
+- Ruling and alternatives for the fix are captured in #12, with two ideonomy
+  passes. The derived radius remains observation-only; evaluated source and
+  moving Hornvale witness are still outstanding Stage 1 work.

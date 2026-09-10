@@ -249,8 +249,8 @@ history policy has completed; it is not merely elapsed wall time.
 
 **Interfaces:** Consumes `EarthMasses` and the existing calendar/ephemeris models. Produces `anchor_radius(mass: EarthMasses) -> Result<Megameters, UnitError>` exported from `hornvale_astronomy`, plus a qualification record containing model provenance, orientation convention, validity range and reproducible seed/time search recipe. This is a derived observation over existing mass, not a new random draw or stored Anchor field.
 
-- [ ] Record Nathan's answer, “Include a physical-radius prerequisite”, as authorization for the source-side addition. Read the actual astronomy model-card and unit conventions before editing.
-- [ ] Implement model `earthlike-rocky-zeng2019-linear/v1`: a spherical bulk-radius approximation for the existing 0.5–2 Earth-mass anchor range, using the published Earth-like rocky curve (32.5% Fe, 67.5% MgSiO3). This is an explicit default composition assumption, not a claim that Hornvale has simulated interior composition. No atmospheric-envelope radius, oblateness, composition diversity or radius feedback into existing dynamics is introduced.
+- [x] Record Nathan's answer, “Include a physical-radius prerequisite”, as authorization for the source-side addition. Read the actual astronomy model-card and unit conventions before editing.
+- [x] Implement model `earthlike-rocky-zeng2019-linear/v1`: a spherical bulk-radius approximation for the existing 0.5–2 Earth-mass anchor range, using the published Earth-like rocky curve (32.5% Fe, 67.5% MgSiO3). This is an explicit default composition assumption, not a claim that Hornvale has simulated interior composition. No atmospheric-envelope radius, oblateness, composition diversity or radius feedback into existing dynamics is introduced.
 
 The author's [model page](https://lweb.cfa.harvard.edu/~lzeng/planetmodels.html)
 identifies the composition and Earth-unit axes. The
@@ -282,7 +282,7 @@ The covering table avoids silently extrapolating that formula below its range.
 Linear interpolation is Hornvale's declared numerical approximation; it is not
 an additional finding attributed to the authors.
 
-- [ ] Establish a compiling error-returning function seam, then capture behavioral red from independent reference tests before filling in interpolation:
+- [x] Establish a compiling error-returning function seam, then capture behavioral red from independent reference tests before filling in interpolation:
 
 ```rust
 #[test]
@@ -296,13 +296,13 @@ fn unsupported_mass_is_not_silently_extrapolated() {
 }
 ```
 
-- [ ] Implement the checked bracket search and interpolation; test both supported boundaries, every interior tabulated reference, positive monotonic radius across the range, one-Earth-mass agreement within 1%, and rejection above 2. Verify existing generated-world/sky fixtures against their current baseline and classify any diff rather than assuming none.
+- [x] Implement the checked bracket search and interpolation; test both supported boundaries, every interior tabulated reference, positive monotonic radius across the range, one-Earth-mass agreement within 1%, and rejection above 2. Verify existing generated-world/sky fixtures against their current baseline and classify any diff rather than assuming none.
 
 ```bash
 cargo test -p hornvale-astronomy --test suite anchor_radius
 ```
 
-- [ ] Check source conventions with executable probes against the fresh candidate world. Use the existing CLI, not invented geometry, for the initial inventory:
+- [x] Check source conventions with executable probes against the fresh candidate world. Use the existing CLI, not invented geometry, for the initial inventory:
 
 ```bash
 work=$(mktemp -d)
@@ -311,10 +311,10 @@ target/debug/hornvale scene system --world "$work/world.json" > "$work/system.js
 target/debug/hornvale scene moons --world "$work/world.json" > "$work/moons.json"
 ```
 
-- [ ] Record the world path/hash, exact commands, topology and catalog. Bound the alternative seed search to seeds 0–63 if composition requires another candidate. Freeze the final seed/pins/time only after the first actual look-development output. Record all attempted candidates; selection is not a prevalence claim.
-- [ ] Write conformance cases for anchor orbital position, tilted/retrograde/locked surface orientation, moon latitude/longitude/node at negative/zero/positive instants, and all three stellar topologies. For the anchor basis, transforming the calendar's subsolar lon/lat normal must agree with the native solar direction; basis columns must be orthonormal and right-handed. If existing source models cannot agree, document the discrepancy and narrow the source contract or resolve it at its owner—do not hide it in camera placement.
-- [ ] Record a conservative eclipse-avoidance procedure: inspect the existing eclipse export for the proposed interval, then inspect emitted source/body alignment for every final sample. Use a single-star candidate; mark any occultation/shadow with unsupported dimensions as unqualified and select another interval. This is avoidance evidence, not validation of the independent eclipse campaign.
-- [ ] Run scoped astronomy format/clippy/tests and the local commit gate; commit the radius implementation, model card and qualification record. Public-item audit changes are reviewed and committed with the code. A completed radius task is not yet a completed moving-visual stage.
+- [x] Record the world path/hash, exact commands, topology and catalog. Bound the alternative seed search to seeds 0–63 if composition requires another candidate. Freeze the final seed/pins/time only after the first actual look-development output. Record all attempted candidates; selection is not a prevalence claim.
+- [x] Write conformance cases for anchor orbital position, tilted/retrograde/locked surface orientation, moon latitude/longitude/node at negative/zero/positive instants, and all three stellar topologies. For the anchor basis, transforming the calendar's subsolar lon/lat normal must agree with the native solar direction; basis columns must be orthonormal and right-handed. If existing source models cannot agree, document the discrepancy and narrow the source contract or resolve it at its owner—do not hide it in camera placement.
+- [x] Record a conservative eclipse-avoidance procedure: inspect the existing eclipse export for the proposed interval, then inspect emitted source/body alignment for every final sample. Use a single-star candidate; mark any occultation/shadow with unsupported dimensions as unqualified and select another interval. This is avoidance evidence, not validation of the independent eclipse campaign.
+- [x] Run scoped astronomy format/clippy/tests and the local commit gate; commit the radius implementation, model card and qualification record. Public-item audit changes are reviewed and committed with the code. A completed radius task is not yet a completed moving-visual stage.
 
 ### Task 2: ship the evaluated scene query and reusable native source
 
