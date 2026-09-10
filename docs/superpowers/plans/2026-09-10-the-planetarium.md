@@ -329,7 +329,7 @@ target/debug/hornvale scene moons --world "$work/world.json" > "$work/moons.json
 
 **Interfaces:** Consumes Task 1's approved geometry/radius contract. Produces `AstronomyContext`, `AstronomyAtScene`, the three observation functions, `Source`, `SourceError`, and the serialized contracts above.
 
-- [ ] Capture a behavioral red on today's command surface before introducing new types:
+- [x] Capture a behavioral red on today's command surface before introducing new types:
 
 ```rust
 #[test]
@@ -351,12 +351,12 @@ cargo test -p hornvale --test suite scene_astronomy_at_cli
 The current unknown-subcommand behavior should be captured as actual evidence;
 a missing module/import is not the behavioral red.
 
-- [ ] Add the smallest native geometry wrappers needed. Reuse stellar/wanderer/calendar/moon helpers and kernel libm. Keep orbital position derivation at its domain owner. Call Task 1's `anchor_radius(system.anchor.mass)` and convert its Megameters to emitted kilometres. Derive anchor basis from the existing calendar and source frame, with explicit half-turn and retrograde conventions. Emit unavailable moon spin/radii as null.
-- [ ] Implement AstronomyContext owning its initialized StarSystem and seed; `_in` queries take the context, not an unrelated World. The convenience world wrapper builds once for CLI use. Convert `WorldTime` to `StdInstant` only at the existing continuous ephemeris boundary. Use existing quantize-at-emit helpers, with field-aware precision tests for kilometre positions and basis vectors; retain full precision internally.
-- [ ] Add the CLI arm `scene astronomy-at --world PATH --ticks I64`; require ticks, reject malformed/out-of-range integers, and update every command help/known-kinds string found by searching its emitted text. Keep `scene system` byte behavior under the existing tests.
-- [ ] Create the independent workspace and source crate with optimized dev profiles matching `clients/game`. Initial members may contain just source until Task 3 adds view/app. Source owns immutable loaded-world bytes, registered World, AstronomyContext and one lazy terrain SceneContext. Hash world bytes client-side using SHA-256. Validate the caller's full revision format and binding; store it in all envelopes.
-- [ ] Add semantic source tests: native/CLI/source astronomy bytes agree for the same world and ticks; request order `0, 100000, -1, 0` returns identical astronomy for repeated 0; same seed with different pins has a different world binding; wrong scope/world/revision errors; static docs and astronomy context are reused without repeated world generation. Count generation/context construction through a test seam, not elapsed-time assertions.
-- [ ] Validate all three topologies with real generated/pinned fixtures, missing moon spin, absent wanderer radius, invalid query, and no-synodic-cycle absence. Record actual query costs separately from correctness tests.
+- [x] Add the smallest native geometry wrappers needed. Reuse stellar/wanderer/calendar/moon helpers and kernel libm. Keep orbital position derivation at its domain owner. Call Task 1's `anchor_radius(system.anchor.mass)` and convert its Megameters to emitted kilometres. Derive anchor basis from the existing calendar and source frame, with explicit half-turn and retrograde conventions. Emit unavailable moon spin/radii as null.
+- [x] Implement AstronomyContext owning its initialized StarSystem and seed; `_in` queries take the context, not an unrelated World. The convenience world wrapper builds once for CLI use. Convert `WorldTime` to `StdInstant` only at the existing continuous ephemeris boundary. Use existing quantize-at-emit helpers, with field-aware precision tests for kilometre positions and basis vectors; retain full precision internally.
+- [x] Add the CLI arm `scene astronomy-at --world PATH --ticks I64`; require ticks, reject malformed/out-of-range integers, and update every command help/known-kinds string found by searching its emitted text. Keep `scene system` byte behavior under the existing tests.
+- [x] Create the independent workspace and source crate with optimized dev profiles matching `clients/game`. Initial members may contain just source until Task 3 adds view/app. Source owns immutable loaded-world bytes, registered World, AstronomyContext and one lazy terrain SceneContext. Hash world bytes client-side using SHA-256. Validate the caller's full revision format and binding; store it in all envelopes.
+- [x] Add semantic source tests: native/CLI/source astronomy bytes agree for the same world and ticks; request order `0, 100000, -1, 0` returns identical astronomy for repeated 0; same seed with different pins has a different world binding; wrong scope/world/revision errors; static docs and astronomy context are reused without repeated world generation. Count generation/context construction through a test seam, not elapsed-time assertions.
+- [x] Validate all three topologies with real generated/pinned fixtures, missing moon spin, absent wanderer radius, invalid query, and no-synodic-cycle absence. Record actual query costs separately from correctness tests.
 
 ```bash
 cargo test -p hornvale-astronomy --test suite planetarium_geometry
@@ -365,7 +365,7 @@ cargo test -p hornvale --test suite scene_astronomy_at_cli
 cargo test --manifest-path clients/visual/Cargo.toml -p hornvale-visual-source
 ```
 
-- [ ] Run scoped format/clippy; review required type/placement/plumb declarations and generated diffs; run the local commit gate and commit working source changes. Any new dependency outside clients must satisfy the existing allowlist, not a convenient exemption.
+- [x] Run scoped format/clippy; review required type/placement/plumb declarations and generated diffs; run the local commit gate and commit working source changes. Any new dependency outside clients must satisfy the existing allowlist, not a convenient exemption.
 
 ### Task 3: render a real scene through the reusable Bevy library
 

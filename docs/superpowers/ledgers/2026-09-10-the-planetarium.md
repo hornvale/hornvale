@@ -515,3 +515,33 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   model can support; source model/version evolution can revise that boundary.
 - Capture actions: Task 2 owns the refusal, regression evidence and emitted
   limitation note; independent review checks the implementation.
+
+## Task 2 — complete
+
+- Task 2: complete (commits 4e06e3349..048212519, review clean).
+  Independent spec and quality review found no Critical, Important or Minor
+  issue. Controller resolved cross-task qualifications against Task 1's clean
+  review and #14; later GPU/interaction/capture criteria remain outstanding.
+- Native geometry: 4 tests; evaluated scene: 1 unit + 3 integration; CLI: 2;
+  source: 1 unit + 3 integration. Existing astronomy and scene-system goldens
+  passed. Final normal hook: 1425/1425, 1393/1393, 1300/1300, 445/445;
+  wall38.775s, rc0. Two earlier guard failures were fixed with a documented
+  standard-library `Cell` lexicon exception and one justified topology-fixture
+  build-site roster row; their cost rows remain in docs/timings.md.
+- Current `luminosity_rel` was added to evaluated lights under the planned
+  additional-contribution provision. This keeps epoch evolution in the source
+  for off-anchor lighting. Native model validity/refusal ruling is #14, with
+  two ideonomy passes; no new simulation model or accuracy tradeoff.
+- Measured dirty-worktree source sample: 1000 queries, mean11.219µs,
+  p5010.958µs, p9511.750µs; open24.301ms, initial width64 302.431ms.
+  Includes parse/evaluate/quantize/serialize, excludes request construction and
+  initial terrain from per-query cost. These are samples, not guarantees.
+- Controller also compiled and ran a separate scratch consumer of Source,
+  exporting 512×256 native tiles plus ticks0/25000/50000 with source revision
+  048212519. Preserved inputs at
+  `/Users/nathan/Downloads/Hornvale Planetarium/source-preview-048212519/`.
+  World SHA256: `77168f2bc1a8db9c01b37b31b66ac4757e1133862f8249aa8d80bb0194285bf8`;
+  initial JSON SHA256: `376767c88d474ab814ba55cd3b750f81980fd0f539ff9326360414f8185d2fa2`.
+  The 18,005,513-byte initial document includes source sea level -1820.2915m;
+  elevations are reference-datum values, not heights above that sea level.
+  This is preserved source evidence, not a film or accepted visual.
