@@ -848,3 +848,49 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 - Capture actions: Task 7/9 package instructions clarified. Any repin that changes
   actual semantic observations or shot inputs triggers normal qualification and
   visual review; the workflow does not predict that those outputs stay unchanged.
+
+
+## Stage 1 — complete, canonical report inspected
+
+- Request `req-cf982ae363e8-20260910T192747Z` reported green in 1414s.
+  Actual chamber log is `sluice-cf982ae363e8-20260910T195743Z`, retrieved with
+  `make sluice-log JOB=sluice-cf982ae363e8-20260910T195743Z`; the request ID
+  itself is not the log basename. Local saved log: `/tmp/planetarium-stage1-report.log`.
+- Every stage phase exited zero: artifacts 279.378s, outboard 96.258s,
+  gate 823.099s, clients 197.410s. Actual merge product
+  `94fbd6dacb573f6edbbf3841e6d714fb669787e7`, final authored tree
+  `0e5501e62acb79b824914aaf635578ec49ca5e2a`.
+- Terminal report explicitly says nothing pushed; main unchanged at
+  `3aff906d4c52d9d3a4fa0551fec5f84248139e38`, kind=stage, rc=0.
+  This checks the Stage 1 SHA, not subsequent Task 4 changes. New visual client
+  CPU integration into the canonical client phase is still Task 8; current
+  view/source tests were run locally under their separate workspace.
+- Existing remote log warnings concern Git garbage collection and Deno bundle's
+  experimental status. No cleanup or unrelated tool-policy change was attempted.
+  No heavy tier, census or final visual approval is claimed by this stage result.
+
+## Task 4 — implementation reviewed; fix round 1
+
+- Implemented in `5d2225b896ced4b4b531dca41eb6c72e5015baa8`; 37 view,
+  4 source and 5 app tests passed. Normal hook passed all four subfloor chunks
+  in 97.509s. Its initial lexical-token refusal was corrected without a waiver.
+- Independent review requires one correction: a contradictory duplicate of
+  committed A must error even while B is pending, preserving both committed A
+  and pending B. The check currently sits only in the no-pending branch.
+  Original implementer is fixing it with a compiling behavioral regression.
+- The small Minor is included in the same fix round: queue a scene application,
+  reset before its system runs, then verify it cannot repopulate the empty scene.
+  This tests correct existing cleanup behavior; it is not a new protocol or waiver.
+- Task 3's consumed static catalog validation and lifecycle split Minors are
+  addressed by Task 4 according to independent review. Remaining readback/setup
+  separation and any proven failure recovery belong to Task 6.
+- Measured source-worker round trips, 1000 exact queries: p50 17.292us,
+  p95 36.041us, max 148.458us; initial world plus512-wide document 746.706ms.
+  Dirty implementation measurement on the fixed seed42 world, declared source
+  revision cf982ae36; no GPU-rate claim. Bounded scheduling test demonstrates
+  active A plus1000 queued requests -> latest999 and exactly two source calls.
+- Bridge tests were initially written alongside implementation. This deviation
+  is explicit: a compiling mutation retaining the first queued request failed
+  (actual0, expected999), then restoration passed. A first mutation exposed a
+  test-cleanup deadlock; assertions were moved after releasing the fake worker,
+  and the mutation then failed normally. No sleep-based ordering or bypass.

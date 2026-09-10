@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report pending. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 fix round in progress. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
@@ -235,7 +235,7 @@ history policy has completed; it is not merely elapsed wall time.
 **Goal:** Resolve physical prerequisites, expose evaluated observations, and render an actual attractive moving draft through the shared libraries.
 **Success Criteria:** Source conformance passes; one declared topology works; a full-resolution still and at least two seconds of moving Bevy output exist with recorded settings.
 **Tests:** Tasks 1–3; source/CLI equality; dependency containment; GPU image and motion inspection.
-**Status:** In Progress
+**Status:** Complete
 
 ### Task 1: add a documented physical anchor radius and qualify geometry
 
@@ -417,7 +417,7 @@ than allowing float overflow or silently compressing distances.
 **Goal:** Make the source-backed scene seekable and inspectable, and define the final edit without tying it to rendering speed.
 **Success Criteria:** Direct seek/playback equivalence, stale-reply rejection and scope resets pass; all camera/time controls work; the selected pilot and shot data are frozen.
 **Tests:** Tasks 4–5, including semantic clock/state tests and real interactive inspection.
-**Status:** Not Started
+**Status:** In Progress
 
 ### Task 4: exact clocks and asynchronous observation state
 

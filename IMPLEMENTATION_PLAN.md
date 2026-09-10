@@ -28,20 +28,20 @@ Detailed tasks: [implementation plan](docs/superpowers/plans/2026-09-10-the-plan
 Approved scope: [design](docs/superpowers/specs/2026-09-10-the-planetarium-design.md).
 
 The physical anchor-radius prerequisite is approved and included in Task 1.
-Execution is authorized; Tasks 1–3 are implemented and reviewed, with Stage 1 canonical verification pending. This section tracks The Planetarium only; the
+Execution is authorized; Stage 1 is complete; Task 4 is in its reviewed fix round. This section tracks The Planetarium only; the
 inherited tracker above remains unchanged.
 
 ## Stage 1: A source-backed moving visual witness
 **Goal**: Qualify physical inputs, expose evaluated observations, render a real Bevy scene.
 **Success Criteria**: Source agreement and independent library boundaries; actual 4K still and at least two-second moving draft; canonical stage result.
 **Tests**: Plan Tasks 1–3: source/CLI agreement, identity, source geometry, document/coordinate tests, GPU inspection.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 2: Exact time, interaction and authored direction
 **Goal**: Make the shared scene seekable and direct the pilot.
 **Success Criteria**: Exact seek/playback correspondence, stale-reply rejection, world/scope reset, camera/time controls and frozen edit; canonical stage result.
 **Tests**: Plan Tasks 4–5: integer clock boundaries, out-of-order replies, scope changes, shot continuity/cuts and live controls.
-**Status**: Not Started
+**Status**: In Progress
 
 ## Stage 3: Complete 4K capture and verifiable packages
 **Goal**: Export the full study with complete source and frame provenance.
