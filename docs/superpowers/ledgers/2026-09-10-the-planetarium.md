@@ -581,3 +581,52 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   current convention and limitation must appear in the production record.
 - Capture actions: Task 3 documents and tests this mapping. G6 carries the
   convention alongside the radius model and other source limitations.
+
+## #16 [Q] — separate stellar body illumination from atmosphere lighting
+
+- Ruling: qualify one point light at each actual emitted stellar position for
+  solid-body PBR, deriving intensity from current emitted luminosity with the
+  declared render-unit conversion. Feed the built-in atmosphere one separate
+  directional light per star using its emitted anchor direction/flux; isolate
+  that directional light from solid surfaces. Unsupported eclipse shadows stay
+  disabled. Disable the atmosphere's apparent stellar disk because the source
+  does not emit a stellar radius.
+- Evidence: the installed pinned `bevy_pbr-0.19.1` shader
+  `src/atmosphere/functions.wgsl`, inspected with `rg` and `sed`, loops every
+  view directional light in `sample_local_inscattering` (line 216),
+  `sample_sun_radiance` (248), and ground reflection (491), without consulting
+  RenderLayers. The sun-radiance path emits a disk when its angular-size and
+  intensity settings are positive. This is code inspection; GPU validation
+  remains Task 3 work, not an inferred success.
+- Why: per-body directional lights could give each moon its actual incident
+  direction and flux, but the atmosphere would add those duplicate feeds.
+  Point transport preserves the source-position relationship for solid bodies
+  and leaves only the intended directional feeds in the atmosphere shader.
+- Illumination routing as a mixing graph (cross-domain re-instantiation;
+  polarity and hierarchy):
+
+  ```text
+  musical source -> duplicate open buses -> unintended amplification [negative]
+  musical source -> dedicated receiver buses -> controlled sum [positive]
+  native star -> actual-position point -> all solid bodies [inverse-square]
+  native star -> anchor directional -> atmosphere [declared approximation]
+  apparent-size default -> invented stellar disk [reject]
+  source revision -> shared binding -> both light treatments [one authority]
+  ```
+
+- Ideonomy passes / overturns: two passes. The audio-routing analogy exposed
+  that “isolated objects” do not imply isolated effects when a downstream
+  consumer ignores the routing filter. The convergence pass checked the shared
+  parent/independent receiver graph and its opposite (one uniform light for
+  everything); this retained the split and prompted the explicit disk-default
+  check. No additional source model or new rendering subsystem is warranted.
+- Alternatives discarded: one anchor light for all moons loses their observed
+  illumination geometry; repeated per-body directional lights contaminate the
+  atmosphere; an immediate custom atmosphere shader is unnecessary before
+  qualifying the existing point-plus-directional arrangement.
+- Cost if wrong: replace the presentation light routing after measured GPU
+  evidence. Actual source positions, luminosity and model contracts stay intact.
+  The bounded atmosphere remains a cosmetic treatment, not a simulated profile.
+- Capture actions: Task 3 verifies point range/culling, scale conversion and
+  actual anchor/moon shading; the production record distinguishes solid-body
+  transport from the directional atmosphere treatment and records disk absence.
