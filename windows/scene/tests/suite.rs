@@ -16,6 +16,8 @@
 
 mod common;
 
+#[path = "suite/astronomy_at.rs"]
+mod astronomy_at;
 #[path = "suite/golden.rs"]
 mod golden;
 #[path = "suite/illumination_hypotheses.rs"]

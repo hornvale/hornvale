@@ -21,5 +21,7 @@ mod genesis_properties;
 mod golden_seed_42;
 #[path = "suite/night_sky_regimes.rs"]
 mod night_sky_regimes;
+#[path = "suite/planetarium_geometry.rs"]
+mod planetarium_geometry;
 #[path = "suite/sky_conformance.rs"]
 mod sky_conformance;

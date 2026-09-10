@@ -15,6 +15,9 @@ use hornvale_kernel::{NearestVertexIndex, Seed, VertexMap, World, WorldTime};
 use hornvale_terrain::GeneratedTerrain;
 use serde::Serialize;
 
+mod astronomy_at;
+pub use astronomy_at::*;
+
 mod region;
 pub use region::*;
 
@@ -37,7 +40,7 @@ pub const MIN_WIDTH: u32 = 16;
 pub const MAX_WIDTH: u32 = 1024;
 
 /// Scene construction failed; the reason, loudly (the GenesisError manner).
-/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0), bare-ok(identifier-text: UnknownTileField.0), bare-ok(prose: MalformedTileFields.0)
+/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(prose: AstronomyQuery.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0), bare-ok(identifier-text: UnknownTileField.0), bare-ok(prose: MalformedTileFields.0)
 #[derive(Debug, Clone, PartialEq)]
 pub enum SceneError {
     /// Width must be even (height is width / 2).
@@ -46,6 +49,8 @@ pub enum SceneError {
     WidthOutOfRange(u32),
     /// The world could not be rebuilt from its ledger.
     Build(String),
+    /// Evaluated astronomy is unavailable for the requested instant.
+    AstronomyQuery(String),
     /// Regional query: `face` must be 0..=5.
     RegionFaceOutOfRange(u32),
     /// Regional query: `level` must be 0..=MAX_REGION_LEVEL.
@@ -86,6 +91,7 @@ impl std::fmt::Display for SceneError {
             SceneError::WidthOutOfRange(w) => {
                 write!(f, "--width {w} is outside {MIN_WIDTH}..={MAX_WIDTH}")
             }
+            SceneError::AstronomyQuery(e) => write!(f, "astronomy query: {e}"),
             SceneError::Build(e) => write!(f, "building the world: {e}"),
             SceneError::RegionFaceOutOfRange(f_) => {
                 write!(f, "--face {f_} is outside 0..=5 (six cube faces)")
