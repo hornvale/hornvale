@@ -3438,7 +3438,6 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
-hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -3764,6 +3763,7 @@ hornvale-worldgen::hornvale_worldgen$tests::an_ametabolic_kind_is_never_asked_fo
 hornvale-worldgen::hornvale_worldgen$tests::axis_supply_agrees_with_the_hoisted_form
 hornvale-worldgen::hornvale_worldgen$tests::build_world_generates_settlements_and_no_vale
 hornvale-worldgen::hornvale_worldgen$tests::build_world_produces_the_full_cascade
+hornvale-worldgen::hornvale_worldgen$tests::cached_fixed_axes_equal_the_liebig_minimum
 hornvale-worldgen::hornvale_worldgen$tests::cascade_regime_of_matches_the_authored_regime_map
 hornvale-worldgen::hornvale_worldgen$tests::culture_lines_name_the_flagship_and_its_subsistence
 hornvale-worldgen::hornvale_worldgen$tests::deity_name_seed_is_pure_and_entity_id_free
@@ -4296,6 +4296,7 @@ hornvale::suite$heavy_tier::every_whole_runner_test_is_front_loaded
 hornvale::suite$heavy_tier::heavy_tier_reason_strings_are_canonical
 hornvale::suite$heavy_tier::override_table_end_stops_at_the_next_profile_section_not_just_eof
 hornvale::suite$heavy_tier::the_canonical_heavy_reason_states_no_duration
+hornvale::suite$heavy_tier::the_four_seed_sweep_class_reserves_exactly_four_threads
 hornvale::suite$heavy_tier::the_heavy_roster_is_exactly_this_fixture
 hornvale::suite$heavy_tier::the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps
 hornvale::suite$heavy_tier::the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_schedule_sensitive
