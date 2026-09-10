@@ -169,6 +169,7 @@ use hornvale_history::record::{Founding, FoundingCoords, founding_key};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::person_promote::{MEMORY_DEPTH, select_founders};
+use hornvale_worldgen::seed_sweep;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, WorldComponents, build_world_to, occupation_records,
 };
@@ -362,8 +363,13 @@ fn the_dropped_founders_are_pinned_per_seed() {
         (2871, 0),
         (2898, 0),
     ];
-    for (seed, drops) in expected {
-        let w = build(seed, BuildDepth::Settlements);
+    // World construction is independent per seed. `map_seeds` returns the
+    // completed worlds in seed order, so every assertion below remains on this
+    // thread with the serial loop's deterministic diagnostics and ordering.
+    let worlds = seed_sweep::map_seeds(expected.iter().map(|(seed, _)| *seed), |seed| {
+        build(seed, BuildDepth::Settlements)
+    });
+    for ((seed, drops), w) in expected.into_iter().zip(worlds) {
         let occs = occupation_records(&w);
         let cast = select_founders(&occs);
         assert_eq!(

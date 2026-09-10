@@ -165,6 +165,7 @@ use hornvale_vessel::liveness::{
     AGENT_AT, DRANK, EATEN, LocaleTerrain, RESTED, SLEPT, SLEPT_ON, Terrain, ThreatNiche,
     built_rooms, derive_npcs, place_agent,
 };
+use hornvale_worldgen::seed_sweep;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Builds a real world at `seed` with every pin at its default — the same
@@ -223,12 +224,14 @@ fn cold_built_settlements_are_common_not_rare() {
     // of them should move when a coastline does. A fourth clause once stood
     // beside them — "at least one seed is cold-DOMINATED" — which turned out
     // NOT to have that property; see the note at the foot of this test.
-    let sweep: Vec<(u64, usize, usize)> = (0..15)
-        .map(|seed| {
-            let (c, b) = cold_built_count(seed);
-            (seed, c, b)
-        })
-        .collect();
+    // Each world is independent. `map_seeds` preserves the input order while
+    // doing the expensive world construction concurrently; the caller-side
+    // assertions and diagnostics therefore remain byte-identical to the
+    // serial sweep. Set `HV_SEED_SWEEP_THREADS=1` to reproduce that shape.
+    let sweep: Vec<(u64, usize, usize)> = seed_sweep::map_seeds(0..15, |seed| {
+        let (c, b) = cold_built_count(seed);
+        (seed, c, b)
+    });
 
     let seeds_with_cold = sweep.iter().filter(|(_, cold, _)| *cold > 0).count();
     let total_built: usize = sweep.iter().map(|(_, _, built)| built).sum();

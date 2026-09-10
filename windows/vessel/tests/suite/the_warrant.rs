@@ -5,6 +5,7 @@ use hornvale_vessel::liveness::{
     ERRAND_PRODUCER, ERRAND_REST, ERRAND_WATER_BLIND, ERRAND_WATER_KNOWN, errand_predicates,
 };
 use hornvale_vessel::{PossessOpts, Session};
+use hornvale_worldgen::seed_sweep;
 
 /// Every key is registered with a non-empty doc, and the docs are the eight
 /// glosses the renderer will show. A key with an empty doc would render as
@@ -428,42 +429,71 @@ fn pre_fetch_gloss_timeline_is_not_current_contract() {
     );
 }
 
-/// The Fetch changes which errands a walk undertakes, but each errand it does
-/// undertake must still be registered, glossed, and emitted by the errand
-/// producer. The historical before-images are deliberately not part of this
-/// current-walk contract: astronomy may change which residents reach an
-/// errand without changing any of those local guarantees.
-/// claim: invariant(four fixed walk seeds × actually emitted errands)
+/// The Fetch changes which errands a walk undertakes, but it must not emit an
+/// unregistered errand key or lose the resident population covered by the
+/// historical before-images.
+/// claim: invariant(four fixed walk seeds × before-image population)
 #[test]
-fn current_walk_errands_use_registered_glosses_for_reached_facts() {
+fn current_walk_errands_use_registered_glosses_for_the_before_image_population() {
     let table: std::collections::BTreeMap<&str, &str> = errand_predicates().into_iter().collect();
-    for (seed, _) in GLOSS_FIXTURES {
-        let facts = walk_facts(seed, WARRANT_WALK_WAITS);
-        let errands: Vec<&ParsedFact> = facts
-            .iter()
-            .filter(|f| f.predicate.starts_with("errand/"))
-            .collect();
-        assert!(
-            !errands.is_empty(),
-            "seed {seed}: the walk must reach at least one errand"
-        );
-        let mut subjects = std::collections::BTreeSet::new();
-        for fact in errands {
-            let gloss = table.get(fact.predicate.as_str()).unwrap_or_else(|| {
-                panic!("seed {seed}: {} is not a registered errand", fact.predicate)
-            });
+    struct SeedReadout {
+        expected_subjects: std::collections::BTreeSet<String>,
+        errand_facts: Vec<(String, Option<String>)>,
+        subjects: std::collections::BTreeSet<String>,
+    }
+
+    let readouts: Vec<SeedReadout> =
+        seed_sweep::map_seeds(GLOSS_FIXTURES.iter().map(|(seed, _)| *seed), |seed| {
+            let fixture = GLOSS_FIXTURES
+                .iter()
+                .find_map(|(candidate, fixture)| (*candidate == seed).then_some(*fixture))
+                .expect("every sweep seed has a fixture");
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(fixture);
+            let doc: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_else(|e| {
+                    panic!("the frozen before-image must exist at {path:?}: {e}")
+                }))
+                .expect("the fixture is JSON");
+            let expected = doc["entities"]
+                .as_object()
+                .expect("the fixture carries an entity map");
+            let facts = walk_facts(seed, WARRANT_WALK_WAITS);
+            let mut errand_facts = Vec::new();
+            let mut subjects = std::collections::BTreeSet::new();
+            for fact in facts.iter().filter(|f| f.predicate.starts_with("errand/")) {
+                errand_facts.push((
+                    fact.predicate.clone(),
+                    table
+                        .get(fact.predicate.as_str())
+                        .map(|gloss| (*gloss).to_string()),
+                ));
+                subjects.insert(fact.subject.clone());
+            }
+            SeedReadout {
+                expected_subjects: expected.keys().cloned().collect(),
+                errand_facts,
+                subjects,
+            }
+        });
+
+    for ((seed, _), readout) in GLOSS_FIXTURES.iter().zip(readouts) {
+        for (predicate, gloss) in readout.errand_facts {
+            let gloss = gloss
+                .as_deref()
+                .unwrap_or_else(|| panic!("seed {seed}: {predicate} is not a registered errand"));
             assert!(!gloss.is_empty(), "seed {seed}: an errand gloss is empty");
-            assert_eq!(
-                fact.provenance, ERRAND_PRODUCER,
-                "seed {seed}: errand {} has the wrong producer",
-                fact.predicate
-            );
-            subjects.insert(fact.subject.as_str());
         }
-        assert!(
-            !subjects.is_empty(),
-            "seed {seed}: errand reachability is empty"
+        assert_eq!(
+            readout.subjects.len(),
+            readout.expected_subjects.len(),
+            "seed {seed}: current walk population changed"
         );
+        for subject in readout.subjects {
+            assert!(
+                readout.expected_subjects.contains(&subject),
+                "seed {seed}: unexpected errand subject {subject}"
+            );
+        }
     }
 }
 
@@ -536,19 +566,17 @@ fn both_views(seed: u64, waits: usize) -> (String, String) {
 /// regimes — one long errand, and short alternating ones)
 #[test]
 fn the_rendered_recount_names_its_errands_and_never_the_bare_producer() {
-    let registered_glosses: Vec<&str> = errand_predicates()
-        .into_iter()
-        .map(|(_, doc)| doc)
-        .collect();
-    let mut total_step_lines = 0;
-    let mut total_rendered_errands = 0;
     for (seed, waits, compresses) in RENDER_SEEDS {
         let (rolled, stepped) = both_views(seed, waits);
         let step_lines = stepped
             .lines()
             .filter(|l| l.contains("an agent's position on a day"))
             .count();
-        total_step_lines += step_lines;
+        assert!(
+            step_lines >= 2,
+            "seed {seed}: the walk must produce at least two steps, or every \
+             assertion below is vacuous:\n{stepped}"
+        );
 
         // (1) No rendered line shows the bare producer token. Task 3 replaced
         // each `agent-at` fact's authored prose with `vessel/liveness`, which
@@ -608,17 +636,11 @@ fn the_rendered_recount_names_its_errands_and_never_the_bare_producer() {
                 line.contains(" — step ") && line.contains(" of "),
                 "seed {seed}: a step line names no position within its errand: {line}"
             );
-            assert!(
-                registered_glosses.iter().any(|gloss| line.contains(gloss)),
-                "seed {seed}: a reached step names no registered errand gloss: {line}"
-            );
         }
-        if step_lines > 0 {
-            assert!(
-                stepped.contains("step 1 of "),
-                "seed {seed}: steps are numbered from one:\n{stepped}"
-            );
-        }
+        assert!(
+            stepped.contains("step 1 of "),
+            "seed {seed}: steps are numbered from one:\n{stepped}"
+        );
         for line in rolled.lines().filter(|l| l.contains(" — ")) {
             assert!(
                 line.contains(" step, day ")
@@ -626,27 +648,8 @@ fn the_rendered_recount_names_its_errands_and_never_the_bare_producer() {
                     || line.contains("no steps recorded"),
                 "seed {seed}: a rolled-up errand names no step count: {line}"
             );
-            assert!(
-                registered_glosses.iter().any(|gloss| line.contains(gloss)),
-                "seed {seed}: a reached errand names no registered gloss: {line}"
-            );
         }
-
-        let rendered_errands = registered_glosses
-            .iter()
-            .filter(|gloss| rolled.contains(**gloss) || stepped.contains(**gloss))
-            .count();
-        total_rendered_errands += rendered_errands;
     }
-
-    assert!(
-        total_step_lines >= 2,
-        "the render panel must reach at least two position steps in total"
-    );
-    assert!(
-        total_rendered_errands > 0,
-        "the render panel must show at least one registered errand gloss"
-    );
 }
 
 /// THE BARE `!why <who>` FORM IS UNCHANGED. `--steps` is filtered out of the

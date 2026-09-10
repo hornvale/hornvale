@@ -24,6 +24,20 @@ use crate::character::Character;
 use crate::circuit::{DescentPlan, NodeId, plan_descent, plan_descent_with_origins};
 use crate::delve_seating::{Tenancy, column_origins};
 use crate::plat::{Reading, Role, read, role_nodes};
+use crate::seed_sweep;
+
+struct ColumnReadout {
+    made_rung: Option<usize>,
+    tenancy: Option<Tenancy>,
+    decile_le5: bool,
+    with_door: bool,
+    with_door_all_found: bool,
+    landings: bool,
+    sanctum_with_thing: bool,
+    nested: usize,
+    nested_smaller: usize,
+    components: Vec<usize>,
+}
 
 fn habitation_rungs() -> Vec<Band> {
     hornvale_terrain::rungs()
@@ -153,12 +167,12 @@ pub fn render_made_population(world: &World, terrain: &GeneratedTerrain) -> Stri
     let mut nested_smaller = 0usize;
     let mut components: BTreeMap<usize, usize> = BTreeMap::new();
 
-    for vertex in terrain.geosphere().vertices() {
-        let Some(cave) = terrain.cave_at(vertex) else {
-            continue;
-        };
+    let vertices: Vec<_> = terrain.geosphere().vertices().collect();
+    let readouts = seed_sweep::map_seeds(0..vertices.len() as u64, |index| {
+        let vertex = vertices[index as usize];
+        let cave = terrain.cave_at(vertex)?;
         if terrain.is_ocean(vertex) {
-            continue;
+            return None;
         }
         let origins = column_origins(world, terrain, vertex, &rungs);
         let origin_list: Vec<ChamberOrigin> = origins.iter().map(|o| o.0).collect();
@@ -172,6 +186,8 @@ pub fn render_made_population(world: &World, terrain: &GeneratedTerrain) -> Stri
         );
         let reading = read(&plan);
         // Alexander 98, over EVERY plan the panel derives.
+        let mut nested = 0;
+        let mut nested_smaller = 0;
         for (i, r) in plan.realms.iter().enumerate() {
             if let Some(p) = r.parent {
                 nested += 1;
@@ -180,43 +196,64 @@ pub fn render_made_population(world: &World, terrain: &GeneratedTerrain) -> Stri
                 }
             }
         }
-        for level in 0..rungs.len() {
-            *components
-                .entry(within_level_components(&plan, level))
-                .or_default() += 1;
+        let components = (0..rungs.len())
+            .map(|level| within_level_components(&plan, level))
+            .collect();
+        let made_rung = origin_list.iter().position(|o| *o == ChamberOrigin::Made);
+        let Some(made_rung) = made_rung else {
+            return Some(ColumnReadout {
+                made_rung: None,
+                tenancy: None,
+                decile_le5: false,
+                with_door: false,
+                with_door_all_found: false,
+                landings: false,
+                sanctum_with_thing: false,
+                nested,
+                nested_smaller,
+                components,
+            });
+        };
+        let wild = plan_descent(seed, vertex, &rungs, cave.kind, Character::WildCave);
+        let sanctum_with_thing = role_nodes(&plan, &reading, made_rung, Role::Sanctum)
+            .first()
+            .is_some_and(|&s| plan.nodes[s].key.is_some());
+        Some(ColumnReadout {
+            made_rung: Some(made_rung),
+            tenancy: Some(origins[made_rung].1),
+            decile_le5: heart_decile(&plan, &reading, made_rung).is_some_and(|d| d <= 5),
+            with_door: doors_on_level(&plan, made_rung) > 0,
+            with_door_all_found: doors_on_level(&wild, made_rung) > 0,
+            landings: plan.nodes_on(made_rung).iter().any(|&n| reading.landing[n]),
+            sanctum_with_thing,
+            nested,
+            nested_smaller,
+            components,
+        })
+    });
+
+    for readout in readouts.into_iter().flatten() {
+        for component_count in readout.components {
+            *components.entry(component_count).or_default() += 1;
         }
-        let Some(made_rung) = origin_list.iter().position(|o| *o == ChamberOrigin::Made) else {
+        nested += readout.nested;
+        nested_smaller += readout.nested_smaller;
+        let Some(made_rung) = readout.made_rung else {
             continue;
         };
         columns += 1;
         *seated.entry(format!("{:?}", rungs[made_rung])).or_default() += 1;
-        match origins[made_rung].1 {
+        match readout.tenancy.expect("Made columns have tenancy") {
             Tenancy::Inhabited => inhabited += 1,
             Tenancy::Abandoned => abandoned += 1,
             Tenancy::Wild => {}
         }
         made_levels += 1;
-        if heart_decile(&plan, &reading, made_rung).is_some_and(|d| d <= 5) {
-            decile_le5 += 1;
-        }
-        if doors_on_level(&plan, made_rung) > 0 {
-            with_door += 1;
-        }
-        // Spec §4.2's report-only before-figure: the same rung's plan as it
-        // was derived before The Plat, all levels `Found`.
-        let wild = plan_descent(seed, vertex, &rungs, cave.kind, Character::WildCave);
-        if doors_on_level(&wild, made_rung) > 0 {
-            with_door_all_found += 1;
-        }
-        if plan.nodes_on(made_rung).iter().any(|&n| reading.landing[n]) {
-            landings += 1;
-        }
-        // A thing at genesis is a latent key at the Sanctum node (spec §4.4).
-        if let Some(&s) = role_nodes(&plan, &reading, made_rung, Role::Sanctum).first()
-            && plan.nodes[s].key.is_some()
-        {
-            sanctum_with_thing += 1;
-        }
+        decile_le5 += usize::from(readout.decile_le5);
+        with_door += usize::from(readout.with_door);
+        with_door_all_found += usize::from(readout.with_door_all_found);
+        landings += usize::from(readout.landings);
+        sanctum_with_thing += usize::from(readout.sanctum_with_thing);
     }
 
     let ratio = |n: usize, d: usize| if d == 0 { 0.0 } else { n as f64 / d as f64 };

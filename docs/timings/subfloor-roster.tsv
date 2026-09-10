@@ -1331,11 +1331,9 @@ hornvale-lab::hornvale_lab$diff::tests::csv_round_trip_diffs_through_render_diff
 hornvale-lab::hornvale_lab$diff::tests::header_reports_row_and_refusal_counts
 hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_292_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
@@ -3437,7 +3435,6 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
-hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -3562,6 +3559,18 @@ hornvale-worldgen::hornvale_worldgen$d4::tests::normalization_rejects_non_finite
 hornvale-worldgen::hornvale_worldgen$d4::tests::recurrence_retains_phase_and_distinguishes_rotation_from_drift
 hornvale-worldgen::hornvale_worldgen$d4::tests::signatures_preserve_dependencies_and_typed_channels
 hornvale-worldgen::hornvale_worldgen$d4::tests::verdict_covers_falsifiers_and_requires_multiple_regimes
+hornvale-worldgen::hornvale_worldgen$d5::tests::any_single_explanatory_control_collapses_structural_ranks
+hornvale-worldgen::hornvale_worldgen$d5::tests::candidate_requires_multiple_adequate_settlements
+hornvale-worldgen::hornvale_worldgen$d5::tests::candidate_requires_multiple_observed_regimes
+hornvale-worldgen::hornvale_worldgen$d5::tests::coercive_flow_cannot_supply_voluntary_convergence_evidence
+hornvale-worldgen::hornvale_worldgen$d5::tests::equal_throughput_keeps_typed_and_source_composition_distinct
+hornvale-worldgen::hornvale_worldgen$d5::tests::large_controls_do_not_rescue_isolation_or_one_type_flow
+hornvale-worldgen::hornvale_worldgen$d5::tests::multiple_typed_inbound_sources_are_ranked_against_adequate_peers
+hornvale-worldgen::hornvale_worldgen$d5::tests::normalization_preserves_the_raw_typed_vector
+hornvale-worldgen::hornvale_worldgen$d5::tests::one_source_across_two_kinds_is_not_two_sources
+hornvale-worldgen::hornvale_worldgen$d5::tests::unavailable_channels_and_windows_are_not_observed_zeroes
+hornvale-worldgen::hornvale_worldgen$d5::tests::verdict_distinguishes_flat_control_collapsed_and_recurrent_apices
+hornvale-worldgen::hornvale_worldgen$d5::tests::zero_non_finite_and_missing_inputs_are_explicitly_inadequate
 hornvale-worldgen::hornvale_worldgen$delve_seating::tests::an_indifferent_niche_scores_zero
 hornvale-worldgen::hornvale_worldgen$delve_seating::tests::every_cave_kind_matches_a_corpus_genus
 hornvale-worldgen::hornvale_worldgen$delve_seating::tests::every_formation_and_depth_class_scores
@@ -3753,6 +3762,7 @@ hornvale-worldgen::hornvale_worldgen$seed_sweep::tests::the_thread_override_refu
 hornvale-worldgen::hornvale_worldgen$settlement_pins::tests::default_pins_pin_nothing
 hornvale-worldgen::hornvale_worldgen$settlement_pins::tests::species_pin_round_trips_through_parse_pin
 hornvale-worldgen::hornvale_worldgen$settlement_pins::tests::unknown_keys_are_user_facing_errors
+hornvale-worldgen::hornvale_worldgen$skyworld::tests::edifice_bias_adds_to_the_distribution_score
 hornvale-worldgen::hornvale_worldgen$tests::a_clear_sky_occludes_nothing_by_construction
 hornvale-worldgen::hornvale_worldgen$tests::a_culture_has_a_dominant_shape_and_a_tail
 hornvale-worldgen::hornvale_worldgen$tests::a_deeper_rung_is_warmer_under_the_same_surface
@@ -3763,6 +3773,7 @@ hornvale-worldgen::hornvale_worldgen$tests::an_ametabolic_kind_is_never_asked_fo
 hornvale-worldgen::hornvale_worldgen$tests::axis_supply_agrees_with_the_hoisted_form
 hornvale-worldgen::hornvale_worldgen$tests::build_world_generates_settlements_and_no_vale
 hornvale-worldgen::hornvale_worldgen$tests::build_world_produces_the_full_cascade
+hornvale-worldgen::hornvale_worldgen$tests::cached_fixed_axes_equal_the_liebig_minimum
 hornvale-worldgen::hornvale_worldgen$tests::cascade_regime_of_matches_the_authored_regime_map
 hornvale-worldgen::hornvale_worldgen$tests::culture_lines_name_the_flagship_and_its_subsistence
 hornvale-worldgen::hornvale_worldgen$tests::deity_name_seed_is_pure_and_entity_id_free
@@ -4005,6 +4016,7 @@ hornvale-worldgen::suite$reproductive::hybrid_relations_are_converted_directiona
 hornvale-worldgen::suite$reproductive::ordinary_reproduction_without_hybrid_partners_summarizes_successfully
 hornvale-worldgen::suite$reproductive::repeated_resolution_is_identical_and_keeps_kind_order
 hornvale-worldgen::suite$reproductive::worldgen_owns_the_species_to_demography_boundary
+hornvale-worldgen::suite$skyworld::skyworld_contract_has_no_build_or_save_surface
 hornvale-worldgen::suite$social_projection::care_cluster_realizes_overlapping_membership_and_multi_party_care
 hornvale-worldgen::suite$social_projection::disabled_projection_preserves_aggregate_registry_and_default_world_bytes
 hornvale-worldgen::suite$social_projection::distinct_seeds_change_only_the_opt_in_projection_facts
@@ -4056,6 +4068,14 @@ hornvale-worldgen::suite$staple_d4_probe::recurrence_and_contrast_must_share_the
 hornvale-worldgen::suite$staple_d4_probe::structural_vacuity_controls_are_non_clearing
 hornvale-worldgen::suite$staple_d4_probe::tribute_only_evidence_is_mixed_not_voluntary_specialization
 hornvale-worldgen::suite$staple_d4_probe::typed_dependencies_and_mechanisms_remain_distinct
+hornvale-worldgen::suite$staple_d5_probe::fixture_branches_keep_empty_zero_isolated_and_coercive_explicit
+hornvale-worldgen::suite$staple_d5_probe::fixture_covers_flat_and_control_collapse_verdicts
+hornvale-worldgen::suite$staple_d5_probe::fixture_covers_unavailable_and_malformed_refusals
+hornvale-worldgen::suite$staple_d5_probe::fixture_distinguishes_same_phase_and_cross_phase_recurrence
+hornvale-worldgen::suite$staple_d5_probe::fixture_evidence_is_stably_ordered_by_settlement_identity
+hornvale-worldgen::suite$staple_d5_probe::fixture_mixed_and_missing_join_denominators_do_not_pool_into_a_positive
+hornvale-worldgen::suite$staple_d5_probe::fixture_requires_multiple_adequate_settlements_and_regimes
+hornvale-worldgen::suite$staple_d5_probe::mutation_of_source_diversity_or_phase_identity_refuses_the_apex
 hornvale-worldgen::suite$stope_variety_probe::a_tie_for_the_modal_branch_count_is_not_rounded_into_the_passing_arm
 hornvale-worldgen::suite$termination_probe::branch_table::every_habitation_rung_has_exactly_one_bucket
 hornvale-worldgen::suite$termination_probe::branch_table::the_branch_table_is_implemented_as_written
@@ -4295,6 +4315,7 @@ hornvale::suite$heavy_tier::every_whole_runner_test_is_front_loaded
 hornvale::suite$heavy_tier::heavy_tier_reason_strings_are_canonical
 hornvale::suite$heavy_tier::override_table_end_stops_at_the_next_profile_section_not_just_eof
 hornvale::suite$heavy_tier::the_canonical_heavy_reason_states_no_duration
+hornvale::suite$heavy_tier::the_four_seed_sweep_class_reserves_exactly_four_threads
 hornvale::suite$heavy_tier::the_heavy_roster_is_exactly_this_fixture
 hornvale::suite$heavy_tier::the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps
 hornvale::suite$heavy_tier::the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_schedule_sensitive

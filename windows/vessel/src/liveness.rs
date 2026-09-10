@@ -4290,6 +4290,7 @@ fn rest_timeline(
     // `built * 2 + cold`, so the four slots are exhaustive by construction and
     // no key can be missing.
     let mut graded: [Option<bool>; 4] = [None; 4];
+    let mut room_slots: std::collections::BTreeMap<Facet, usize> = Default::default();
     let mut cursor = 0usize;
     let mut here: Option<Facet> = None;
     for bout in rests.iter_mut() {
@@ -4298,8 +4299,9 @@ fn rest_timeline(
             cursor += 1;
         }
         let room = here.clone().unwrap_or_else(|| sites.body.home.clone());
-        let slot = usize::from(sites.terrain.is_built(&room)) * 2
-            + usize::from(sites.terrain.is_cold(&room));
+        let slot = *room_slots
+            .entry(room.clone())
+            .or_insert_with(|| terrain_slot(sites.terrain, &room));
         let affords = *graded[slot]
             .get_or_insert_with(|| room_affords_rest(&room, sites.body, sites.terrain, objects));
         if affords {
@@ -5069,9 +5071,7 @@ impl Drive for Fatigue {
     }
 }
 
-/// A game-layer predicate: the agent ate (satisfied its hunger goal) on this
-/// day — The Provender's discharge event, the hunger analogue of `drank`.
-/// Registered by the session, NOT at genesis.
+/// A game-layer predicate: the agent ate (satisfied its hunger goal) on this day — The Provender's discharge event, the hunger analogue of `drank`. Registered by the session, NOT at genesis.
 /// type-audit: bare-ok(identifier-text)
 pub const EATEN: &str = "eaten";
 
@@ -22883,4 +22883,9 @@ mod tests {
              hard {drow_hard} vs yielding {drow_yielding}"
         );
     }
+}
+
+#[allow(clippy::items_after_test_module)]
+fn terrain_slot(terrain: &dyn Terrain, room: &Facet) -> usize {
+    usize::from(terrain.is_built(room)) * 2 + usize::from(terrain.is_cold(room))
 }

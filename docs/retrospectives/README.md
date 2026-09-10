@@ -121,6 +121,8 @@ under review. This file is.
 
 ### Engine / ECS / infrastructure
 
+- [The Census Tail](the-census-tail.md) — parallel seed panels cut the automated suite's long tail; the census itself is near its practical floor
+
 - [The Charter](the-charter.md) — independent context contributors; typed claims need scoped oracles, lifecycle fixtures and reader review; all 72 samples retained without an SLO
 
 - [The Hearsay](the-hearsay.md) — myth gets its channel; four things that could not go red, all in controller text and all caught by mutation; violence is intramural twice over

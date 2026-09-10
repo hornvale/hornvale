@@ -93,6 +93,7 @@ pub mod color_naming;
 pub mod components;
 pub mod d3b;
 pub mod d4;
+pub mod d5;
 pub mod delve_seating;
 mod descent;
 pub mod disposition;
@@ -123,6 +124,9 @@ pub mod resolve;
 pub mod schedule;
 pub mod seed_sweep;
 pub mod settlement_pins;
+pub mod skyworld;
+mod skyworld_propagation;
+pub mod skyworld_render;
 pub mod social_projection;
 pub mod streams;
 pub mod traversal;
@@ -154,6 +158,11 @@ pub use d4::{
     D4PortfolioProfile, D4PortfolioVector, D4ProfileError, D4ProfileSignature, D4RecurrenceClass,
     D4RegimeEvidence, D4RegimeVerdict, d4_normalize_profile, d4_profile_signature,
     d4_recurrence_class, d4_regime_verdict,
+};
+pub use d5::{
+    D5ApexVerdict, D5ControlValues, D5ConvergenceEvidence, D5EvidenceBranch, D5FlowProvenance,
+    D5FlowVector, D5ObservationAvailability, D5PhaseRecord, D5Recurrence, D5RegimeEvidence,
+    D5SettlementProfile, d5_apex_verdict, d5_compare_peers, d5_convergence_evidence,
 };
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
 pub use fieldpack::{FieldPack, field_pack_from};
@@ -202,6 +211,18 @@ pub use reproductive::{
 };
 pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
 pub use settlement_pins::SettlementPins;
+pub use skyworld::skyworld_from;
+pub use skyworld::{
+    SkyAdjacency, SkyCorridor, SkyCorridorKind, SkyEcology, SkyEnergy, SkyEvent, SkyEventKind,
+    SkyExchangeMode, SkyFields, SkyFootprint, SkyLifecycle, SkyLineage, SkyMobility, SkyPhenotype,
+    SkyPosition, SkyPropagation, SkyPropagationDetail, SkyStability, SkyStocks, SkySubstrate,
+    SkyTerritory, SkyTrajectorySample, SkyWater, SkyWorld, SkyWorldConfig,
+};
+pub use skyworld_propagation::{propagation_at, trajectory_at};
+pub use skyworld_render::{
+    SkyWorldDetail, render_skyworld_diagnostic_readout, render_skyworld_png,
+    render_skyworld_readout,
+};
 pub use social_projection::{
     SocialProjection, SocialProjectionError, SocialProjectionPins, SocialReadout, SyntheticSociety,
     approved_lot_probe_projection, approved_lot_probe_projection_for, derive_social_readout,
@@ -1658,6 +1679,26 @@ pub fn tolerance_liebig(
         .min(elevation)
 }
 
+/// `tolerance_liebig` with the moisture/insolation minimum already evaluated.
+/// Those two fields do not change across climate eras, so the capacity bake can
+/// compute them once per species and vertex instead of paying for two more
+/// exponentials on every era.
+fn tolerance_liebig_with_fixed(
+    cn: &hornvale_species::ConditionNiche,
+    s: &Substrate,
+    floor_buf: f64,
+    fixed: f64,
+) -> f64 {
+    let elevation = cn.elevation.eval(s.height_asl_m.get(), 0.0);
+    if elevation <= floor_buf {
+        return elevation;
+    }
+    cn.temperature
+        .eval(s.temperature_c, floor_buf)
+        .min(fixed)
+        .min(elevation)
+}
+
 /// **The Tense §3.3's two-tier tolerance — SHADOW MODE, not yet binding.**
 ///
 /// `tolerance_liebig` above expresses two different *kinds* of constraint through
@@ -2170,6 +2211,42 @@ impl EraInvariantSupply {
     }
 }
 
+/// Per-species condition work that does not vary with the climate era.
+///
+/// Temperature and elevation move with [`EraAdjust`], but moisture and
+/// insolation do not. Their Liebig minimum is therefore safe to reuse across
+/// every era of one bake.
+struct EraInvariantTolerance {
+    fixed: Vec<hornvale_kernel::VertexMap<f64>>,
+}
+
+impl EraInvariantTolerance {
+    fn build(
+        geo: &Geosphere,
+        climate: &GeneratedClimate,
+        insolation: &hornvale_kernel::VertexMap<f64>,
+        species_biosphere: &[&hornvale_species::BiosphereTraits],
+    ) -> Self {
+        let fixed = species_biosphere
+            .iter()
+            .map(|bio| {
+                let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
+                hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+                    bio.condition_niche
+                        .moisture
+                        .eval(climate.moisture_at(vertex), floor_buf)
+                        .min(
+                            bio.condition_niche
+                                .insolation
+                                .eval(*insolation.get(vertex), floor_buf),
+                        )
+                })
+            })
+            .collect();
+        Self { fixed }
+    }
+}
+
 /// [`per_species_capacity`] at one era, reusing hoisted era-invariant supply.
 ///
 /// Everything rebuilt here genuinely moves with the era: the substrate (via the
@@ -2203,6 +2280,33 @@ pub fn per_species_capacity_at(
     species_biosphere: &[&hornvale_species::BiosphereTraits],
     species_realm: &[hornvale_species::HabitatRealm],
     species_affinity: &[Option<hornvale_species::BiomeAffinity>],
+) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
+    let invariant =
+        EraInvariantTolerance::build(geo, climate, &hoisted.insolation, species_biosphere);
+    per_species_capacity_at_with_invariant(
+        geo,
+        terrain,
+        climate,
+        hoisted,
+        adjust,
+        species_biosphere,
+        species_realm,
+        species_affinity,
+        &invariant,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn per_species_capacity_at_with_invariant(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    hoisted: &EraInvariantSupply,
+    adjust: &EraAdjust,
+    species_biosphere: &[&hornvale_species::BiosphereTraits],
+    species_realm: &[hornvale_species::HabitatRealm],
+    species_affinity: &[Option<hornvale_species::BiomeAffinity>],
+    invariant: &EraInvariantTolerance,
 ) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
     debug_assert_eq!(
         species_realm.len(),
@@ -2245,6 +2349,10 @@ pub fn per_species_capacity_at(
         .map(|(tag, bio)| {
             let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
             let cn = &bio.condition_niche;
+            let fixed_tolerance = invariant
+                .fixed
+                .get(tag)
+                .expect("era-invariant tolerance stays parallel to biosphere");
             // Two loop-invariant hoists from two campaigns, kept together
             // because they are complementary rather than competing: The Range
             // lifts the realm lookup, The Whetstone the niche weights. Both are
@@ -2281,7 +2389,13 @@ pub fn per_species_capacity_at(
                     ];
                     let supply = axis_supply_with(&niche_weights, &per_axis);
                     let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
-                    headcount * tolerance_liebig(cn, s, floor_buf)
+                    headcount
+                        * tolerance_liebig_with_fixed(
+                            cn,
+                            s,
+                            floor_buf,
+                            *fixed_tolerance.get(vertex),
+                        )
                 };
                 // The Warren: which realm's substrate this kind is scored
                 // against, and — for a `Subterranean` kind — the BEST rung of
@@ -8055,6 +8169,8 @@ fn bake_history_from(
         insolation_scalar,
         &regime,
     );
+    let invariant_tolerance =
+        EraInvariantTolerance::build(geo, climate, &hoisted.insolation, &species_biosphere);
     // THE DELVE SEATING (The Underworld, spec §4.6). Which rung of the ladder
     // each settling people occupies at each vertex, and the factor its capacity
     // there is scaled by. Built here because it is the one derivation that
@@ -8085,7 +8201,7 @@ fn bake_history_from(
     let caps_by_era: Vec<Vec<hornvale_kernel::ecology::CapacityMap>> = era_adjusts
         .iter()
         .map(|adjust| {
-            per_species_capacity_at(
+            per_species_capacity_at_with_invariant(
                 geo,
                 terrain,
                 climate,
@@ -8094,6 +8210,7 @@ fn bake_history_from(
                 &species_biosphere,
                 &species_realm,
                 &species_affinity,
+                &invariant_tolerance,
             )
             .into_iter()
             // REALM-AWARE CAPACITY (spec §4.6): "capacity for an underworld
@@ -10806,6 +10923,48 @@ mod tests {
             shortcut_fired > 0 && shortcut_fired < checked,
             "sweep must exercise BOTH branches: {shortcut_fired} of {checked} took the shortcut"
         );
+    }
+
+    /// The era-varying capacity path may reuse the moisture/insolation half of
+    /// the Liebig minimum across eras. The cached form must remain bit-identical
+    /// to the ordinary scorer for finite substrate values.
+    #[test]
+    fn cached_fixed_axes_equal_the_liebig_minimum() {
+        use hornvale_kernel::ecology::ConditionResponse;
+
+        let response = |optimum: f64, width: f64, devotion: f64| ConditionResponse {
+            optimum,
+            width,
+            devotion,
+        };
+        let cn = hornvale_species::ConditionNiche {
+            temperature: response(18.0, 12.0, 0.80),
+            moisture: response(0.55, 0.25, 0.70),
+            insolation: response(1.0, 0.40, 0.60),
+            elevation: response(400.0, 900.0, 0.45),
+        };
+        for &temperature in &[-20.0, 4.0, 18.0, 42.0] {
+            for &moisture in &[0.05, 0.55, 0.95] {
+                for &insolation in &[0.10, 0.70, 1.40] {
+                    for &height in &[-500.0, 300.0, 1800.0] {
+                        let substrate = Substrate {
+                            temperature_c: temperature,
+                            moisture,
+                            insolation,
+                            height_asl_m: hornvale_kernel::SeaLevelHeight::from_metres(height),
+                        };
+                        let floor = 0.35;
+                        let fixed = cn
+                            .moisture
+                            .eval(moisture, floor)
+                            .min(cn.insolation.eval(insolation, floor));
+                        let want = tolerance_liebig(&cn, &substrate, floor);
+                        let got = tolerance_liebig_with_fixed(&cn, &substrate, floor, fixed);
+                        assert_eq!(want.to_bits(), got.to_bits());
+                    }
+                }
+            }
+        }
     }
 
     /// A surface reading to derive chambers from — deliberately temperate,

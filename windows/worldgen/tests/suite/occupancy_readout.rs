@@ -37,8 +37,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed, quantize};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, WorldComponents, build_world, climate_of, per_species_suitability, sky_of,
-    terrain_of,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts, climate_from,
+    per_species_suitability, sky_of,
 };
 use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
@@ -133,17 +133,25 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
     let mut kind_k_total: BTreeMap<&'static str, f64> = BTreeMap::new();
 
     for seed in seeds {
-        let world = build_world(
+        // Occupancy only reads the generated sky, terrain and climate. A Full
+        // build also runs settlement placement, history, language, culture,
+        // religion and person genesis, none of which can affect this
+        // readout. Stop at Terrain and reconstruct climate from that prefix;
+        // BuildDepth guarantees the prefix is the same byte-identical world
+        // that a deeper build would start from.
+        let built = build_world_to_with_artifacts(
             Seed(seed),
             &SkyPins::default(),
             &TerrainPins::default(),
             &SettlementPins::default(),
+            &wc,
+            BuildDepth::Terrain,
         )
         .unwrap_or_else(|e| panic!("seed {seed} failed to build: {e:?}"));
 
-        let terrain = terrain_of(&world).expect("terrain reconstructs");
-        let climate = climate_of(&world).expect("climate reconstructs");
-        let sky = sky_of(&world).expect("sky reconstructs");
+        let terrain = built.terrain.expect("terrain is present at Terrain depth");
+        let climate = climate_from(&built.world, &terrain).expect("climate reconstructs");
+        let sky = sky_of(&built.world).expect("sky reconstructs");
         let geo = terrain.geosphere();
         let system = sky.system();
         let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
