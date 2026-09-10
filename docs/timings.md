@@ -7098,3 +7098,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T19:08:12Z | gate-commit | 210.209 | 1043.092 | 68.301 | 5.29 | 0 | 637c8830e | campaign/the-vent-succession | MacBookPro | 10 |
 | 2026-09-10T19:09:30Z | gate-commit | 47.996 | 77.013 | 22.499 | 2.07 | 0 | 637c8830e | campaign/the-vent-succession | MacBookPro | 10 |
 | 2026-09-10T19:11:08Z | gate-commit | 40.977 | 73.486 | 21.583 | 2.32 | 0 | 637c8830e | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:33:00Z | gate-commit | 17.024 | 31.292 | 4.464 | 2.10 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:33:41Z | gate-commit | 21.304 | 32.238 | 4.145 | 1.71 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:34:22Z | gate-commit | 24.152 | 22.356 | 0.612 | 0.95 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:41:06Z | gate-commit | 49.468 | 74.590 | 22.175 | 1.96 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:41:32Z | gate-commit | 50.310 | 74.234 | 21.755 | 1.91 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |

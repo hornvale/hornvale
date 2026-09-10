@@ -246,21 +246,18 @@ mod seams {
     }
 
     #[test]
-    fn genesis_snapshot_preserves_the_static_readout_boundary() {
+    fn genesis_snapshot_preserves_the_static_overlay_boundary() {
         let fixture = seed_42();
         let generated = active(&fixture);
+        let stable_before = generated.clone();
         let snapshot = generated.at(&fixture.climate, WorldTime::GENESIS);
 
-        assert_eq!(snapshot.fields, generated.fields);
+        assert_eq!(generated, stable_before);
+        assert_eq!(snapshot.fields.len(), generated.fields.len());
         assert_eq!(snapshot.stocks, generated.stocks);
         assert_eq!(snapshot.propagation, generated.propagation);
         assert_eq!(snapshot.vent_states.len(), generated.vents.len());
-        assert!(
-            snapshot
-                .vent_states
-                .iter()
-                .all(|state| *state == VentState::Active)
-        );
+        assert_eq!(snapshot.vent_positions.len(), generated.vents.len());
     }
 
     #[test]
@@ -355,10 +352,8 @@ mod temporal_red {
     use super::*;
 
     /// Catches a snapshot path that accepts `WorldTime` but keeps reading the
-    /// genesis climate value. Stage 2 connects the temporal input and removes
-    /// this ignore only after the downstream inequality turns green.
+    /// genesis climate value.
     #[test]
-    #[ignore = "probe: behavioral red until Stage 2 connects climate time to Waterworld fields"]
     fn future_climate_temperature_reaches_the_present_field_readout() {
         let fixture = seed_42();
         let future = WorldTime::from_ticks(WorldTime::TICKS_PER_STD_DAY * 10);
@@ -399,6 +394,359 @@ mod temporal_red {
             genesis.fields[sample_index].temperature_c, later.fields[sample_index].temperature_c,
             "static Waterworld field ignored the changed climate-time source at {vertex:?}"
         );
+    }
+}
+
+mod succession {
+    use super::*;
+
+    const DAY: i64 = WorldTime::TICKS_PER_STD_DAY;
+    const ABSENT_END: i64 = 20 * DAY;
+    const NASCENT_END: i64 = 35 * DAY;
+    const ACTIVE_END: i64 = 65 * DAY;
+    const WEAKENING_END: i64 = 85 * DAY;
+    const CYCLE_END: i64 = 100 * DAY;
+
+    fn source_zero(vent: &hornvale_worldgen::WaterVent) -> i64 {
+        -(i64::from(vent.vertex.0).rem_euclid(100) * DAY)
+    }
+
+    /// Catches an off-by-one phase selector, a reordered state, or a snapshot
+    /// that reports every admitted source as permanently active.
+    #[test]
+    fn exact_tick_boundaries_cover_all_five_states_on_a_real_source() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let vent = generated
+            .vents
+            .first()
+            .expect("VACUOUS: seed 42 has no admitted vent source");
+        let zero = source_zero(vent);
+        let cases = [
+            (0, VentState::Absent, VentState::Failed),
+            (ABSENT_END, VentState::Nascent, VentState::Absent),
+            (NASCENT_END, VentState::Active, VentState::Nascent),
+            (ACTIVE_END, VentState::Weakening, VentState::Active),
+            (WEAKENING_END, VentState::Failed, VentState::Weakening),
+            (CYCLE_END, VentState::Absent, VentState::Failed),
+        ];
+
+        for (boundary, at_boundary, before_boundary) in cases {
+            let at = generated.at(&fixture.climate, WorldTime::from_ticks(zero + boundary));
+            let before = generated.at(&fixture.climate, WorldTime::from_ticks(zero + boundary - 1));
+            assert_eq!(at.vent_states[vent.id], at_boundary);
+            assert_eq!(before.vent_states[vent.id], before_boundary);
+        }
+    }
+
+    #[test]
+    fn genesis_has_real_witnesses_for_every_succession_state() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let snapshot = generated.at(&fixture.climate, WorldTime::GENESIS);
+        let states = [
+            VentState::Absent,
+            VentState::Nascent,
+            VentState::Active,
+            VentState::Weakening,
+            VentState::Failed,
+        ];
+        let counts = states.map(|state| {
+            snapshot
+                .vent_states
+                .iter()
+                .filter(|candidate| **candidate == state)
+                .count()
+        });
+
+        eprintln!("waterworld succession state witnesses at genesis: {counts:?}");
+        assert!(
+            counts.into_iter().all(|count| count > 0),
+            "VACUOUS: seed 42 does not witness all five vent states"
+        );
+        assert!(
+            snapshot
+                .vent_phase_positions
+                .iter()
+                .all(|position| position.is_finite() && (0.0..1.0).contains(position))
+        );
+        assert!(
+            snapshot
+                .fields
+                .iter()
+                .all(|field| field.chemistry.is_finite() && (0.0..=1.0).contains(&field.chemistry))
+        );
+    }
+}
+
+mod fields {
+    use super::*;
+
+    fn active_time(vent: &hornvale_worldgen::WaterVent) -> WorldTime {
+        let offset_days = i64::from(vent.vertex.0).rem_euclid(100);
+        WorldTime::from_ticks((35 - offset_days) * WorldTime::TICKS_PER_STD_DAY)
+    }
+
+    fn field_index(world: &WaterWorld, vertex: Vertex) -> usize {
+        world
+            .substrate
+            .iter()
+            .position(|sample| sample.vertex == vertex && sample.is_seabed)
+            .expect("vent influence vertex has a seabed sample")
+    }
+
+    fn has_open_chemistry_path(world: &WaterWorld, vent: &hornvale_worldgen::WaterVent) -> bool {
+        world.vent_candidate_rings[vent.id]
+            .iter()
+            .take(2)
+            .all(|vertex| !world.substrate[field_index(world, *vertex)].has_edifice)
+    }
+
+    /// Catches a coupled vent term where changing chemistry also changes the
+    /// thermal or ambient field paths, and catches a snapshot that ignores the
+    /// stable vent chemistry source entirely.
+    #[test]
+    fn chemistry_source_changes_only_local_chemistry() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let mut changed = generated.clone();
+        let original = generated
+            .vents
+            .iter()
+            .find(|vent| {
+                generated.vent_candidate_rings[vent.id].len() >= 2
+                    && has_open_chemistry_path(&generated, vent)
+            })
+            .copied()
+            .expect("VACUOUS: no vent has open local chemistry capacity");
+        changed.vents[original.id].chemistry = (original.chemistry + 0.25).min(1.0);
+        assert_ne!(changed.vents[original.id].chemistry, original.chemistry);
+        assert_eq!(changed.vents[original.id].strength, original.strength);
+        assert_eq!(
+            changed.vents[original.id].temperature_delta,
+            original.temperature_delta
+        );
+
+        let time = active_time(&original);
+        let before = generated.at(&fixture.climate, time);
+        let after = changed.at(&fixture.climate, time);
+        let changed_fields = before
+            .fields
+            .iter()
+            .zip(&after.fields)
+            .enumerate()
+            .filter(|(_, (a, b))| a.chemistry != b.chemistry)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            changed_fields.len(),
+            1,
+            "one changed source must reach exactly one local field"
+        );
+        assert_eq!(
+            changed_fields[0].0,
+            field_index(&generated, before.vent_positions[original.id].unwrap())
+        );
+        assert!(
+            before
+                .fields
+                .iter()
+                .zip(&after.fields)
+                .any(|(a, b)| a.chemistry != b.chemistry),
+            "changed vent chemistry reached no local field"
+        );
+        assert!(before.fields.iter().zip(&after.fields).all(|(a, b)| {
+            a.light == b.light
+                && a.pressure == b.pressure
+                && a.temperature_c == b.temperature_c
+                && a.salinity == b.salinity
+                && a.current == b.current
+        }));
+    }
+
+    /// Catches a coupled vent term where changing thermal output also changes
+    /// chemistry or ambient fields, and catches a snapshot that ignores the
+    /// stable thermal source entirely.
+    #[test]
+    fn thermal_source_changes_only_local_temperature() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let mut changed = generated.clone();
+        let original = generated.vents[0];
+        changed.vents[0].temperature_delta = original.temperature_delta + 10.0;
+        assert_ne!(
+            changed.vents[0].temperature_delta,
+            original.temperature_delta
+        );
+        assert_eq!(changed.vents[0].strength, original.strength);
+        assert_eq!(changed.vents[0].chemistry, original.chemistry);
+
+        let time = active_time(&original);
+        let before = generated.at(&fixture.climate, time);
+        let after = changed.at(&fixture.climate, time);
+        let changed_fields = before
+            .fields
+            .iter()
+            .zip(&after.fields)
+            .enumerate()
+            .filter(|(_, (a, b))| a.temperature_c != b.temperature_c)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            changed_fields.len(),
+            1,
+            "one changed source must reach exactly one local field"
+        );
+        assert_eq!(
+            changed_fields[0].0,
+            field_index(&generated, before.vent_positions[original.id].unwrap())
+        );
+        assert!(
+            before
+                .fields
+                .iter()
+                .zip(&after.fields)
+                .any(|(a, b)| a.temperature_c != b.temperature_c),
+            "changed vent thermal source reached no local field"
+        );
+        assert!(before.fields.iter().zip(&after.fields).all(|(a, b)| {
+            a.light == b.light
+                && a.pressure == b.pressure
+                && a.salinity == b.salinity
+                && a.chemistry == b.chemistry
+                && a.current == b.current
+        }));
+    }
+
+    /// Catches state labels that change without changing the two documented
+    /// local consequences, or a failed source that keeps emitting.
+    #[test]
+    fn state_strength_changes_thermal_and_chemical_contributions() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let vent = generated
+            .vents
+            .iter()
+            .find(|vent| {
+                generated.vent_candidate_rings[vent.id].len() >= 2
+                    && has_open_chemistry_path(&generated, vent)
+            })
+            .copied()
+            .expect("VACUOUS: no vent has open nascent and active chemistry paths");
+        let source_zero = -(vent.phase_offset_ticks);
+        let nascent_time = WorldTime::from_ticks(source_zero + 20 * WorldTime::TICKS_PER_STD_DAY);
+        let active_time = WorldTime::from_ticks(source_zero + 35 * WorldTime::TICKS_PER_STD_DAY);
+        let failed_time = WorldTime::from_ticks(source_zero + 85 * WorldTime::TICKS_PER_STD_DAY);
+
+        let local_delta = |time: WorldTime| {
+            let snapshot = generated.at(&fixture.climate, time);
+            let vertex = snapshot.vent_positions[vent.id]
+                .expect("a contributing vent state has one influence position");
+            let index = field_index(&generated, vertex);
+            let ambient = hornvale_worldgen::waterworld::WaterFields::from_substrate(
+                &generated.substrate[index],
+                fixture.climate.insolation(),
+                fixture.climate.temperature_at(vertex, time).get(),
+                fixture.climate.current_at(vertex),
+            );
+            (
+                snapshot.fields[index].temperature_c - ambient.temperature_c,
+                snapshot.fields[index].chemistry - ambient.chemistry,
+            )
+        };
+        let nascent = local_delta(nascent_time);
+        let active = local_delta(active_time);
+        assert!(nascent.0 > 0.0 && nascent.0 < active.0);
+        assert!(nascent.1 > 0.0 && nascent.1 < active.1);
+
+        let failed = generated.at(&fixture.climate, failed_time);
+        assert_eq!(failed.vent_states[vent.id], VentState::Failed);
+        assert_eq!(failed.vent_positions[vent.id], None);
+        let mut changed_failed = generated.clone();
+        changed_failed.vents[vent.id].temperature_delta += 10.0;
+        changed_failed.vents[vent.id].chemistry += 0.25;
+        assert_ne!(changed_failed.vents[vent.id], vent);
+        let failed_after_source_change = changed_failed.at(&fixture.climate, failed_time);
+        assert_eq!(
+            failed_after_source_change.vent_states[vent.id],
+            VentState::Failed
+        );
+        assert_eq!(failed_after_source_change.vent_positions[vent.id], None);
+        assert_eq!(failed_after_source_change.fields, failed.fields);
+    }
+}
+
+mod migration {
+    use super::*;
+
+    /// Catches an unbounded/unsorted candidate set, a selector that never
+    /// migrates, or a temporal query that rewrites stable source/substrate data.
+    #[test]
+    fn succession_selects_one_bounded_candidate_without_moving_substrate() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let vent = generated
+            .vents
+            .iter()
+            .find(|vent| generated.vent_candidate_rings[vent.id].len() >= 3)
+            .copied()
+            .expect("VACUOUS: no vent has three marine ring candidates");
+        let ring = &generated.vent_candidate_rings[vent.id];
+        assert!(ring.len() <= 5);
+        assert!(ring.windows(2).all(|pair| pair[0] < pair[1]));
+        assert!(
+            generated.vents.iter().all(|source| {
+                generated.vent_candidate_rings[source.id].contains(&source.vertex)
+            })
+        );
+        assert!(ring.iter().all(|vertex| {
+            generated
+                .substrate
+                .iter()
+                .any(|sample| sample.vertex == *vertex && sample.is_seabed)
+        }));
+        let before_substrate = generated.substrate.clone();
+        let before_source = vent;
+        let zero = -vent.phase_offset_ticks;
+        let times = [20, 35, 65]
+            .map(|day| WorldTime::from_ticks(zero + day * WorldTime::TICKS_PER_STD_DAY));
+        let positions =
+            times.map(|time| generated.at(&fixture.climate, time).vent_positions[vent.id]);
+
+        assert!(positions.iter().all(Option::is_some));
+        assert!(
+            positions
+                .into_iter()
+                .flatten()
+                .all(|vertex| ring.contains(&vertex))
+        );
+        assert_ne!(positions[0], positions[1]);
+        assert_ne!(positions[1], positions[2]);
+        assert_eq!(generated.substrate, before_substrate);
+        assert_eq!(generated.vents[vent.id], before_source);
+    }
+}
+
+mod determinism {
+    use super::*;
+
+    #[test]
+    fn repeated_and_reordered_snapshot_queries_are_byte_identical_and_pure() {
+        let fixture = seed_42();
+        let generated = active(&fixture);
+        let stable_before = generated.clone();
+        let time = WorldTime::from_ticks(47 * WorldTime::TICKS_PER_STD_DAY + 123);
+        let first = generated.at(&fixture.climate, time);
+        let _other = generated.at(
+            &fixture.climate,
+            WorldTime::from_ticks(88 * WorldTime::TICKS_PER_STD_DAY),
+        );
+        let repeated = generated.at(&fixture.climate, time);
+
+        assert_eq!(first, repeated);
+        assert_eq!(
+            format!("{first:?}").as_bytes(),
+            format!("{repeated:?}").as_bytes()
+        );
+        assert_eq!(generated, stable_before);
     }
 }
 

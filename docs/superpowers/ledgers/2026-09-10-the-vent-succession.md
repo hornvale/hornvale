@@ -186,3 +186,64 @@ ignored. A preceding attempt did not count as the red because the newly added
 depth-band inventory used `BTreeSet<Stratum>` and failed to compile;
 `Stratum` is not `Ord`. Replacing that test-only set with stable first-seen
 vector membership produced the behavioral evidence above.
+
+## Task 2 — deterministic succession and independent local fields
+
+The stable overlay now derives a 100-standard-day succession cycle entirely
+from existing stable inputs. Its exact integer-tick intervals are 20 days
+absent, 15 nascent, 30 active, 20 weakening, and 15 failed. Each admitted
+source stores a phase offset derived from its stable vertex key; the existing
+seeded `waterworld/vent/v1` admission/strength/temperature/chemistry draw order
+is unchanged. No new stream label or draw was earned.
+
+The candidate ring contains the stable anchor and at most four one-hop marine
+vertices, sorted by vertex key. Nascent, active, and weakening select at most
+one ring entry; absent and failed select none. A red test caught the first
+builder truncating after the final sort, which could evict a high-key anchor.
+The corrected builder limits neighbours before adding the anchor and sorting.
+Migration therefore changes only the snapshot influence position, never the
+stable source or substrate vectors.
+
+Local thermal and chemistry terms are separate. Thermal contribution is
+additive; chemistry uses a bounded availability blend. Source-isolation tests
+first prove the chosen source mutation, then require exactly one local field
+to change and require light, pressure, salinity, current, and the other vent
+term to remain equal. A first chemistry witness was rejected because its
+selected seabed already had edifice chemistry at the bounded ceiling; the
+replacement explicitly requires open chemistry capacity. Failed-state source
+mutations leave snapshot fields unchanged while the source and seabed remain
+present.
+
+The implementation ruling received one ideonomy pass using organon-construction
+as a cycle over reversibility and materiality. No overturn. It confirmed two
+closure constraints: the physical anchor/source identity spans every state,
+and only the informational state plus local influence disappear and renew.
+No follow-up was created; stocks/residue/transport remain Task 3 and rendering
+remains Task 4.
+
+Behavioral reds were observed before their corresponding production behavior:
+
+- exact-boundary succession failed `left: Active`, `right: Absent`;
+- chemistry and thermal source tests each failed because the changed source
+  reached no local field;
+- neutralising migration selection failed with both adjacent states at
+  `Some(Vertex(85))`;
+- the all-source anchor assertion failed against the truncate-after-sort ring;
+- bounded chemistry failed until local contributions used the bounded blend.
+
+The focused green commands reported 2 succession, 3 field, 1 migration, and 1
+determinism test passing. The former ignored temporal probe is now ordinary and
+passed with the same real climate witness: vertex 0 changed from
+`22.777682501657186` to `22.78167180589651` degrees Celsius after ten standard
+days. The complete Waterworld run reported 17 passed, 0 failed, 0 ignored.
+Genesis state witness counts in enum order were `[150, 96, 164, 123, 90]`
+(623 admitted sources total).
+
+Stream compatibility was checked with:
+
+```text
+cargo run --quiet -p hornvale -- streams | diff -u book/src/reference/stream-manifest-generated.md -
+```
+
+It exited 0 with empty output: the generated manifest is byte-identical and
+`windows/worldgen/src/streams.rs` is unchanged.
