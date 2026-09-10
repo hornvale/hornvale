@@ -271,12 +271,18 @@ status.
   frames (000, 450, and 899) report `1440×900`; `HV-009.mp4` is nonempty at
   159,026 bytes and its SHA-256 is
   `b3858d66bc33eee237e4a4c0f73333d2bf79d4cde5434ea26682bdc21cff438e`.
-  The sidecar contains the manifest, all 900 packets, all 900 PNGs, and the
-  video digest. A representative laptop raster was inspected for its supplied
-  title, labels, legend, and observation sentence.
+  `ffprobe` reports its video stream as `1440×900`, `30/1` fps, 900 decoded
+  frames, and 30.000000 seconds. After a rerun, `shasum -a 256 -c
+  HV-009.sha256` from the ignored package directory passed all 1,802 entries;
+  the sidecar covers the manifest, all 900 packets, all 900 PNGs, and the
+  video digest with paths relative to that directory. Isolated Firefox
+  captures were technically inspected at the phone `390×844` and laptop
+  `1440×900` viewports: both retain the supplied title, stellar map, unit,
+  object/scale/axis legend, observation sentence, and provenance.
 - **Review boundary:** This is technical package assembly only. HV-009's
-  manifest and caption remain draft, `approval` remains `null`, and nothing is
-  reviewed, approved, published, or counted toward the seven-package reserve.
-  Nathan must manually inspect the exact film and caption for object, scale,
-  axis, labels, sentence, duration, and legibility before any editorial state
-  changes.
+  manifest, caption, evidence status, and editorial status remain draft,
+  `approval` remains `null`, and nothing is reviewed, approved, published, or
+  counted toward the seven-package reserve. Its earliest review or publication
+  date remains 2026-09-16. Nathan must manually inspect the exact film and
+  caption for object, scale, axis, labels, sentence, duration, and legibility
+  before any editorial state changes.

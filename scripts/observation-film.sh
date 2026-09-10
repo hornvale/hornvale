@@ -46,6 +46,34 @@ else
     die "sha256sum or shasum is required"
 fi
 
+relative_path() {
+    local target="$1"
+    local base="$2"
+    local target_trimmed="${target#/}"
+    local base_trimmed="${base#/}"
+    local -a target_parts base_parts result_parts
+    local index=0
+
+    IFS=/ read -r -a target_parts <<<"$target_trimmed"
+    IFS=/ read -r -a base_parts <<<"$base_trimmed"
+    while [ "$index" -lt "${#target_parts[@]}" ] \
+        && [ "$index" -lt "${#base_parts[@]}" ] \
+        && [ "${target_parts[$index]}" = "${base_parts[$index]}" ]; do
+        index=$((index + 1))
+    done
+
+    local common_index="$index"
+    for ((; index < ${#base_parts[@]}; index++)); do
+        result_parts+=("..")
+    done
+    local target_index="$common_index"
+    for ((; target_index < ${#target_parts[@]}; target_index++)); do
+        result_parts+=("${target_parts[$target_index]}")
+    done
+
+    (IFS=/; printf '%s' "${result_parts[*]}")
+}
+
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 manifest_abs="$(cd "$(dirname "$manifest")" && pwd -P)/$(basename "$manifest")"
 frames_abs="$(cd "$frames" && pwd -P)"
@@ -139,15 +167,16 @@ work_dir="$(mktemp -d "$out_abs/.observation-film.XXXXXX")"
 trap 'rm -rf "$work_dir"' EXIT
 sidecar_tmp="$work_dir/$episode_id.sha256"
 
-printf '%s  manifest/%s\n' "$(checksum "$manifest_abs")" "$(basename "$manifest_abs")" >"$sidecar_tmp"
+printf '%s  %s\n' "$(checksum "$manifest_abs")" "$(relative_path "$manifest_abs" "$out_abs")" >"$sidecar_tmp"
 for ((index = 0; index < frame_count; index++)); do
     printf -v packet_name 'frame-%03d.json' "$index"
-    printf '%s  packets/%s\n' "$(checksum "$frames_abs/$packet_name")" "$packet_name" >>"$sidecar_tmp"
+    packet="$frames_abs/$packet_name"
+    printf '%s  %s\n' "$(checksum "$packet")" "$(relative_path "$packet" "$out_abs")" >>"$sidecar_tmp"
 done
 
 png_files=("$frames_abs"/frame-*.png)
 for png in "${png_files[@]}"; do
-    printf '%s  frames/%s\n' "$(checksum "$png")" "$(basename "$png")" >>"$sidecar_tmp"
+    printf '%s  %s\n' "$(checksum "$png")" "$(relative_path "$png" "$out_abs")" >>"$sidecar_tmp"
 done
 
 ffmpeg_command="${HV_OBSERVATION_FFMPEG:-ffmpeg}"
@@ -163,7 +192,8 @@ if command -v "$ffmpeg_command" >/dev/null 2>&1; then
         -i "$frames_abs/frame-%03d.png" -c:v libx264 -pix_fmt yuv420p \
         -movflags +faststart "$video_tmp"
     [ -s "$video_tmp" ] || die "ffmpeg did not produce a non-empty film"
-    printf '%s  video/%s.mp4\n' "$(checksum "$video_tmp")" "$episode_id" >>"$sidecar_tmp"
+    printf '%s  %s\n' "$(checksum "$video_tmp")" \
+        "$(relative_path "$out_abs/$episode_id.mp4" "$out_abs")" >>"$sidecar_tmp"
     mv "$video_tmp" "$out_abs/$episode_id.mp4"
     printf 'observation-film: wrote derived film %s\n' "$out_abs/$episode_id.mp4"
 else

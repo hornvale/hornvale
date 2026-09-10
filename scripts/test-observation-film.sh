@@ -159,8 +159,23 @@ if run_film no-video --manifest "$manifest" --frames "$valid_frames" --out "$out
     else
         bad "no-video mode wrote an unexpected film"
     fi
+    if (cd "$out" && shasum -a 256 -c HV-TEST.sha256) >"$tmp/no-video-check.out" 2>"$tmp/no-video-check.err"; then
+        ok "package-directory checksum verification succeeds"
+    else
+        bad "package-directory checksum verification failed: $(cat "$tmp/no-video-check.err")"
+    fi
 else
     bad "valid no-video assembly failed: $(cat "$tmp/no-video.err")"
+fi
+
+if run_film rerun-no-video-sidecar --manifest "$manifest" --frames "$valid_frames" --out "$out"; then
+    if (cd "$out" && shasum -a 256 -c HV-TEST.sha256) >"$tmp/rerun-no-video-check.out" 2>"$tmp/rerun-no-video-check.err"; then
+        ok "package-directory checksum verification survives a no-video rerun"
+    else
+        bad "rerun package-directory checksum verification failed: $(cat "$tmp/rerun-no-video-check.err")"
+    fi
+else
+    bad "no-video rerun failed: $(cat "$tmp/rerun-no-video-sidecar.err")"
 fi
 
 printf '== observation-film: derived film checksums\n'
@@ -185,10 +200,15 @@ if HV_OBSERVATION_FFMPEG="$fake_ffmpeg" bash "$film" \
         bad "available assembler did not write a film"
     fi
     if [ "$(wc -l <"$video_out/HV-TEST.sha256" | tr -d ' ')" -eq 8 ] \
-        && grep -Fq "video/HV-TEST.mp4" "$video_out/HV-TEST.sha256"; then
+        && grep -Fq "  HV-TEST.mp4" "$video_out/HV-TEST.sha256"; then
         ok "sidecar covers manifest, packets, PNG frames, and video"
     else
         bad "video sidecar is incomplete"
+    fi
+    if (cd "$video_out" && shasum -a 256 -c HV-TEST.sha256) >"$tmp/video-check.out" 2>"$tmp/video-check.err"; then
+        ok "package-directory checksum verification covers the derived film"
+    else
+        bad "video package-directory checksum verification failed: $(cat "$tmp/video-check.err")"
     fi
 else
     bad "available assembler path failed: $(cat "$tmp/video.err")"

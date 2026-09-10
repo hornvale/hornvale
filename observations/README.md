@@ -48,6 +48,16 @@ The assembler verifies contiguous packet indices and episode identity before
 writing anything. Its SHA-256 sidecar covers the exact manifest, every packet,
 every PNG present, and the video when one is assembled. If `ffmpeg` is absent,
 verification still succeeds and writes the sidecar without claiming a video.
+Verify a completed package from its own directory:
+
+```bash
+cd observations/render-output/HV-001/package
+shasum -a 256 -c HV-001.sha256
+```
+
+The sidecar's paths are relative to the package directory, including its
+sibling frame inputs and the source manifest, so this command also works after
+an assembler rerun.
 
 An approved package consists of the exact manifest, frame checksum sidecar,
 video checksum when a video is present, and final caption text reviewed as one
