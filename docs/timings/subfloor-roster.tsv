@@ -303,6 +303,7 @@ hornvale-astronomy::hornvale_astronomy$provider::tests::a_locked_sun_is_aperiodi
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_moon_below_the_phase_threshold_is_a_smear_not_a_face
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_mooned_sky_promises_bloodred_lunar_eclipses_at_night
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_night_sky_reports_each_body_as_its_own_phrase
+hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_heliacal_rising_across_a_year
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_wandering_star_across_two_synodic_periods
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_query_has_a_documented_answer
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_sky_answers_for_the_instant_asked
@@ -1336,7 +1337,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -1416,7 +1416,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_al
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
 hornvale-lab::hornvale_lab$domesday::render::tests::the_index_carries_the_generated_header_and_every_domain_link
 hornvale-lab::hornvale_lab$domesday::stats::tests::a_metric_with_no_present_values_yields_none
@@ -3437,6 +3436,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -3752,6 +3752,7 @@ hornvale-worldgen::hornvale_worldgen$seed_sweep::tests::the_thread_override_refu
 hornvale-worldgen::hornvale_worldgen$settlement_pins::tests::default_pins_pin_nothing
 hornvale-worldgen::hornvale_worldgen$settlement_pins::tests::species_pin_round_trips_through_parse_pin
 hornvale-worldgen::hornvale_worldgen$settlement_pins::tests::unknown_keys_are_user_facing_errors
+hornvale-worldgen::hornvale_worldgen$skyworld::tests::edifice_bias_adds_to_the_distribution_score
 hornvale-worldgen::hornvale_worldgen$tests::a_clear_sky_occludes_nothing_by_construction
 hornvale-worldgen::hornvale_worldgen$tests::a_culture_has_a_dominant_shape_and_a_tail
 hornvale-worldgen::hornvale_worldgen$tests::a_deeper_rung_is_warmer_under_the_same_surface
@@ -4005,6 +4006,7 @@ hornvale-worldgen::suite$reproductive::hybrid_relations_are_converted_directiona
 hornvale-worldgen::suite$reproductive::ordinary_reproduction_without_hybrid_partners_summarizes_successfully
 hornvale-worldgen::suite$reproductive::repeated_resolution_is_identical_and_keeps_kind_order
 hornvale-worldgen::suite$reproductive::worldgen_owns_the_species_to_demography_boundary
+hornvale-worldgen::suite$skyworld::skyworld_contract_has_no_build_or_save_surface
 hornvale-worldgen::suite$social_projection::care_cluster_realizes_overlapping_membership_and_multi_party_care
 hornvale-worldgen::suite$social_projection::disabled_projection_preserves_aggregate_registry_and_default_world_bytes
 hornvale-worldgen::suite$social_projection::distinct_seeds_change_only_the_opt_in_projection_facts
@@ -4315,7 +4317,6 @@ hornvale::suite$lane_sets::every_rostered_set_is_well_formed
 hornvale::suite$lane_sets::the_commit_gate_is_local_and_everything_else_is_the_lane
 hornvale::suite$lane_sets::the_phase_lists_and_the_roster_rungs_agree_both_ways
 hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
-hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty
 hornvale::suite$lexicon_guard::the_tokenizer_counts_affixed_bare_and_shouting_forms
 hornvale::suite$murrain_epidemiology::h_m1_binds_catalogue_rows_and_uses_the_monotonicity_grid
@@ -4327,7 +4328,6 @@ hornvale::suite$provision::declared_absent_row_carries_its_reason
 hornvale::suite$provision::declared_but_unserved_token_is_not_served
 hornvale::suite$provision::feels_toward_does_not_resolve
 hornvale::suite$regularity_corpus::a_corpus_parses_its_items_criteria_and_verdicts
-hornvale::suite$regularity_corpus::a_deferred_item_whose_registry_row_settled_is_stale
 hornvale::suite$regularity_corpus::a_doc_anchor_into_generated_prose_resolves
 hornvale::suite$regularity_corpus::a_doc_anchor_into_hand_written_prose_is_refused
 hornvale::suite$regularity_corpus::a_lost_regularity_is_red
