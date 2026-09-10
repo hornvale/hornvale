@@ -7112,3 +7112,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T21:47:14Z | gate-commit | 111.142 | 78.043 | 22.816 | 0.91 | 0 | cd4ef90a0 | campaign/the-vent-succession | MacBookPro | 10 |
 | 2026-09-10T21:47:14Z | gate-commit | 126.043 | 340.268 | 50.695 | 3.10 | 0 | 06edfe24a | campaign/the-vent-succession | MacBookPro | 10 |
 | 2026-09-10T22:01:37Z | gate-commit | 160.612 | 123.262 | 47.128 | 1.06 | 0 | e84f4d068 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:02:58Z | gate-commit | 53.237 | 78.025 | 24.292 | 1.92 | 0 | 48d2f4cac | campaign/the-vent-succession | MacBookPro | 10 |
