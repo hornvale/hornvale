@@ -789,3 +789,22 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   mirror JSON while leaving ECS entities alive (misses the reset requirement).
 - Capture: plan and Task 4 brief corrected before dispatch; the implementer must
   record real boundary/reset tests, pending state and worker failure behavior.
+
+
+## Stage 1 — canonical request submitted
+
+- Absorbed main `214c1b67d52ff36165881f98ee1315ba875dee1d` in merge
+  `0268062a71db95c354c469e9ce620f4378198e66`. Actual conflicts were limited
+  to type-audit-report.md and plumb-roster.md. Regenerated both using their own
+  `cargo run --manifest-path tools/{type-audit,plumb}/Cargo.toml -- report`
+  authors and staged those results; no hand-selected generated inventory.
+  Normal merge commit hook passed all four subfloor chunks, 182.889s, rc=0.
+- Controller documentation commit `cf982ae363e8515e90e09ba8c6e5d4a3bd03a5d5`
+  passed all 75 prose-subject tests. Pushed that exact branch tip normally.
+- `make sluice-stage BRANCH=campaign/the-planetarium
+  REF=cf982ae363e8515e90e09ba8c6e5d4a3bd03a5d5` returned request
+  `req-cf982ae363e8-20260910T192747Z`, kind=stage, host=lefford.
+  Submission log: `/tmp/planetarium-stage1-submit.log`. No report is claimed yet.
+- Task 4 development proceeds against the reviewed source/view foundation while
+  the queue works on the fixed Stage 1 SHA. Stage 1 remains In Progress until
+  its actual report is inspected; a later green development test cannot replace it.
