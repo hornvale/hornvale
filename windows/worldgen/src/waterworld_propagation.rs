@@ -7,7 +7,7 @@ use hornvale_kernel::{Geosphere, Vertex};
 /// type-audit: bare-ok(count: candidate_ring), bare-ok(count: stock), bare-ok(count: propagation), bare-ok(count: refresh), bare-ok(count: observation)
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct WaterWorkCounters {
-    /// Candidate-ring entries inspected or selected.
+    /// Present phase/source candidate rings examined.
     pub candidate_ring: usize,
     /// Aggregate stock rows derived.
     pub stock: usize,
@@ -28,13 +28,11 @@ pub(crate) fn build_vent_candidate_ring(
     geosphere: &Geosphere,
     marine_vertices: &[Vertex],
     anchor: Vertex,
-    candidate_count: &mut usize,
 ) -> Vec<Vertex> {
     let mut candidates = geosphere
         .neighbors(anchor)
         .iter()
         .copied()
-        .inspect(|_| *candidate_count += 1)
         .filter(|candidate| marine_vertices.binary_search(candidate).is_ok())
         .take(VENT_CANDIDATE_LIMIT - 1)
         .collect::<Vec<_>>();
@@ -154,11 +152,19 @@ impl WaterPropagation {
                         continue;
                     };
                     let candidate_position = geosphere.position(candidate);
-                    let direction = [
+                    let raw_direction = [
                         candidate_position[0] - position[0],
                         candidate_position[1] - position[1],
                         candidate_position[2] - position[2],
                     ];
+                    let magnitude = (raw_direction[0] * raw_direction[0]
+                        + raw_direction[1] * raw_direction[1]
+                        + raw_direction[2] * raw_direction[2])
+                        .sqrt();
+                    if magnitude == 0.0 {
+                        continue;
+                    }
+                    let direction = raw_direction.map(|value| value / magnitude);
                     let alignment = current[0] * direction[0]
                         + current[1] * direction[1]
                         + current[2] * direction[2];
@@ -170,10 +176,13 @@ impl WaterPropagation {
                         best = Some(choice);
                     }
                 }
-                let Some((_, next_vertex, next_index)) = best else {
+                let Some((alignment, next_vertex, next_index)) = best else {
                     break;
                 };
-                influence *= attenuation * (0.5 + 0.5 * current[0].clamp(-1.0, 1.0));
+                if alignment <= 0.0 {
+                    break;
+                }
+                influence *= attenuation * alignment.clamp(0.0, 1.0);
                 if influence <= 0.0 {
                     break;
                 }

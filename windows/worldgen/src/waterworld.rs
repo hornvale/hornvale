@@ -213,8 +213,6 @@ pub struct WaterWorld {
     pub vent_candidate_rings: Vec<Vec<Vertex>>,
     /// Bounded current and vertical propagation samples.
     pub propagation: WaterPropagation,
-    /// Work performed while building stable candidate rings.
-    pub counters: WaterWorkCounters,
 }
 
 /// Dynamic Waterworld readout at one exact world instant.
@@ -256,10 +254,7 @@ impl WaterWorld {
             self.vent_candidate_rings.len(),
             "Waterworld vents and candidate rings must remain aligned"
         );
-        let mut counters = WaterWorkCounters {
-            candidate_ring: self.counters.candidate_ring,
-            ..WaterWorkCounters::default()
-        };
+        let mut counters = WaterWorkCounters::default();
         let mut fields = Vec::with_capacity(self.substrate.len());
         for sample in &self.substrate {
             counters.refresh += 1;
@@ -275,6 +270,7 @@ impl WaterWorld {
         let mut vent_positions = Vec::with_capacity(self.vents.len());
         let mut local_influence = vec![0.0_f64; self.substrate.len()];
         for (vent, ring) in self.vents.iter().zip(&self.vent_candidate_rings) {
+            counters.candidate_ring += 1;
             let phase = vent_phase(vent, time);
             let position = select_vent_position(ring, phase.state, phase.cycle_index);
             if let Some(vertex) = position {
@@ -486,7 +482,6 @@ pub fn waterworld_from(
         .collect::<Vec<_>>();
     let mut vents = Vec::new();
     let mut vent_candidate_rings = Vec::new();
-    let mut candidate_ring_count = 0;
     for sample in substrate.iter().filter(|sample| sample.is_seabed) {
         let source_exists = sample.has_edifice || sample.seafloor_boundary.is_some();
         if !source_exists {
@@ -517,7 +512,6 @@ pub fn waterworld_from(
             terrain.geosphere(),
             &marine_vertices,
             sample.vertex,
-            &mut candidate_ring_count,
         ));
     }
     let stocks = substrate
@@ -533,10 +527,6 @@ pub fn waterworld_from(
         vents,
         vent_candidate_rings,
         propagation,
-        counters: WaterWorkCounters {
-            candidate_ring: candidate_ring_count,
-            ..WaterWorkCounters::default()
-        },
     }
 }
 
