@@ -399,3 +399,14 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 - Capture actions: permanent plan, appended four-stage tracker and reconciliation
   links committed together; final prose-gate evidence is the commit-hook result.
   No build, test run of new code, render, performance target or merge is claimed.
+
+## #11 [G5] — execution authorized and pre-flight completed
+
+- Nathan: “Let's goooooooo!” — execute the approved plan.
+- Task consistency and shared-interface pre-flight tables are recorded in this
+  plan's SDD progress file. No scope conflict was found.
+- Ruling: Task 1 records geometry conformance cases and source qualification;
+  Task 2 adds their executable evaluated-geometry wrappers/tests. This follows
+  Task 1's explicit “subsequent source implementation” file note and avoids
+  pulling the evaluated scene into the radius-only increment.
+- Stage 1 is in progress. G6 final visual/merge approval remains required.
