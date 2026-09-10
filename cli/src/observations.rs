@@ -600,6 +600,31 @@ pub fn read_manifest(path: &Path) -> Result<EpisodeManifest, ObservationError> {
     Ok(manifest)
 }
 
+/// Find the repository root that owns an observation manifest.
+pub fn repository_root(manifest_path: &Path) -> Result<PathBuf, ObservationError> {
+    let manifest_absolute =
+        std::fs::canonicalize(manifest_path).map_err(|error| ObservationError::Read {
+            path: manifest_path.to_path_buf(),
+            reason: format!("find repository root: {error}"),
+        })?;
+    let current_directory = std::env::current_dir().map_err(|error| ObservationError::Read {
+        path: manifest_path.to_path_buf(),
+        reason: format!("find repository root: {error}"),
+    })?;
+    for candidate in manifest_absolute
+        .ancestors()
+        .chain(current_directory.ancestors())
+    {
+        if candidate.join(".git").exists() {
+            return Ok(candidate.to_path_buf());
+        }
+    }
+    Err(ObservationError::Read {
+        path: manifest_path.to_path_buf(),
+        reason: "find repository root: no .git directory or worktree marker in manifest or current-directory ancestors".to_string(),
+    })
+}
+
 fn time_day(manifest: &EpisodeManifest, frame_index: u32) -> Option<f64> {
     manifest.time_window.map(|window| {
         if manifest.frame_count == 1 {
@@ -645,8 +670,14 @@ fn underworld_source(manifest: &EpisodeManifest) -> Result<String, ObservationEr
 fn neighbors_source(
     manifest: &EpisodeManifest,
     world_path: &Path,
+    repository_root: &Path,
 ) -> Result<String, ObservationError> {
-    let mut world = World::load(world_path).map_err(|error| ObservationError::Build {
+    let resolved_world_path = if world_path.is_absolute() {
+        world_path.to_path_buf()
+    } else {
+        repository_root.join(world_path)
+    };
+    let mut world = World::load(&resolved_world_path).map_err(|error| ObservationError::Build {
         episode_id: manifest.id.clone(),
         reason: format!("world artifact {}: {error}", world_path.display()),
     })?;
@@ -673,7 +704,10 @@ fn neighbors_source(
     Ok(hornvale_scene::neighbors_json(&scene))
 }
 
-fn spatial_source(manifest: &EpisodeManifest) -> Result<SpatialObservation, ObservationError> {
+fn spatial_source(
+    manifest: &EpisodeManifest,
+    repository_root: &Path,
+) -> Result<SpatialObservation, ObservationError> {
     let underworld_command = format!(
         "cargo run -p hornvale -- underworld --seed {}",
         manifest.seed
@@ -695,7 +729,7 @@ fn spatial_source(manifest: &EpisodeManifest) -> Result<SpatialObservation, Obse
             }
             return Ok(SpatialObservation {
                 source: "hornvale scene/neighbors/v1 stdout".to_string(),
-                readout: neighbors_source(manifest, Path::new(world_path))?,
+                readout: neighbors_source(manifest, Path::new(world_path), repository_root)?,
             });
         }
     }
@@ -730,6 +764,7 @@ fn is_owned_frame(path: &Path) -> bool {
 pub fn export_frames(
     manifest: &EpisodeManifest,
     out_dir: &Path,
+    repository_root: &Path,
 ) -> Result<ExportReport, ObservationError> {
     validate_manifest(manifest)?;
     if manifest.capability_state != CapabilityState::Existing {
@@ -742,7 +777,7 @@ pub fn export_frames(
         ));
     }
 
-    let spatial = spatial_source(manifest)?;
+    let spatial = spatial_source(manifest, repository_root)?;
     let source_digest = format!(
         "fnv1a64:{:016x}",
         hornvale_lab::fnv1a64(spatial.readout.as_bytes())

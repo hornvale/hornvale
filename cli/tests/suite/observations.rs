@@ -729,6 +729,39 @@ fn observations_export_neighbors_refuses_missing_or_mismatched_declared_world() 
 }
 
 #[test]
+fn observations_export_neighbors_resolves_declared_world_from_repository_root() {
+    // The manifest's source command is repository-relative. Export must keep
+    // that meaning when the CLI is launched from the cli/ subdirectory.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root");
+    let manifest = root.join("observations/episodes/HV-009.json");
+    let output_dir = temp_output_dir("neighbor-non-root-cwd");
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["observations", "export", "--manifest"])
+        .arg(&manifest)
+        .arg("--out")
+        .arg(&output_dir)
+        .current_dir(root.join("cli"))
+        .output()
+        .expect("export committed neighbor manifest from cli/");
+    assert!(
+        out.status.success(),
+        "non-root neighbor export failed: {out:?}"
+    );
+    let packet: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(output_dir.join("frame-000.json")).expect("read non-root export"),
+    )
+    .expect("non-root packet is JSON");
+    assert_eq!(packet["world_seed"], "42");
+    assert_eq!(
+        packet["spatial"]["source"],
+        "hornvale scene/neighbors/v1 stdout"
+    );
+    std::fs::remove_dir_all(output_dir).expect("remove non-root export");
+}
+
+#[test]
 fn observations_export_missing_manifest_does_not_create_output_directory() {
     let manifest = temp_output_dir("missing-manifest").join("absent.json");
     let output_dir = temp_output_dir("missing-manifest-output");

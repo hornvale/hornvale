@@ -299,8 +299,15 @@ fn cmd_observations(args: &[String]) -> Result<(), String> {
             }
             let manifest = observations::read_manifest(std::path::Path::new(manifest_path))
                 .map_err(|error| error.to_string())?;
-            let report = observations::export_frames(&manifest, std::path::Path::new(out_dir))
-                .map_err(|error| error.to_string())?;
+            let repository_root =
+                observations::repository_root(std::path::Path::new(manifest_path))
+                    .map_err(|error| error.to_string())?;
+            let report = observations::export_frames(
+                &manifest,
+                std::path::Path::new(out_dir),
+                &repository_root,
+            )
+            .map_err(|error| error.to_string())?;
             println!(
                 "exported observation {}: frames={} source={} out={}",
                 report.episode_id,
