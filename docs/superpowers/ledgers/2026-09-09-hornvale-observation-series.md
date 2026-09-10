@@ -27,6 +27,31 @@
 
 Ruling: execute the plan in task order. The shared interfaces are deliberately additive; no task conflict requires a plan change before Task 1.
 
+## Release-order ruling — scale ladder with atlas branches
+
+- **Question:** How should the public observation series orient its first
+  episodes without collapsing the atlas into a rigid staircase?
+- **Decision:** Use a hybrid release model: the public presentation follows a
+  scale ladder from astronomical neighborhood through system, world, region,
+  settlement, occupation layer, population, individual, and finally language,
+  belief, and practice; the production and evidence plans remain an atlas/DAG
+  that can branch, interleave, and revisit a scale.
+- **Why:** A literal descent gives viewers an intuitive visual spine, while
+  the atlas preserves independent distinctions and prevents a presentation
+  order from implying unsupported causation. This also moves the opening away
+  from the underworld pilot's accidental dependence on the first available
+  spatial renderer.
+- **Alternatives discarded:** A strict funnel would force every later episode
+  to follow one selected world and could overstate causal continuity. A flat
+  atlas would preserve precision but provide too little audience orientation.
+- **Ideonomy passes / overturns:** One substitution/dimension/combination pass.
+  It surfaced presentation spine versus evidence dependency as separate
+  dimensions; no overturn, but it added the requirement to distinguish
+  causation from nested description and shared provenance.
+- **Capture actions:** The public-release-spine section was added to the
+  approved design. No pilot package statuses or implementation files were
+  changed by this ruling.
+
 ## Review ruling — Task 1, round 1
 
 Ruling: the reviewer’s strict-record findings are load-bearing. Amend Task 1 before proceeding: reject duplicate and unknown JSON fields, make approval state explicit and internally consistent, require a reproducible repository-relative fixture command, and align the manifest with the approved spec’s separate evidence and editorial fields. The cost is a slightly larger record contract now; the benefit is that later frame export cannot preserve ambiguity or claim provenance it cannot replay.

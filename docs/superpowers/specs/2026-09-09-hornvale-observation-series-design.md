@@ -251,6 +251,29 @@ The release graph is not required to be a numbered staircase. It may branch,
 interleave, revisit an atlas cell at a finer scale, or pause one branch while
 another produces a more visually legible episode.
 
+### Public release spine
+
+The audience-facing sequence uses a scale ladder as its primary orientation:
+
+```text
+astronomical neighborhood → system → world → region → settlement
+→ occupation layer → population → individual → language, belief, and practice
+```
+
+This is a presentation spine, not a claim that every episode belongs to one
+continuous world or that coarse conditions causally determine every fine
+observation. The production and evidence graphs retain their independent
+dependencies. Within each scale cluster, episodes may branch across spatial,
+temporal, relational, and interpretive axes, and the sequence may revisit a
+scale when a distinct object or observable warrants its own episode.
+
+The first episodes should establish astronomical and system-level variation
+before descending into planetary, regional, and social objects. A later
+episode may follow one selected world inward, but the record must distinguish
+demonstrated causation from nested description, correlation, or shared
+provenance. The scale ladder supplies continuity; the atlas determines whether
+an episode is independently warranted.
+
 ## Visual grammars
 
 Every episode chooses one primary visual grammar:
