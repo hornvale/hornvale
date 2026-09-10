@@ -1,6 +1,6 @@
 # The Staple D4 — portfolio regimes before specialization
 
-**Status:** G3 approved 2026-09-09; implementation complete; G6 merge review pending  
+**Status:** G3 approved 2026-09-09; implementation complete; G6 merge landed 2026-09-09
 **Campaign:** `campaign/the-staple-d4`  
 **Predecessor:** The Staple D3B, gradient sufficiency  
 **Decision block:** 0946–0955

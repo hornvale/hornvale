@@ -235,7 +235,7 @@ use hornvale_kernel::{EntityId, KindId, Seed, Value, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BakeCensus, History, SettlementPins, WorldComponents, cascade_sizes, census, emit_history,
-    history_for, register_all,
+    history_for, register_all, seed_sweep,
 };
 use std::collections::BTreeMap;
 
@@ -411,12 +411,19 @@ const NOISE_Z: f64 = 1.96;
 /// the same instrument.
 fn history(seed: u64) -> History {
     let wc = WorldComponents::assemble().expect("registries");
+    history_with_components(seed, &wc)
+}
+
+/// Build one history against an already assembled canonical component set.
+/// The headline seed sweep shares that immutable assembly across workers;
+/// single-seed tests keep using [`history`] above.
+fn history_with_components(seed: u64, wc: &WorldComponents) -> History {
     history_for(
         Seed(seed),
         &SkyPins::default(),
         &TerrainPins::default(),
         &SettlementPins::default(),
-        &wc,
+        wc,
     )
     .expect("bakes")
 }
@@ -713,35 +720,59 @@ fn no_emitted_tribute_fact_predates_either_party() {
 /// deferred depth/release levers are meant to break.
 /// claim: readout(off-gate, heavy:) — cascade-size distribution over
 /// SHAPE_SAMPLE, adjudicated
+///
+/// nextest: sized-sweep
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_cascade_distribution_is_adjudicated() {
+    struct SeedReadout {
+        raided: u64,
+        resettled: u64,
+        alive: u64,
+        flights: u64,
+        revolts: u64,
+        relations: u64,
+        hist: [u64; 12],
+    }
+
+    let wc = WorldComponents::assemble().expect("registries");
+    // Each world is a pure function of its seed and the immutable canonical
+    // components. `map_seeds` returns rows in seed order, so the caller-thread
+    // fold and readout below are byte-identical to the serial loop this
+    // replaces. Set `HV_SEED_SWEEP_THREADS=1` to reproduce the old execution
+    // shape exactly.
+    let per_seed: Vec<SeedReadout> = seed_sweep::map_seeds(SHAPE_SAMPLE, |s| {
+        let h = history_with_components(s, &wc);
+        let c = census(&h);
+        SeedReadout {
+            raided: c.raided,
+            resettled: c.resettled,
+            alive: c.alive_at_now,
+            flights: c.vassal_flights,
+            revolts: c.vassal_revolts,
+            relations: c.tribute_relations_at_now,
+            hist: cascade_sizes(&h),
+        }
+    });
+
     let mut agg = [0u64; 12];
     let mut raided = 0u64;
     let mut resettled = 0u64;
     let mut alive = 0u64;
     let mut flights = 0u64;
     let mut revolts = 0u64;
-    for s in SHAPE_SAMPLE {
-        let h = history(s);
-        let c = census(&h);
-        let hi = cascade_sizes(&h);
+    for (s, row) in SHAPE_SAMPLE.zip(per_seed) {
         eprintln!(
             "TITHE seed {s}: raided {} resettled {} alive {} flights {} revolts {} \
-             relations {} hist {hi:?}",
-            c.raided,
-            c.resettled,
-            c.alive_at_now,
-            c.vassal_flights,
-            c.vassal_revolts,
-            c.tribute_relations_at_now
+             relations {} hist {:?}",
+            row.raided, row.resettled, row.alive, row.flights, row.revolts, row.relations, row.hist
         );
-        raided += c.raided;
-        resettled += c.resettled;
-        alive += c.alive_at_now;
-        flights += c.vassal_flights;
-        revolts += c.vassal_revolts;
-        for (a, b) in agg.iter_mut().zip(hi.iter()) {
+        raided += row.raided;
+        resettled += row.resettled;
+        alive += row.alive;
+        flights += row.flights;
+        revolts += row.revolts;
+        for (a, b) in agg.iter_mut().zip(row.hist.iter()) {
             *a += b;
         }
     }

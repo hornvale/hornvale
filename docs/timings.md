@@ -6921,3 +6921,49 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T22:42:50Z | gate-commit | 77.968 | 226.773 | 47.040 | 3.51 | 0 | 6be88ddc6 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T22:43:37Z | gate-commit | 38.875 | 71.264 | 18.924 | 2.32 | 0 | 6be88ddc6 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T23:10:10Z | gate-commit | 45.309 | 72.788 | 20.565 | 2.06 | 0 | 8ca1ae631 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T22:22:17Z | census-tail-chorus | 59.056 | 743.987 | 20.927 | 12.95 | 0 | 57856632d |  | lefford | 40 |
+| 2026-09-09T22:22:19Z | census-tail-domesday | 1.244 | 1.085 | 0.159 | 1.00 | 0 | 57856632d |  | lefford | 40 |
+| 2026-09-09T22:22:21Z | census-tail-anomalies | 1.090 | 0.948 | 0.143 | 1.00 | 0 | 57856632d |  | lefford | 40 |
+| 2026-09-09T22:22:23Z | sluice:artifacts | 331.157 | 2317.857 | 94.713 | 7.29 | 0 | 57856632d |  | lefford | 40 |
+| 2026-09-09T22:24:06Z | sluice:outboard | 102.417 | 125.538 | 82.704 | 2.03 | 0 | f1a1d8539 |  | lefford | 40 |
+| 2026-09-09T22:38:32Z | sluice:gate | 865.708 | 25710.603 | 845.703 | 30.68 | 0 | 659dfb094 |  | lefford | 40 |
+| 2026-09-07T23:34:02Z | gate-commit | 142.226 | 842.542 | 102.923 | 6.65 | 0 | efb22862e | tooling/announce-terminal-states | lefford | 40 |
+| 2026-09-09T23:08:15Z | census-tail-chorus | 57.350 | 717.743 | 20.731 | 12.88 | 0 | f28098f38 |  | lefford | 40 |
+| 2026-09-09T23:08:16Z | census-tail-domesday | 0.815 | 0.753 | 0.062 | 1.00 | 0 | f28098f38 |  | lefford | 40 |
+| 2026-09-09T23:08:17Z | census-tail-anomalies | 0.927 | 0.808 | 0.120 | 1.00 | 0 | f28098f38 |  | lefford | 40 |
+| 2026-09-09T23:08:20Z | sluice:artifacts | 310.340 | 2219.613 | 89.711 | 7.44 | 0 | f28098f38 |  | lefford | 40 |
+| 2026-09-09T23:10:01Z | sluice:outboard | 100.337 | 109.407 | 83.801 | 1.93 | 0 | 6cccf7706 |  | lefford | 40 |
+| 2026-09-09T23:24:29Z | sluice:gate | 868.210 | 25534.214 | 800.249 | 30.33 | 0 | 449d62e90 |  | lefford | 40 |
+| 2026-09-09T23:27:57Z | sluice:clients | 208.106 | 3255.334 | 351.831 | 17.33 | 0 | a3639ba8b |  | lefford | 40 |
+| 2026-09-09T23:36:58Z | sluice:heavy | 540.577 | 12894.602 | 218.837 | 24.26 | 0 | 52fd666e6 |  | lefford | 40 |
+| 2026-09-10T00:42:51Z | census-tail-chorus | 33.668 | 484.423 | 20.135 | 14.99 | 0 | 290e2a0b5 |  | lefford | 40 |
+| 2026-09-10T00:42:53Z | census-tail-domesday | 1.293 | 1.145 | 0.148 | 1.00 | 0 | 290e2a0b5 |  | lefford | 40 |
+| 2026-09-10T00:42:55Z | census-tail-anomalies | 1.089 | 0.949 | 0.140 | 1.00 | 0 | 290e2a0b5 |  | lefford | 40 |
+| 2026-09-10T00:42:58Z | sluice:artifacts | 272.427 | 1336.904 | 56.505 | 5.11 | 0 | 290e2a0b5 |  | lefford | 40 |
+| 2026-09-10T00:44:17Z | sluice:outboard | 78.578 | 56.209 | 68.254 | 1.58 | 0 | 928033cd5 |  | lefford | 40 |
+| 2026-09-10T00:57:45Z | sluice:gate | 808.241 | 24231.908 | 703.062 | 30.85 | 0 | da12d7bc7 |  | lefford | 40 |
+| 2026-09-10T01:01:10Z | sluice:clients | 204.365 | 3185.096 | 309.158 | 17.10 | 0 | efb020fb4 |  | lefford | 40 |
+| 2026-09-10T01:10:51Z | sluice:heavy | 580.390 | 12916.304 | 192.278 | 22.59 | 0 | a4769a3e2 |  | lefford | 40 |
+| 2026-09-09T23:50:40Z | census-tail-chorus | 24.185 | 173.153 | 6.647 | 7.43 | 0 | 6cec40067 | campaign/census-tail | MacBookPro | 10 |
+| 2026-09-09T23:50:40Z | census-tail-domesday | 0.380 | 0.327 | 0.032 | 0.94 | 0 | 6cec40067 | campaign/census-tail | MacBookPro | 10 |
+| 2026-09-09T23:50:40Z | census-tail-anomalies | 0.298 | 0.243 | 0.035 | 0.93 | 0 | 6cec40067 | campaign/census-tail | MacBookPro | 10 |
+| 2026-09-09T23:50:43Z | rebaseline | 128.227 | 420.424 | 19.064 | 3.43 | 0 | 6cec40067 | campaign/census-tail | MacBookPro | 10 |
+| 2026-09-09T23:51:27Z | gate-commit | 43.919 | 76.043 | 21.966 | 2.23 | 0 | 4c86ef0a9 | campaign/census-tail | MacBookPro | 10 |
+| 2026-09-10T01:52:19Z | census-tail-chorus | 57.789 | 729.973 | 23.800 | 13.04 | 0 | 8a7d3b24b |  | lefford | 40 |
+| 2026-09-10T01:52:20Z | census-tail-anomalies | 0.531 | 0.471 | 0.060 | 1.00 | 0 | 8a7d3b24b |  | lefford | 40 |
+| 2026-09-10T01:52:20Z | census-tail-domesday | 1.072 | 0.952 | 0.120 | 1.00 | 0 | 8a7d3b24b |  | lefford | 40 |
+| 2026-09-10T01:52:23Z | sluice:artifacts | 225.438 | 1435.924 | 58.253 | 6.63 | 0 | 8a7d3b24b |  | lefford | 40 |
+| 2026-09-10T01:54:05Z | sluice:outboard | 101.608 | 109.231 | 82.087 | 1.88 | 0 | be9059f02 |  | lefford | 40 |
+| 2026-09-10T02:08:15Z | sluice:gate | 850.054 | 25502.702 | 853.470 | 31.01 | 0 | 6be332de2 |  | lefford | 40 |
+| 2026-09-10T02:11:43Z | sluice:clients | 207.320 | 3223.276 | 307.741 | 17.03 | 0 | f1eb171bc |  | lefford | 40 |
+| 2026-09-10T02:19:20Z | sluice:heavy | 457.377 | 12910.624 | 285.246 | 28.85 | 0 | 71fb7b1a1 |  | lefford | 40 |
+| 2026-09-07T22:27:14Z | heavy | 409.335 | 11537.716 | 187.665 | 28.64 | 0 | 4d96119c7 |  | lefford | 40 |
+| 2026-09-08T13:47:38Z | heavy | 497.637 | 13978.546 | 340.764 | 28.77 | 0 | f898be329 |  | lefford | 40 |
+| 2026-09-10T02:26:14Z | census-tail-chorus | 22.950 | 430.893 | 14.816 | 19.42 | 0 | 694c0a6f4 |  | lefford | 40 |
+| 2026-09-10T02:26:16Z | census-tail-domesday | 1.247 | 1.092 | 0.124 | 0.98 | 0 | 694c0a6f4 |  | lefford | 40 |
+| 2026-09-10T02:26:16Z | census-tail-anomalies | 0.657 | 0.580 | 0.078 | 1.00 | 0 | 694c0a6f4 |  | lefford | 40 |
+| 2026-09-10T02:26:18Z | sluice:artifacts | 181.017 | 1101.678 | 33.497 | 6.27 | 0 | 694c0a6f4 |  | lefford | 40 |
+| 2026-09-10T02:27:36Z | sluice:outboard | 77.500 | 57.482 | 68.933 | 1.63 | 0 | 844cc0b20 |  | lefford | 40 |
+| 2026-09-10T02:40:22Z | sluice:gate | 765.055 | 23975.645 | 727.178 | 32.29 | 0 | a2c03b082 |  | lefford | 40 |
+| 2026-09-10T02:43:22Z | sluice:clients | 180.402 | 2932.308 | 258.071 | 17.68 | 0 | 377cf9f37 |  | lefford | 40 |
+| 2026-09-10T02:50:47Z | sluice:heavy | 444.504 | 12884.475 | 270.333 | 29.59 | 0 | 0a7199730 |  | lefford | 40 |

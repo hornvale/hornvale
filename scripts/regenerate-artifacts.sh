@@ -92,13 +92,13 @@ set -euo pipefail
 #   NOT IN A/B/C/D — the census-schema backfill loop, the domesday survey,
 #   and the anomaly report.
 #   Traced: `backfill-schema` reads the CSVs Group D's census studies write
-#   (when HV_CENSUS=1), and both `domesday` and `anomalies` read what
-#   `backfill-schema` just wrote, so all three stay serial, right after
-#   Group D reaps — exactly where they sat in the original list, since
-#   Group D itself did not move relative to them.
+#   (when HV_CENSUS=1), so it stays serial right after Group D reaps. Both
+#   `domesday` and `anomalies` then read the committed census independently
+#   and write disjoint files, so they share one bounded parallel phase after
+#   the schema backfill.
 #
-# Schedule: A, reap; B+C together, reap; D serially; then the three dependent
-# trailers (schema backfill, domesday, anomalies) serially.
+# Schedule: A, reap; B+C together, reap; D serially; schema backfill; then
+# Domesday and anomalies together, reap.
 #
 # FAN-OUT IS BOUNDED BY HV_JOBS, not by wishful thinking. Group B+C alone has
 # over 50 `spawn` call sites; left uncapped on a quiet box that is a >50-way
@@ -1253,8 +1253,8 @@ done
 # refresh left there, not a fresh run) and renders book/src/domesday/ — the
 # index plus one page per domain. It never triggers a census itself (spec
 # §4.5), so it runs unconditionally here, independent of the HV_CENSUS gate
-# above. Serial (not parallelised): it reads the schema the backfill loop
-# just wrote.
+# above. It is spawned after schema backfill and reaped with anomalies below;
+# both commands read the now-stable committed census and write disjoint files.
 # TIMED SEPARATELY (2026-09-07). `census` minus the two study rows left a
 # 221-318 s remainder across five runs with a 96.6 s spread and no trend, so
 # four perf changes across two campaigns were safe, byte-identical and
@@ -1269,7 +1269,7 @@ done
 # reason. Writing `timed.sh ... -- run -p hornvale ...` looks right and fails
 # at runtime.
 echo "regenerate-artifacts: the domesday survey" >&2
-HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-domesday -- \
+spawn env HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-domesday -- \
     cargo run -q -p hornvale -- lab domesday
 
 # The Seedbed: does the world GROW the imported macro-regularities? Like every
@@ -1299,12 +1299,12 @@ run -p hornvale -- regularities report > docs/audits/regularity-coverage-sugarsc
 # The anomaly report (The Gnomon, 2026-08-13): the Domesday's transpose, per
 # world rather than per column. Also a pure read over the same COMMITTED
 # census — it never triggers a census itself — so it runs unconditionally
-# here too. It is a SERIAL TRAILER for the same reason `domesday` is: it
-# reads the schema the backfill loop above just wrote, so it cannot be
-# spawned into Group B+C.
+# here too. It is spawned alongside Domesday after the schema backfill above;
+# both commands read the now-stable committed census and write disjoint files.
 echo "regenerate-artifacts: the anomaly report" >&2
-HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-anomalies -- \
+spawn env HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-anomalies -- \
     cargo run -q -p hornvale -- lab anomalies
+reap
 
 echo "regenerate-artifacts: done." >&2
 

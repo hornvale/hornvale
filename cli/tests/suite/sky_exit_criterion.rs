@@ -6,6 +6,8 @@
 use std::path::PathBuf;
 use std::process::Command;
 
+use hornvale_worldgen::seed_sweep;
+
 fn bin() -> Command {
     Command::new(env!("CARGO_BIN_EXE_hornvale"))
 }
@@ -314,15 +316,24 @@ fn worlds_survive_reload_byte_identically() {
 /// claim: invariant(forall-seed) — off-gate (heavy:); builds each world by
 /// spawning the CLI as a subprocess, which this lint's module doc names as
 /// a blind spot it happens to still flag by loop-variable naming
+///
+/// nextest: sized-sweep
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn graded_pins_never_fail_above_min() {
     let dir = temp_dir("pins");
+    let seeds = 1..=20u64;
+    let moons = "0+3";
 
-    for seed in 1..=20 {
+    // Each subprocess owns one seed-specific output path. `map_seeds` returns
+    // results in seed order, so process errors and success assertions stay on
+    // this controller thread with the same deterministic diagnostics as the
+    // serial loop. Set `HV_SEED_SWEEP_THREADS=1` to reproduce that old
+    // execution shape exactly.
+    let outputs = seed_sweep::map_seeds(seeds.clone(), |seed| {
         // Test with graded pin --moons 0+3 (min 0, never hard-fails)
-        let moons = "0+3";
-        let out = bin()
+        let path = dir.join(format!("world-{seed}-graded.json"));
+        bin()
             .args([
                 "new",
                 "--seed",
@@ -330,12 +341,13 @@ fn graded_pins_never_fail_above_min() {
                 "--moons",
                 moons,
                 "--out",
-                dir.join(format!("world-{seed}-graded.json"))
-                    .to_str()
-                    .unwrap(),
+                path.to_str().unwrap(),
             ])
             .output()
-            .unwrap();
+    });
+
+    for (seed, out) in seeds.zip(outputs) {
+        let out = out.unwrap();
         assert!(
             out.status.success(),
             "new --seed {} --moons {} failed: {:?}",
