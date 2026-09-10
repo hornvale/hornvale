@@ -1,6 +1,6 @@
 # The Planetarium — decision ledger
 
-Status: G3 approved on 2026-09-10; implementation plan in preparation.
+Status: G3 and physical-radius prerequisite approved; G4 plan self-review complete; ready for execution.
 Branch: `campaign/the-planetarium`.
 Starting revision: `b6b374f6d2dea329d904b56322a09b1dfb29983f`.
 
@@ -337,3 +337,65 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   the anchor's physical dimensions could simply be exported.
 - Capture actions: async question sent during planning; dependent radius work
   remains unapproved while independent plan work continues.
+
+## #9 [Q] — approved radius prerequisite and bounded source model
+
+- Nathan's answer: “Include a physical-radius prerequisite”. The source-side
+  work is authorized; the anchor-centered pilot remains the subject.
+- Decision: add a derived `anchor_radius(EarthMasses)` observation returning
+  Megameters, using a frozen subset of the Zeng author's 2019 Earth-like rocky
+  mass–radius curve with declared piecewise-linear interpolation on [0.5,2]
+  Earth masses. The model assumes 32.5% Fe / 67.5% MgSiO3; it does not claim
+  Hornvale has simulated that composition. No new random draw or stored Anchor
+  field is part of the plan. Radius is not fed into existing angular terrain
+  or dynamics in this campaign.
+- Why: the source's existing anchor mass range and the moon-radius precedent
+  allow a narrow derived observation; the published table brackets the whole
+  range. The attractive 2016 analytic shortcut explicitly covers 1–8 Earth
+  masses, so it would extrapolate over half of this model's admitted interval.
+- Evidence: retrieved
+  https://lweb.cfa.harvard.edu/~lzeng/tables/massradiusEarthlikeRocky.txt;
+  49 numerical rows, SHA-256
+  dcc5080f2186983b7e36200373878dc06a8d8083ec21ce1c4f670659c0404b38.
+  The author's planetmodels.html identifies the composition and Earth-unit
+  axes. The plan freezes eight bracketing rows and cites the analytic paper's
+  stated range. Python evaluation of the planned interpolation gives
+  approximately 0.8178, 0.9980 and 1.2113 Earth radii at masses 0.5,1,2; this
+  is a calculation over the retrieved data, not an executed Rust implementation.
+- Alternatives discarded: constant density across the full mass range; analytic
+  formula outside its published range; a new composition distribution and random
+  stream; cosmetic renderer radius; moon-centered scope change.
+- Ideonomy passes / overturns: two notation/visibility/reversibility passes.
+  `source mass -> supported table bracket -> interpolation -> unit conversion
+  -> emitted radius` makes both range and the physical assumption visible.
+  Trying the simpler analytic notation exposed its unsupported lower interval.
+  The convergence pass tested moving the model into a stored field versus a
+  derived observation: derivation preserves the existing construction surface
+  and keeps future model revision explicit. No further material improvement;
+  analytic shortcut rejected before adoption.
+- Capture actions: spec planning amendment and concrete Task 1 added; the
+  existing astronomy model-card page will carry the implemented model. Broader
+  composition, atmospheric envelopes and changed dynamics remain outside this
+  prerequisite and are not promised future work.
+
+## #10 [G4] — implementation-plan self-review
+
+- Decision: the four-stage, nine-task plan matches the approved spec and the
+  newly approved radius prerequisite; proceed under the standing SDD preference
+  when execution begins. This turn prepares the plan, not an implementation.
+- Review: mapped all spec sections to tasks; checked live source signatures and
+  tagged Bevy facilities; checked exact clocks, scope/request identity, library
+  dependency directions, actual GPU evidence, capture errors, package integrity,
+  visual/performance acceptance and G6/publication boundaries.
+- Corrections made during review: Task 1 is now an independently testable
+  physical-radius implementation rather than an unresolved research instruction;
+  shot sampling explicitly takes observed body positions; the unfinished tracker
+  inherited at root is preserved verbatim, with a separate Planetarium section.
+- Alternatives discarded: approving visual quality through tests alone; silently
+  treating an inherited in-progress tracker as disposable; deferring the real
+  moving-image checkpoint until production tooling is complete.
+- Ideonomy passes / overturns: G4 uses spec self-review; the nontrivial planning
+  choices are recorded with passes in #7–9. No new scope overturn.
+- Capture actions: permanent plan, appended four-stage tracker and reconciliation
+  links committed together; final prose-gate evidence is the commit-hook result.
+  No build, test run of new code, render, performance target or merge is claimed.

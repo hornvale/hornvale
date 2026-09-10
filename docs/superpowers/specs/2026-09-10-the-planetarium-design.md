@@ -86,6 +86,22 @@ exported twice from it: `scene/system/v1`, topology `single`, two moons and two
 wanderers; `cmp` found the repeated files identical. The ledger records the
 commands and output. This qualifies a source candidate, not its visual quality.
 
+### Planning amendment: physical anchor radius
+
+The planning source audit found that `Anchor` carries mass but no physical
+radius, and the terrain substrate explicitly uses a unit sphere. Nathan approved
+adding a physical-radius prerequisite on 2026-09-10: “Include a physical-radius
+prerequisite”. The campaign therefore adds a scientifically documented,
+deterministic mass–radius observation at the astronomy layer before rendering a
+physical globe. Its model, range, units and reference tests are fixed in Task 1
+of the implementation plan. The initial model uses a declared Earth-like rocky
+composition; it does not claim simulated interior composition. Bevy consumes
+the emitted radius. No cosmetic sphere size substitutes for this observation.
+
+This extends the approved source work; artifact/save effects are tested and
+classified, not presumed absent. Existing terrain retains its angular contracts;
+a bulk radius does not silently redefine river widths or movement distances.
+
 ## 4. Pilot subject and visual direction
 
 The study observes passage of time in one selected system. Select and record a
