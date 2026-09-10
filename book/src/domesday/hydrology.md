@@ -188,13 +188,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 - **D2**: min == median == max == 1 across 1000 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
+### `endorheic-coverage`
+
+- **D5 strength**: declared weak tracking mean-land-temperature-c, but observed |r| = 0.097 (1000 pairs) is none
+
 ### `hydro-variant-coverage`
 
 - **D1**: "aquifer+aquitard+spring+runoff+karst" holds 1000/1000 worlds (100.0%), at or above the 80% threshold
 
 ### `karst-fraction`
 
-- **D5 strength**: declared weak tracking mean-land-temperature-c, but observed |r| = 0.028 (1000 pairs) is none
+- **D5 strength**: declared weak tracking mean-land-temperature-c, but observed |r| = 0.025 (1000 pairs) is none
 
 ### `shelf-fraction`
 
@@ -211,7 +215,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `shoreline-development`
 
-- **D5 strength**: declared weak tracking total-tide, but observed |r| = 0.009 (1000 pairs) is none
+- **D5 strength**: declared weak tracking total-tide, but observed |r| = 0.004 (1000 pairs) is none
 - **D5 strength**: declared moderate tracking largest-continent-share, but observed r = -0.258 (1000 pairs) is weak (negative)
 
 ### `waterfall-count`

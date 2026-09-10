@@ -13,7 +13,7 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 | Astronomy | 26 | 5 | [page](./astronomy.md) |
 | Terrain | 73 | 5 | [page](./terrain.md) |
 | Climate | 6 | 9 | [page](./climate.md) |
-| Hydrology | 17 | 13 | [page](./hydrology.md) |
+| Hydrology | 17 | 14 | [page](./hydrology.md) |
 | Biology | 15 | 34 | [page](./biology.md) |
 | Settlement | 20 | 11 | [page](./settlement.md) |
 | Demography | 8 | 7 | [page](./demography.md) |
@@ -21,7 +21,7 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 | Religion | 21 | 12 | [page](./religion.md) |
 | Language | 48 | 36 | [page](./language.md) |
 | Naming | 17 | 10 | [page](./naming.md) |
-| History | 34 | 26 | [page](./history.md) |
+| History | 34 | 25 | [page](./history.md) |
 
 ## Crate coverage (D8)
 
@@ -39,11 +39,11 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | detector | findings |
 |---|---|
 | D1 | 29 |
-| D2 | 42 |
+| D2 | 41 |
 | D3 | 18 |
 | D4 | 56 |
 | D5 direction | 1 |
-| D5 strength | 18 |
+| D5 strength | 19 |
 | D5 unmeasurable | 6 |
 | D6 | 1 |
 | D7 | 0 |
