@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** G3 approved; physical-radius prerequisite approved by Nathan during planning; G4 self-review complete. Ready for subagent-driven execution. No implementation or GPU qualification is claimed.
+**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report pending. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
@@ -220,8 +220,9 @@ bindings and render history; frame capture cannot span a reset.
 For `0 <= frame < frames`, compute `start + round_away_from_zero(frame *
 (end-start) / frames)` with checked i128 integer arithmetic, then checked i64
 conversion. Round the signed **offset**, not an absolute float instant. The
-exclusive endpoint is never sampled. Playback and direct seeking call the same
-function. A still simulation interval (`start == end`) is allowed.
+presentation endpoint is never sampled. Quantization can repeat simulation ticks
+and can round a final offset to the end tick when the interval is short; do not
+clamp away that result. Playback and direct seeking call the same function. A still simulation interval (`start == end`) is allowed.
 
 `VisualPlugin` owns observation application, camera primitives, body visuals
 and capture systems. Planetarium inserts the mirror and sends serialized replies;
@@ -379,10 +380,10 @@ cargo test --manifest-path clients/visual/Cargo.toml -p hornvale-visual-source
 
 **Interfaces:** Consumes Source's serialized initial/reply documents. Produces `Binding`, `ViewError`, `ObservationMirror`, `CameraPose`, `VisualPlugin` and `planetarium inspect --world PATH --revision SHA --film PATH`. The application owns source worker/channels; the view accepts documents and owns no source.
 
-- [ ] Implement document parsing/validation first. Behavioral tests reject unknown schemas/frame/units, repeated body IDs, non-finite or invalid radii, and incomplete initial documents. Accept and preserve explicit nulls. Establish compiling parser stubs that return errors before capturing valid-document assertion failures.
-- [ ] Add Bevy `=0.19.1`, `default-features = false`, and an explicit feature list grounded in the tagged manifest: `std`, `async_executor`, `multi_threaded`, `bevy_asset`, `bevy_log`, `bevy_state`, `bevy_winit`, `x11`, `3d_bevy_render`, `ui_api`, `ui_bevy_render`, `default_font`, `png`. Verify the resolved features and Linux build prerequisites; remove only unused features deliberately. Avoid audio/gamepad dependencies the pilot does not need.
-- [ ] Bootstrap a real app using VisualPlugin and the source bridge. Begin with synchronous exact observations in a persistent app; full scrub scheduling comes in Task 4. Apply an entire snapshot before rendering it, keyed by `(binding, body_id)`.
-- [ ] Use camera-relative f64 subtraction and an explicit kilometres-per-render-unit scale before f32 conversion:
+- [x] Implement document parsing/validation first. Behavioral tests reject unknown schemas/frame/units, repeated body IDs, non-finite or invalid radii, and incomplete initial documents. Accept and preserve explicit nulls. Establish compiling parser stubs that return errors before capturing valid-document assertion failures.
+- [x] Add Bevy `=0.19.1`, `default-features = false`, and an explicit feature list grounded in the tagged manifest: `std`, `async_executor`, `multi_threaded`, `bevy_asset`, `bevy_log`, `bevy_state`, `bevy_winit`, `x11`, `3d_bevy_render`, `ui_api`, `ui_bevy_render`, `default_font`, `png`. Verify the resolved features and Linux build prerequisites; remove only unused features deliberately. Avoid audio/gamepad dependencies the pilot does not need.
+- [x] Bootstrap a real app using VisualPlugin and the source bridge. Begin with synchronous exact observations in a persistent app; full scrub scheduling comes in Task 4. Apply an entire snapshot before rendering it, keyed by `(binding, body_id)`.
+- [x] Use camera-relative f64 subtraction and an explicit kilometres-per-render-unit scale before f32 conversion:
 
 ```rust
 pub fn render_position(position_km: [f64; 3], origin_km: [f64; 3], km_per_unit: f64)
@@ -404,10 +405,10 @@ camera range, including a large origin and a nearby moon. Bound projective
 error to 0.25 pixel at 4K in those tests. Fail a supported-range check rather
 than allowing float overflow or silently compressing distances.
 
-- [ ] Build the anchor from actual exported tiles, using the documented tile projection/order and elevation datum. Resolve sea level from its source; do not equate an isostatic elevation with height above sea level. Keep radial relief unexaggerated. Moon surface descriptors drive only disclosed cosmetic material variation. Missing-radius wanderers use sourced points. Use a quiet background and source-fed illumination; leave unsupported eclipse shadows disabled.
-- [ ] Start with Bevy PBR/tonemapping and a single camera. Select a lit limb composition and a readable moon using camera placement and cuts, not changed scale. Save an actual 4K still and at least 60 ordered 1080p frames using the tagged image-target screenshot approach; wait for each completion before advancing its source tick. Record this as draft capture evidence, not the final verified package.
-- [ ] Inspect the actual still and moving clip at desktop and phone size. Record which visual properties succeeded/failed and revise the cheapest consequential issue. If images remain schematic, profile the missing appearance work before advancing to production tooling; the deliverable includes an actual visual direction, not only successful initialization.
-- [ ] Commit CPU-tested code and the early-visual report, with paths/hashes for the actual files. Large frames/videos stay outside Git; preserve the review copies in the campaign artifact directory.
+- [x] Build the anchor from actual exported tiles, using the documented tile projection/order and elevation datum. Resolve sea level from its source; do not equate an isostatic elevation with height above sea level. Keep radial relief unexaggerated. Moon surface descriptors drive only disclosed cosmetic material variation. Missing-radius wanderers use sourced points. Use a quiet background and source-fed illumination; leave unsupported eclipse shadows disabled.
+- [x] Start with Bevy PBR/tonemapping and a single camera. Select a lit limb composition and a readable moon using camera placement and cuts, not changed scale. Save an actual 4K still and at least 60 ordered 1080p frames using the tagged image-target screenshot approach; wait for each completion before advancing its source tick. Record this as draft capture evidence, not the final verified package.
+- [x] Inspect the actual still and moving clip at desktop and phone size. Record which visual properties succeeded/failed and revise the cheapest consequential issue. If images remain schematic, profile the missing appearance work before advancing to production tooling; the deliverable includes an actual visual direction, not only successful initialization.
+- [x] Commit CPU-tested code and the early-visual report, with paths/hashes for the actual files. Large frames/videos stay outside Git; preserve the review copies in the campaign artifact directory.
 
 **Stage 1 boundary:** source correctness and a moving GPU witness both required. Update `IMPLEMENTATION_PLAN.md`, push the branch, and submit the full current SHA through `make sluice-stage BRANCH=campaign/the-planetarium REF=<full-sha>`. Use the submitting-to-the-sluice skill. Inspect the reported result; do not treat queued as passed.
 
@@ -444,7 +445,7 @@ fn a_paused_simulation_still_has_a_presentation_timeline() {
 
 - [ ] Implement checked i128 arithmetic. Reject zero frames/out-of-range indices and overflow; include exact half-tick ties in both directions and i64 boundary cases. No repeated addition or float seconds-to-ticks accumulation.
 - [ ] Implement one source-owning worker. A bounded channel/request slot prevents scrub floods from growing unbounded work; handle disconnect and worker errors in the visible application state. Coalesce only work not yet begun. Export disables coalescing for its outstanding frame.
-- [ ] Test requests A then B, replies B then A: B stays displayed; test world/scope/revision reset followed by the old reply: no old entities or data reappear. Reused IDs under a new binding must not preserve selection/material state. Add a valid empty catalog test to ensure old bodies are removed.
+- [ ] Test requests A then B, replies B then A: B stays displayed; test world/scope/revision reset followed by the old reply: no old entities or data reappear. Reused IDs under a new binding must not preserve selection/material state. Test the empty rendered catalog immediately after a source reset and before its first reply, and a valid new source with no optional moons/wanderers. Old optional bodies must disappear; do not invent an anchorless astronomy document to exercise removal.
 - [ ] Separate simulation tick, presentation playhead and wall-clock diagnostics. Pause/reverse/seek updates a desired instant; the last committed observation can remain visible with an explicit pending indicator until its replacement arrives. Never label old physical state with the requested new tick.
 - [ ] Reset temporal history on discontinuity; record the reset policy as part of capture settings. Direct frame 150 and sequential playback to 150 must produce identical semantic JSON, camera input and caption selection. Pixel comparison is separately measured later.
 

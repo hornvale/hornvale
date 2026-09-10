@@ -729,3 +729,63 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 - Cost if wrong: expand the presentation coordinate implementation and its
   supported range in a later refinement; no simulation/save data is changed.
   G6 must disclose this camera limit alongside the other pilot limitations.
+
+
+## Task 3 — complete; Stage 1 canonical result pending
+
+- Implementation range `7d3a5156d..64c2575f3`; one fix round addressed all three
+  Important findings. Independent scoped review approved complete stellar-light
+  inventories, bounded geometry and the real f32 camera/body projection test.
+- Final focused tests: 25 view and 4 source tests passed, fmt/clippy passed.
+  Normal commit hook passed in 43.352s (`/tmp/planetarium-review-commit2.log`).
+  The first hook correctly refused two lexical-token additions in a comment
+  and test name; rewording removed them without a waiver or guard change.
+- The supported orbital test sampled 6,342 visible points; worst measured error
+  was 0.101748006 pixels. This is measured finite coverage, not a universal proof.
+  Existing draft captures satisfy the range and retain their original hashes
+  and dirty-build provenance. No recapture is claimed for this validation fix.
+- Early visual inspection includes the full-resolution still, phone review and
+  all 60 decoded moving frames in order. Live desktop video playback remains
+  unverified because Computer Use input did not reliably operate QuickTime.
+  Task 5 still owes the actual interactive window and controls witness.
+- The two earlier Minors remain assigned: consumed initial catalog validation
+  in Task 4/8, renderer responsibility split while extending lifecycle/capture
+  in Task 4/6. No additional waiver or new visual approval is implied.
+
+## #18 [Q] — Task 4 quantization and empty-catalog meanings
+
+- Ruling: preserve the approved signed-offset rounding formula. The film samples
+  presentation frames over a half-open interval; rounded simulation ticks can
+  repeat, including the end tick. Do not clamp ticks merely to make an incorrect
+  plan sentence true. Spec section 7 separates those clocks; the plan is corrected.
+- Executed integer probe on 2026-09-10: for frame 299 of 300, start=0/end=1
+  gives tick=1; start=0/end=-1 gives tick=-1. The same formula gives -3 for
+  frame 2 of 3 over 0 to -5. These results disprove the prior unconditional
+  simulation-endpoint exclusion while preserving its signed-offset test.
+- Empty-catalog ruling: test zero rendered entities at reset, before a new reply,
+  and an optional moon/wanderer inventory becoming empty in a valid new source.
+  `documents.rs` requires an anchor and nonempty stellar illumination; a fake
+  anchorless native astronomy document would exercise a different protocol.
+  Reset must remove old selection, material bindings and entities even if the
+  next source reuses IDs. A full observation may then repopulate the new scene.
+- Ideonomy passes / overturns: two dimension-identification passes, using purpose
+  and side-effects. First map: distinguish time sampling from time quantization,
+  and source completeness from displayed-state lifetime. The convergence pass
+  checks reverse intervals and reused IDs: neither should inherit old state or
+  require altered source facts. It adds regressions at these borders but no new
+  clock or schema. Both plan wording defects were overturned.
+
+  ```text
+  PURPOSE: exact time                           PURPOSE: complete source
+  frame sampling -- rounding boundary          native inventory -- reset boundary
+        |                  |                         |                  |
+  no frame at 10s     repeated/end ticks       anchor required     no displayed entities
+  side effect: reject a valid rounded tick     side effect: stale bodies if only replacing
+               if these regions are merged                 matching IDs
+  ```
+
+- Alternatives rejected: endpoint clamping (changes the documented mapping),
+  an anchorless source schema (unneeded protocol expansion), or testing only
+  mirror JSON while leaving ECS entities alive (misses the reset requirement).
+- Capture: plan and Task 4 brief corrected before dispatch; the implementer must
+  record real boundary/reset tests, pending state and worker failure behavior.
