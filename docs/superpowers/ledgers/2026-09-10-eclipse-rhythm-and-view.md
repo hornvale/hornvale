@@ -53,3 +53,15 @@ Plan self-review found no placeholders, unresolved type-name mismatch, or requir
 **Alternatives discarded:** Keeping shortest-arc semantics is physically wrong for long crossings. Expanding the campaign into a new shadow integrator is unnecessary; the existing track duration and rotation direction already determine the required directed arc.
 
 **Capture actions:** Task 1 fix round adds the long-sweep regression and updates the domain implementation before scene work continues.
+
+## #4 [G5] — scene wire tick boundary review finding
+
+**Question:** Can the v3 scene producer accept any finite `StdInstant` without panicking while emitting exact `i64` wire ticks?
+
+**Decision:** Validate and convert both requested window bounds to `WorldTime` before eclipse enumeration, return a `SceneError` for either out-of-range bound, and reuse the validated ticks in the document.
+
+**Why:** The reviewed producer used `expect` while converting event instants. A finite bound just outside the representable tick range reached that conversion and panicked, violating the public `Result` contract and the v3 exact-tick requirement.
+
+**Alternatives discarded:** Retaining the `expect` leaves a reachable panic in a query surface. Clamping would silently change the requested window and violate exact bounds.
+
+**Capture actions:** Task 2 fix round adds lower and upper boundary tests and propagates conversion errors before event enumeration.

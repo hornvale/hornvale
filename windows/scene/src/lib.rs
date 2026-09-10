@@ -1742,14 +1742,17 @@ pub fn eclipses_scene(
     observer: Option<EclipseObserverQuery>,
 ) -> Result<EclipsesScene, SceneError> {
     let observer = normalized_eclipse_observer(observer)?;
+    let from_ticks = WorldTime::from_std_days(from.get())
+        .map_err(|e| SceneError::Build(e.to_string()))?
+        .ticks();
+    let until_ticks = WorldTime::from_std_days(until.get())
+        .map_err(|e| SceneError::Build(e.to_string()))?
+        .ticks();
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
     let system = sky.system();
-    // The bounds arrive already typed and already validated -- StdInstant's
-    // constructor refuses a non-finite value, so the caller cannot hand in
-    // one. This is what closes The Escapement review's Minor 5: the bound
-    // conversions used to run AFTER the events map, so an out-of-range
-    // `until` hit an `expect` inside the map and panicked before it could
-    // reach the graceful error. There is no conversion left to mis-order.
+    // StdInstant admits every finite point, while the wire contract is the
+    // narrower i64 tick axis. Converting both bounds before enumeration makes
+    // every event inside the requested window representable too.
     let calendar = hornvale_astronomy::calendar_of(system);
     let recurrences = hornvale_astronomy::eclipse_recurrences(system, &calendar)
         .into_iter()
@@ -1823,12 +1826,8 @@ pub fn eclipses_scene(
     Ok(EclipsesScene {
         schema: ECLIPSES_SCHEMA.to_string(),
         seed: world.seed.0,
-        from: WorldTime::from_std_days(from.get())
-            .map_err(|e| SceneError::Build(e.to_string()))?
-            .ticks(),
-        until: WorldTime::from_std_days(until.get())
-            .map_err(|e| SceneError::Build(e.to_string()))?
-            .ticks(),
+        from: from_ticks,
+        until: until_ticks,
         observer,
         recurrences,
         events,
@@ -2840,6 +2839,40 @@ mod tests {
             scene.events[0].day,
             scene.from,
             scene.until
+        );
+    }
+
+    #[test]
+    fn eclipses_scene_rejects_a_lower_bound_below_the_wire_tick_range() {
+        let w = mooned_world();
+        let axis_edge_days = i64::MAX as f64 / WorldTime::TICKS_PER_STD_DAY as f64;
+        let result = eclipses_scene(
+            &w,
+            StdInstant::new(-axis_edge_days - 2000.0).unwrap(),
+            StdInstant::new(-axis_edge_days + 2000.0).unwrap(),
+            None,
+        );
+
+        assert!(
+            matches!(result, Err(SceneError::Build(message)) if message.contains("outside the representable tick range")),
+            "a finite lower bound below i64::MIN ticks must return a scene error"
+        );
+    }
+
+    #[test]
+    fn eclipses_scene_rejects_an_upper_bound_above_the_wire_tick_range() {
+        let w = mooned_world();
+        let axis_edge_days = i64::MAX as f64 / WorldTime::TICKS_PER_STD_DAY as f64;
+        let result = eclipses_scene(
+            &w,
+            StdInstant::new(axis_edge_days - 2000.0).unwrap(),
+            StdInstant::new(axis_edge_days + 2000.0).unwrap(),
+            None,
+        );
+
+        assert!(
+            matches!(result, Err(SceneError::Build(message)) if message.contains("outside the representable tick range")),
+            "a finite upper bound above i64::MAX ticks must return a scene error"
         );
     }
 
