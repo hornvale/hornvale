@@ -169,6 +169,10 @@ run "worktree take"   bash scripts/test-worktree-take.sh
 # symptom was a volume filling at 805 GB. Case 5 is the control; without a real
 # cargo-sweep it FAILS rather than skipping quietly, because a scope test that
 # opts out of measuring scope is the bug it was written against.
+# PREREQUISITE: cargo-sweep must be installed ON THIS HOST (CLAUDE.md, the
+# sweep block). This set is the only automatic path that needs it — the sweep
+# targets themselves refuse with an install hint and are typed by a human.
+# lefford lacked it on 2026-09-10 and red a candidate whose code was fine.
 run "sweep roots"     bash scripts/test-sweep-roots.sh
 run "shellcheck"       make --no-print-directory shellcheck
 

@@ -427,6 +427,23 @@ make doctor        # the repo self-map — run this first in a fresh session
 #
 # cargo-sweep is a dev tool on the 0040 pattern (`cargo install cargo-sweep` /
 # `brew install cargo-sweep`); `make sweep-check` fails with an install hint.
+#
+# **IT IS ALSO A PREREQUISITE OF THE `outboard` SET, ON EVERY CHAMBER HOST.**
+# Unlike the sweep targets — which a human types, and which refuse with an
+# install hint when it is absent — `scripts/test-sweep-roots.sh` runs in
+# `outboard` on whatever box the chamber is using, and its case 5 (the only
+# case that distinguishes the fix from the bug it guards) needs the real
+# binary. It FAILS rather than skipping when the tool is missing, deliberately:
+# a scope test that opts out of measuring scope is the bug it was written
+# against. So a chamber host without cargo-sweep reds `outboard`, and the red
+# looks like a code regression to whoever meets it first.
+#
+# THIS IS NOT HYPOTHETICAL AND IT IS WHY THE LINE IS HERE. lefford lacked the
+# tool on 2026-09-10 and red the `sweep-scope` candidate on its first run; the
+# operator installed 0.8.0 by hand and requeued. That install is host state the
+# repo does not record, so a rebuilt lefford reproduces the red with no trace
+# of the cause — which is strictly worse than the original gap, because a
+# working box now hides the dependency. Provision it with nextest.
 # Cargo cannot do it itself: `cargo clean` has no age or reachability option and
 # `-Z gc` is nightly-only and governs the GLOBAL REGISTRY cache, not `target/`.
 #   make sweep-dry              # what would go, deleting nothing
