@@ -151,7 +151,7 @@ impl Renderer {
         self.set_caption("");
         Ok(())
     }
-    /// Disable the cosmetic atmospheric treatment for an explicit body-only view.
+    /// Disable volume scattering for an explicit material comparison.
     pub fn disable_atmosphere(&mut self) {
         self.atmosphere_enabled = false;
         if let Ok(mut entity) = self.apps.main.world_mut().get_entity_mut(self.atmosphere) {

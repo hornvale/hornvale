@@ -19,88 +19,88 @@
   "presentation_seed": 42,
   "shots": [
     {
-      "caption": "A world in motion",
-      "end_frame": 90,
-      "end_offset_km": [
-        -28000.0,
-        -3000.0,
-        8100.0
-      ],
-      "focus_distance_km": 30000.0,
       "start_frame": 0,
-      "start_offset_km": [
-        -30500.0,
-        -4500.0,
-        9500.0
-      ],
+      "end_frame": 90,
       "target_body_id": "anchor",
+      "start_offset_km": [
+        -30500,
+        -4500,
+        9500
+      ],
+      "end_offset_km": [
+        -28000,
+        -3000,
+        8100
+      ],
       "target_offset_km": [
-        -1000.0,
-        0.0,
-        0.0
+        -1000,
+        0,
+        0
       ],
       "up": [
-        0.0,
-        0.0,
-        1.0
+        0,
+        0,
+        1
       ],
-      "vertical_fov_radians": 0.8
+      "vertical_fov_radians": 0.8,
+      "focus_distance_km": 30000,
+      "caption": "A world in motion"
     },
     {
-      "caption": "Turning into the light",
-      "end_frame": 210,
-      "end_offset_km": [
-        -18800.0,
-        -8500.0,
-        6200.0
-      ],
-      "focus_distance_km": 21000.0,
       "start_frame": 90,
+      "end_frame": 210,
+      "target_body_id": "anchor",
       "start_offset_km": [
         -23955.8474,
         -1765.6958,
         6717.443
       ],
-      "target_body_id": "anchor",
+      "end_offset_km": [
+        -14100,
+        -9000,
+        4800
+      ],
       "target_offset_km": [
-        -2896.3189,
-        754.9353,
-        0.0
+        -2400,
+        600,
+        -2500
       ],
       "up": [
-        0.0,
-        0.0,
-        1.0
+        0,
+        0,
+        1
       ],
-      "vertical_fov_radians": 0.8
+      "vertical_fov_radians": 0.8,
+      "focus_distance_km": 12000,
+      "caption": "Turning into the light"
     },
     {
-      "caption": "Moons keep their own time",
-      "end_frame": 300,
-      "end_offset_km": [
-        -438000.0,
-        -187500.0,
-        19500.0
-      ],
-      "focus_distance_km": 477349.0,
       "start_frame": 210,
+      "end_frame": 300,
+      "target_body_id": "anchor",
       "start_offset_km": [
         -441242.3104,
         -181220.0622,
         18076.2385
       ],
-      "target_body_id": "anchor",
+      "end_offset_km": [
+        -438000,
+        -187500,
+        19500
+      ],
       "target_offset_km": [
         4860.9972,
         -12652.4851,
         -2877.2507
       ],
       "up": [
-        0.0,
-        0.0,
-        1.0
+        0,
+        0,
+        1
       ],
-      "vertical_fov_radians": 0.078
+      "vertical_fov_radians": 0.078,
+      "focus_distance_km": 477349,
+      "caption": "Moons keep their own time"
     }
   ],
   "settings": {
@@ -110,6 +110,8 @@
     "focus_max_blur_pixels": 2.0,
     "water_roughness": 0.38,
     "reflectance": 0.28,
-    "pigment_variation": 0.12
+    "pigment_variation": 0.12,
+    "cloud_opacity": 0.5,
+    "cloud_shell_km": 12.0
   }
 }

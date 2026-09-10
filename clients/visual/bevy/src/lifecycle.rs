@@ -12,6 +12,8 @@ pub(crate) struct BodyVisual {
     pub(crate) id: String,
 }
 #[derive(Component)]
+struct CosmeticCloud;
+#[derive(Component)]
 struct PointVisual {
     pub(crate) id: String,
 }
@@ -336,6 +338,43 @@ impl SceneCatalog {
                     .id(),
             );
         }
+        // A static, source-coverage-conditioned presentation layer. It never casts
+        // an eclipse/cloud shadow and is not part of the physical body inventory.
+        let cloud_mesh = world
+            .resource_mut::<Assets<Mesh>>()
+            .add(surface::cloud_shell(
+                &mirror.initial().tiles,
+                radius,
+                KM_PER_UNIT,
+            ));
+        let cloud_texture = world
+            .resource_mut::<Assets<Image>>()
+            .add(surface::cloud_texture(&mirror.initial().tiles));
+        let cloud_material =
+            world
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(StandardMaterial {
+                    base_color_texture: Some(cloud_texture.clone()),
+                    alpha_mode: AlphaMode::Blend,
+                    perceptual_roughness: 1.,
+                    reflectance: 0.0,
+                    ..default()
+                });
+        meshes.push(cloud_mesh.clone());
+        textures.push(cloud_texture);
+        materials.push(cloud_material.clone());
+        entities.push(
+            world
+                .spawn((
+                    Mesh3d(cloud_mesh),
+                    MeshMaterial3d(cloud_material),
+                    Transform::IDENTITY,
+                    CosmeticCloud,
+                    bevy::light::NotShadowCaster,
+                    RenderLayers::layer(0),
+                ))
+                .id(),
+        );
         for light in &reply.astronomy.lights {
             entities.push(
                 world
@@ -431,6 +470,12 @@ pub(crate) fn apply_pending_scene(world: &mut World) {
         .iter_mut(world)
     {
         *t = transforms[&visual.id];
+    }
+    for mut t in world
+        .query_filtered::<&mut Transform, With<CosmeticCloud>>()
+        .iter_mut(world)
+    {
+        *t = transforms["anchor"];
     }
     for (key, mut t, mut light) in world
         .query::<(&StarLight, &mut Transform, &mut DirectionalLight)>()

@@ -131,7 +131,9 @@ fn replacement_optional_inventory_and_atomic_camera_preparation() {
     apply_pending_scene(&mut world);
     assert_eq!(world.query::<&BodyVisual>().iter(&world).count(), 1);
     assert_eq!(world.query::<&PointVisual>().iter(&world).count(), 0);
-    assert_eq!(c.materials.len(), 1);
+    // One physical anchor and one nonselectable cosmetic cloud material.
+    assert_eq!(world.query::<&CosmeticCloud>().iter(&world).count(), 1);
+    assert_eq!(c.materials.len(), 2);
     assert_eq!(world.resource::<AppliedObservation>().0, Some((1, 0)));
     c.select("star:0", &mut world).unwrap();
     assert_eq!(c.selected(), Some("star:0"));

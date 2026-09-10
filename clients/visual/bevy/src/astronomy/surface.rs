@@ -296,3 +296,44 @@ pub fn moon_texture(m: &Moon) -> Image {
     }
     image(w as u32, h as u32, bytes)
 }
+
+/// A static presentation layer conditioned by exported cloud coverage. The source
+/// does not resolve cloud shapes or altitude: this seeded texture is cosmetic.
+pub fn cloud_texture(t: &Tiles) -> Image {
+    let (w, h) = (2048, 1024);
+    let mut bytes = Vec::with_capacity(w * h * 4);
+    for y in 0..h {
+        for x in 0..w {
+            let u = (x as f64 + 0.5) / w as f64;
+            let v = (y as f64 + 0.5) / h as f64;
+            let lon = u * std::f64::consts::TAU;
+            let lat = (0.5 - v) * std::f64::consts::PI;
+            let p = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+            let warp = [
+                noise(p.map(|v| v * 9.), 152),
+                noise(p.map(|v| v * 9. + 7.), 153),
+                noise(p.map(|v| v * 9. - 3.), 154),
+            ];
+            let q = std::array::from_fn::<_, 3, _>(|i| p[i] * 15. + warp[i] * 0.7);
+            let detail = 0.55 * noise(q, 142)
+                + 0.3 * noise(q.map(|v| v * 2.), 143)
+                + 0.15 * noise(q.map(|v| v * 4.), 144);
+            let coverage = sample(t, &t.cloud_fraction, u, v).clamp(0., 1.);
+            let opacity = ((detail - (0.65 - coverage * 0.3)) * 3.).clamp(0., 1.)
+                * coverage
+                * f64::from(crate::camera::ViewSettings::default().cloud_opacity);
+            bytes.extend([218, 234, 238, (opacity * 255.).round() as u8]);
+        }
+    }
+    image(w as u32, h as u32, bytes)
+}
+/// Nonphysical presentation shell; no terrain is moved and no body dimension changes.
+pub fn cloud_shell(t: &Tiles, radius_km: f64, km_per_unit: f64) -> Mesh {
+    let mut flat = t.clone();
+    flat.elevation_m.fill(t.sea_level_m);
+    globe_mesh(
+        &flat,
+        radius_km + f64::from(crate::camera::ViewSettings::default().cloud_shell_km),
+        km_per_unit,
+    )
+}
