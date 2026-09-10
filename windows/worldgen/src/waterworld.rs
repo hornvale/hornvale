@@ -80,6 +80,26 @@ impl WaterFields {
         temperature_c: f64,
         current: [f64; 3],
     ) -> Self {
+        Self::from_sources(
+            substrate,
+            insolation,
+            temperature_c,
+            35.0 + substrate.depth_m / 10_000.0,
+            if substrate.has_edifice { 1.0 } else { 0.0 },
+            current,
+        )
+    }
+
+    /// Derive fields from explicit ambient sources; used to prove source isolation.
+    /// type-audit: bare-ok(diagnostic-value: insolation), bare-ok(diagnostic-value: temperature_c), bare-ok(diagnostic-value: salinity), bare-ok(ratio: chemistry), bare-ok(diagnostic-value: current)
+    pub fn from_sources(
+        substrate: &WaterSubstrate,
+        insolation: f64,
+        temperature_c: f64,
+        salinity: f64,
+        chemistry: f64,
+        current: [f64; 3],
+    ) -> Self {
         let depth_m = substrate.depth_m;
         Self {
             depth_m,
@@ -87,8 +107,8 @@ impl WaterFields {
             light: insolation * hornvale_kernel::math::exp(-depth_m / 1_000.0),
             pressure: 1.0 + depth_m / 10.0,
             temperature_c,
-            salinity: 35.0 + depth_m / 10_000.0,
-            chemistry: if substrate.has_edifice { 1.0 } else { 0.0 },
+            salinity,
+            chemistry,
             current,
         }
     }

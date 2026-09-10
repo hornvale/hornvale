@@ -341,6 +341,22 @@ fn ambient_fields_are_finite_and_depth_changes_light_and_pressure() {
         deeper.light, fields.light,
         "depth changed but light did not"
     );
+    let changed_sources = hornvale_worldgen::waterworld::WaterFields::from_sources(
+        substrate,
+        fixture.climate.insolation(),
+        fields.temperature_c + 1.0,
+        fields.salinity + 1.0,
+        fields.chemistry + 1.0,
+        [
+            fields.current[0] + 1.0,
+            fields.current[1],
+            fields.current[2],
+        ],
+    );
+    assert_ne!(changed_sources.temperature_c, fields.temperature_c);
+    assert_ne!(changed_sources.salinity, fields.salinity);
+    assert_ne!(changed_sources.chemistry, fields.chemistry);
+    assert_ne!(changed_sources.current, fields.current);
 }
 
 #[test]
