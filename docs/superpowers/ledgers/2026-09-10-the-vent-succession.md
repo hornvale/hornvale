@@ -192,9 +192,10 @@ vector membership produced the behavioral evidence above.
 The stable overlay now derives a 100-standard-day succession cycle entirely
 from existing stable inputs. Its exact integer-tick intervals are 20 days
 absent, 15 nascent, 30 active, 20 weakening, and 15 failed. Each admitted
-source stores a phase offset derived from its stable vertex key; the existing
-seeded `waterworld/vent/v1` admission/strength/temperature/chemistry draw order
-is unchanged. No new stream label or draw was earned.
+source stores a phase offset derived from the existing seeded strength,
+temperature, and chemistry values; the existing seeded
+`waterworld/vent/v1` admission/strength/temperature/chemistry draw order is
+unchanged. No new stream label or draw was earned.
 
 The candidate ring contains the stable anchor and at most four one-hop marine
 vertices, sorted by vertex key. Nascent, active, and weakening select at most
@@ -235,9 +236,11 @@ The focused green commands reported 2 succession, 3 field, 1 migration, and 1
 determinism test passing. The former ignored temporal probe is now ordinary and
 passed with the same real climate witness: vertex 0 changed from
 `22.777682501657186` to `22.78167180589651` degrees Celsius after ten standard
-days. The complete Waterworld run reported 17 passed, 0 failed, 0 ignored.
-Genesis state witness counts in enum order were `[150, 96, 164, 123, 90]`
-(623 admitted sources total).
+days. The corrected complete Waterworld run reported 18 passed, 0 failed, 0
+ignored. Genesis state witness counts in enum order were `[103, 105, 193, 134,
+88]` (623 admitted sources total). A source-first cross-seed test held a
+shared admitted anchor constant, proved its seeded source fields changed, and
+then proved its phase offset changed.
 
 Stream compatibility was checked with:
 
@@ -247,3 +250,12 @@ cargo run --quiet -p hornvale -- streams | diff -u book/src/reference/stream-man
 
 It exited 0 with empty output: the generated manifest is byte-identical and
 `windows/worldgen/src/streams.rs` is unchanged.
+
+## Task 2 review correction
+
+The first review rejected the vertex-only phase offset as not seed-derived.
+The correction uses the three already-consumed seeded vent draws, mixed into
+the fixed cycle range, without adding a draw or changing stream order. The
+second review found no remaining implementation issue; it required this
+ledger correction so the durable record names the actual source inputs and
+the corrected evidence.
