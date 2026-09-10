@@ -1052,3 +1052,60 @@ no new design decision; no ideonomy pass was needed or run for these code fixes.
 Stage2 remains in progress until its canonical request reports. Task6 capture
 implementation follows; the earlier compressed-command maintenance minor is
 carried into its brief. Manual drag delivery remains explicitly unproven.
+
+
+## #20 [Q] — make capture source-wait deadlines effective
+
+Ruling: include bounded source initialization and exact-observation waiting in
+Task6. A timed-out Bridge becomes terminal, rejects future work and discards late
+replies; dropping that failed connection must not wait indefinitely for its
+worker. Keep normal interactive shutdown semantics. This is app lifecycle work,
+not a new physical model or source algorithm.
+
+Evidence: actual `bridge.rs` uses unbounded `rx.recv` in open, `Condvar::wait` in
+observe, and `JoinHandle::join` in Drop. The initial Task6 path checks its deadline
+only after observe returns. Thus renderer deadlines do not bound a stalled query.
+The implementer confirmed these exact boundaries before finalizing the report.
+Tests must demonstrate bounded waiting with deliberately blocked initialization
+and queries, terminal rejection/late-discard behavior and no blocked failure
+cleanup. The fake workers must then be released to keep the test itself clean.
+
+Alternatives: keeping an after-return timeout fails the named AwaitingObservation
+contract. Moving the entire source into a killable helper process introduces a
+larger transport/lifecycle change than this campaign needs. Do not claim forced
+thread termination: an abandoned native thread may finish privately; CLI exit
+ends its process. Synchronous filesystem or driver calls also are not magically
+preempted by application deadlines. Record those actual boundaries.
+
+Ideonomy: two passes, no recommendation overturn; first enriched the choice to
+cover initialization, preserve deadlines across wakeups and make expiration
+absorbing. The second found no further material improvement.
+
+The first pass translated the abstract request/deadline relationship into a
+courier dispatch: old or modern transport changes how a reply arrives, not
+whether an expired recipient should accept it. Age and direction distinguish
+transport lifetime from monotonically expiring authorization:
+
+```text
+Initializing --ready--> Idle --request--> Waiting --on-time reply--> Idle
+Initializing/Waiting --deadline--> Closed
+Closed --late reply--> Closed (discard)
+Closed -X-> Idle or a new request
+```
+
+The second pass ordered guarantees by scope and ownership. Bounded wait and
+terminal isolation are independent requirements; their combination bounds the
+caller's wait without claiming control over all computation or the OS:
+
+```text
+                 bounded wait + terminal isolation
+                 /                              
+          bounded wait                    terminal isolation
+                 \                              /
+                         neither guarantee
+```
+
+Capture actions: carry this ruling into Task6 implementation/review; preserve
+prior successful captures as development evidence and run a fresh qualification
+with the final timeout-aware binary. No existing pixels or source records are
+relabelled.
