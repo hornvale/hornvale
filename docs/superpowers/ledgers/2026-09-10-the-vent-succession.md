@@ -43,6 +43,23 @@ supersedes it.
 - Verify every generated-artifact, tool, timing, and cost claim with its
   command output before placing it in the spec or plan.
 
+## Task 1 — complete
+
+**Evidence:** `fa4ffe78a` added the stable/dynamic boundary, non-vacuous
+source inventory, disabled-overlay stability checks, and the ignored
+behavioral-red temporal probe. The probe measured a real climate source change
+from `22.777682501657186` to `22.78167180589651` after ten standard days, then
+failed because the static Waterworld field stayed at the genesis value. The
+focused suite passed 9 tests with 1 intentionally ignored probe; the commit
+gate passed with `47.996s` wall time and the commit hook recorded a second
+`40.977s` run in `docs/timings.md`. The task reviewer approved spec
+compliance and code quality with no findings.
+
+**Scope ruling:** The ignored red is load-bearing evidence and remains until
+Task 2 connects time; it is not a skipped requirement. The timing row is
+preserved as append-only campaign evidence even though the hook produced it
+after the implementation commit was staged.
+
 ## #2 [G2] — How much temporal state should succession retain?
 
 **Decision:** Use a fixed derived cycle of absent, nascent, active, weakening,
