@@ -93,6 +93,7 @@ pub fn observe_waterworld_snapshot(
     let mut nutrients = 0;
     let mut kelp_reef = 0;
     let mut transported = 0;
+    let mut local = 0;
     let mut zero_baseline = 0;
     for ((substrate, fields), stocks) in world
         .substrate
@@ -105,6 +106,7 @@ pub fn observe_waterworld_snapshot(
         nutrients += usize::from(stocks.nutrients > 0.0);
         kelp_reef += usize::from(stocks.kelp_reef > 0.0);
         transported += usize::from(stocks.transported_influence > 0.0);
+        local += usize::from(stocks.local_source_influence > 0.0);
         zero_baseline += usize::from(
             fields.chemistry == 0.0
                 && stocks.local_source_influence == 0.0
@@ -116,12 +118,13 @@ pub fn observe_waterworld_snapshot(
         ..WaterWorkCounters::default()
     };
     let mut text = format!(
-        "Waterworld {scope}; marine substrate: {} samples ({} seabed); present stocks: bloom in {}, nutrients in {}, reef/kelp suitability in {}; current transport: {} influenced samples",
+        "Waterworld {scope}; marine substrate: {} samples ({} seabed); present stocks: bloom in {}, nutrients in {}, reef/kelp suitability in {}; vent consequence: {} locally influenced samples; current transport: {} influenced samples",
         world.substrate.len(),
         seabed,
         bloom,
         nutrients,
         kelp_reef,
+        local,
         transported
     );
 
@@ -138,11 +141,7 @@ pub fn observe_waterworld_snapshot(
             states[2],
             states[3],
             states[4],
-            snapshot
-                .stocks
-                .iter()
-                .filter(|stock| stock.local_source_influence > 0.0)
-                .count(),
+            local,
             transported,
             states[0],
             states[4],

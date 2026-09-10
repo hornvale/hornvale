@@ -1585,6 +1585,7 @@ mod observation {
         assert!(observation.text.contains("marine substrate:"));
         assert!(observation.text.contains("present stocks:"));
         assert!(observation.text.contains("current transport:"));
+        assert!(observation.text.contains("vent consequence:"));
         assert!(observation.text.contains("bloom"));
         assert!(observation.text.contains("nutrients"));
         assert!(observation.text.contains("reef/kelp"));
