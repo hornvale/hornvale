@@ -995,3 +995,26 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 - Richer source-descriptor-driven cosmetic moon detail is captured above for
   Task9. The current task still needs final refinement checks and independent
   review before its stage submission; visual acceptance remains Nathan's G6.
+
+
+## Task 5 — final directed draft and implementation awaiting review
+
+- Foundation b9364d631 and refinement addbe4e57 are committed. The refinement's
+  53 scoped client tests and normal commit gate passed; gate wall128.174s.
+  Independent spec/quality review is pending, so Stage2 remains in progress.
+- The revised middle shot has visible caption clearance at frame209, including
+  the actual360px-wide phone copy. Root played all10seconds of moving02 in
+  QuickTime. The movie has300frames at1920x1080/30fps and SHA
+  `ec7e30d8bd5ae77ca97d7f38e5567f5a121d7ebc042ccb2cda4f02ef7ddf73f7`.
+  Every original frame hash/dimension and every decoded caption band was checked.
+  Caption masks are stable within each shot (6852/8639/10781 bright pixels).
+- Evidence is preserved in `/Users/nathan/Downloads/Hornvale Planetarium/task5-moving-02/`:
+  `controller-review/check.json`, originalPNG/source documents, movie and
+  direction-seek-check.json. The actual-source601-query check agrees after
+  forward, reverse and direct seeking for astronomy, camera and caption.
+- Five final3840x2160 stills in `task5-cloud-stills-03/` were independently
+  decoded and hash-checked at frames0/90/180/270/299. Frame180 was inspected
+  at full resolution. These and the moving draft retain their actual dirty
+  capture provenance. They are not relabeled final clean-revision packages.
+- No further Task5 composition change is requested. Task9 still owns moon
+  detail, formal performance and final visual refinement; Nathan retains G6.
