@@ -189,3 +189,15 @@ rows are evidence-backed before later tasks consume them.
   `needs_renderer`, and unassessed capability-audit boundaries separately.
   The next public record requires a follow-up implementation task; no public
   status or approval changed.
+
+## Task 8: complete
+
+- **Commit:** `94e3927ce`
+- **Result:** Resequenced the opening truthfully: HV-009 is the sole current
+  public candidate; HV-001–HV-008 remain the draft internal underworld pilot.
+  Later cells and their exact adapter/renderer boundaries are recorded rather
+  than fabricated.
+- **Evidence:** 35 focused observation tests, 40 Atlas tests, deterministic
+  HV-009 export checks, and `make gate-commit` passed.
+- **Review:** Approved with no findings. The reviewer confirmed that all
+  statuses remain draft and that the batch does not claim unsupported coverage.
