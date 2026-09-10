@@ -410,3 +410,60 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   Task 1's explicit “subsequent source implementation” file note and avoids
   pulling the evaluated scene into the radius-only increment.
 - Stage 1 is in progress. G6 final visual/merge approval remains required.
+
+## #12 [Q] — name the two astronomy reference frames
+
+- Ruling: preserve both existing source conventions and explicitly convert
+  calendar equatorial directions with `Rz(pi) * Rx(-obliquity)` into the
+  native ephemeris system plane. Task 1 review correctly exposed an ambiguous
+  equality; Task 2 must prove the converted equality, including nonzero phase.
+  This is a coordinate conversion, not a change to simulation physics.
+- Why: the native anchor is +X at phase zero, making its center sightline -X;
+  Calendar's phase-zero solar direction is +X. A basis cannot erase that
+  difference without naming which reference it maps from and to. Source
+  anchors: ephemeris.rs `anchor_position_at`, calendar.rs `solar_equatorial`.
+- Cost if wrong: body orientation and lighting disagree; executable geometry
+  conformance in Task 2 must refuse that outcome before rendering.
+- Dictionary of source convention × physical interpretation (combination,
+  dictionary, materiality/source prompts):
+  - Calendar solar direction: an informational equinox convention, not a
+    second physical star position.
+  - Ephemeris center sightline: physical anchor-to-orbital-center direction.
+  - Converted solar direction: the calendar vector expressed in the native
+    system frame; coherent and directly testable.
+  - Resolved stellar direction: native direction to one actual modeled star;
+    substituting the calendar center direction in a binary is incoherent.
+  - Locked surface: fixed substellar body longitude under Calendar's model;
+    this does not mean an inertially fixed body basis.
+  - Basis conversion: a reversible mapping of coordinates, not an orbital
+    modification or a cosmetic scene rotation.
+- Ideonomy passes / overturns: two passes. The combination exposed two
+  distinctions the old prose blurred: reference center versus resolved stars,
+  and locked longitude versus inertial orientation. The convergence pass
+  checked these definitions for overlap/circularity against the native source
+  functions; no further material option. No change to approved fidelity.
+- Alternatives discarded: changing genesis orbital phase; comparing vectors
+  before frame conversion; rotating rendered lighting to disguise a mismatch.
+- Capture actions: original implementer owns the prose fix and numerical
+  evidence; independent scoped re-review precedes the evaluated source task.
+
+## #13 [G5] — native Bevy render qualification
+
+- Bevy 0.19.1 with the plan's explicit features and Rust 1.96.1 compiled.
+  Optimized cold dev build: 21m05s, exit 0. The unmodified tagged upstream
+  externally-driven headless-renderer example then exited 0 on Apple M1 Max
+  through Metal, writing ten 500×500 PNGs.
+- Visual inspection: screenshot0 is clear color only; screenshot9 shows the
+  lit mesh, floor and shadow. The first-frame result is direct evidence for
+  the plan's asset/pipeline/readback readiness requirement. This is a toolchain
+  smoke witness, not a Hornvale moving-image or 4K acceptance result.
+- Screenshot9 SHA-256:
+  `3018399aa47e37bbab3c9a9a5776a1d1190253919903e9c587c5ec75bf10a720`.
+  Runtime log: `/tmp/planetarium-bevy-runtime.log`; build log:
+  `/tmp/planetarium-bevy-build.log`. Scratch manifest path is recorded in
+  `/tmp/planetarium-bevy-qualification-path`; reproducible source:
+  <https://raw.githubusercontent.com/bevyengine/bevy/v0.19.1/examples/app/externally_driven_headless_renderer.rs>.
+- Read-only canonical prerequisites returned lefford, cargo present, X11
+  1.8.4 and xkbcommon 1.5.0. This does not claim a Linux build or stage pass.
+- Capture actions: carry readiness and offscreen ShadowLodOrigin findings into
+  Task 3; keep production rendering and aesthetic evidence separate.
