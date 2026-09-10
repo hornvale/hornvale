@@ -1,0 +1,9 @@
+{
+  "schema": "planetarium/draft/v1",
+  "start_ticks": 0,
+  "step_ticks": 60,
+  "frames": 60,
+  "width": 1920,
+  "height": 1080,
+  "shot": "companions"
+}
