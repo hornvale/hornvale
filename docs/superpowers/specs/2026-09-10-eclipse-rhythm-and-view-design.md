@@ -3,7 +3,7 @@
 **Date:** 2026-09-10  
 **Status:** Draft for G3 review  
 **Parent work:** Eclipse Seasons, already shipped on `main`  
-**Related references:** `2026-07-14-eclipse-seasons-design.md`, `2026-07-18-the-shadow-track-design.md`, `book/src/reference/scene-eclipses-v2.md`
+**Related references:** `2026-07-14-eclipse-seasons-design.md`, `2026-07-18-the-shadow-track-design.md`, `book/src/reference/scene-eclipses-v3.md`
 
 ## 1. Goal
 
