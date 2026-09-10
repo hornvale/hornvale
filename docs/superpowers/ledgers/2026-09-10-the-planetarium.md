@@ -482,3 +482,36 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 - Ruling and alternatives for the fix are captured in #12, with two ideonomy
   passes. The derived radius remains observation-only; evaluated source and
   moving Hornvale witness are still outstanding Stage 1 work.
+
+## #14 [Q] — reject invalid native luminosity at extreme epochs
+
+- Ruling: the evaluated scene refuses nonfinite or nonpositive native stellar
+  luminosity/flux with an explicit invalid-query/model-validity error. Keep
+  ordinary negative ticks and existing simulation producers unchanged. Do not
+  clamp values or render negative luminosity as darkness.
+- Why: `domains/astronomy/src/star.rs::luminosity_at` computes the existing
+  unbounded linear brightening law. Task 2 validation found negative values
+  at extreme pre-genesis i64 ticks. The plan already requires invalid-query
+  errors and source limitations; accepting such a value would fabricate a
+  plausible-looking observation. Positive output is not a claim that this
+  simplified stellar model covers all stages of stellar evolution.
+- Scale of source intervention (dimension-identification; scope/autonomy):
+  1. Forward every number: widest apparent time scope, consumer silently owns
+     invalid physics. Rejected.
+  2. Refuse invalid native contributions at the observation producer: adopted;
+     scope is the failed query, with an explicit reason and original ticks.
+  3. Impose an arbitrary universal epoch cutoff: rejects otherwise usable
+     observations without source evidence. Rejected.
+  4. Clamp or replace contributions: autonomous presentation changes physical
+     source values. Rejected.
+  5. Replace stellar evolution: a new scientific model beyond this campaign.
+- Ideonomy passes / overturns: two passes. Separating scope and intervention
+  revealed that rejecting all negative ticks would unnecessarily narrow valid
+  use; preserve them and test ordinary negative plus extreme invalid epochs.
+  The convergence pass distinguished numerical admissibility from scientific
+  lifecycle coverage, adding the model limitation above. No further material
+  option; no authorized accuracy tradeoff is being introduced.
+- Cost if wrong: callers may receive an explicit refusal for an epoch a future
+  model can support; source model/version evolution can revise that boundary.
+- Capture actions: Task 2 owns the refusal, regression evidence and emitted
+  limitation note; independent review checks the implementation.

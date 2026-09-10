@@ -7066,3 +7066,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T16:04:00Z | prewarm | 241.292 | 1649.675 | 59.537 | 7.08 | 0 | d99f847e6 | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-10T17:22:38Z | gate-commit | 132.960 | 215.368 | 39.997 | 1.92 | 0 | d61ad3f99 | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-10T17:25:42Z | gate-commit | 82.121 | 78.806 | 21.840 | 1.23 | 0 | d61ad3f99 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T18:00:44Z | gate-commit | 65.591 | 225.062 | 40.760 | 4.05 | 0 | 4e06e3349 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T18:02:14Z | gate-commit | 37.937 | 72.051 | 20.802 | 2.45 | 0 | 4e06e3349 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T18:03:47Z | gate-commit | 38.775 | 72.883 | 20.909 | 2.42 | 0 | 4e06e3349 | campaign/the-planetarium | MacBookPro | 10 |
