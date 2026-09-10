@@ -6886,3 +6886,21 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T00:57:45Z | sluice:gate | 808.241 | 24231.908 | 703.062 | 30.85 | 0 | da12d7bc7 |  | lefford | 40 |
 | 2026-09-10T01:01:10Z | sluice:clients | 204.365 | 3185.096 | 309.158 | 17.10 | 0 | efb020fb4 |  | lefford | 40 |
 | 2026-09-10T01:10:51Z | sluice:heavy | 580.390 | 12916.304 | 192.278 | 22.59 | 0 | a4769a3e2 |  | lefford | 40 |
+| 2026-09-09T23:48:19Z | gate-commit | 18.870 | 46.216 | 4.267 | 2.68 | 0 | 3c8f938da | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-09T23:50:05Z | gate-commit | 20.300 | 31.297 | 3.255 | 1.70 | 0 | 3c8f938da | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-09T23:52:09Z | gate-commit | 32.585 | 25.646 | 0.759 | 0.81 | 0 | 3c8f938da | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-09T23:57:39Z | gate-commit | 74.211 | 421.813 | 12.797 | 5.86 | 0 | 3c8f938da | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-09T23:58:20Z | gate-commit | 27.594 | 26.114 | 1.415 | 1.00 | 0 | 3c8f938da | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:00:30Z | gate-commit | 84.738 | 433.494 | 32.635 | 5.50 | 0 | 3c8f938da | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:23:12Z | gate-commit | 15.081 | 38.229 | 4.022 | 2.80 | 0 | f8cc43b16 | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:24:01Z | gate-commit | 20.340 | 31.039 | 3.661 | 1.71 | 0 | f8cc43b16 | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:25:47Z | gate-commit | 70.180 | 185.014 | 40.115 | 3.21 | 0 | f8cc43b16 | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:34:25Z | gate-commit | 123.623 | 454.210 | 52.315 | 4.10 | 0 | f938465a2 | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:35:06Z | gate-commit | 113.447 | 75.747 | 22.370 | 0.86 | 0 | 31ea76e47 | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:36:58Z | gate-commit | 41.369 | 71.407 | 19.150 | 2.19 | 0 | f8cc43b16 | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:53:08Z | gate-commit | 42.002 | 70.536 | 18.047 | 2.11 | 0 | af1fb3fab | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:54:12Z | gate-commit | 42.193 | 74.584 | 20.166 | 2.25 | 0 | af1fb3fab | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T00:55:13Z | gate-commit | 43.101 | 75.853 | 20.784 | 2.24 | 0 | af1fb3fab | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T01:06:24Z | gate-commit | 4.683 | 4.121 | 0.342 | 0.95 | 0 | 0f33707a1 | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T01:07:21Z | gate-commit | 44.185 | 75.930 | 20.848 | 2.19 | 0 | 0f33707a1 | campaign/the-staple-d5 | MacBookPro | 10 |
+| 2026-09-10T01:13:38Z | gate-commit | 40.637 | 73.528 | 19.152 | 2.28 | 0 | 36c9859df | campaign/the-staple-d5 | MacBookPro | 10 |

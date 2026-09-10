@@ -453,8 +453,10 @@ that the brief is a coordinate and never a catalogue entry.
 
 **D5 — a city.** The apex where flows converge, with `notability` derived and
 comparative — a place whose catchment dominates its neighbours' *is* a seat.
-Requires revisiting `SETTLERS_PER_CAPACITY` and, per §1.3, the *same-rung*
-half of `SOC-dense-settlement` only.
+The Staple D5 shipped the read-only comparative flow-convergence probe: it
+tests this claim against existing D2/D4 evidence without assigning a city
+label or changing the bake. Requires revisiting `SETTLERS_PER_CAPACITY` and,
+per §1.3, the *same-rung* half of `SOC-dense-settlement` only.
 
 **D6 — decay and refounding.** The bottom arc of §2.2's wheel, and the
 majority case. Inherits The Plat's tense vocabulary (decision 0649).

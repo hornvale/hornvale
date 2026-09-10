@@ -105,3 +105,12 @@ review found missing live joins; those findings were fixed and independently
 verified in the corrected probe runs plus the full gate, but the requested
 final review seat never returned a written report after bounded finish
 requests. This remains explicitly reported for G6.
+
+## Close routing
+
+The close walk absorbed `origin/main` before preparing the merge product. The
+chronicle, retrospective, book index and registry update, completed plan, and
+implementation-result note were added on this branch. No deferred minor was
+left without an outcome; no open-question score moved; no keystone fixture,
+census golden, or fixed-roster measurement was changed. The branch is ready
+for the G6 merge submission, subject to the queue's canonical merge phases.

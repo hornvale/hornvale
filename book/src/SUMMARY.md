@@ -476,6 +476,7 @@
 - [The Hidage](./chronicle/the-hidage.md)
 - [The Staple D2](./chronicle/the-staple-d2.md)
 - [The Staple D4](./chronicle/the-staple-d4.md)
+- [The Staple D5](./chronicle/the-staple-d5.md)
 - [The Culvert](./chronicle/the-culvert.md)
 - [The Warrant](./chronicle/the-warrant.md)
 - [The Ken](./chronicle/the-ken.md)

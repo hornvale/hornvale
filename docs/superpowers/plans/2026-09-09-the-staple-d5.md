@@ -68,7 +68,7 @@ suite, local `make gate-commit`.
   `d5_apex_verdict`; each accepts prepared observations and returns a value
   without world access, RNG, stream consumption, or mutation.
 
-- [ ] **Step 1: Write failing unit tests for typed flow separation.**
+- [x] **Step 1: Write failing unit tests for typed flow separation.**
 
   Add fixture constructors and tests proving that two profiles with equal
   throughput but different source/type composition remain distinguishable;
@@ -76,27 +76,27 @@ suite, local `make gate-commit`.
   normalization; and zero or non-finite inputs become explicit inadequate
   branches.
 
-- [ ] **Step 2: Run the focused tests to verify failure.**
+- [x] **Step 2: Run the focused tests to verify failure.**
 
   Run: `cargo test -p hornvale-worldgen d5 --lib`
 
   Expected: FAIL because `d5.rs` and the D5 interfaces do not yet exist.
 
-- [ ] **Step 3: Implement the minimal pure data model.**
+- [x] **Step 3: Implement the minimal pure data model.**
 
   Use fixed typed arrays and `BTreeMap`/ordered vectors where a variable set
   of source or flow identities is required. Preserve raw values beside every
   derived view. Return explicit `Incomplete`, `Unavailable`, or `Malformed`
   evidence rather than treating missing channels as zero.
 
-- [ ] **Step 4: Add peer-comparison and control tests.**
+- [x] **Step 4: Add peer-comparison and control tests.**
 
   Prove that a large isolated settlement, a one-type high-throughput hub, and
   an old settlement with no inbound diversity do not pass merely because a
   control is large. Prove that a profile with multiple typed inbound sources
   can produce convergence evidence when its peer comparison is adequate.
 
-- [ ] **Step 5: Run tests and commit.**
+- [x] **Step 5: Run tests and commit.**
 
   Run: `cargo test -p hornvale-worldgen d5 --lib && cargo fmt --check`
 
@@ -121,20 +121,20 @@ suite, local `make gate-commit`.
 - The ignored fixed-roster test reports the same structure for the frozen
   probe seeds and never writes census or save artifacts.
 
-- [ ] **Step 1: Write failing fixture tests for every verdict branch.**
+- [x] **Step 1: Write failing fixture tests for every verdict branch.**
 
   Cover no convergence, control-variable collapse, coercion-only apparent
   prominence, transient contrast, same-phase recurrence, cross-phase
   recurrence, mixed seeds, missing joins, isolated settlements, zero-flow
   profiles, and a positive fixture with multiple adequate peer settlements.
 
-- [ ] **Step 2: Run the focused probe tests to verify failure.**
+- [x] **Step 2: Run the focused probe tests to verify failure.**
 
   Run: `cargo nextest run -p hornvale-worldgen --test suite -E 'test(staple_d5_probe)'`
 
   Expected: FAIL until the probe module and D5 interfaces are implemented.
 
-- [ ] **Step 3: Implement deterministic live joins.**
+- [x] **Step 3: Implement deterministic live joins.**
 
   Build the existing world at the probe seed, enumerate alive settlements,
   join each settlement to its same-run D4 witness exactly once, and retain
@@ -142,21 +142,21 @@ suite, local `make gate-commit`.
   reduction and never weight a settlement by population, degree, or flow
   volume when assigning the verdict.
 
-- [ ] **Step 4: Implement recurrence and discrimination reduction.**
+- [x] **Step 4: Implement recurrence and discrimination reduction.**
 
   Compare same-phase windows before cross-phase aggregates. Keep raw and
   normalized profiles, controls, flow provenance, and recurrence class in the
   report. Apply the spec’s branch table without inventing an absolute city
   threshold or collapsing all flows into one score.
 
-- [ ] **Step 5: Add the ignored fixed-roster readout.**
+- [x] **Step 5: Add the ignored fixed-roster readout.**
 
   Mark the real-world report with the repository’s existing ignored-probe
   convention and a reason naming the D5 spec and sanctioned boundary. Assert
   only structural invariants in the non-ignored path; print measurements in the
   ignored path rather than pinning them before the evidence exists.
 
-- [ ] **Step 6: Run focused non-roster tests and commit.**
+- [x] **Step 6: Run focused non-roster tests and commit.**
 
   Run: `cargo nextest run -p hornvale-worldgen --test suite -E 'test(staple_d5_probe)'`
 
@@ -172,26 +172,26 @@ suite, local `make gate-commit`.
 - Modify: `windows/worldgen/src/d5.rs`
 - Modify: `docs/superpowers/ledgers/2026-09-09-the-staple-d5.md`
 
-- [ ] **Step 1: Add mutation-oriented vacuity tests.**
+- [x] **Step 1: Add mutation-oriented vacuity tests.**
 
   Use controlled fixtures or source-level mutation helpers to demonstrate that
   removing source diversity, phase identity, or coercive-flow separation moves
   the relevant verdict or refusal branch. Assert the mutation target is found
   before applying it so a no-op mutation cannot report green evidence.
 
-- [ ] **Step 2: Add save-inert regression checks.**
+- [x] **Step 2: Add save-inert regression checks.**
 
   Compare the existing emitted history/save-facing fields before and after D5
   reduction. The D5 diagnostic may read D4 evidence but must not change emitted
   bytes, stream positions, or existing D2 behavior.
 
-- [ ] **Step 3: Add attribution and control witnesses.**
+- [x] **Step 3: Add attribution and control witnesses.**
 
   Verify that the report names control-variable collapse separately from
   convergence, reports coercion as qualified evidence, and refuses causal
   wording when only association is available.
 
-- [ ] **Step 4: Run the focused suite and commit.**
+- [x] **Step 4: Run the focused suite and commit.**
 
   Run: `cargo nextest run -p hornvale-worldgen --test suite -E 'test(staple_d5_probe)'`
 
@@ -204,26 +204,26 @@ suite, local `make gate-commit`.
 **Files:**
 - Modify: `docs/superpowers/ledgers/2026-09-09-the-staple-d5.md`
 
-- [ ] **Step 1: Run the complete focused D5/D4 compatibility suite.**
+- [x] **Step 1: Run the complete focused D5/D4 compatibility suite.**
 
   Run: `cargo nextest run -p hornvale-worldgen --test suite -E 'test(staple_d5_probe) or test(staple_d4_probe)'`
 
   Expected: all selected non-ignored tests pass.
 
-- [ ] **Step 2: Run the local commit gate.**
+- [x] **Step 2: Run the local commit gate.**
 
   Run: `make gate-commit`
 
   Expected: formatting, clippy, audits, freshness checks, and the sub-floor
   tier pass. Do not run the fixed-roster probe or census locally.
 
-- [ ] **Step 3: Record the implementation review.**
+- [x] **Step 3: Record the implementation review.**
 
   Add the observed test result, any axis debt, and any review findings to the
   committed D5 ledger. Confirm that the implementation matches every verdict
   branch and that no city mechanism or save-facing fact slipped into the tree.
 
-- [ ] **Step 4: Stop at the campaign boundary.**
+- [x] **Step 4: Stop at the campaign boundary.**
 
   Do not submit a stage gate, run the fixed-roster measurement, regenerate a
   census, merge, or close the campaign from this plan. Those actions require

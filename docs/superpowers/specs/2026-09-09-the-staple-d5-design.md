@@ -2,8 +2,8 @@
 
 ## Status
 
-Design drafted for G3 review on 2026-09-09. No implementation or mechanism
-change is authorized by this document.
+Design approved at G3 and implemented on 2026-09-09 as a read-only diagnostic.
+No city mechanism or save-facing change is authorized by this document.
 
 **Campaign:** `campaign/the-staple-d5`
 
@@ -215,3 +215,18 @@ collapsing typed flows into one scalar merely to obtain a positive result.
 The next campaign-stage decision is therefore: run the frozen Task 0 probe,
 classify the result per seed, and decide whether a later city-mechanism
 campaign is warranted.
+
+## 13. Implementation result
+
+The D5 implementation preserves the contract above. Its pure model retains
+typed flow vectors, source identity, provenance, phase identity, controls,
+availability, and explicit refusal branches. The live probe joins existing D4
+portfolio and exchange witnesses by stable settlement identity, evaluates
+each seed independently, and keeps its fixed-roster readout ignored pending
+the sanctioned campaign boundary.
+
+The D4/D5 compatibility suite passed 19/19 selected tests, and the docs
+consistency suite passed 75/75. The local commit gate passed formatting,
+clippy, type/placement/plumb audits, freshness checks, and the sub-floor
+tier. The fixed-roster measurement and census remain intentionally unrun, so
+this campaign delivers the instrument, not a city verdict.
