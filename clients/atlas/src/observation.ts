@@ -2,6 +2,7 @@ import { FLAGSHIP_MARK, SETTLEMENT_MARK } from "./palette.ts";
 import { initialViewport, type Viewport as AtlasViewport } from "./projection.ts";
 
 const FRAME_SCHEMA = "observation/frame/v1";
+const NEIGHBORS_SOURCE = "hornvale scene/neighbors/v1 stdout";
 
 export interface FramePacket {
   schema: string;
@@ -94,6 +95,82 @@ function canonicalU64(value: unknown): string {
     throw new ObservationFrameError("world_seed must be a canonical decimal string");
   }
   return seed;
+}
+
+interface StarMark {
+  kind: "field" | "neighbor";
+  raDeg: number;
+  decDeg: number;
+  radius: number;
+}
+
+function numberInRange(
+  value: unknown,
+  field: string,
+  minimum: number,
+  maximum: number,
+): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < minimum || value > maximum) {
+    throw new ObservationFrameError(`${field} must be a finite number in [${minimum}, ${maximum}]`);
+  }
+  return value;
+}
+
+function sceneList(document: Record<string, unknown>, field: string): Record<string, unknown>[] {
+  if (!Array.isArray(document[field])) {
+    throw new ObservationFrameError(`scene/neighbors/v1 ${field} must be an array`);
+  }
+  return document[field].map((entry, index) =>
+    record(entry, `scene/neighbors/v1 ${field}[${index}]`)
+  );
+}
+
+/**
+ * Read the optional stellar scene already carried by a spatial packet.
+ * The projection consumes only the producer's angular and brightness fields;
+ * other spatial sources remain lossless textual readouts.
+ */
+function neighborStars(spatial: FramePacket["spatial"]): StarMark[] | null {
+  if (spatial.source !== NEIGHBORS_SOURCE) return null;
+  let document: Record<string, unknown>;
+  try {
+    document = record(JSON.parse(spatial.readout), "scene/neighbors/v1");
+  } catch (error) {
+    if (error instanceof ObservationFrameError) throw error;
+    throw new ObservationFrameError(`scene/neighbors/v1 JSON is malformed: ${error}`);
+  }
+  if (document.schema !== "scene/neighbors/v1") {
+    throw new ObservationFrameError("spatial readout must be scene/neighbors/v1");
+  }
+
+  const neighbors = sceneList(document, "neighbors").map((neighbor, index) => ({
+    kind: "neighbor" as const,
+    raDeg: numberInRange(neighbor.ra_deg, `neighbors[${index}].ra_deg`, 0, 360),
+    decDeg: numberInRange(neighbor.dec_deg, `neighbors[${index}].dec_deg`, -90, 90),
+    brightness: numberInRange(
+      neighbor.brightness_rel,
+      `neighbors[${index}].brightness_rel`,
+      0,
+      Infinity,
+    ),
+  }));
+  const brightest = Math.max(...neighbors.map(({ brightness }) => brightness), 1);
+  const notable = neighbors.map(({ raDeg, decDeg, brightness }) => ({
+    kind: "neighbor" as const,
+    raDeg,
+    decDeg,
+    radius: 2 + 4 * Math.sqrt(brightness / brightest),
+  }));
+  const field = sceneList(document, "stars").map((star, index) => {
+    const magnitude = numberInRange(star.magnitude_class, `stars[${index}].magnitude_class`, 1, 5);
+    return {
+      kind: "field" as const,
+      raDeg: numberInRange(star.ra_deg, `stars[${index}].ra_deg`, 0, 360),
+      decDeg: numberInRange(star.dec_deg, `stars[${index}].dec_deg`, -90, 90),
+      radius: 1 + (5 - magnitude) / 5,
+    };
+  });
+  return [...field, ...notable];
 }
 
 /** Parse the producer packet and enforce the renderer's lossless input contract. */
@@ -255,6 +332,17 @@ function escapeHtml(value: string): string {
     })[character]!);
 }
 
+function starMarkup(stars: StarMark[], map: RenderState["map"]): string {
+  return stars.map((star) => {
+    const x = map.bounds.width * star.raDeg / 360;
+    const y = map.bounds.height * (90 - star.decDeg) / 180;
+    const fill = star.kind === "neighbor" ? map.palette.accent : map.palette.foreground;
+    return `<circle data-star-kind="${star.kind}" data-ra="${star.raDeg}" data-dec="${star.decDeg}" cx="${
+      x.toFixed(3)
+    }" cy="${y.toFixed(3)}" r="${star.radius.toFixed(3)}" fill="${fill}"></circle>`;
+  }).join("");
+}
+
 /** Produce a self-contained browser-inspectable SVG/HTML preview for one frame. */
 export function renderObservationFrameHtml(
   packet: FramePacket,
@@ -265,6 +353,13 @@ export function renderObservationFrameHtml(
     `<li><span>${escapeHtml(key)}</span>: ${escapeHtml(value)}</li>`
   ).join("");
   const map = state.map;
+  const stars = neighborStars(packet.spatial);
+  const mapBody = stars === null
+    ? `<foreignObject x="0" y="0" width="100%" height="100%"><pre>${
+      escapeHtml(map.content)
+    }</pre></foreignObject>`
+    : starMarkup(stars, map);
+  const mapBackground = stars === null ? "#e1d7be" : "#0c1326";
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(state.title)}</title>
@@ -275,9 +370,7 @@ export function renderObservationFrameHtml(
   }${state.countUnitLabel ? ` · ${escapeHtml(state.countUnitLabel)}` : ""}</p></header>
 <section data-map data-source="${escapeHtml(map.source)}"><svg role="img" aria-label="${
     escapeHtml(map.source)
-  }" viewBox="0 0 ${map.bounds.width} ${map.bounds.height}" width="${map.bounds.width}" height="${map.bounds.height}"><rect width="100%" height="100%" fill="#e1d7be"></rect><foreignObject x="0" y="0" width="100%" height="100%"><pre>${
-    escapeHtml(map.content)
-  }</pre></foreignObject></svg></section>
+  }" viewBox="0 0 ${map.bounds.width} ${map.bounds.height}" width="${map.bounds.width}" height="${map.bounds.height}"><rect width="100%" height="100%" fill="${mapBackground}"></rect>${mapBody}</svg></section>
 <section aria-label="Legend"><h2>Legend</h2><ul>${legend}</ul></section>
 <aside aria-label="Observation"><p>${escapeHtml(state.annotation.text)}</p></aside>
 <footer data-provenance><p>Episode ${

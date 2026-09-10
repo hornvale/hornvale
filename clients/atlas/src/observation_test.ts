@@ -28,6 +28,13 @@ async function fixtureText(): Promise<string> {
   );
 }
 
+async function neighborFixture(): Promise<FramePacket> {
+  const text = await Deno.readTextFile(
+    new URL("../../../observations/fixtures/HV-009/render-input.json", import.meta.url),
+  );
+  return parseObservationFramePacket(text);
+}
+
 Deno.test("frame composition preserves the authored title and object/scale labels", async () => {
   // Catches a renderer substituting generic client copy for packet-authored labels.
   const state = renderObservationFrame(await fixture(), LAPTOP);
@@ -75,6 +82,34 @@ Deno.test("phone composition retains the primary map and observation sentence", 
     state.annotation.text,
     "Chambers gather into connected cave systems across depth bands.",
   );
+});
+
+Deno.test("neighbor observation preserves supplied stellar evidence at phone and laptop sizes", async () => {
+  // Catches the public-scale preview dropping the scene payload, its unit, or
+  // the seed provenance while adapting to either review viewport.
+  const packet = await neighborFixture();
+  const scene = JSON.parse(packet.spatial.readout) as Record<string, unknown>;
+  assertEquals(packet.episode_id, "HV-009");
+  assertEquals(packet.labels.count_unit, "stars");
+  assertEquals(packet.spatial.source, "hornvale scene/neighbors/v1 stdout");
+  assertEquals(scene.schema, "scene/neighbors/v1");
+  assertEquals(scene.seed, 42);
+
+  const preview = renderObservationPreview(packet);
+  for (const frame of [preview.phone, preview.laptop]) {
+    assertEquals(frame.state.map.content, packet.spatial.readout);
+    assertEquals(frame.state.countUnitLabel, "stars");
+    assertEquals(frame.state.provenance.worldSeed, "42");
+    assert(frame.html.includes("The notable stars of seed 42"));
+    assert(frame.html.includes("scene/neighbors/v1 stdout"));
+    assert(frame.html.includes("Five notable neighbor stars stand at fixed positions"));
+    assertEquals((frame.html.match(/data-star-kind=/g) ?? []).length, 153);
+    assert(frame.html.includes('data-star-kind="neighbor" data-ra="81.841371"'));
+    assert(frame.html.includes('data-star-kind="field"'));
+    assert(!frame.html.includes("<foreignObject"));
+  }
+  assertEquals(preview.phone.state.viewport, PHONE);
+  assertEquals(preview.laptop.state.viewport, LAPTOP);
 });
 
 Deno.test("unknown frame schemas and missing source digests are refused", async () => {
