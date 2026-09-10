@@ -1438,9 +1438,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
 hornvale-lab::hornvale_lab$domesday::render::tests::the_index_carries_the_generated_header_and_every_domain_link
 hornvale-lab::hornvale_lab$domesday::stats::tests::a_metric_with_no_present_values_yields_none
@@ -1682,6 +1680,7 @@ hornvale-lab::suite$health_calibration::one_stuck_creature_among_nine_recovering
 hornvale-lab::suite$health_calibration::searching_is_not_distress
 hornvale-lab::suite$health_calibration::the_chronic_threshold_is_exact_at_chronic_ticks
 hornvale-lab::suite$hearth_population_calibration::the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close
+hornvale-lab::suite$hearth_population_calibration::the_hearth_never_worsens_a_planted_cold_built_population
 hornvale-lab::suite$individuation::awakening_is_a_fact_and_the_large_owlbear_stays_large
 hornvale-lab::suite$individuation::mighty_things_in_the_cold_north
 hornvale-lab::suite$individuation::the_roster_passes_integrity_and_stays_out_of_the_canon
