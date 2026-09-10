@@ -154,3 +154,19 @@ When testing a client in a browser, **rebuild the bundle first**. Serving a
 stale `dist`/gallery bundle against fresh source has burned this project more
 than once: the page renders, the test passes, and it is testing the previous
 commit.
+
+## The native visual workspace
+
+`visual/` contains the reusable native source, the independent Bevy view and
+Planetarium, its first application. Read [its guide](visual/README.md) before
+editing it. `make visual-check` runs its pinned Rust 1.96.1 CPU checks; both
+`clients-check-run` lists now include `visual-check-run` as an additional arm.
+The earlier five-arm account above is historical. No new lane phase is needed.
+
+The resolved Cargo metadata guard follows all-feature normal/build/dev paths.
+The source cannot reach Bevy/view/application; the view cannot reach simulation,
+source or application. The root workspace never links Bevy. The libraries' tests
+instantiate independent consumers without Planetarium. GPU inspect/capture and
+visual acceptance are separate required evidence, never a silently passing skip.
+The scientific source is unrestricted; a future situated game must bring its own
+limited producer/mirror, not hide scientific truth in controls.

@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run visual-check visual-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -995,6 +995,16 @@ wasm-lot: ## Build the Lot's own exhibit wasm into book/src/gallery (deploy runs
 	fi
 	cp clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm book/src/gallery/lot.wasm
 
+visual-check: ## The visual client's CPU gate (GPU qualification is separate)
+	@bash scripts/timed.sh visual-check -- make --no-print-directory visual-check-run
+
+visual-check-run:
+	cd clients/visual && cargo +1.96.1 fmt --check
+	cargo +1.96.1 clippy --locked --manifest-path clients/visual/Cargo.toml --workspace --all-targets -- -D warnings
+	cargo +1.96.1 test --locked --manifest-path clients/visual/Cargo.toml --workspace
+	python3 scripts/visual-dependencies.py
+	python3 scripts/test-visual-dependencies.py
+
 game-check: ## The game client's local gate: fmt/clippy/test on both crates
 	@bash scripts/timed.sh game-check -- make --no-print-directory game-check-run
 
@@ -1075,7 +1085,7 @@ lot-check-run: wasm-lot
 	  gz=$$(gzip -9 -c clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm | wc -c); \
 	  echo "lot wasm size: $$gz bytes gzipped ($$raw raw)"
 
-# THE FIVE ARMS RUN IN PARALLEL, and they used to be plain prerequisites
+# THE CLIENT ARMS RUN IN PARALLEL, and they used to be plain prerequisites
 # (i.e. serial). Measured on lefford 2026-08-23, alternating arms on an idle
 # box to cancel cache-warming drift, when there were four arms (vessel, world,
 # game, atlas — the Lot exhibit did not exist yet):
@@ -1120,13 +1130,13 @@ lot-check-run: wasm-lot
 # are how people learn to stop reading gate logs. `--jobserver-style=fifo`
 # fixes it upstream and needs make 4.4; lefford has 4.3.
 #
-# Backgrounding five SERIAL sub-makes creates no jobserver at all, so the
+# Backgrounding the SERIAL sub-makes creates no jobserver at all, so the
 # warning cannot arise. Each target's output is captured to its own file and
 # printed whole after the `wait`, which gives strictly better grouping than
 # -Otarget did, and every target's pass/fail is named before the logs.
 clients-check-run:
 	@set -u; pids=""; names=""; \
-	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check; do \
+	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check visual-check-run; do \
 	  $(MAKE) --no-print-directory $$t > /tmp/hv-clients-$$t.log 2>&1 & \
 	  pids="$$pids $$!"; names="$$names $$t"; \
 	done; \
@@ -1135,7 +1145,7 @@ clients-check-run:
 	  n=$$(echo $$names | cut -d' ' -f$$i); i=$$((i+1)); \
 	  if wait $$p; then echo "clients: $$n OK"; else rc=1; echo "clients: $$n FAILED"; fi; \
 	done; \
-	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check; do \
+	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check visual-check-run; do \
 	  echo "----- $$t -----"; cat /tmp/hv-clients-$$t.log; \
 	done; \
 	exit $$rc
