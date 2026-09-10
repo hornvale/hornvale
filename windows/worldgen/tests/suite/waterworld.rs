@@ -8,8 +8,9 @@ use hornvale_climate::{BiomeExpr, GeneratedClimate, Realm, Stratum};
 use hornvale_kernel::{Seed, Vertex, World, WorldTime};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins, WaterKind};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, WaterSubstrate, WaterWorld, WaterWorldConfig, WorldComponents,
-    build_world_to_with_artifacts, climate_from, waterworld_from,
+    BuildDepth, SettlementPins, WaterSubstrate, WaterWorld, WaterWorldConfig, WaterWorldDetail,
+    WorldComponents, build_world_to_with_artifacts, climate_from, observe_waterworld,
+    waterworld_from,
 };
 
 struct Fixture {
@@ -398,5 +399,21 @@ fn stocks_and_propagation_are_bounded_ordered_and_counted() {
             .samples
             .windows(2)
             .all(|pair| (pair[0].vertex, pair[0].depth_m) <= (pair[1].vertex, pair[1].depth_m))
+    );
+}
+
+#[test]
+fn observation_keeps_ordinary_and_diagnostic_claims_distinct_and_pure() {
+    let generated = active(&seed_42());
+    let ordinary = observe_waterworld(&generated, WaterWorldDetail::Habitat, false);
+    let diagnostic = observe_waterworld(&generated, WaterWorldDetail::Habitat, true);
+    assert!(ordinary.contains("substrate samples"));
+    assert!(ordinary.contains("aggregate stock samples"));
+    assert!(!ordinary.contains("diagnostic fields"));
+    assert!(diagnostic.contains("diagnostic fields include depth, pressure, light"));
+    assert!(diagnostic.contains("values are derived, not certainty"));
+    assert_eq!(
+        diagnostic,
+        observe_waterworld(&generated, WaterWorldDetail::Habitat, true)
     );
 }
