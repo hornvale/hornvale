@@ -7026,6 +7026,22 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T03:49:05Z | sluice:gate | 848.398 | 25315.506 | 847.330 | 30.84 | 0 | b0f9f07ca |  | lefford | 40 |
 | 2026-09-10T03:52:35Z | sluice:clients | 209.248 | 3210.433 | 319.001 | 16.87 | 0 | 0895b0e43 |  | lefford | 40 |
 | 2026-09-10T04:00:15Z | sluice:heavy | 460.506 | 12876.342 | 299.182 | 28.61 | 0 | 406c12114 |  | lefford | 40 |
+| 2026-09-10T13:28:41Z | gate-commit | 2.533 | 2.333 | 0.143 | 0.98 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:29:06Z | gate-commit | 6.377 | 7.469 | 0.473 | 1.25 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:29:42Z | gate-commit | 17.481 | 41.019 | 4.519 | 2.60 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:30:37Z | gate-commit | 14.057 | 25.552 | 4.057 | 2.11 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:31:30Z | gate-commit | 20.105 | 31.770 | 4.177 | 1.79 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:32:44Z | gate-commit | 63.555 | 251.991 | 33.519 | 4.49 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:33:51Z | gate-commit | 40.328 | 79.833 | 20.970 | 2.50 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:38:21Z | gate-commit | 24.779 | 34.448 | 4.542 | 1.57 | 0 | f3faad829 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:39:20Z | gate-commit | 47.971 | 92.516 | 37.095 | 2.70 | 0 | f3faad829 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:47:16Z | gate-commit | 16.964 | 39.986 | 5.081 | 2.66 | 0 | c5be1a2bf | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:47:50Z | gate-commit | 20.016 | 31.397 | 4.652 | 1.80 | 0 | c5be1a2bf | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:49:23Z | gate-commit | 82.243 | 325.723 | 38.898 | 4.43 | 0 | c5be1a2bf | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:53:51Z | gate-commit | 15.537 | 26.187 | 5.184 | 2.02 | 0 | 9f984d343 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:54:21Z | gate-commit | 20.162 | 31.586 | 5.027 | 1.82 | 0 | 9f984d343 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:56:15Z | gate-commit | 102.670 | 278.434 | 38.550 | 3.09 | 0 | 9f984d343 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:57:31Z | gate-commit | 37.663 | 70.899 | 18.968 | 2.39 | 0 | 9f984d343 | campaign/the-vent | MacBookPro | 10 |
 | 2026-09-09T21:35:14Z | census-tail-chorus | 113.119 | 177.604 | 6.626 | 1.63 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
 | 2026-09-09T21:35:15Z | census-tail-domesday | 0.388 | 0.329 | 0.034 | 0.94 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
 | 2026-09-09T21:35:16Z | census-tail-anomalies | 0.283 | 0.234 | 0.032 | 0.94 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
@@ -7072,3 +7088,19 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T19:03:58Z | gate-commit | 40.385 | 72.961 | 21.646 | 2.34 | 0 | 1fc81e6ac | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-10T19:19:05Z | gate-commit | 51.959 | 74.108 | 20.913 | 1.83 | 0 | ef006cd9a | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-10T19:20:42Z | gate-commit | 43.352 | 74.078 | 21.918 | 2.21 | 0 | ef006cd9a | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T14:51:10Z | gate-commit | 121.114 | 738.411 | 53.720 | 6.54 | 0 | e983902f7 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T14:52:19Z | gate-commit | 40.117 | 71.791 | 20.553 | 2.30 | 0 | cabc8001a | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T17:06:35Z | census-tail-chorus | 57.253 | 725.317 | 22.413 | 13.06 | 0 | 1a830cc95 |  | lefford | 40 |
+| 2026-09-10T17:06:38Z | census-tail-domesday | 1.237 | 1.071 | 0.111 | 0.96 | 0 | 1a830cc95 |  | lefford | 40 |
+| 2026-09-10T17:06:38Z | census-tail-anomalies | 0.935 | 0.805 | 0.131 | 1.00 | 0 | 1a830cc95 |  | lefford | 40 |
+| 2026-09-10T17:06:41Z | sluice:artifacts | 224.688 | 1425.940 | 58.826 | 6.61 | 0 | 1a830cc95 |  | lefford | 40 |
+| 2026-09-10T17:08:09Z | sluice:outboard | 87.638 | 71.924 | 79.399 | 1.73 | 0 | 0a12f88b5 |  | lefford | 40 |
+| 2026-09-10T17:21:35Z | sluice:gate | 805.509 | 24474.561 | 832.288 | 31.42 | 0 | ca7629c65 |  | lefford | 40 |
+| 2026-09-10T17:24:42Z | sluice:clients | 186.984 | 3114.976 | 292.579 | 18.22 | 0 | fdef6fc51 |  | lefford | 40 |
+| 2026-09-10T17:32:13Z | sluice:heavy | 450.446 | 12880.490 | 280.166 | 29.22 | 0 | 352d21af7 |  | lefford | 40 |
+| 2026-09-10T17:51:44Z | census-tail-chorus | 61.520 | 762.483 | 25.261 | 12.80 | 0 | 54a7f9f21 |  | lefford | 40 |
+| 2026-09-10T17:51:46Z | census-tail-domesday | 1.220 | 1.044 | 0.125 | 0.96 | 0 | 54a7f9f21 |  | lefford | 40 |
+| 2026-09-10T17:51:47Z | census-tail-anomalies | 0.942 | 0.811 | 0.132 | 1.00 | 0 | 54a7f9f21 |  | lefford | 40 |
+| 2026-09-10T17:51:49Z | sluice:artifacts | 255.876 | 2331.137 | 92.727 | 9.47 | 0 | 54a7f9f21 |  | lefford | 40 |
+| 2026-09-10T17:53:28Z | sluice:outboard | 98.201 | 122.946 | 84.646 | 2.11 | 0 | 6bd2332e4 |  | lefford | 40 |
+| 2026-09-10T18:07:30Z | sluice:gate | 841.541 | 25802.832 | 868.484 | 31.69 | 0 | c315a6efc |  | lefford | 40 |
