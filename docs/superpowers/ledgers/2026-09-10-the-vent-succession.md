@@ -96,3 +96,32 @@ the explicit distinction between derived natural history and authored events.
 **Capture actions:** The spec must state the static/dynamic API boundary and
 the source-first perturbation protocol. The plan must make Stage 1 red probes
 behavioral against existing accessors before introducing the new snapshot.
+
+## #4 [G4] — How should the approved spec be executed?
+
+**Decision:** Execute four reviewable stages: seam inventory and behavioral-red
+probes; deterministic succession and independent local fields; bounded stocks
+and current-mediated redistribution; observation, performance evidence,
+documentation, and close. Use one focused task boundary per stage and commit
+each stage before the next.
+
+**Why:** The current merged Waterworld seam already supplies substrate, fields,
+vents, stocks, propagation, and observation. The plan can therefore extend
+those files incrementally, preserving existing names and isolating failures by
+temporal concern. The stage ordering follows the approved spec and The Vent's
+source-first test discipline.
+
+**Alternatives discarded:** A rewrite of the static overlay would mix a known
+green predecessor with the new temporal experiment; one large task would make
+stream/order and non-vacuity regressions hard to localize; a new domain or
+universal wrapper would violate layering and the scope decision.
+
+**Ideonomy passes / overturns:** One G4 decomposition pass using
+decomposability, direction, and source-first evidence. No overturn. It added
+the explicit static/dynamic API boundary, exact tick-boundary tests, and an
+independent absent-overlay compatibility task.
+
+**Capture actions:** Plan saved under `docs/superpowers/plans/`; the unrelated
+root `IMPLEMENTATION_PLAN.md` remains untouched. Execution uses
+subagent-driven development with review checkpoints, local `make gate-commit`,
+and queued Sluice stage/merge requests only.
