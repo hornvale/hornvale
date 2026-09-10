@@ -194,3 +194,31 @@ fn first_reply_requires_native_wanderer_indices() {
     assert!(m.accept(&reply.to_string()).is_err());
     assert_eq!(m.current_ticks(), None);
 }
+#[test]
+fn committed_conflict_errors_while_newer_request_remains_pending() {
+    let mut mirror = ObservationMirror::new(INITIAL).unwrap();
+    let mut reply: serde_json::Value =
+        serde_json::from_str(include_str!("../fixtures/reply.json")).unwrap();
+    mirror.request(-1).unwrap();
+    let old = {
+        let mut old = reply.clone();
+        old["ticks"] = serde_json::json!(-1);
+        old["astronomy"]["ticks"] = serde_json::json!(-1);
+        old.to_string()
+    };
+    mirror.request(0).unwrap();
+    reply["request_id"] = serde_json::json!(1);
+    mirror.accept(&reply.to_string()).unwrap();
+    let committed = serde_json::to_value(mirror.current().unwrap()).unwrap();
+    mirror.request(60).unwrap();
+    assert!(!mirror.accept(&reply.to_string()).unwrap());
+    assert!(!mirror.accept(&old).unwrap());
+    reply["ticks"] = serde_json::json!(1);
+    reply["astronomy"]["ticks"] = serde_json::json!(1);
+    assert!(mirror.accept(&reply.to_string()).is_err());
+    assert_eq!(
+        serde_json::to_value(mirror.current().unwrap()).unwrap(),
+        committed
+    );
+    assert_eq!(mirror.pending_ticks(), Some(60));
+}

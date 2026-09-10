@@ -159,3 +159,40 @@ fn capture_preconditions_do_not_poison_but_actual_failure_requires_rebuild() {
     assert!(c.reset(&mut world, &m).is_err());
     assert!(c.begin_capture(&output_path(), Some((0, 0))).is_err());
 }
+#[test]
+fn reset_discards_queued_scene_before_application() {
+    let (mut world, mut mirror, mut catalog) = setup();
+    let camera = world.spawn(Transform::IDENTITY).id();
+    let pose = CameraPose {
+        eye_km: [30000., 0., 0.],
+        target_km: [0.; 3],
+        up: [0., 0., 1.],
+        vertical_fov_radians: 0.7,
+        focus_distance_km: 30000.,
+    };
+    catalog
+        .apply(
+            &mut world,
+            &mirror,
+            &pose,
+            SceneTarget {
+                camera,
+                width: 1920,
+                height: 1080,
+            },
+        )
+        .unwrap();
+    assert!(world.resource::<PendingScene>().0.is_some());
+    mirror
+        .reset(include_str!("../tests/fixtures/initial.json"))
+        .unwrap();
+    catalog.reset(&mut world, &mirror).unwrap();
+    apply_pending_scene(&mut world);
+    assert_eq!(catalog.entity_count(), 0);
+    assert_eq!(world.query::<&BodyVisual>().iter(&world).count(), 0);
+    assert_eq!(world.query::<&PointVisual>().iter(&world).count(), 0);
+    assert_eq!(world.query::<&StarLight>().iter(&world).count(), 0);
+    assert_eq!(world.query::<&StellarPoint>().iter(&world).count(), 0);
+    assert_eq!(world.query::<&Atmosphere>().iter(&world).count(), 0);
+    assert_eq!(world.resource::<AppliedObservation>().0, None);
+}

@@ -45,15 +45,15 @@ impl ObservationMirror {
         if reply.request_id >= self.next {
             return Err(ViewError::Document("reply was never requested".into()));
         }
+        if let Some(current) = &self.current
+            && reply.request_id == current.request_id
+            && serde_json::to_value(&reply)? != serde_json::to_value(current)?
+        {
+            return Err(ViewError::Document(
+                "reply conflicts with committed observation".into(),
+            ));
+        }
         let Some((id, ticks)) = self.pending else {
-            if let Some(current) = &self.current
-                && reply.request_id == current.request_id
-                && serde_json::to_value(&reply)? != serde_json::to_value(current)?
-            {
-                return Err(ViewError::Document(
-                    "reply conflicts with committed observation".into(),
-                ));
-            }
             return Ok(false);
         };
         if reply.request_id < id {
