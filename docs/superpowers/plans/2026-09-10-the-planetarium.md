@@ -146,11 +146,12 @@ indices as local IDs, then bind them to world/revision/scope in the envelope.
 No ID is a globally stable identity across source revisions.
 
 A light record is `star_id: String`, `direction_from_anchor: [f64; 3]`,
-`flux_rel: f64`. The unit direction and Earth-relative unattenuated flux come
-from the native stellar evaluator. Other-body lighting uses the same emitted
-source positions and luminosities from the static system document; the source
-must emit any additional evaluated contribution needed instead of Bevy growing
-an independent time-dependent astronomy model. Do not apply stellar finite-disc
+`flux_rel: f64`, `luminosity_rel: f64`. The unit direction, Earth-relative
+unattenuated flux and current epoch luminosity come from the native stellar
+evaluator. Other-body lighting uses the emitted current source positions and
+luminosity, rather than substituting static catalog luminosity. Task 2 supplied
+this evaluated contribution under the existing source-owned contract; Bevy does
+not grow an independent time-dependent astronomy model. Do not apply stellar finite-disc
 shadows without a verified stellar radius contract. Missing wanderer radius
 means a point. Missing moon spin means recorded cosmetic material orientation,
 not physical synchronous rotation inferred by the renderer.
@@ -233,7 +234,7 @@ history policy has completed; it is not merely elapsed wall time.
 **Goal:** Resolve physical prerequisites, expose evaluated observations, and render an actual attractive moving draft through the shared libraries.
 **Success Criteria:** Source conformance passes; one declared topology works; a full-resolution still and at least two seconds of moving Bevy output exist with recorded settings.
 **Tests:** Tasks 1–3; source/CLI equality; dependency containment; GPU image and motion inspection.
-**Status:** Not Started
+**Status:** In Progress
 
 ### Task 1: add a documented physical anchor radius and qualify geometry
 

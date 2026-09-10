@@ -630,3 +630,57 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 - Capture actions: Task 3 verifies point range/culling, scale conversion and
   actual anchor/moon shading; the production record distinguishes solid-body
   transport from the directional atmosphere treatment and records disk absence.
+
+## Task 3 — review and fix round 1
+
+- Independent review of `7d3a5156d..a1a9a3089` found three Important issues:
+  incomplete binary light inventories can reach a renderer panic; finite but
+  unsupported radius/elevation values lack geometry bounds; quarter-pixel tests
+  omit the actual f32 camera/body projection. All three returned to the original
+  implementer for fix round 1 and scoped behavioral verification. No finding is
+  dismissed on the basis of the successful native visual witness.
+- Deferred Minor: initial-document validation currently validates only part of
+  the nested static catalog. Carry to Task 4's reset/identity work and Task 8's
+  public schema documentation; the final review must decide whether additional
+  validation is needed. This is separate from the blocking light inventory bug.
+- Deferred Minor: the new 629-line renderer combines construction, application
+  and readiness/capture. Tasks 4 and 6 should separate the lifecycle and capture
+  responsibilities they extend; carry the observation into their briefs and
+  final review, rather than start another implementation wave during this fix.
+- Ruling: Task 3's persistent offscreen Bevy app qualifies its GPU bootstrap;
+  the visible inspection window and controls remain required Task 5 deliverables.
+  Task 3 explicitly starts synchronous exact observation and draft capture;
+  Task 5 owns orbit/pan/dolly, time controls and film/inspection switching.
+  This resolves the review's scope ambiguity without dropping interactive work.
+- Maturity/complexity spectrum (substitution, age and complexity prompts):
+
+  ```text
+  isolated illustrative frame ... persistent native GPU scene ... full interactive film client
+                           Task3 occupies this middle band
+  substitute a visible host window: adds UI hosting, not source-motion evidence
+  substitute an earlier hand-authored image: loses the required native/GPU witness
+  substitute final control/package maturity now: duplicates Tasks4–7 responsibilities
+  ```
+
+  Two ideonomy passes: the first separated a program's visible window from its
+  persistent rendering behavior; the convergence pass checked which later
+  obligations would disappear under that substitution. None may disappear, so
+  the original task allocation stands. Cost if wrong: deliver the visible host
+  earlier; no data/model contract changes and no final acceptance is granted.
+- Unchanged-source qualifications resolved: Task 2's native source and CLI
+  correspondence were independently reviewed at `048212519`; root Cargo.toml
+  currently excludes `clients/visual`. A fresh locked cargo-metadata traversal
+  at the Task 3 head found view closure 448 packages with no Hornvale package
+  except the view itself, and source closure 45 packages with no Bevy or
+  Planetarium dependency, including resolved normal/build/dev edges. The
+  full metadata is retained in task scratch; Task 8 still owes the durable guard.
+- Root independently checked all 60 PNG hashes/dimensions/order, exact inner
+  and outer ticks, unchanged source binding, constant original caption bands,
+  video/still hashes and actual 3840×2160 still dimensions. Viewed every decoded
+  frame in ordered contact sheets and phone-size images. Moon translation,
+  world rotation and persistent caption are present. Live desktop playback is
+  not yet verified: Computer Use access was granted, but QuickTime input
+  remains unreliable; preserve this limitation through the controls review.
+- Actual draft artifacts remain in Downloads/Hornvale Planetarium, with the
+  dirty renderer and local Georgia font documented. They are early visual
+  evidence; neither final visual acceptance nor a clean final package is claimed.
