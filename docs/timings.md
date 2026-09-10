@@ -6880,6 +6880,26 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T16:52:27Z | gate-commit | 36.525 | 70.240 | 18.537 | 2.43 | 0 | a9492c327 | campaign/skyworld | MacBookPro | 10 |
 | 2026-09-09T17:00:05Z | gate-commit | 39.056 | 72.128 | 19.328 | 2.34 | 0 | 210bd1664 | campaign/skyworld | MacBookPro | 10 |
 | 2026-09-09T17:00:47Z | gate-commit | 36.704 | 70.104 | 18.766 | 2.42 | 0 | 210bd1664 | campaign/skyworld | MacBookPro | 10 |
+| 2026-09-09T14:18:10Z | gate-commit | 33.101 | 65.434 | 5.355 | 2.14 | 0 | ed8e6f336 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T14:21:04Z | gate-commit | 20.818 | 17.234 | 0.645 | 0.86 | 0 | ed8e6f336 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T14:25:44Z | gate-commit | 183.169 | 932.785 | 51.674 | 5.37 | 0 | ed8e6f336 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T14:27:54Z | gate-commit | 57.796 | 76.725 | 20.090 | 1.68 | 0 | ed8e6f336 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T14:50:36Z | gate-commit | 42.368 | 77.845 | 20.252 | 2.32 | 0 | 9d525615d | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T14:52:10Z | gate-commit | 40.573 | 71.272 | 18.827 | 2.22 | 0 | 9d525615d | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T15:16:43Z | gate-commit | 8.900 | 8.466 | 0.279 | 0.98 | 0 | 2c8d988ce | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T15:17:19Z | gate-commit | 16.313 | 16.355 | 0.635 | 1.04 | 0 | 2c8d988ce | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T15:18:27Z | gate-commit | 42.520 | 104.627 | 21.280 | 2.96 | 0 | 2c8d988ce | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T15:19:58Z | gate-commit | 37.427 | 71.089 | 18.842 | 2.40 | 0 | 2c8d988ce | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T15:21:04Z | gate-commit | 39.544 | 72.031 | 19.203 | 2.31 | 0 | 2c8d988ce | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T15:31:02Z | gate-commit | 41.554 | 74.348 | 19.674 | 2.26 | 0 | f2836f823 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T15:31:55Z | gate-commit | 37.697 | 70.609 | 18.657 | 2.37 | 0 | f2836f823 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T16:15:46Z | gate-commit | 10.833 | 10.650 | 0.646 | 1.04 | 0 | d4cab8582 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T16:16:14Z | gate-commit | 17.184 | 16.730 | 0.797 | 1.02 | 0 | d4cab8582 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T16:17:37Z | gate-commit | 59.389 | 78.735 | 22.392 | 1.70 | 0 | d4cab8582 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T16:18:48Z | gate-commit | 47.504 | 75.149 | 20.040 | 2.00 | 0 | d4cab8582 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T16:19:54Z | gate-commit | 58.984 | 74.886 | 19.990 | 1.61 | 0 | d4cab8582 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T16:43:39Z | gate-commit | 47.953 | 78.073 | 22.803 | 2.10 | 0 | a950f5929 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T18:00:19Z | gate-commit | 38.609 | 70.713 | 19.340 | 2.33 | 0 | 4dbef7a0e | campaign/hornvale-observation-series | MacBookPro | 10 |
 | 2026-09-09T20:30:41Z | census-tail-chorus | 55.643 | 740.074 | 21.420 | 13.69 | 0 | d0eb35611 |  | lefford | 40 |
 | 2026-09-09T20:30:43Z | census-tail-domesday | 1.235 | 1.101 | 0.134 | 1.00 | 0 | d0eb35611 |  | lefford | 40 |
 | 2026-09-09T20:30:44Z | census-tail-anomalies | 0.879 | 0.809 | 0.070 | 1.00 | 0 | d0eb35611 |  | lefford | 40 |
@@ -6969,3 +6989,24 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T03:49:05Z | sluice:gate | 848.398 | 25315.506 | 847.330 | 30.84 | 0 | b0f9f07ca |  | lefford | 40 |
 | 2026-09-10T03:52:35Z | sluice:clients | 209.248 | 3210.433 | 319.001 | 16.87 | 0 | 0895b0e43 |  | lefford | 40 |
 | 2026-09-10T04:00:15Z | sluice:heavy | 460.506 | 12876.342 | 299.182 | 28.61 | 0 | 406c12114 |  | lefford | 40 |
+| 2026-09-09T21:35:14Z | census-tail-chorus | 113.119 | 177.604 | 6.626 | 1.63 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:35:15Z | census-tail-domesday | 0.388 | 0.329 | 0.034 | 0.94 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:35:16Z | census-tail-anomalies | 0.283 | 0.234 | 0.032 | 0.94 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:35:18Z | rebaseline | 683.155 | 495.470 | 24.331 | 0.76 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:37:53Z | gate-commit | 154.904 | 539.703 | 45.414 | 3.78 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:40:11Z | gate-commit | 42.814 | 72.873 | 19.906 | 2.17 | 0 | 021eab765 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:27:27Z | gate-commit | 38.549 | 71.545 | 20.262 | 2.38 | 0 | 953cbf0de | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:28:55Z | gate-commit | 38.190 | 70.456 | 19.562 | 2.36 | 0 | 953cbf0de | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:30:25Z | gate-commit | 37.567 | 70.795 | 19.274 | 2.40 | 0 | 953cbf0de | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:40:45Z | gate-commit | 2.607 | 2.314 | 0.159 | 0.95 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:41:43Z | gate-commit | 40.582 | 68.589 | 18.483 | 2.15 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:42:29Z | gate-commit | 37.657 | 65.427 | 16.853 | 2.18 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:44:17Z | gate-commit | 41.418 | 74.974 | 21.390 | 2.33 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:45:18Z | gate-commit | 38.802 | 71.566 | 19.642 | 2.35 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:46:28Z | gate-commit | 41.726 | 73.623 | 20.431 | 2.25 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:47:24Z | gate-commit | 38.129 | 70.944 | 19.502 | 2.37 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:55:07Z | gate-commit | 42.875 | 75.366 | 20.569 | 2.24 | 0 | b81cb4835 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:57:09Z | gate-commit | 38.292 | 71.118 | 19.262 | 2.36 | 0 | 3e6c2b48c | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T02:08:41Z | gate-commit | 36.581 | 69.716 | 18.816 | 2.42 | 0 | 08d422a1f | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T02:09:36Z | gate-commit | 36.898 | 69.964 | 18.775 | 2.40 | 0 | 08d422a1f | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T12:38:25Z | gate-commit | 39.304 | 71.394 | 19.429 | 2.31 | 0 | cb31c171d | campaign/hornvale-observation-series | MacBookPro | 10 |

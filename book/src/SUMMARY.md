@@ -491,6 +491,7 @@
 - [The Seedbed](./chronicle/the-seedbed.md)
 - [The Census Tail](./chronicle/the-census-tail.md)
 - [Skyworld Seams](./chronicle/skyworld-seams.md)
+- [The Observation Series](./chronicle/the-observation-series.md)
 
 # Appendix: The Frontier
 
