@@ -942,6 +942,14 @@ mod stocks {
             baseline.stocks[substrate_index].nutrients,
             substrate_after.stocks[substrate_index].nutrients
         );
+        assert_eq!(
+            baseline.stocks[substrate_index].local_source_influence,
+            substrate_after.stocks[substrate_index].local_source_influence
+        );
+        assert_eq!(
+            baseline.stocks[substrate_index].transported_influence,
+            substrate_after.stocks[substrate_index].transported_influence
+        );
 
         let vent = generated
             .vents
@@ -989,6 +997,14 @@ mod stocks {
             before.stocks[index].nutrients,
             temperature_after.stocks[index].nutrients
         );
+        assert_eq!(
+            before.stocks[index].local_source_influence,
+            temperature_after.stocks[index].local_source_influence
+        );
+        assert_eq!(
+            before.stocks[index].transported_influence,
+            temperature_after.stocks[index].transported_influence
+        );
 
         let mut changed_chemistry = generated.clone();
         changed_chemistry.vents[vent.id].chemistry += 0.2;
@@ -1002,8 +1018,24 @@ mod stocks {
             chemistry_after.fields[index].chemistry
         );
         assert_eq!(
+            before.fields[index].light,
+            chemistry_after.fields[index].light
+        );
+        assert_eq!(
+            before.fields[index].pressure,
+            chemistry_after.fields[index].pressure
+        );
+        assert_eq!(
             before.fields[index].temperature_c,
             chemistry_after.fields[index].temperature_c
+        );
+        assert_eq!(
+            before.fields[index].salinity,
+            chemistry_after.fields[index].salinity
+        );
+        assert_eq!(
+            before.fields[index].current,
+            chemistry_after.fields[index].current
         );
         assert_ne!(
             before.stocks[index].kelp_reef,
@@ -1016,6 +1048,14 @@ mod stocks {
         assert_eq!(
             before.stocks[index].nutrients,
             chemistry_after.stocks[index].nutrients
+        );
+        assert_eq!(
+            before.stocks[index].local_source_influence,
+            chemistry_after.stocks[index].local_source_influence
+        );
+        assert_eq!(
+            before.stocks[index].transported_influence,
+            chemistry_after.stocks[index].transported_influence
         );
         assert_bounded(substrate_after.stocks[substrate_index]);
         assert_bounded(temperature_after.stocks[index]);
@@ -1211,6 +1251,10 @@ mod cost {
             3,
             0.5,
         );
+        eprintln!(
+            "waterworld hop-bound counters: one={:?} three={:?}",
+            one_hop.counters, three_hops.counters
+        );
         assert!(one_hop.counters.propagation > 0);
         assert!(three_hops.counters.propagation > one_hop.counters.propagation);
         assert!(one_hop.samples.len() <= 1);
@@ -1254,6 +1298,10 @@ mod cost {
             &two_sources,
             3,
             0.5,
+        );
+        eprintln!(
+            "waterworld source-bound counters: one={:?} two={:?}",
+            one.counters, two.counters
         );
         assert!(two.counters.propagation > one.counters.propagation);
         assert!(one.samples.len() <= 3);

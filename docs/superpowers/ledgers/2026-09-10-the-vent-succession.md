@@ -295,6 +295,44 @@ snapshot refreshed and derived exactly one row per substrate row, while the
 disabled overlay reported all-zero counters.
 
 The focused command
-`cargo test -p hornvale-worldgen --test suite waterworld::` reported 26 passed,
+`cargo test -p hornvale-worldgen --test suite waterworld::` reported 29 passed,
 0 failed, 0 ignored. The stream-manifest diff exited 0 with empty output, so
 no stream label or draw-order change was introduced.
+
+### Task 3 review correction
+
+The first Task 3 review rejected four pieces of evidence. The memory probe had
+compared the local influence input rather than a downstream aggregate; the
+transport attenuation read global `current[0]` rather than the chosen edge;
+stock tests did not freeze unrelated outputs; and the snapshot copied a
+stable construction counter while its cost comparison changed source count,
+hop count, and attenuation together.
+
+The corrected memory probe pins one stable vent to one candidate position and
+compares its downstream nutrient and reef/kelp aggregates across active,
+weakening, and failed snapshots. Both aggregates strictly decline across all
+three states. That downstream evidence, rather than the local input, earns the
+no-residue ruling.
+
+Transport now normalizes each candidate edge, chooses by current/edge dot
+product with stable vertex tie-breaking, rejects a best alignment at or below
+zero, and attenuates by `configured attenuation * clamp(alignment, 0, 1)`.
+Because the edge is unit length, alignment carries both direction and current
+magnitude while the clamp bounds the multiplier. The source-first tests prove
+that zero current transports nothing and that increasing a current along one
+negative-x marine edge increases transported influence without changing the
+chosen vertex, substrate, or vent identity.
+
+Each stock source test now freezes unrelated fields and stocks. The light test
+allows only depth-derived field companions while requiring only plankton to
+change among stocks; chemistry allows bloom and reef/kelp; terrain nutrients
+allow nutrients and reef/kelp; and the reef/kelp test perturbs substrate,
+temperature, and chemistry independently.
+
+Snapshot counters now increment in the present refresh, phase/source,
+propagation, and stock loops. The seed-42 snapshot measured 623 phase/source
+rings, 83,997 refreshes, 7,038 propagation candidates, and 83,997 stock rows.
+One source measured 6 versus 18 propagation candidates at one versus three
+hops; at three hops, one versus two sources measured 18 versus 36. Each pair
+changes one bound only. The corrected focused suite reported 29 passed, 0
+failed, and 0 ignored.
