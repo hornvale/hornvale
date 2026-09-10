@@ -1034,3 +1034,21 @@ Minor deferred: extract the compressed actions/error boundaries in
 Task6/7 dispatch and final review must retain this maintenance follow-up.
 Manual orbit/pan input delivery remains unproven; handler tests are narrower
 than an actual UI witness, and that limit remains in the final evidence.
+
+
+## Task 5 — complete after independent fix review
+
+Task5 is complete over1e1163020..b5c1b5bc5. Fix round1 addressed both P2
+findings; independent spec and quality verdicts are ready with no new findings.
+The six amended control tests, scoped formatting/clippy/build and normal commit
+gate passed (59.995s). Actual bundle03 UI at1920x1080/scale2 displayed the units,
+camera envelope and cosmetic cloud disclosure; click selectedwanderer:1 and F
+focused the emitted point. Tab retained only the film caption; window exited0.
+Screens and bundle provenance remain in `task5-inspection-03/`. No fictional
+physical radius or new collision sphere was assigned. Production film and
+rendered appearance did not change in this fix. Task-boundary verification made
+no new design decision; no ideonomy pass was needed or run for these code fixes.
+
+Stage2 remains in progress until its canonical request reports. Task6 capture
+implementation follows; the earlier compressed-command maintenance minor is
+carried into its brief. Manual drag delivery remains explicitly unproven.

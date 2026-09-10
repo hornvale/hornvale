@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 inspection foundation committed and visual refinement in progress. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 complete after independent fix review; Stage 2 canonical request follows. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
@@ -465,7 +465,7 @@ cargo test --manifest-path clients/visual/Cargo.toml -p hornvale-visual-source
 
 **Interfaces:** Consumes FilmClock, CameraPose, current mirrored body positions. Produces application-owned `FilmDefinition`, `Shot`, and `sample_shot(film: &FilmDefinition, frame: u32, body_positions: &std::collections::BTreeMap<String, [f64; 3]>) -> Result<CameraPose, ViewError>`; FilmDefinition contains dimensions/fps/frame count, binding, start/end ticks, presentation seed, ordered shots/captions/settings. A Shot contains start/end frame, target body ID, start/end camera offsets in kilometres, up, FOV, focus distance and caption. No source World appears in these types.
 
-- [ ] Write tests for exactly one shot per frame, boundary cuts at 90 and 210, no gap/overlap, missing target rejection, and identical camera/caption results regardless of query order. Pose interpolation uses a pure function of frame; use the same function in inspection reset and export.
+- [x] Write tests for exactly one shot per frame, boundary cuts at 90 and 210, no gap/overlap, missing target rejection, and identical camera/caption results regardless of query order. Pose interpolation uses a pure function of frame; use the same function in inspection reset and export.
 
 ```rust
 pub fn smoothstep(u: f64) -> f64 {
@@ -478,12 +478,12 @@ Within a shot interpolate camera offsets with this curve and resolve its target
 against the exact current observation. Do not interpolate physical body states.
 A cut has a declared boundary and resets render history.
 
-- [ ] Author three initial shot ranges `[0,90)`, `[90,210)`, `[210,300)` following the spec's establish/limb/moon beats. Initial captions: “A world in motion”, “Turning into the light”, “Moons keep their own time”. Revise any caption the source witness does not support. Commit real measured camera values from Task 3, with no unevaluated preset placeholders.
-- [ ] Freeze the chosen source world/revision/pins, represented tick interval, supported camera bounds and selection/avoidance evidence. Film parsing rejects an incompatible binding, count/fps/dimensions, target identity or unsupported interval. Future production data need not follow these three beats; do not bake their ranges into VisualPlugin.
-- [ ] Add orbit (left drag), pan (middle/shift drag), dolly (wheel), focus selected body (F), reset authored pose (R), pause/play (Space), scrub slider, signed rate controls, and film/inspection toggle (Tab). Clamp dolly/focus to the declared range and above the body surface. Marker picking never changes physical body dimensions.
-- [ ] Refine lighting, color, terrain material, bounded atmosphere and selective focus from the real moving draft. Drive existing environmental features from exported values; distinguish a presentation haze from a simulated atmosphere profile. No sampled climate state is animated merely because the camera moves. Keep technical metadata in inspection and manifest, not film captions.
-- [ ] Inspect input focus conflicts, window resize, high-DPI text, phone-size captions and a camera move while simulation is paused. Record video evidence of controls, including reverse/scrub and a return to the authored pose.
-- [ ] Run the shot/binding/camera tests and applicable gates, then commit the frozen film definition and source-selection report.
+- [x] Author three initial shot ranges `[0,90)`, `[90,210)`, `[210,300)` following the spec's establish/limb/moon beats. Initial captions: “A world in motion”, “Turning into the light”, “Moons keep their own time”. Revise any caption the source witness does not support. Commit real measured camera values from Task 3, with no unevaluated preset placeholders.
+- [x] Freeze the chosen source world/revision/pins, represented tick interval, supported camera bounds and selection/avoidance evidence. Film parsing rejects an incompatible binding, count/fps/dimensions, target identity or unsupported interval. Future production data need not follow these three beats; do not bake their ranges into VisualPlugin.
+- [x] Add orbit (left drag), pan (middle/shift drag), dolly (wheel), focus selected body (F), reset authored pose (R), pause/play (Space), scrub slider, signed rate controls, and film/inspection toggle (Tab). Clamp dolly/focus to the declared range and above the body surface. Marker picking never changes physical body dimensions.
+- [x] Refine lighting, color, terrain material, bounded atmosphere and selective focus from the real moving draft. Drive existing environmental features from exported values; distinguish a presentation haze from a simulated atmosphere profile. No sampled climate state is animated merely because the camera moves. Keep technical metadata in inspection and manifest, not film captions.
+- [x] Inspect input focus conflicts, window resize, high-DPI text, phone-size captions and a camera move while simulation is paused. Record video evidence of controls, including reverse/scrub and a return to the authored pose.
+- [x] Run the shot/binding/camera tests and applicable gates, then commit the frozen film definition and source-selection report.
 
 **Stage 2 boundary:** submit a stage request for the tested full SHA; record controls/seek evidence and queue result before marking complete.
 
