@@ -6967,3 +6967,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T02:40:22Z | sluice:gate | 765.055 | 23975.645 | 727.178 | 32.29 | 0 | a2c03b082 |  | lefford | 40 |
 | 2026-09-10T02:43:22Z | sluice:clients | 180.402 | 2932.308 | 258.071 | 17.68 | 0 | 377cf9f37 |  | lefford | 40 |
 | 2026-09-10T02:50:47Z | sluice:heavy | 444.504 | 12884.475 | 270.333 | 29.59 | 0 | 0a7199730 |  | lefford | 40 |
+| 2026-09-10T03:01:52Z | census-tail-chorus | 47.731 | 204.797 | 8.768 | 4.47 | 0 | 0cd02dc2d | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T03:01:53Z | census-tail-domesday | 0.395 | 0.331 | 0.032 | 0.92 | 0 | 0cd02dc2d | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T03:01:53Z | census-tail-anomalies | 0.308 | 0.239 | 0.031 | 0.88 | 0 | 0cd02dc2d | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T03:01:55Z | rebaseline | 207.181 | 532.526 | 23.733 | 2.68 | 0 | 0cd02dc2d | campaign/underworld-peoples | MacBookPro | 10 |
