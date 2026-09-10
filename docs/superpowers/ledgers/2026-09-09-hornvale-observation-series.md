@@ -116,3 +116,21 @@ D4. The sanctioned absorb resolved the generated type-audit report through
 regeneration; the resulting merge is clean with no source conflict. The
 rebaseline regenerated the current local artifact measurements. A fresh
 commit gate is required before resubmission.
+
+## Execution scan — astronomical-to-surface amendment
+
+| Task | Shared file/interface | Producer → consumer | Finding and ruling |
+|---|---|---|---|
+| 6 → 7 | capability matrix and observation packet contract | Task 6 identifies a supported cell or an exact missing boundary; Task 7 implements only that selected boundary | Compatible. Task 7 must not claim a cell `existing` until Task 6 records a command and witness. |
+| 6 → 8 | capability matrix and opening batch | Task 6 supplies the admissible cells; Task 8 selects only rows with an authoritative witness | Compatible. Unsupported social, temporal, relational, and close-reading cells remain internal requirements. |
+| 7 → 8 | producer packets and Atlas renderer | Task 7 supplies the first public-scale packet and renderer; Task 8 consumes the same contract | Compatible. The batch may not invent a client-side semantic field absent from the packet. |
+| 8 → 9 | episode manifests, captions, and batch record | Task 8 supplies draft records; Task 9 adds checksums and manual review state | Compatible. Task 9 cannot mark `approved` without Nathan's explicit review of the exact package. |
+| 6 | matrix, commands, determinism checks | The matrix tests its own support classifications against observed commands | Internally consistent; a refusal or missing witness is a capability result, not a failed public episode. |
+| 7 | producer, packet, renderer, local assembly | The selected cell is exercised end-to-end | Internally consistent; simulation changes are out of scope unless the matrix proves the phenomenon absent. |
+| 8 | eight manifests, captions, batch | Each record names one object, scale, axis, unit, and sentence | Internally consistent; the underworld pilot is not silently relabeled as the public opening. |
+| 9 | local outputs, review ledger, gate | Exact media/copy review precedes status changes | Internally consistent; generated outputs remain ignored and publication remains manual. |
+
+Ruling: proceed with Task 6. The amendment adds a release-order and capability
+audit slice without changing the established packet, renderer, or approval
+contracts. Its only planned cross-task handoff is the capability matrix, whose
+rows are evidence-backed before later tasks consume them.
