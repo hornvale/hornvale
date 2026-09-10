@@ -54,3 +54,13 @@ encoder and probe. Tests cover missing frame, duplicate index, changed ticks eve
 after rehash, camera/caption/time contradiction, world binding, corrupted PNG and
 video, decoded-video mismatch, traversal/symlinks, interrupted completion, fresh
 output refusal, missing encoder, nonzero exit, missing codec and bad probe profile.
+
+The first real clean attempt (`task7-clean-300-01`, build
+`61eb2454373746306f676522e8eff7f4caec736b`) preserved all 300 frames and a video,
+but correctly refused COMPLETE: ffmpeg 8.1.1 omitted transfer/primaries tags when
+only output flags named them. Its FAILED file names the probe mismatch. A
+one-frame reproduction demonstrated that appending explicit frame metadata with
+`setparams=range=limited:color_primaries=bt709:color_trc=iec61966-2-1:colorspace=bt709`
+retains all four required probe tags. The conversion itself is unchanged. The
+encoder fixture now fails without this argument. The failed run is preserved;
+final qualification uses a fresh clean revision and fresh frames in another root.

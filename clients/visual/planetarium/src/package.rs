@@ -159,7 +159,7 @@ impl Default for EncodeTools<'_> {
         }
     }
 }
-const FILTER: &str = "scale=in_range=full:out_range=limited:out_color_matrix=bt709,format=yuv420p";
+const FILTER: &str = "scale=in_range=full:out_range=limited:out_color_matrix=bt709,format=yuv420p,setparams=range=limited:color_primaries=bt709:color_trc=iec61966-2-1:colorspace=bt709";
 fn color() -> Value {
     json!({"delivery":"SDR", "input":"RGB8 sRGB full range PNG", "filter":FILTER,"matrix":"bt709","primaries":"bt709","transfer":"iec61966-2-1","range":"tv","pixel_format":"yuv420p","note":"sRGB transfer preserved; BT.709 matrix, limited-range YCbCr. PNG originals retained; no HDR claim."})
 }

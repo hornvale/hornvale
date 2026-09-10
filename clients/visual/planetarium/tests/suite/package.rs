@@ -138,7 +138,7 @@ impl Fixture {
         );
         script(
             &encoder,
-            "if [ \"$1\" = '-version' ]; then echo 'CPU fixture encoder'; elif [ \"$1\" = '-nostdin' ]; then echo 'synthetic video' > study.mp4; else dd if=/dev/zero bs=6912 count=300 2>/dev/null; fi",
+            "if [ \"$1\" = '-version' ]; then echo 'CPU fixture encoder'; elif [ \"$1\" = '-nostdin' ]; then case \"$*\" in *setparams=range=limited:color_primaries=bt709:color_trc=iec61966-2-1:colorspace=bt709*) echo 'synthetic video' > study.mp4 ;; *) echo 'frame color metadata missing' >&2; exit 8 ;; esac; else dd if=/dev/zero bs=6912 count=300 2>/dev/null; fi",
         );
         Self {
             root,
