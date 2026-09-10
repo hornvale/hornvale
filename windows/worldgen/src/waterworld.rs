@@ -134,9 +134,19 @@ pub struct WaterVent {
     pub chemistry: f64,
 }
 
-/// Stage-3 aggregate stocks; deliberately empty until derivation is tested.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct WaterStocks;
+/// Bounded aggregate environmental stocks; no individual organisms are stored.
+/// type-audit: bare-ok(ratio: plankton), bare-ok(ratio: chemosynthetic_bloom), bare-ok(ratio: nutrients), bare-ok(ratio: kelp_reef)
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct WaterStocks {
+    /// Photic plankton availability.
+    pub plankton: f64,
+    /// Chemosynthetic bloom availability.
+    pub chemosynthetic_bloom: f64,
+    /// Dissolved nutrient reserve.
+    pub nutrients: f64,
+    /// Kelp/reef substrate suitability.
+    pub kelp_reef: f64,
+}
 
 /// Read-only generated Waterworld state.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -145,8 +155,12 @@ pub struct WaterWorld {
     pub substrate: Vec<WaterSubstrate>,
     /// Ambient fields aligned one-for-one with `substrate`.
     pub fields: Vec<WaterFields>,
+    /// Aggregate stocks aligned one-for-one with `substrate`.
+    pub stocks: Vec<WaterStocks>,
     /// Sparse derived vent sources in stable seabed order.
     pub vents: Vec<WaterVent>,
+    /// Bounded current and vertical propagation samples.
+    pub propagation: WaterPropagation,
 }
 
 /// Composition-root entry point for the Waterworld overlay.
@@ -222,7 +236,7 @@ pub fn waterworld_from(
                 climate.current_at(sample.vertex),
             )
         })
-        .collect();
+        .collect::<Vec<_>>();
     let mut vents = Vec::new();
     for sample in substrate.iter().filter(|sample| sample.is_seabed) {
         let source_exists = sample.has_edifice || sample.seafloor_boundary.is_some();
@@ -248,10 +262,27 @@ pub fn waterworld_from(
             chemistry: stream.next_f64(),
         });
     }
+    let stocks = substrate
+        .iter()
+        .zip(&fields)
+        .map(|(sample, field)| WaterStocks {
+            plankton: (field.light / (field.light + 1.0)).clamp(0.0, 1.0),
+            chemosynthetic_bloom: field.chemistry.clamp(0.0, 1.0),
+            nutrients: ((sample.terrain_features.len() as f64) / 4.0).clamp(0.0, 1.0),
+            kelp_reef: if sample.is_seabed && (field.temperature_c > -2.0) {
+                1.0
+            } else {
+                0.0
+            },
+        })
+        .collect::<Vec<_>>();
+    let propagation = WaterPropagation::from_substrate(&substrate, &fields);
     WaterWorld {
         substrate,
         fields,
+        stocks,
         vents,
+        propagation,
     }
 }
 

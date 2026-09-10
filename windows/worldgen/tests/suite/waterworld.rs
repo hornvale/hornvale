@@ -375,3 +375,28 @@ fn vents_are_sparse_seeded_and_require_a_live_seafloor_source() {
     let again = active(&fixture);
     assert_eq!(generated.vents, again.vents);
 }
+
+#[test]
+fn stocks_and_propagation_are_bounded_ordered_and_counted() {
+    let generated = active(&seed_42());
+    assert_eq!(generated.substrate.len(), generated.stocks.len());
+    assert!(generated.stocks.iter().all(|stock| {
+        [
+            stock.plankton,
+            stock.chemosynthetic_bloom,
+            stock.nutrients,
+            stock.kelp_reef,
+        ]
+        .into_iter()
+        .all(|value| value.is_finite() && (0.0..=1.0).contains(&value))
+    }));
+    assert!(generated.propagation.candidate_count >= generated.propagation.accepted_count);
+    assert!(generated.propagation.accepted_count > 0);
+    assert!(
+        generated
+            .propagation
+            .samples
+            .windows(2)
+            .all(|pair| (pair[0].vertex, pair[0].depth_m) <= (pair[1].vertex, pair[1].depth_m))
+    );
+}
