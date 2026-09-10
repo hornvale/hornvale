@@ -357,6 +357,141 @@ pub enum EclipseSight {
     Unseen,
 }
 
+/// Which half of the world contains an observer during an eclipse.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EclipseSide {
+    /// The hemisphere facing the star.
+    Day,
+    /// The hemisphere facing away from the star.
+    Night,
+}
+
+/// The event-scale geographic region in which an eclipse is visible.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EclipseRegion {
+    /// A solar eclipse's bounded shadow track.
+    GroundTrack(GroundTrack),
+    /// The entire night hemisphere for a lunar eclipse.
+    NightHemisphere,
+}
+
+/// What kind of eclipse visibility applies to one observer.
+/// type-audit: bare-ok(flag: Lunar.visible)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EclipseVisibility {
+    /// The existing solar sight tier.
+    Solar(EclipseSight),
+    /// Whether the eclipsed moon is above the observer's horizon.
+    Lunar {
+        /// True on the night side, false on the day side.
+        visible: bool,
+    },
+}
+
+/// One observer's derived result for one dated eclipse.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EclipseObserverResult {
+    /// Whether the observer is on the day or night side.
+    pub side: EclipseSide,
+    /// The applicable solar tier or lunar visibility.
+    pub visibility: EclipseVisibility,
+    /// The event's physical geographic region.
+    pub region: EclipseRegion,
+}
+
+/// Derive one observer's result for a dated eclipse. Latitude must be finite
+/// and lie in `[-90, 90]`; finite longitudes are normalized to the module's
+/// `[-180, 180)` convention before the existing sight helpers are applied.
+/// `None` reports invalid observer coordinates (or a malformed solar event
+/// whose track cannot be derived).
+/// type-audit: pending(wave-1: latitude), pending(wave-1: longitude)
+pub fn eclipse_observer_result(
+    system: &StarSystem,
+    calendar: &Calendar,
+    event: &EclipseEvent,
+    latitude: f64,
+    longitude: f64,
+) -> Option<EclipseObserverResult> {
+    if !latitude.is_finite() || !(-90.0..=90.0).contains(&latitude) {
+        return None;
+    }
+    let longitude = normalize_longitude_deg(longitude)?;
+    let side = eclipse_side(calendar, event.day, longitude);
+    let (visibility, region) = match event.body {
+        EclipseBody::Solar => {
+            let track = ground_track(system, calendar, event)?;
+            (
+                EclipseVisibility::Solar(solar_sight_in_region(
+                    event, latitude, longitude, side, track,
+                )),
+                EclipseRegion::GroundTrack(track),
+            )
+        }
+        EclipseBody::Lunar => (
+            EclipseVisibility::Lunar {
+                visible: side == EclipseSide::Night,
+            },
+            EclipseRegion::NightHemisphere,
+        ),
+    };
+    Some(EclipseObserverResult {
+        side,
+        visibility,
+        region,
+    })
+}
+
+fn normalize_longitude_deg(longitude: f64) -> Option<f64> {
+    longitude
+        .is_finite()
+        .then(|| (longitude + 180.0).rem_euclid(360.0) - 180.0)
+}
+
+fn longitude_delta_deg(from: f64, to: f64) -> f64 {
+    (to - from + 180.0).rem_euclid(360.0) - 180.0
+}
+
+fn eclipse_side(calendar: &Calendar, day: StdInstant, longitude: f64) -> EclipseSide {
+    let subsolar = sub_solar_longitude_deg(calendar, day);
+    if longitude_delta_deg(subsolar, longitude).abs() < 90.0 {
+        EclipseSide::Day
+    } else {
+        EclipseSide::Night
+    }
+}
+
+fn longitude_in_track(longitude: f64, track: GroundTrack) -> bool {
+    let sweep = longitude_delta_deg(track.start_lon_deg, track.end_lon_deg);
+    let offset = longitude_delta_deg(track.start_lon_deg, longitude);
+    if sweep >= 0.0 {
+        (0.0..=sweep).contains(&offset)
+    } else {
+        (sweep..=0.0).contains(&offset)
+    }
+}
+
+fn solar_sight_in_region(
+    event: &EclipseEvent,
+    latitude: f64,
+    longitude: f64,
+    side: EclipseSide,
+    track: GroundTrack,
+) -> EclipseSight {
+    if side == EclipseSide::Night {
+        return EclipseSight::Unseen;
+    }
+    if (latitude - track.center_lat_deg).abs() <= track.half_width_deg
+        && longitude_in_track(longitude, track)
+    {
+        match event.kind {
+            EclipseKind::Total => EclipseSight::WholeSun,
+            EclipseKind::Annular => EclipseSight::BurningRing,
+        }
+    } else {
+        EclipseSight::Bitten
+    }
+}
+
 /// Which tier of the omen an observer at (`latitude`, `longitude`) sees
 /// for a dated solar `event`. Day-side membership is the equatorial
 /// half-day approximation: within 90° of the sub-solar longitude
@@ -369,22 +504,22 @@ pub fn solar_eclipse_sight(
     latitude: f64,
     longitude: f64,
 ) -> EclipseSight {
-    let ss = sub_solar_longitude_deg(calendar, event.day);
-    let lon_gap = (longitude - ss + 180.0).rem_euclid(360.0) - 180.0;
-    if lon_gap.abs() >= 90.0 {
+    if !latitude.is_finite() || !(-90.0..=90.0).contains(&latitude) {
         return EclipseSight::Unseen;
     }
+    let Some(longitude) = normalize_longitude_deg(longitude) else {
+        return EclipseSight::Unseen;
+    };
     let Some(track) = ground_track(system, calendar, event) else {
         return EclipseSight::Unseen;
     };
-    if (latitude - track.center_lat_deg).abs() <= track.half_width_deg {
-        match event.kind {
-            EclipseKind::Total => EclipseSight::WholeSun,
-            EclipseKind::Annular => EclipseSight::BurningRing,
-        }
-    } else {
-        EclipseSight::Bitten
-    }
+    solar_sight_in_region(
+        event,
+        latitude,
+        longitude,
+        eclipse_side(calendar, event.day, longitude),
+        track,
+    )
 }
 
 /// Whether an observer at `longitude` has the full moon in their sky for
@@ -392,9 +527,8 @@ pub fn solar_eclipse_sight(
 /// half-day window.
 /// type-audit: pending(wave-1: longitude), bare-ok(flag: return)
 pub fn lunar_eclipse_seen(calendar: &Calendar, event: &EclipseEvent, longitude: f64) -> bool {
-    let ss = sub_solar_longitude_deg(calendar, event.day);
-    let lon_gap = (longitude - ss + 180.0).rem_euclid(360.0) - 180.0;
-    lon_gap.abs() >= 90.0
+    normalize_longitude_deg(longitude)
+        .is_some_and(|longitude| eclipse_side(calendar, event.day, longitude) == EclipseSide::Night)
 }
 
 /// The draconic month — the moon's period relative to its regressing
@@ -425,6 +559,71 @@ pub struct EclipseCycle {
     pub period: StdDays,
     /// Node-phase slip per return, degrees.
     pub node_slip_deg: f64,
+}
+
+/// The recurrence ladder for one moon and eclipse family.
+/// type-audit: bare-ok(index: moon), bare-ok(count: series_returns), pending(wave-1: exeligmos_node_slip_deg), pending(wave-1: parade_days_per_year)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EclipseRecurrence {
+    /// Distance-sorted moon index.
+    pub moon: usize,
+    /// Solar or lunar eclipse family.
+    pub body: EclipseBody,
+    /// The moon's draconic month.
+    pub draconic_month: StdDays,
+    /// The sun's return to the moon's node line.
+    pub eclipse_year: StdDays,
+    /// The selected bounded synodic/draconic return.
+    pub cycle: EclipseCycle,
+    /// Estimated number of returns in the eclipse series.
+    pub series_returns: u32,
+    /// Estimated duration of the eclipse series.
+    pub series_lifetime: StdDays,
+    /// Three selected-cycle periods.
+    pub exeligmos_period: StdDays,
+    /// Node-phase slip accumulated across three returns.
+    pub exeligmos_node_slip_deg: f64,
+    /// Eclipse-season migration through one civil year.
+    pub parade_days_per_year: f64,
+}
+
+/// Derive recurrence records in moon order, solar then lunar per moon.
+pub fn eclipse_recurrences(system: &StarSystem, calendar: &Calendar) -> Vec<EclipseRecurrence> {
+    let year = calendar.year_length();
+    let mean_sun = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
+    let mut recurrences = Vec::with_capacity(system.moons.len() * 2);
+    for (moon_index, moon) in system.moons.iter().enumerate() {
+        let Some(synodic) = calendar.synodic_month(moon_index) else {
+            continue;
+        };
+        let draconic = draconic_month(year, moon.period, moon.inclination_deg);
+        let Some(cycle) = best_cycle(synodic, draconic) else {
+            continue;
+        };
+        let node_period = node_regression_period(year, moon.period, moon.inclination_deg);
+        let eclipse_year = eclipse_year(year, node_period);
+        let solar_threshold = solar_eclipse_threshold_deg(mean_sun, moon.angular_diameter_rel);
+        for (_, body) in syzygy_families() {
+            let threshold = match body {
+                EclipseBody::Solar => solar_threshold,
+                EclipseBody::Lunar => LUNAR_SHADOW_FACTOR * solar_threshold,
+            };
+            let returns = series_returns(&cycle, threshold, moon.inclination_deg);
+            recurrences.push(EclipseRecurrence {
+                moon: moon_index,
+                body,
+                draconic_month: draconic,
+                eclipse_year,
+                cycle,
+                series_returns: returns,
+                series_lifetime: StdDays(returns as f64 * cycle.period.0),
+                exeligmos_period: StdDays(3.0 * cycle.period.0),
+                exeligmos_node_slip_deg: 3.0 * cycle.node_slip_deg,
+                parade_days_per_year: parade_days_per_year(year, eclipse_year),
+            });
+        }
+    }
+    recurrences
 }
 
 /// The longest-lived eclipse cycle up to 300 synodic months: the s
@@ -1036,6 +1235,240 @@ mod tests {
             solar_eclipse_sight(&system, &calendar, solar, track.center_lat_deg, night_lon),
             EclipseSight::Unseen
         ));
+    }
+
+    /// A one- or two-return value mislabeled as an exeligmos would corrupt
+    /// both the recurrence period and the accumulated node-phase drift.
+    #[test]
+    fn recurrence_summary_makes_the_exeligmos_exactly_three_returns() {
+        let (system, calendar) = luna_sol();
+        let records = eclipse_recurrences(&system, &calendar);
+        assert_eq!(records.len(), 2, "one moon has solar and lunar families");
+        for record in records {
+            assert_eq!(
+                record.series_lifetime,
+                StdDays(record.series_returns as f64 * record.cycle.period.0)
+            );
+            assert_eq!(
+                record.exeligmos_period,
+                StdDays(3.0 * record.cycle.period.0)
+            );
+            assert_eq!(
+                record.exeligmos_node_slip_deg,
+                3.0 * record.cycle.node_slip_deg
+            );
+        }
+    }
+
+    /// The central solar tier belongs only to the swept ground-track arc.
+    /// Its endpoints are inclusive, including when the arc crosses the
+    /// longitude seam; another day-side longitude receives only a bite.
+    #[test]
+    fn observer_result_respects_track_edges_and_longitude_wrap() {
+        let (system, calendar) = luna_sol();
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 100.0),
+        );
+        let (solar, track) = events
+            .iter()
+            .filter(|event| event.body == EclipseBody::Solar)
+            .find_map(|event| {
+                let track = ground_track(&system, &calendar, event)?;
+                ((track.start_lon_deg - track.end_lon_deg).abs() > 180.0).then_some((event, track))
+            })
+            .expect("the Luna fixture crosses the longitude seam within a century");
+
+        for longitude in [track.start_lon_deg, track.end_lon_deg, 180.0, -180.0] {
+            let result =
+                eclipse_observer_result(&system, &calendar, solar, track.center_lat_deg, longitude)
+                    .expect("valid observer");
+            assert_eq!(result.side, EclipseSide::Day);
+            assert!(matches!(
+                result.visibility,
+                EclipseVisibility::Solar(EclipseSight::WholeSun | EclipseSight::BurningRing)
+            ));
+            assert_eq!(result.region, EclipseRegion::GroundTrack(track));
+        }
+
+        let subsolar = sub_solar_longitude_deg(&calendar, solar.day);
+        let outside_arc = (subsolar + 30.0 + 180.0).rem_euclid(360.0) - 180.0;
+        let result =
+            eclipse_observer_result(&system, &calendar, solar, track.center_lat_deg, outside_arc)
+                .expect("valid observer");
+        assert_eq!(result.side, EclipseSide::Day);
+        assert_eq!(
+            result.visibility,
+            EclipseVisibility::Solar(EclipseSight::Bitten)
+        );
+
+        let night = eclipse_observer_result(
+            &system,
+            &calendar,
+            solar,
+            track.center_lat_deg,
+            subsolar + 180.0,
+        )
+        .expect("valid observer");
+        assert_eq!(night.side, EclipseSide::Night);
+        assert_eq!(
+            night.visibility,
+            EclipseVisibility::Solar(EclipseSight::Unseen)
+        );
+    }
+
+    /// The unified result keeps the lunar night hemisphere distinct from a
+    /// solar ground track and reports the boundary as night-side visibility.
+    #[test]
+    fn observer_result_reports_lunar_night_side_without_a_track() {
+        let (system, calendar) = luna_sol();
+        let lunar = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        )
+        .into_iter()
+        .find(|event| event.body == EclipseBody::Lunar)
+        .unwrap();
+        let subsolar = sub_solar_longitude_deg(&calendar, lunar.day);
+
+        let day = eclipse_observer_result(&system, &calendar, &lunar, 0.0, subsolar).unwrap();
+        assert_eq!(day.side, EclipseSide::Day);
+        assert_eq!(day.visibility, EclipseVisibility::Lunar { visible: false });
+        assert_eq!(day.region, EclipseRegion::NightHemisphere);
+
+        let terminator =
+            eclipse_observer_result(&system, &calendar, &lunar, 90.0, subsolar + 90.0).unwrap();
+        assert_eq!(terminator.side, EclipseSide::Night);
+        assert_eq!(
+            terminator.visibility,
+            EclipseVisibility::Lunar { visible: true }
+        );
+        assert_eq!(terminator.region, EclipseRegion::NightHemisphere);
+    }
+
+    /// Latitude poles are valid, values beyond them are not, and longitude
+    /// aliases normalize to one observer result.
+    #[test]
+    fn observer_result_validates_latitude_and_normalizes_longitude() {
+        let (system, calendar) = luna_sol();
+        let solar = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        )
+        .into_iter()
+        .find(|event| event.body == EclipseBody::Solar)
+        .unwrap();
+        let longitude = sub_solar_longitude_deg(&calendar, solar.day);
+
+        assert!(eclipse_observer_result(&system, &calendar, &solar, 90.0, longitude).is_some());
+        assert!(eclipse_observer_result(&system, &calendar, &solar, -90.0, longitude).is_some());
+        for latitude in [90.000_001, -90.000_001, f64::NAN, f64::INFINITY] {
+            assert!(
+                eclipse_observer_result(&system, &calendar, &solar, latitude, longitude).is_none(),
+                "latitude {latitude} must be rejected"
+            );
+        }
+        assert!(eclipse_observer_result(&system, &calendar, &solar, 0.0, f64::NAN).is_none());
+
+        let canonical =
+            eclipse_observer_result(&system, &calendar, &solar, 0.0, longitude).unwrap();
+        let wrapped =
+            eclipse_observer_result(&system, &calendar, &solar, 0.0, longitude + 720.0).unwrap();
+        assert_eq!(canonical, wrapped);
+    }
+
+    /// Reversing the world's spin reverses the ground-track sweep, while
+    /// both endpoints remain inside the physical region.
+    #[test]
+    fn observer_result_follows_retrograde_track_direction() {
+        let (mut system, _) = luna_sol();
+        let day = match system.anchor.rotation {
+            crate::anchor::Rotation::Spinning { day, .. } => day,
+            crate::anchor::Rotation::Locked => unreachable!(),
+        };
+        system.anchor.rotation = crate::anchor::Rotation::Spinning {
+            day,
+            retrograde: true,
+        };
+        let calendar = crate::calendar::calendar_of(&system);
+        let solar = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        )
+        .into_iter()
+        .find(|event| event.body == EclipseBody::Solar)
+        .unwrap();
+        let track = ground_track(&system, &calendar, &solar).unwrap();
+        let sweep = (track.end_lon_deg - track.start_lon_deg + 180.0).rem_euclid(360.0) - 180.0;
+        assert!(sweep > 0.0, "retrograde sweep must run eastward: {sweep}");
+
+        for longitude in [track.start_lon_deg, track.end_lon_deg] {
+            let result = eclipse_observer_result(
+                &system,
+                &calendar,
+                &solar,
+                track.center_lat_deg,
+                longitude,
+            )
+            .unwrap();
+            assert!(matches!(
+                result.visibility,
+                EclipseVisibility::Solar(EclipseSight::WholeSun | EclipseSight::BurningRing)
+            ));
+        }
+    }
+
+    /// A locked world's substellar meridian and shadow do not sweep. The
+    /// day side still sees a partial eclipse outside that zero-length track,
+    /// while the opposite hemisphere sees the lunar event.
+    #[test]
+    fn observer_result_keeps_locked_world_regions_static() {
+        let (mut system, _) = luna_sol();
+        system.anchor.rotation = crate::anchor::Rotation::Locked;
+        let calendar = crate::calendar::calendar_of(&system);
+        let events = eclipse_events(
+            &system,
+            &calendar,
+            StdInstant(0.0),
+            StdInstant(365.25 * 10.0),
+        );
+        let solar = events
+            .iter()
+            .find(|event| event.body == EclipseBody::Solar)
+            .unwrap();
+        let track = ground_track(&system, &calendar, solar).unwrap();
+        assert_eq!((track.start_lon_deg, track.end_lon_deg), (0.0, 0.0));
+
+        let on_track =
+            eclipse_observer_result(&system, &calendar, solar, track.center_lat_deg, 0.0).unwrap();
+        assert!(matches!(
+            on_track.visibility,
+            EclipseVisibility::Solar(EclipseSight::WholeSun | EclipseSight::BurningRing)
+        ));
+        let off_track =
+            eclipse_observer_result(&system, &calendar, solar, track.center_lat_deg, 45.0).unwrap();
+        assert_eq!(off_track.side, EclipseSide::Day);
+        assert_eq!(
+            off_track.visibility,
+            EclipseVisibility::Solar(EclipseSight::Bitten)
+        );
+
+        let lunar = events
+            .iter()
+            .find(|event| event.body == EclipseBody::Lunar)
+            .unwrap();
+        let night = eclipse_observer_result(&system, &calendar, lunar, -90.0, 180.0).unwrap();
+        assert_eq!(night.side, EclipseSide::Night);
+        assert_eq!(night.visibility, EclipseVisibility::Lunar { visible: true });
+        assert_eq!(night.region, EclipseRegion::NightHemisphere);
     }
 
     /// Luna check: the draconic month is ~27.21 days.
