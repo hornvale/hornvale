@@ -7032,3 +7032,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T03:49:05Z | sluice:gate | 848.398 | 25315.506 | 847.330 | 30.84 | 0 | b0f9f07ca |  | lefford | 40 |
 | 2026-09-10T03:52:35Z | sluice:clients | 209.248 | 3210.433 | 319.001 | 16.87 | 0 | 0895b0e43 |  | lefford | 40 |
 | 2026-09-10T04:00:15Z | sluice:heavy | 460.506 | 12876.342 | 299.182 | 28.61 | 0 | 406c12114 |  | lefford | 40 |
+| 2026-09-10T12:10:48Z | gate-commit | 75.385 | 70.166 | 8.117 | 1.04 | 0 | f9da733bf | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T12:13:05Z | gate-commit | 122.143 | 568.832 | 46.541 | 5.04 | 0 | f9da733bf | campaign/underworld-peoples | MacBookPro | 10 |
