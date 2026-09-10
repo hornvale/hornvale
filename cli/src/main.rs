@@ -2431,8 +2431,8 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             // rather than panicking inside the constructor.
             let from = hornvale_astronomy::StdInstant::new(from).map_err(|e| e.to_string())?;
             let until = hornvale_astronomy::StdInstant::new(until).map_err(|e| e.to_string())?;
-            let scene =
-                hornvale_scene::eclipses_scene(&world, from, until).map_err(|e| e.to_string())?;
+            let scene = hornvale_scene::eclipses_scene(&world, from, until, None)
+                .map_err(|e| e.to_string())?;
             println!("{}", hornvale_scene::eclipses_json(&scene));
             Ok(())
         }
