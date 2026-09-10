@@ -1018,3 +1018,19 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   capture provenance. They are not relabeled final clean-revision packages.
 - No further Task5 composition change is requested. Task9 still owns moon
   detail, formal performance and final visual refinement; Nathan retains G6.
+
+
+## Task 5 — independent review, fix round1
+
+Independent review of1e1163020..addbe4e57 finds two bounded corrections:
+inspection must disclose the enforced physical camera envelope, time units and
+cosmetic clouds; visible radius-less wanderers must be pickable without adding
+fictional collision radii. Spec and correctness verdicts remain not ready.
+Original implementer owns the fixes, focused regression tests and normal commit;
+independent re-review follows. No design ruling or fidelity reduction is made.
+
+Minor deferred: extract the compressed actions/error boundaries in
+`control_recording.rs` and `main.rs` when the capture/package commands touch them.
+Task6/7 dispatch and final review must retain this maintenance follow-up.
+Manual orbit/pan input delivery remains unproven; handler tests are narrower
+than an actual UI witness, and that limit remains in the final evidence.
