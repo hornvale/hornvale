@@ -145,6 +145,37 @@ done
 printf '  headline trailer: %s\n' \
     "$(git log --format='%(trailers:key=Sluice-Headline,valueonly)' "origin/main..$sha" 2>/dev/null | grep -v '^$' | head -1)"
 
+# THE CLOSE PACKAGE. A campaign's close record is knowable BEFORE the merge --
+# disposition, close date, which gates passed -- and writing it afterwards costs
+# a whole second merge slot for a few lines of status text. campaign/the-staple-d4
+# paid 1,299 s of canonical-box time on 2026-09-09 to flip `active` to `shipped`:
+# artifacts 331 s + outboard 102 s + gate 866 s, on a diff containing no code at
+# all. The prose-only phase skip saves `clients` and `heavy`; it does not save
+# the two phases that actually cost, because neither scales with the diff.
+#
+# So this block REPORTS the close package at vet time, where it is still free to
+# fix. It does not gate -- same as every other line here, the operator judges.
+# A `disposition` still reading `active` on a MERGE is the tell.
+# Only a campaign branch has a reconciliation row; a census/* or tooling/*
+# branch has none by design and asking is noise.
+case "$branch" in
+    campaign/*)
+        recon_key="${branch#campaign/}"
+        # Exact key first. Older rows use a `plan-<date>-campaign-<name>` key
+        # rather than the bare campaign name, so fall back to a suffix match
+        # before reporting an absence -- 440 rows still read `active`, so a
+        # genuinely missing row is a real signal and worth not faking.
+        recon_row="$(git show "$sha:docs/audits/campaign-reconciliation.tsv" 2>/dev/null \
+            | awk -F'\t' -v k="$recon_key" '$1==k{print $2; exit}')"
+        [ -n "$recon_row" ] || recon_row="$(git show "$sha:docs/audits/campaign-reconciliation.tsv" 2>/dev/null \
+            | awk -F'\t' -v k="$recon_key" 'index($1,k){print $2" (key: "$1")"; exit}')"
+        printf '  reconciliation disposition: %s\n' "${recon_row:-<NO ROW for $recon_key>}"
+        ;;
+    *)
+        printf '  reconciliation disposition: <n/a — not a campaign branch>\n'
+        ;;
+esac
+
 echo
 echo "SHAPE"
 git diff --shortstat "origin/main...$sha" 2>/dev/null | sed 's/^ */  /'
