@@ -33,27 +33,32 @@ The current Atlas scene parser accepted the recorded `scene/tiles/v1` output:
 Atlas accepted scene/tiles/v1 16x8; fields=elevation,biome,plate,features
 ```
 
-The current observation exporter was separately tested with a valid manifest
-whose source command was `scene neighbors`; it refused before creating a
-packet:
+Before Task 7, the observation exporter was separately tested with a valid
+manifest whose source command was `scene neighbors`; it refused before
+creating a packet:
 
 ```text
 error: source_commands: export currently requires exactly
 'cargo run -p hornvale -- underworld --seed 42'
 ```
 
-That boundary is implemented by `underworld_source` and `export_frames` in
-[`cli/src/observations.rs`](../../cli/src/observations.rs). Atlas observation
-frames accept only `observation/frame/v1` with textual `spatial.readout`
-([`clients/atlas/src/observation.ts`](../../clients/atlas/src/observation.ts));
-the ordinary Atlas map separately accepts `scene/tiles/v1`
+Task 7 admitted exactly the corresponding `scene neighbors` command for
+`HV-009`. Its adapter builds only to `BuildDepth::Astronomy`, serializes the
+complete existing `scene/neighbors/v1` document into `spatial.readout`, and
+binds `fnv1a64:35d7bb6804371e60` to those bytes. Two 900-packet exports had
+identical files and the same complete-sequence SHA-256:
+`8e45bc6d6fbd9a04607b387d72d82557fb46d404520f10a2b86b03e362ad1c6b`.
+Atlas observation frames accept `observation/frame/v1`; when the supplied
+source is `hornvale scene/neighbors/v1 stdout`, the preview plots the supplied
+RA, declination, brightness, and magnitude fields at 390×844 and 1440×900.
+The ordinary Atlas map separately accepts `scene/tiles/v1`
 ([`clients/atlas/src/scene.ts`](../../clients/atlas/src/scene.ts)).
 
 ## Matrix
 
 | Candidate object | Scale / primary axis / unit | Live producer and observed packet or output | Renderer grammar and client path | Witness and state | Precise gap |
 |---|---|---|---|---|---|
-| Notable stellar neighborhood | astronomical neighborhood / apparent brightness and sky position / stars | `cargo run -p hornvale -- scene neighbors --world $TMP/world.json` emitted `scene/neighbors/v1`, seed 42, 5 `neighbors`; `star-chart --world … --out $TMP/star-chart.png` emitted the planisphere PNG and Markdown star list. | Spatial star-chart raster exists in the CLI (`domains/astronomy/src/render.rs`, invoked by `cmd_star_chart`); Atlas has no `scene/neighbors/v1` parser or star-chart view. | Repeated JSON bytes matched; raster SHA-256 was `02982ce2…cde5`. **needs_observation_surface** | The phenomena and direct chart are real, but `observations export` accepts only the underworld command and cannot attach the neighbors packet/readout and provenance to an observation frame. A phone/laptop star renderer remains follow-on work after that packet boundary. |
+| Notable stellar neighborhood | astronomical neighborhood / apparent brightness and sky position / stars | `cargo run -p hornvale -- scene neighbors --world $TMP/world.json` emitted `scene/neighbors/v1`, seed 42, 5 `neighbors`; `star-chart --world … --out $TMP/star-chart.png` emitted the planisphere PNG and Markdown star list. `HV-009` admits the committed-fixture form of the neighbors command and preserves the complete scene JSON in its frame packet. | The CLI planisphere remains available. Atlas's observation preview plots the supplied 148 field stars and 5 notable neighbors by RA/declination; notable-star radius uses supplied relative brightness and field-star radius uses supplied magnitude class. | Repeated source JSON bytes matched; raster SHA-256 was `02982ce2…cde5`. `HV-009` frame-000 SHA-256 is `bfd65269d4503b9268ac2ef8d05c8f8fc7f6644612a29e5e1256b07bfa680ac7`; two complete 900-frame exports shared sequence SHA-256 `8e45bc6d6fbd9a04607b387d72d82557fb46d404520f10a2b86b03e362ad1c6b`. **existing** | This is the minimum frame-preview contract, not a general-purpose Atlas `scene/neighbors/v1` scene parser or interactive planisphere. Those remain follow-on work; the client derives no data beyond placing the supplied scene fields. |
 | Primary system | system / orbital arrangement / bodies and orbital elements | `cargo run -p hornvale -- scene system --world $TMP/world.json` emitted `scene/system/v1`, seed 42, with moon/orbit data. | Required grammar is a spatial orrery. No Atlas parser/view imports `scene/system/v1`; `clients/atlas/src/scene.ts` rejects any schema other than tiles v1. | Repeated JSON bytes matched; SHA-256 `dd95bd26…5459`. **needs_renderer** | Authoritative semantic packet exists, but there is no compatible client visual grammar. The generic observation exporter additionally cannot yet select this command, but renderer absence is the first rendering boundary. |
 | Moons and surface descriptors | planetary system / orbit, phase, and surface descriptors / moons | `cargo run -p hornvale -- scene moons --world $TMP/world.json` emitted `scene/moons/v1`, seed 42, 2 moons. | Required grammar is a moon strip/orbital detail view. Atlas contains no `scene/moons/v1` parser or view. | Repeated JSON bytes matched; SHA-256 `11d6cd46…1108`. **needs_renderer** | The astronomy producer is present; no compatible client grammar exists. Observation export also has the shared underworld-only source restriction. |
 | Planetary surface | world / relief, ocean, biome, plate, and settlement arrangement / map tiles | `cargo run -p hornvale -- scene tiles --world $TMP/world.json --width 16` emitted `scene/tiles/v1`: 16×8, 128 elevation and biome entries, 307 features. | Spatial map. `clients/atlas/src/scene.ts` parsed the actual output; `clients/atlas/src/main.ts` draws elevation, biome, plate, and features. | Repeated JSON bytes matched; SHA-256 `5e8d0635…0fc7`; live Atlas parse succeeded. **existing** | No simulation or map-renderer gap. To make it an episode, add a non-underworld observation source adapter/provenance binding; that is packaging work, not a missing authoritative or visual capability. |
