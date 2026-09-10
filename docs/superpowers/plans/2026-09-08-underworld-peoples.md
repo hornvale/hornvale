@@ -46,11 +46,11 @@
 - Consumes: `World`, `made_chambers`, chamber condition helpers, `chamber_fit`, and `seat_at`.
 - Produces: a deterministic report/test surface for reachable delve rungs, per-kind candidate fit, water-bearing chamber count, and top-quartile overlap.
 
-- [ ] Read the existing probe helpers and copy their seed enumeration and chamber traversal shape into the new probe.
-- [ ] Write failing assertions for the required observations: more than one reachable seating value where the current design requires it, water-bearing chambers being counted separately, and overlap being computed from the same chamber population for both dwarf candidates.
-- [ ] Run the targeted probe and capture its actual output; if a criterion is false, record the null in the campaign ledger and stop the affected admission path.
-- [ ] Keep only measurements that are consumed by a later authoring decision; remove redundant report columns.
-- [ ] Run `cargo nextest run -p hornvale-worldgen --test suite -E 'test(underworld_peoples_probe)'` and commit the measurement with a message explaining the admission result.
+- [x] Read the existing probe helpers and copy their seed enumeration and chamber traversal shape into the new probe.
+- [x] Write failing assertions for the required observations: more than one reachable seating value where the current design requires it, water-bearing chambers being counted separately, and overlap being computed from the same chamber population for both dwarf candidates.
+- [x] Run the targeted probe and capture its actual output; if a criterion is false, record the null in the campaign ledger and stop the affected admission path.
+- [x] Keep only measurements that are consumed by a later authoring decision; remove redundant report columns.
+- [x] Run `cargo nextest run -p hornvale-worldgen --test suite -E 'test(underworld_peoples_probe)'` and commit the measurement with a message explaining the admission result.
 
 ### Stage 2: Author the new species and registry projections
 **Goal**: Add only the kinds admitted by Stage 1, with complete registry consistency.
@@ -69,12 +69,12 @@
 - Consumes: `EnvironmentNiche`, `ConditionResponse`, `BiosphereTraits`, `HabitatRealm`, `Locomotion`, and `family_of`.
 - Produces: `KindId` rows for admitted names, niche functions consumed by `environment_niche_registry`, and registry rows used by worldgen.
 
-- [ ] Add coverage tests first for the admitted roster, dwarf-family membership, subterranean realm rows, and kuo-toa’s water-capability row.
-- [ ] Add the minimal authored rows to `biosphere_registry`, `environment_niche_registry`, `habitat_realm_registry`, and `locomotion_registry`, following the existing sparse/total registry conventions.
-- [ ] Add mountain dwarf and duergar to the dwarf family map; leave svirfneblin and kuo-toa outside that family.
-- [ ] Author each niche from measured chamber fields. Do not add a preference for an axis that the seating path does not consume.
-- [ ] Run species coverage and targeted worldgen compilation; inspect every changed registry list for ordering and completeness.
-- [ ] Commit the species-domain change separately from worldgen seating.
+- [x] Add coverage tests first for the admitted roster, dwarf-family membership, subterranean realm rows, and kuo-toa’s water-capability row.
+- [x] Add the minimal authored rows to `biosphere_registry`, `environment_niche_registry`, `habitat_realm_registry`, and `locomotion_registry`, following the existing sparse/total registry conventions.
+- [x] Add mountain dwarf and duergar to the dwarf family map; leave svirfneblin and kuo-toa outside that family.
+- [x] Author each niche from measured chamber fields. Do not add a preference for an axis that the seating path does not consume.
+- [x] Run species coverage and targeted worldgen compilation; inspect every changed registry list for ordering and completeness.
+- [x] Commit the species-domain change separately from worldgen seating.
 
 ### Task 3: Extend language and cross-registry coverage
 
@@ -87,11 +87,11 @@
 - Consumes: the new `KindId` roster and existing dwarf-family proto contract.
 - Produces: stable family/proto output for the expanded dwarf family and explicit coverage for names that remain singleton families.
 
-- [ ] Write a failing test that the dwarf family’s member set includes the surviving and admitted dwarf kinds and that non-dwarf kinds do not enter it.
-- [ ] Extend the family/proto data in the same order and representation used by the existing dwarf family.
-- [ ] Update the CLI rendered-family list only if the current output contract requires the expanded family to appear; preserve deterministic ordering.
-- [ ] Run the targeted language/proto tests and compare rendered output before accepting any fixture change.
-- [ ] Commit the language and coverage changes.
+- [x] Write a failing test that the dwarf family’s member set includes the surviving and admitted dwarf kinds and that non-dwarf kinds do not enter it.
+- [x] Extend the family/proto data in the same order and representation used by the existing dwarf family.
+- [x] Update the CLI rendered-family list only if the current output contract requires the expanded family to appear; preserve deterministic ordering.
+- [x] Run the targeted language/proto tests and compare rendered output before accepting any fixture change.
+- [x] Commit the language and coverage changes.
 
 ### Stage 3: Wire and verify chamber seating
 **Goal**: Make admitted kinds participate in real chamber seating with the intended terrestrial/aquatic distinctions.
@@ -109,11 +109,11 @@
 - Consumes: `chamber_fit`, `seat_at`, `seating_for`, the species niche registry, and chamber condition fixtures.
 - Produces: failing behavioral tests that distinguish reachable-rung truncation, chamber water state, overlap, and darkness controls.
 
-- [ ] Add a test that every admitted terrestrial seat is one of the chamber’s reachable rungs.
-- [ ] Add a test that a chamber with water and its dry counterpart can differ for kuo-toa while holding light constant.
-- [ ] Add a darkness-control test proving kuo-toa is not admitted solely by `insolation == 0.0`.
-- [ ] Add a dwarf-pair comparison over the measured chamber population, asserting the recorded overlap and distinction properties rather than hardcoding an invented modal rung.
-- [ ] Run the targeted tests and confirm they fail for the absent roster or missing seating behavior.
+- [x] Add a test that every admitted terrestrial seat is one of the chamber’s reachable rungs.
+- [x] Add a test that a chamber with water and its dry counterpart can differ for kuo-toa while holding light constant.
+- [x] Add a darkness-control test proving kuo-toa is not admitted solely by `insolation == 0.0`.
+- [x] Add a dwarf-pair comparison over the measured chamber population, asserting the recorded overlap and distinction properties rather than hardcoding an invented modal rung.
+- [x] Run the targeted tests and confirm they fail for the absent roster or missing seating behavior.
 
 ### Task 5: Implement minimal seating integration
 
@@ -126,16 +126,16 @@
 - Consumes: the Stage 2 registries and existing chamber condition values.
 - Produces: `seating_for` results containing the admitted kinds without new nondeterministic draws or surface-slot changes.
 
-- [ ] Implement the smallest change that makes the Stage 4 tests pass, preserving existing `Band` names and stream inputs.
-- [ ] Run the targeted worldgen tests once, inspect all failures, and fix only failures caused by this roster.
-- [ ] Run `cargo fmt --check` and `cargo clippy -p hornvale-worldgen --all-targets -- -D warnings`.
-- [ ] Commit the seating integration with its tests.
+- [x] Implement the smallest change that makes the Stage 4 tests pass, preserving existing `Band` names and stream inputs.
+- [x] Run the targeted worldgen tests once, inspect all failures, and fix only failures caused by this roster.
+- [x] Run `cargo fmt --check` and `cargo clippy -p hornvale-worldgen --all-targets -- -D warnings`.
+- [x] Commit the seating integration with its tests.
 
 ### Stage 4: Artifacts, documentation, and final verification
 **Goal**: Reconcile all user-visible rosters and prove deterministic integration.
 **Success Criteria**: Workspace gates pass, generated output is reviewed, no stale campaign documentation remains, and the branch is ready for the canonical stage gate.
 **Tests**: targeted tests, `make quick`, `make gate-commit`, and the repository’s queued stage gate when submitted.
-**Status**: In Progress
+**Status**: Complete
 
 ### Task 6: Update artifacts and documentation from live output
 
@@ -163,4 +163,4 @@
 - [x] Run `make quick` and record the exact result.
 - [x] Run `make gate-commit` and record the exact result; do not use `--no-verify`.
 - [x] Review `git diff main...HEAD`, working-tree status, and commit history.
-- [ ] Submit the full branch SHA to the repository’s stage queue according to the Sluice workflow; do not claim merge readiness before the queued result is green.
+- [x] Submit the full branch SHA to the repository’s stage queue according to the Sluice workflow; do not claim merge readiness before the queued result is green.
