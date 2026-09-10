@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 complete; Stage 2 canonical report green; Task 6 capture complete after independent review; Task 7 packaging complete after independent review; Stage 3 canonical submission follows and Task 8 integration begins. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 complete; Stage 2 canonical report green; Task 6 capture complete after independent review; Task 7 packaging complete after independent review; Stage 3 canonical request queued; Task 8 integration complete after independent review; Task 9 final refinement begins. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
@@ -607,14 +607,14 @@ review MP4 is SDR. Preserve the original PNGs as the high-quality source.
 
 **Interfaces:** Consumes Cargo metadata and the existing `clients-check-run` aggregation. Produces `make visual-check` (timed wrapper), `make visual-check-run` (CPU check body), and a dependency guard with an explicit forbidden-reachability direction.
 
-- [ ] Read `scripts/game-no-vessel-dep.sh` and architecture/gate tests. Implement the visual guard over resolved `cargo metadata --format-version 1 --locked`, not a text grep that misses aliases/transitive edges. Identify workspace paths and package IDs; allow app→source/view, forbid source→Bevy/app, view→any simulation/source/app. Test normal and dev dependency paths; a test-only leak is still a leak.
-- [ ] Add synthetic graph tests for direct, renamed and transitive forbidden edges and allowed app edges. Prove a real temporary manifest mutation is detected, asserting the target text exists before editing and restoring it after the run. Library tests instantiate their own Source or a CPU Bevy App/ObservationMirror without importing Planetarium.
-- [ ] Add `visual-check-run`:
+- [x] Read `scripts/game-no-vessel-dep.sh` and architecture/gate tests. Implement the visual guard over resolved `cargo metadata --format-version 1 --locked`, not a text grep that misses aliases/transitive edges. Identify workspace paths and package IDs; allow app→source/view, forbid source→Bevy/app, view→any simulation/source/app. Test normal and dev dependency paths; a test-only leak is still a leak.
+- [x] Add synthetic graph tests for direct, renamed and transitive forbidden edges and allowed app edges. Prove a real temporary manifest mutation is detected, asserting the target text exists before editing and restoring it after the run. Library tests instantiate their own Source or a CPU Bevy App/ObservationMirror without importing Planetarium.
+- [x] Add `visual-check-run`:
 
 ```make
-	cargo fmt --check --manifest-path clients/visual/Cargo.toml
-	cargo clippy --locked --manifest-path clients/visual/Cargo.toml --workspace --all-targets -- -D warnings
-	cargo test --locked --manifest-path clients/visual/Cargo.toml --workspace
+	cd clients/visual && cargo +1.96.1 fmt --check
+	cargo +1.96.1 clippy --locked --manifest-path clients/visual/Cargo.toml --workspace --all-targets -- -D warnings
+	cargo +1.96.1 test --locked --manifest-path clients/visual/Cargo.toml --workspace
 	python3 scripts/visual-dependencies.py
 	python3 scripts/test-visual-dependencies.py
 ```
@@ -626,10 +626,15 @@ and log collection stay matched. Check canonical Linux development libraries
 from the pinned Bevy requirements before submitting the client phase; report
 installation failures rather than suppressing compilation.
 
-- [ ] Extend the architecture test to require the three-crate boundary, own workspace/lockfile and optimized profiles without enumerating implementation details. Root tests must not link Bevy. Check the test-binary roster when registering the new suite targets; justify any new compiled unit explicitly.
-- [ ] Document commands, physical/model limitations, source authority, exact clocks, supported camera range, capture/verification failures, assets/licenses, and the future situated-game boundary. Explain how another application supplies permitted documents without inheriting Planetarium shots. Do not claim a second renderer/game exists.
-- [ ] Reserve decision numbers with `make decision-block NAME=the-planetarium` if not already reserved; record the actual allocated numbers. Add accepted campaign decisions for graphical-client scheduling/Observation Series amendments, native evaluated observation seam, and reusable client ownership. Use allocated paths, never guessed numbers. Add supersession pointers to the earlier spec while retaining historical manifests and records.
-- [ ] Run `make visual-check`, the root commit gate and documentation checks as applicable, inspect every result, then commit. Expensive combined client/workspace checks belong to the canonical stage request.
+- [x] Extend the architecture test to require the three-crate boundary, own workspace/lockfile and optimized profiles without enumerating implementation details. Root tests must not link Bevy. Check the test-binary roster when registering the new suite targets; justify any new compiled unit explicitly.
+- [x] Document commands, physical/model limitations, source authority, exact clocks, supported camera range, capture/verification failures, assets/licenses, and the future situated-game boundary. Explain how another application supplies permitted documents without inheriting Planetarium shots. Do not claim a second renderer/game exists.
+- [x] Reserve decision numbers with `make decision-block NAME=the-planetarium` if not already reserved; record the actual allocated numbers. Add accepted campaign decisions for graphical-client scheduling/Observation Series amendments, native evaluated observation seam, and reusable client ownership. Use allocated paths, never guessed numbers. Add supersession pointers to the earlier spec while retaining historical manifests and records.
+- [x] Run `make visual-check`, the root commit gate and documentation checks as applicable, inspect every result, then commit. Expensive combined client/workspace checks belong to the canonical stage request.
+
+Actual allocation: 0956–0965, with 0956–0958 authored in Task 8. The original
+root-CWD virtual-manifest formatter invocation failed to find targets; the final
+CWD-based recipe was qualified against its verbose source/view/app target list.
+Canonical compilation of this new client remains the final Stage 4 request.
 
 ### Task 9: refine and measure the final moving result; prepare G6
 

@@ -1,6 +1,6 @@
 # The Planetarium — decision ledger
 
-Status: G3 and physical-radius prerequisite approved; G4 plan self-review complete; ready for execution.
+Status: execution authorized; Tasks 1–8 complete after review; Stage 3 canonical request queued; Task 9 final refinement in progress; G6 pending.
 Branch: `campaign/the-planetarium`.
 Starting revision: `b6b374f6d2dea329d904b56322a09b1dfb29983f`.
 
@@ -1197,3 +1197,49 @@ Stage 3 awaits its canonical report. Task 8 integrates the reusable client gates
 Task 9 still owns moon detail, interactive performance, repeat-render measurements
 and final G6 review. No visual acceptance, merge or publication is implied by
 package completion. No new design ruling was needed at this verification boundary.
+
+
+## Task 8 — reusable client integration complete
+
+Task 8 is complete over `2dd219cef..dafe45b33`. Independent spec and quality
+review found no findings. The resolved all-feature metadata guard covers normal,
+build and dev edges, including aliases and transitive dependencies. A real
+renamed dev dependency from source to view produced forbidden reachability;
+restoring the exact manifest and lock bytes returned green. The new visual CPU
+gate passed 72 Rust and six Python tests in 47.578 seconds. Focused root
+architecture, lane, test-binary and documentation checks passed; the normal
+implementation gate ran 4,563 selected tests in 42.895 seconds. No new compiled
+test binary or root Bevy dependency was introduced.
+
+The canonical allocator reserved 0956–0965 for this campaign. Records 0956–0958
+cover graphical scheduling, the native evaluated seam, and reusable ownership.
+Public client/schema documentation states the consumed validation subset and
+keeps scientific scope separate from a future situated game. Historical specs
+retain their records with narrow supersession pointers. The named digest author
+added exactly three decision rows; the temporary delta output was unchanged.
+Details and real mutation output are in
+[client-checks.md](../../audits/the-planetarium/client-checks.md).
+
+The plan's root-CWD formatter command failed on the nested virtual manifest.
+The final `cd clients/visual && cargo +1.96.1 fmt --check` invocation selected
+exactly the visual source/view/app targets in its verbose probe. The plan is
+corrected to that tested command, without duplicating the member roster.
+Canonical Linux prerequisites are present; actual new-client compilation remains
+pending the final stage request. Earlier stage client passes do not cover it.
+
+Stage 3 request `req-2dd219cef400-20260910T233741Z` was submitted after normal
+push of `2dd219cef400c0a4cdb770f83f5cae533ca68c32`; it is queued, not passed.
+Before Task 9, root absorbed main `cb033119272dac268f9b5fc78674dfaf9504ce74`
+in `a483c5d9f96fa60ccc0b70bacab510843a2b55ce`. The actual merge preview and merge
+were clean. Main's delta contains artifact registration and workspace cleanup,
+with no simulation changes. The automatic clean merge did not invoke pre-commit;
+root then explicitly ran the local commit gate, which passed all four chunks in
+43.565 seconds before further implementation or push. Future absorptions should
+use `--no-commit` followed by the ordinary commit command to preserve hook order.
+The post-merge generated-write-manifest advisory is retained: full artifact
+authoring remains on the canonical box through the queued stage, rather than
+an unauthorized local full regeneration.
+
+Task 9 follows with the preserved Task 7 clean movie as its comparison, the
+already-recorded moon/detail and clean-provenance test follow-ups, and the final
+performance/GPU evidence. No final visual approval, merge or publication granted.
