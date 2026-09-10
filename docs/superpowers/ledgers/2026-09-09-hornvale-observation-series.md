@@ -144,3 +144,19 @@ rows are evidence-backed before later tasks consume them.
 - **Evidence:** `make observation-check` passed; the task reviewer approved
   spec compliance and quality with no findings.
 - **Review:** Approved; no fix round required.
+
+## Task 7: complete
+
+- **Commits:** `31a493625`, `f4e1530a0`, `0f706fc73`, `0db9c9f53`,
+  `b81cb4835`, `6f7bbd536`, `3e6c2b48c`, `8b657bdb8`
+- **Result:** Added the HV-009 stellar-neighborhood observation path, including
+  declared-world loading, seed validation, deterministic arbitrary-world
+  export, packet-driven Atlas rendering, and phone/laptop preview coverage.
+- **Evidence:** 33 focused observation tests, 40 Atlas tests, 20 assembly
+  assertions, and `make gate-commit` passed. Two full 900-frame exports were
+  byte-identical.
+- **Review:** Initial review found false arbitrary-seed provenance. Fix round
+  1 added artifact and seed validation; re-review found repository-root path
+  resolution incomplete. Fix round 2 corrected that boundary and added the
+  non-root-CWD regression. Final scoped re-review approved with no new
+  Critical or Important findings.

@@ -425,12 +425,17 @@ comparison, shell assembly tests, and `make observation-check`.
 
 **Status:** Not Started
 
-- [ ] Select the first supported cell using visual legibility and dependency coverage.
-- [ ] Write a failing test for its packet fields, unit, ordering, seed identity, and refusal boundary.
-- [ ] Implement the smallest observation-surface change, if the matrix requires one; preserve world artifacts and stream contracts.
-- [ ] Re-export twice and compare the complete packet sequence byte-for-byte.
-- [ ] Extend Atlas only for supplied packet fields; exercise 390×844 and 1440×900 previews.
-- [ ] Update the capability matrix only after command and checksum witnesses exist; commit producer and renderer changes separately.
+- [x] Select the first supported cell using visual legibility and dependency coverage.
+- [x] Write a failing test for its packet fields, unit, ordering, seed identity, and refusal boundary.
+- [x] Implement the smallest observation-surface change, if the matrix requires one; preserve world artifacts and stream contracts.
+- [x] Re-export twice and compare the complete packet sequence byte-for-byte.
+- [x] Extend Atlas only for supplied packet fields; exercise 390×844 and 1440×900 previews.
+- [x] Update the capability matrix only after command and checksum witnesses exist; commit producer and renderer changes separately.
+
+Task 7 completion: HV-009 now exports and renders the stellar-neighborhood
+cell from the declared `scene neighbors` world artifact. The provenance fix
+also validates repository-root path resolution, missing artifacts, and seed
+identity.
 
 ### Task 8: Resequence the surface-facing batch
 
