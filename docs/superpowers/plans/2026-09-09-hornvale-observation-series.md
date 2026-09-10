@@ -379,7 +379,7 @@ existing underworld records remain useful as an internal production-path
 pilot, but they are not the public opening unless a later review explicitly
 promotes them.
 
-### Stage 6: Audit the opening capability cells
+### Task 6: Audit the opening capability cells
 
 **Goal:** Establish which astronomical, system, planetary, geographic, field,
 and habitat observations are authoritative and renderable.
@@ -406,7 +406,7 @@ inspect `domains/astronomy/`, `domains/climate/`, `domains/terrain/`,
 - [ ] Mark `needs_observation_surface`, `needs_renderer`, or `needs_simulation_extension` at the precise failing boundary.
 - [ ] Run `git diff --check` and focused observation checks; commit `docs: audit opening observation cells`.
 
-### Stage 7: Build the first astronomical/system path
+### Task 7: Build the first astronomical/system path
 
 **Goal:** Make the earliest public-scale observations reproducible and legible
 without changing simulation semantics merely for presentation.
@@ -428,7 +428,7 @@ comparison, shell assembly tests, and `make observation-check`.
 - [ ] Extend Atlas only for supplied packet fields; exercise 390×844 and 1440×900 previews.
 - [ ] Update the capability matrix only after command and checksum witnesses exist; commit producer and renderer changes separately.
 
-### Stage 8: Resequence the surface-facing batch
+### Task 8: Resequence the surface-facing batch
 
 **Goal:** Replace the public opening records with supported astronomical,
 system, world, region, and surface observations while retaining distinct
@@ -451,7 +451,7 @@ Rust/client suites.
 - [ ] Keep all package statuses `draft` until exact video and copy review.
 - [ ] Commit `docs: reorder opening observation batch`.
 
-### Stage 9: Assemble and review the reserve
+### Task 9: Assemble and review the reserve
 
 **Goal:** Produce inspectable local packages and obtain the manual approvals
 required for publication readiness.
