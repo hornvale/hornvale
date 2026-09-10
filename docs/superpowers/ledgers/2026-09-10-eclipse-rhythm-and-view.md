@@ -41,3 +41,15 @@ Plan self-review found no placeholders, unresolved type-name mismatch, or requir
 **Alternatives discarded:** Bypassing the hook is prohibited. Deferring the report would leave a known gate failure. Regenerating census artifacts remains out of scope because no world-generating or census metric change occurred.
 
 **Capture actions:** Task 1 now explicitly owns the type-audit report refresh and preserves the timing ledger output; the worker resumes from its uncommitted diff.
+
+## #3 [G5] — long-duration ground-track review finding
+
+**Question:** Does observer visibility remain correct when a legal short-day world rotates more than 180 degrees during one eclipse crossing?
+
+**Decision:** Fix the track membership calculation to use the directed rotation sweep derived from `duration_days / day_length`, treating a full rotation as global coverage, and test endpoint membership independently of the event midpoint's day-side classification.
+
+**Why:** The task review produced a legal counterexample with a four-hour day and a nearly one-day eclipse crossing. The current shortest-arc calculation classified the middle of a physically covered track as `Bitten`, and midpoint day-side gating could reject track endpoints.
+
+**Alternatives discarded:** Keeping shortest-arc semantics is physically wrong for long crossings. Expanding the campaign into a new shadow integrator is unnecessary; the existing track duration and rotation direction already determine the required directed arc.
+
+**Capture actions:** Task 1 fix round adds the long-sweep regression and updates the domain implementation before scene work continues.

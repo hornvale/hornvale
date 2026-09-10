@@ -70,7 +70,7 @@
 - Consumes: existing `EclipseEvent`, `GroundTrack`, `EclipseSight`, `Calendar`, `StarSystem`, `StdDays`, and `StdInstant`.
 - Produces: a public recurrence summary containing the existing cycle fields plus explicit three-return exeligmos data, and one public observer result that distinguishes solar sight tier, lunar visibility, day/night side, and region.
 
-- [ ] **Step 1: Add failing behavior tests** for exeligmos = three selected-cycle periods, node-slip accumulation across three returns, per-moon recurrence ordering, solar track boundary/longitude-wrap visibility, lunar night-side visibility, poles, retrograde rotation, and locked worlds.
+- [ ] **Step 1: Add failing behavior tests** for exeligmos = three selected-cycle periods, node-slip accumulation across three returns, per-moon recurrence ordering, solar track boundary/longitude-wrap visibility, long-duration tracks exceeding 180° and one full rotation, lunar night-side visibility, poles, retrograde rotation, and locked worlds.
 - [ ] **Step 2: Run the focused astronomy tests** and confirm the new assertions fail against the current API while the existing Eclipse Seasons tests remain green.
 - [ ] **Step 3: Implement the smallest pure API** over the existing helpers. Preserve `best_cycle`’s bounded search and its distinction between true Luna calibration inputs and generated-world approximations. Validate observer latitude in `[-90, 90]`, normalize longitude to the existing `[-180, 180)` convention, and route solar/lunar events through one result type without duplicating day-side logic.
 - [ ] **Step 4: Run the focused tests and the astronomy crate test suite**; inspect that no stream or generated-world code changed. Preserve the timing ledger row produced by the repository's timed commands.
