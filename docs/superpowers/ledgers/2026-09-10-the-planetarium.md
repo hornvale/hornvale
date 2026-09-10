@@ -151,6 +151,11 @@ an alternate astronomical world.
 
 ## Follow-ups
 
+- Task 9 visual refinement: compare richer stable moon material detail driven
+  by the emitted cratering descriptors. The current moon reads as a smooth
+  mottled sphere in Task 5 frames. Any added crater appearance remains cosmetic,
+  with no new physical or walkable terrain; retain it only if actual renders improve.
+
 - G3 review refinement: the shared visual libraries live under `clients/visual/`;
   Planetarium is the first application in that workspace. Further 2D/2.5D/3D
   renderers, gameplay adapters and additional library splits are demand-driven,
@@ -916,46 +921,46 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 ## Task 5 — working inspection foundation and visual iteration
 
 - Foundation committed as `b9364d631a73827143854d41d82841b29ec320d0`.
-  Normal hook passed all four subfloor chunks in67.478s. Its initial refusal
+  Normal hook passed all four subfloor chunks in 67.478s. Its initial refusal
   required a structural claim-shape declaration on the frame-partition test;
   the declaration and focused guard were corrected before the successful hook.
   Task5 is still in progress, with independent task review and Stage2 pending.
-- Actual native eclipse export for the candidate inclusive interval0..3600ticks
-  (CLI standard-day arguments0..0.036) returned `scene/eclipses/v2`, seed42,
+- Actual native eclipse export for the candidate inclusive interval 0..3600 ticks
+  (CLI standard-day arguments 0..0.036) returned `scene/eclipses/v2`, seed 42,
   events[]. World SHA remains77168f2bc1a8db9c01b37b31b66ac4757e1133862f8249aa8d80bb0194285bf8.
-  A separate native probe sampled all300 frames plus endpoint, including native
+  A separate native probe sampled all 300 frames plus endpoint, including native
   solar angular diameter and eclipse thresholds. Moon0 minimum solar separation
-  50.514136657deg exceeds its maximum native threshold1.693434031deg; moon1
-  minimum solar92.810519168deg and anti-solar86.845548279deg exceed1.443120246deg.
-  All301 application astronomy payloads, ticks and bindings agreed with the
+  50.514136657deg exceeds its maximum native threshold 1.693434031deg; moon1
+  minimum solar 92.810519168deg and anti-solar 86.845548279deg exceed 1.443120246deg.
+  All 301 application astronomy payloads, ticks and bindings agreed with the
   independent probe. This is selected-interval avoidance, not eclipse validation
   or permission to invent physical stellar spheres/shadows.
 - Native evidence, reproducer, hashes and executable provenance live at
   `/Users/nathan/Downloads/Hornvale Planetarium/task5-native-avoidance-01/`.
-  Native paths were clean at1e11630202fd5db21a54944ab5f460afc28889ff;
+  Native paths were clean at 1e11630202fd5db21a54944ab5f460afc28889ff;
   client implementation was in progress. The helper's initial compile error
   concerned SceneError conversion and was resolved locally; no native code changed.
 - Real Computer Use review of the bundled app found and verified corrections
   for Retina startup dimensions, quick scrub clicks, extreme dolly input and
-  inspection text/caption overlap. Actual target1920x1080 atscale2 was observed.
+  inspection text/caption overlap. Actual target 1920x1080 at scale 2 was observed.
   Body picking/focus, paused camera movement, authored reset, exact frame step,
-  play/pause, reverse and film toggle worked. Native window resize to3024x1832
-  and back retained readable controls. Approximately100fps on the overlay is
-  preliminary observation; Task9 still owes formal performance measurements.
+  play/pause, reverse and film toggle worked. Native window resize to 3024x1832
+  and back retained readable controls. Approximately 100fps on the overlay is
+  preliminary observation; Task 9 still owes formal performance measurements.
 - Mouse dragging remains a live-input evidence limitation: the Computer Use
   drag operation leaves the visible pointer at its start in two input versions.
   Click and wheel delivery work. Orbit/pan geometry and pointer ownership have
   app tests; they are not relabeled manually demonstrated drag behavior.
 - Preserved actual interaction evidence is in
   `/Users/nathan/Downloads/Hornvale Planetarium/task5-inspection-02/`:
-  915 acknowledged PNGs and915 state-at-request records, all images checked
+  915 acknowledged PNGs and 915 state-at-request records, all images checked
   against declared dimensions, strictly increasing timestamps and no error records.
-  The100.727323708s sampled span includes798 images at1920x1080 and117 at3024x1832.
+  The 100.727323708s sampled span includes 798 images at1920x1080 and 117 at 3024x1832.
   `controls.mp4` preserves variable cadence and aspect ratio,100.88s including
   final hold; SHAeaab3e7e362be0cd84cfa0be354edaaf939bacebc08b493275c3511d1208d132.
   Recording was stopped with no pending acknowledgement before clean window exit.
 - QuickTime input/playback now works through its actual file dialog. The control
-  movie played through100.88s, with intermediate changing states observed. Earlier
+  movie played through 100.88s, with intermediate changing states observed. Earlier
   playback difficulty is resolved. A transient garbled player preview was checked
   against both originalPNG and independently decodedMP4; both files were intact.
   Visual alarms must be confirmed against actual artifact bytes before changing
@@ -965,3 +970,28 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
   was rejected. Source-driven static cloud appearance and a more revealing camera
   angle are being refined; physical scale and source time remain unchanged.
   This checkpoint approves no final visual result, package or merge.
+
+
+## Task 5 — complete moving draft reviewed; caption clearance adjustment
+
+- The softer second cloud prototype and revised close camera produce a clearer
+  change of scale. Full moving draft01 is at
+  `/Users/nathan/Downloads/Hornvale Planetarium/task5-moving-01/review.mp4`;
+  SHA `ea1334b79066e0f668d531a6753b72b9536d7ae3da3451ed2a167dc50f4134ed`.
+  Independent ffprobe confirms 1920x1080, 30fps, 300 frames and 10.000000s.
+- Every original frame's hash and dimensions were checked. Every decoded MP4
+  frame's caption band was checked: all three captions remain present, with
+  small count variation within each shot. The middle-shot band also admits
+  the nearby limb, so that count alone is not a text-only metric. Root played
+  the complete file in QuickTime, observing both cuts and the end state. The
+  player-screen preview intermittently hid parts of text; the original PNGs
+  and all decoded MP4 bands contradict that preview. No caption-renderer fix
+  was made on this evidence.
+- Actual phone-sized cut stills revealed insufficient space between the globe
+  and caption near frame209. The implementer is moving the close shot's aim
+  downward to frame the globe higher, retaining caption placement and physical
+  eye path. Fresh stills and a full moving draft will establish the result;
+  no presumed pixel clearance is accepted as verification.
+- Richer source-descriptor-driven cosmetic moon detail is captured above for
+  Task9. The current task still needs final refinement checks and independent
+  review before its stage submission; visual acceptance remains Nathan's G6.
