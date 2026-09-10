@@ -748,23 +748,19 @@ In the hold of **Kanadaba**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Naka the Kx'soknaka returns every 386.98 days. So it was, so it is.
->
-> — derived from the phenomenon *wandering-star*
-
-> Babanaka the Kx'zhotbabanaka returns every 15.99 days. So it was, so it is.
+> Baba the Kx'zhagnakababa returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Sasa the Nadsasa is felt, not counted. So it was, so it is.
+> Sasa the Noaksasa is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Nakababa the Kx'zhoqnakababa returns every 32.55 days. So it was, so it is.
+> Babanaka the Noabbaba returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Sasa the Kx'zhaksasa is felt, not counted. So it was, so it is.
+> Sasa the Kx'zhatsasa is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -1102,23 +1098,19 @@ In the hold of **Zha**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Bzhoa the Zhambzho returns every 386.98 days. So it was, so it is.
->
-> — derived from the phenomenon *wandering-star*
-
-> Bzhoa the Zhazhqza returns every 15.99 days. So it was, so it is.
+> Qza the Zoasbzho returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bzho the Psambzho is felt, not counted. So it was, so it is.
+> Bzho the Dsombzho is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Bzhoa the Zoomqza returns every 32.55 days. So it was, so it is.
+> Qza the Ksamqzabzho returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bzho the Soambzho is felt, not counted. So it was, so it is.
+> Bzho the Tzoazbzho is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -1136,19 +1128,15 @@ In the hold of **Panamsadax**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Naxav the Waapnaxav returns every 386.98 days. So it was, so it is.
->
-> — derived from the phenomenon *wandering-star*
-
-> Naxav the Woqnaxav returns every 15.99 days. So it was, so it is.
+> Vapadnaxav the Vooqvapad returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Sasad the Wopsasad is felt, not counted. So it was, so it is.
+> Sasad the Waadsasad is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Naxav the Woqvapadnaxav returns every 32.55 days. So it was, so it is.
+> Vapad the Waoqnaxav returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -1254,23 +1242,19 @@ In the hold of **Faakxzhazhofobo**, an organized priesthood tends its own panthe
 >
 > — derived from the phenomenon *eclipse*
 
-> Zooza the Fozoza returns every 386.98 days. So it was, so it is.
+> Shafo the Saozozashafo returns every 15.99 days. So it was, so it is.
 >
-> — derived from the phenomenon *wandering-star*
+> — derived from the phenomenon *celestial-body*
 
-> Shafozoza the Vokxshafo returns every 15.99 days. So it was, so it is.
+> Bao the Vaakxba is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
+
+> Zooza the Shashafozoza returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
 > Bao the Vaaba is felt, not counted. So it was, so it is.
->
-> — derived from the phenomenon *tide*
-
-> Shafo the Shoshafo returns every 32.55 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
-
-> Bao the Shaakxba is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
