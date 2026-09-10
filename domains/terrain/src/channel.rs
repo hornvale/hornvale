@@ -10,11 +10,12 @@
 //! and the band predicate evaluates at any position without traversal.
 //!
 //! **Everything in this module is angular.** `domains/terrain` works on the
-//! unit sphere and no planet radius exists anywhere in the codebase, so a
-//! "channel width in metres" has no defined meaning here. Widths are radians,
-//! expressed as fractions of the local vertex spacing — which is the better
-//! statement of the campaign's claim anyway, since the claim is about the
-//! *ratio* of channel width to vertex width.
+//! unit sphere. Astronomy now derives an anchor bulk radius for observation,
+//! but terrain widths remain radians and this module does not bind them to a
+//! physical-distance conversion. They are expressed as fractions of the local
+//! vertex spacing — which is the better statement of the campaign's claim
+//! anyway, since the claim is about the *ratio* of channel width to vertex
+//! width.
 
 use crate::crust::SphereFbm;
 use crate::globe::TectonicGlobe;

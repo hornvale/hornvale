@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 pub mod anchor;
+pub mod anchor_radius;
 pub mod calendar;
 pub mod eclipses;
 pub mod ephemeris;
@@ -28,6 +29,7 @@ pub mod units;
 pub mod wanderers;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
+pub use anchor_radius::anchor_radius;
 pub use calendar::{
     Calendar, SkyBand, TWILIGHT_DEPTH_DEG, WandererCalendarMark, calendar_of,
     wanderer_calendar_marks,
