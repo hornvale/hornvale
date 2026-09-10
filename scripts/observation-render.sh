@@ -87,12 +87,14 @@ png_dimensions() {
     local signature ihdr width_hex height_hex width height
     signature="$(od -An -tx1 -N 8 "$png" | tr -d '[:space:]')"
     ihdr="$(od -An -tx1 -j 12 -N 4 "$png" | tr -d '[:space:]')"
-    [ "$signature" = 89504e470d0a1a0a ] && [ "$ihdr" = 49484452 ] \
-        || die "Firefox did not produce a PNG: $png"
+    if [ "$signature" != 89504e470d0a1a0a ] || [ "$ihdr" != 49484452 ]; then
+        die "Firefox did not produce a PNG: $png"
+    fi
     width_hex="$(od -An -tx1 -j 16 -N 4 "$png" | tr -d '[:space:]')"
     height_hex="$(od -An -tx1 -j 20 -N 4 "$png" | tr -d '[:space:]')"
-    [ "${#width_hex}" -eq 8 ] && [ "${#height_hex}" -eq 8 ] \
-        || die "Firefox PNG header is truncated: $png"
+    if [ "${#width_hex}" -ne 8 ] || [ "${#height_hex}" -ne 8 ]; then
+        die "Firefox PNG header is truncated: $png"
+    fi
     printf -v width '%d' "0x$width_hex"
     printf -v height '%d' "0x$height_hex"
     printf '%s %s\n' "$width" "$height"
@@ -160,8 +162,9 @@ for ((index = 0; index < frame_count; index++)); do
         || die "Firefox failed to rasterize $frame_base.html"
     [ -s "$staged_png" ] || die "Firefox did not produce $frame_base.png"
     read -r width height < <(png_dimensions "$staged_png")
-    [ "$width" -eq "$VIEWPORT_WIDTH" ] && [ "$height" -eq "$VIEWPORT_HEIGHT" ] \
-        || die "Firefox produced ${width}x${height}; expected ${VIEWPORT_WIDTH}x${VIEWPORT_HEIGHT}"
+    if [ "$width" -ne "$VIEWPORT_WIDTH" ] || [ "$height" -ne "$VIEWPORT_HEIGHT" ]; then
+        die "Firefox produced ${width}x${height}; expected ${VIEWPORT_WIDTH}x${VIEWPORT_HEIGHT}"
+    fi
 done
 
 stale_pngs=("$frames_abs"/frame-*.png)
