@@ -23,6 +23,7 @@
 ## File Map
 
 - Modify `domains/astronomy/src/eclipses.rs`: recurrence record/helpers and one observer result over existing eclipse primitives.
+- Modify `docs/audits/type-audit-report.md` and `docs/timings.md` when the repository gate regenerates mandatory reports for the public API and test/gate runs.
 - Modify `domains/astronomy/src/lib.rs` only if the new public types/functions are not already re-exported by the crate’s existing surface.
 - Modify `domains/astronomy/src/eclipses.rs` tests and `domains/astronomy/tests/suite/` tests: physics identities, edge cases, and determinism.
 - Modify `windows/scene/src/lib.rs`: v3 schema types, observer input validation, event mapping, and JSON serialization.
@@ -72,8 +73,9 @@
 - [ ] **Step 1: Add failing behavior tests** for exeligmos = three selected-cycle periods, node-slip accumulation across three returns, per-moon recurrence ordering, solar track boundary/longitude-wrap visibility, lunar night-side visibility, poles, retrograde rotation, and locked worlds.
 - [ ] **Step 2: Run the focused astronomy tests** and confirm the new assertions fail against the current API while the existing Eclipse Seasons tests remain green.
 - [ ] **Step 3: Implement the smallest pure API** over the existing helpers. Preserve `best_cycle`’s bounded search and its distinction between true Luna calibration inputs and generated-world approximations. Validate observer latitude in `[-90, 90]`, normalize longitude to the existing `[-180, 180)` convention, and route solar/lunar events through one result type without duplicating day-side logic.
-- [ ] **Step 4: Run the focused tests and the astronomy crate test suite**; inspect that no stream or generated-world code changed.
-- [ ] **Step 5: Commit** with a message explaining that the existing eclipse physics is being exposed as structured rhythm and observer data.
+- [ ] **Step 4: Run the focused tests and the astronomy crate test suite**; inspect that no stream or generated-world code changed. Preserve the timing ledger row produced by the repository's timed commands.
+- [ ] **Step 5: Regenerate `docs/audits/type-audit-report.md` with the repository's prescribed report command, inspect that its changes are limited to the new public API audit entries, and include it with the domain commit.**
+- [ ] **Step 6: Commit** with a message explaining that the existing eclipse physics is being exposed as structured rhythm and observer data.
 
 ### Task 2: `scene/eclipses/v3` producer
 

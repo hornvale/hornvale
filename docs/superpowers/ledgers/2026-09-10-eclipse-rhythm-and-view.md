@@ -29,3 +29,15 @@
 | Tasks 3 and 5: generated output → verification | Task 5 checks native/WASM and committed artifacts after surface wiring; no census refresh is assumed. | No conflict. |
 
 Plan self-review found no placeholders, unresolved type-name mismatch, or requirement without a task. The plan and this ledger are committed before implementation begins.
+
+## #2 [G4] — Task 1 generated-report correction
+
+**Question:** May Task 1 include generated reports required by the commit gate?
+
+**Decision:** Yes. The plan's prohibition on generated artifacts was too broad. A public API addition must update the prescribed type-audit report, and timed verification may append the required `docs/timings.md` row. These are gate artifacts, not census regeneration.
+
+**Why:** The worker's focused tests passed, while `make gate-commit` failed closed because `docs/audits/type-audit-report.md` was stale. The repository hook requires that report to be current and forbids bypassing the hook.
+
+**Alternatives discarded:** Bypassing the hook is prohibited. Deferring the report would leave a known gate failure. Regenerating census artifacts remains out of scope because no world-generating or census metric change occurred.
+
+**Capture actions:** Task 1 now explicitly owns the type-audit report refresh and preserves the timing ledger output; the worker resumes from its uncommitted diff.
