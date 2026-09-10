@@ -160,3 +160,32 @@ rows are evidence-backed before later tasks consume them.
   resolution incomplete. Fix round 2 corrected that boundary and added the
   non-root-CWD regression. Final scoped re-review approved with no new
   Critical or Important findings.
+
+## #2 [G5] — Task 8 opening-batch amendment
+
+- **Question:** How can Task 8 truthfully resequence eight public opening
+  records when the capability matrix and Task 7 witness support only the
+  stellar-neighborhood exporter path?
+- **Decision:** Retain `HV-001` through `HV-008` as the draft internal
+  underworld production-path pilot. Place the existing `HV-009`
+  stellar-neighborhood record first in release order and amend the public
+  opening batch to one active candidate; leave later cells unassigned while
+  recording their exact implementation boundaries.
+- **Why:** The matrix marks world, elevation, and habitat cells as needing an
+  observation adapter; the system and regional cells need a renderer; and
+  the social cells have no qualifying matrix witness. Eight captions or a
+  relabelled underworld readout would be an invented public claim, not eight
+  independent records.
+- **Alternatives discarded:** Renumbering or copying `HV-009` eight times
+  would duplicate one cell. Promoting the underworld pilot would violate the
+  approved release spine. Calling unaudited social cells simulation gaps
+  would pretend to know the first failing boundary.
+- **Ideonomy passes / overturns:** One dimension-identification/map pass,
+  using discovery-versus-invention and predictability. It separated
+  discovered, witnessed support from authored record ordering and confirmed
+  that only deterministic, present packet evidence—not expected future
+  adapter work—can populate this batch. No overturn.
+- **Capture actions:** The amended batch records `needs_observation_surface`,
+  `needs_renderer`, and unassessed capability-audit boundaries separately.
+  The next public record requires a follow-up implementation task; no public
+  status or approval changed.

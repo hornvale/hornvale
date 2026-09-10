@@ -1,107 +1,95 @@
 # 2026-09 opening observation batch
 
-Batch status: **draft internal pilot**. All eight evidence records and caption
-packages remain drafts. No exact video/copy package has been reviewed or
-approved by Nathan. The seven-package approval reserve remains pending
-Nathan's manual review. Nothing in this record authorizes publication.
+Batch status: **draft internal resequence**. The opening run has one
+end-to-end package, `HV-009`. It is a draft candidate, not a reviewed,
+approved, or published package. The numbered `HV-001` through `HV-008`
+underworld records remain the internal spatial production-path pilot; they
+are not public opening records.
 
-## Realized surface and scope
+## Truthful batch amendment
 
-This pilot uses the one observation source and renderer path that exists now:
+The prior eight-record public opening is withdrawn. The capability matrix
+supports exactly one opening-scale observation path today: the witnessed
+stellar-neighborhood path in `HV-009`. Reusing it under eight captions or
+relabeling the underworld pilot as astronomical-to-surface coverage would not
+create eight independent atlas cells.
+
+`HV-009` remains its stable record identity while appearing first in the
+release order. No public package has been published, so this changes no public
+identifier. The next opening records remain unassigned until the precise
+capability boundaries below are implemented and witnessed. This is the
+smallest amendment that preserves the approved astronomical-to-surface spine
+without inventing evidence.
+
+## Active opening record
+
+| Release order | Episode | Object | Scale | Primary axis | Count unit | Grammar | Evidence | Package |
+|---:|---|---|---|---|---|---|---|---|
+| 1 | HV-009 | notable stellar neighborhood | astronomical neighborhood | apparent brightness and sky position | stars | spatial | draft | draft |
+
+`HV-009` uses the declared fixture world and its sole accepted command:
 
 ```text
-cargo run -p hornvale -- underworld --seed 42
-  → observation/frame/v1 spatial packets
-  → atlas spatial observation renderer
+cargo run -p hornvale -- scene neighbors --world cli/tests/fixtures/world-seed-42.json
 ```
 
-At revision `0d7067a0f20aafbe88fb67358537f56963fba5b0`, the producer emitted
-5,910 bytes with SHA-256
-`70328bb4f83aa088a7ec88e398ddbf8ab20049f2ded24d51b422880692238c01`.
-Those bytes matched the committed HV-001 frame fixture exactly. HV-001 retains
-its original producer revision
-`ed8e6f3369f2b45097d702a5c28cc84f1ae35f56`; HV-002 through HV-008 pin the
-revision at which this batch review repeated the producer command.
+Its exporter preserves the complete `scene/neighbors/v1` document in
+`spatial.readout`; the Atlas observation preview plots only its supplied RA,
+declination, brightness, and magnitude fields. The committed first packet is
+`observations/fixtures/HV-009/expected-frame-000.json`; two 900-packet
+exports have the recorded sequence SHA-256
+`8e45bc6d6fbd9a04607b387d72d82557fb46d404520f10a2b86b03e362ad1c6b`.
 
-The eight records occupy distinct object/scale/axis cells supported by that
-readout. They do not pretend the current exporter can carry another producer,
-and they do not claim four visual grammars. Reusing one readout makes this a
-pipeline and editorial pilot, not a claim of broad atlas coverage.
+The candidate was generated on 2026-09-09. Its earliest review or publication
+date is 2026-09-16, satisfying the seven-day buffer. Its manifest, caption,
+evidence status, and editorial status all remain `draft`; approval is `null`.
 
-## Episode matrix
+## Deferred astronomical-to-surface cells
 
-| Episode | Object | Scale | Axis | Count unit | Grammar | Evidence | Package |
-|---|---|---|---|---|---|---|---|
-| HV-001 | geography | world | spatial arrangement | chambers | spatial | draft | draft |
-| HV-002 | entrances | world | quantity | entrances | spatial | draft | draft |
-| HV-003 | cave systems | world | quantity | cave systems | spatial | draft | draft |
-| HV-004 | chambers | depth band | distribution | chambers | spatial | draft | draft |
-| HV-005 | chambers | rock layer | distribution | chambers | spatial | draft | draft |
-| HV-006 | chambers | world | provenance | chambers | spatial | draft | draft |
-| HV-007 | cave systems | depth band | topology or connectivity | cave systems | spatial | draft | draft |
-| HV-008 | chamber run | cave system | viewpoint or resolution | floors | spatial | draft | draft |
+These are capability requirements, not episode records. Each row keeps one
+object, one scale, and one primary axis; none assigns an unsupported public
+claim or an episode identifier.
 
-Every manifest names one value for object, scale, axis, count unit, visual
-grammar, and observation sentence. Every source command is the exact current
-repository-root command accepted by the exporter.
+| Release position | Object | Scale | Primary axis | Unit | Current boundary | Required capability work |
+|---:|---|---|---|---|---|---|
+| 2 | primary system | system | orbital arrangement | bodies and orbital elements | `needs_renderer` | Add a spatial orrery grammar for authoritative `scene/system/v1`; then bind that scene through the observation exporter. |
+| 3 | planetary surface | world | spatial arrangement | map tiles | `needs_observation_surface` | Bind the exercised `scene/tiles/v1` map path into `observation/frame/v1`; Atlas already parses its map grammar. |
+| 4 | terrain elevation field | field | elevation | meters | `needs_observation_surface` | Select the producer's `elevation_m` field through an observation adapter; retain its meters unit and existing Atlas field grammar. |
+| 5 | habitat biome classification | habitat | spatial distribution | biome tiles | `needs_observation_surface` | Select the producer's biome tiles and legend through an observation adapter; retain the supplied categorical legend. |
+| 6 | geographic regional tile | region | spatial arrangement | sampled tile nodes | `needs_renderer` | Add a regional-tile grammar for authoritative `scene/tiles-region/v1`; then add its observation adapter. |
 
-## Reproduction record
+## Deferred social and non-spatial cells
 
-Each manifest requests 900 packets at 30 frames per second, a declared
-30-second episode. The batch was
-exported from clean per-episode directories. `source_digest` was
-`fnv1a64:5344fcc22e8d960d` for every episode because every packet observes the
-same producer bytes. The atlas fixture's tested viewports are 390×844 (phone)
-and 1440×900 (laptop).
+These requirements preserve the distinctions the atlas requires. `Unassessed`
+means the opening capability matrix records no authoritative producer and
+compatible Atlas grammar for that exact cell; a capability audit must identify
+the first implementation boundary before the state can truthfully be narrowed
+to simulation, observation surface, or renderer.
 
-The sequence checksum is SHA-256 over the exact bytes of `frame-000.json`
-through `frame-119.json`, concatenated in lexical order.
-
-| Episode | Frames | Sequence SHA-256 |
-|---|---:|---|
-| HV-001 | 900 | `2d1cad2d9b01a2aba3aa5e3415efce363a1c85a0958a0ee34ae82a0b1fb02d1c` |
-| HV-002 | 900 | `4fb27ea29e7ca9549e3b649593dd763e3b5230febf9df00a5e8884c0124190a3` |
-| HV-003 | 900 | `3a74b3cfa51ebf5f85af46801f017302fe5a0087896e0d2145fff3374c48eafd` |
-| HV-004 | 900 | `76bcc2567779bfb5f4331a8385e440cdb61cd3a83510099d558f5e8728e5cbff` |
-| HV-005 | 900 | `5a9a752d1162fc8b0da24d11def7fc700cb993a3340255609a9b8d3a2bebe551` |
-| HV-006 | 900 | `da1c6964bdcc6bc9d94a5de847344ccf8cc2943e2e80a76d64b9884b0a52ce5f` |
-| HV-007 | 900 | `f95e63ea64e2e6399b9aadddd22e2878082d8bd0f8631e7cd67c2a48ec92ee6e` |
-| HV-008 | 900 | `723ede96f6e9d3f30f0869bc85901a63527e80e509241cd05be621ca34f26db7` |
-
-These checksums cover authoritative JSON packets, not PNGs or videos. The
-current renderer has a deterministic browser preview and phone/laptop layout
-tests, but this docs/data task did not create or approve exact video files.
-
-## Unsupported observation surfaces
-
-The following are honest backlog requirements, not episodes in this pilot:
-
-| Needed surface | Exact object | Scale | Observable | Capability state | Why omitted |
+| Object | Scale | Primary axis | Unit or observable | Current boundary | Internal requirement |
 |---|---|---|---|---|---|
-| temporal packet/export path | chambers | depth band | transition through world time | needs_observation_surface | `observation/frame/v1` currently carries one static underworld readout; repeating it does not demonstrate change |
-| typed relation packet/export path | cave systems | depth band | junction graph edges and components | needs_observation_surface | the producer reports aggregate junction facts but does not export graph structure for a relational film |
-| close-reading packet/export path | chamber run | cave system | one selected run's floors and material sequence | needs_observation_surface | the producer prints three examples, but the exporter cannot select and structure one run independently |
-| temporal renderer | chambers | depth band | transition through world time | needs_renderer | the atlas observation renderer currently accepts only `spatial` packets |
-| relational renderer | cave systems | depth band | typed junction relations | needs_renderer | no relation-node/edge render contract exists |
-| close-reading renderer | chamber run | cave system | selected run detail | needs_renderer | the current presentation remains the general spatial readout |
+| settlement | settlement | spatial arrangement | settlements | `needs_renderer` | The realized `settlement-map` has no compatible Atlas grammar; add that grammar before an observation adapter. |
+| occupation | occupation | persistence or duration | occupation intervals | unassessed | Audit an authoritative occupation interval producer and a temporal grammar; do not substitute settlement or population. |
+| population | population | quantity | persons | unassessed | Audit an authoritative population-count producer and a quantity/distribution grammar; do not substitute settlement or occupation. |
+| individual | individual | viewpoint or resolution | one projected individual | unassessed | Audit an individual witness and close-reading grammar; do not project an aggregate record as an individual. |
+| chambers | depth band | transition | chamber changes across world time | `needs_observation_surface` and `needs_renderer` | Export a bounded time series, then add a temporal grammar; repeated static packets are not a transition witness. |
+| cave systems | depth band | relation | typed junction edges and components | `needs_observation_surface` and `needs_renderer` | Export selected graph structure, then add a relational grammar; aggregate junction facts are not a relational film. |
+| chamber run | cave system | viewpoint or resolution | one selected run's floors and material sequence | `needs_observation_surface` and `needs_renderer` | Export a selected run independently, then add a close-reading grammar; three printed examples are not a selected witness. |
 
-No simulation extension is requested by these rows: the current readout
-already establishes the static facts used here. The missing work is an
-authoritative observation surface and corresponding renderer, to be planned at
-least fourteen days before demonstration and tested at least seven days before
-publication.
+## Internal-pilot boundary
+
+The `HV-001` through `HV-008` manifests and caption drafts remain draft
+underworld spatial records. Their command, fixtures, deterministic export, and
+renderer tests still exercise the production path. They are retained as an
+internal pilot only and are not counted as opening coverage, a reserve, or
+publicly approved work.
 
 ## Review boundary
 
-- Evidence status remains `draft` for all eight manifests; no evidence record
-  is represented as reviewed. HV-001's existing phrase "across depth bands"
-  is explicitly pending an editorial decision about whether it describes
-  distribution or connectivity. The pilot does not silently rewrite the
-  committed renderer fixture.
-- Renderer tests, rather than an invented screenshot record, establish the two
-  layout dimensions and preservation of authored labels.
-- Caption files contain advisory primary drafts and optional replies only.
-- Exact video/copy review by Nathan remains pending for all eight packages.
-  Until then every `editorial_status` remains `draft`, every `approval` remains
-  `null`, and seven-package approval remains pending with a reserve count of
-  **0 of 7**.
+- No status changed to `reviewed`, `approved`, or `published`.
+- No video, caption package, or social-network action is authorized by this
+  record.
+- The public opening needs a follow-up implementation task: first bind an
+  existing `scene/tiles/v1` surface through the exporter, or implement a
+  system renderer and bind its scene through the exporter, before another
+  independently supported opening record can be added.

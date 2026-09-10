@@ -451,14 +451,14 @@ unsupported temporal, relational, social, or close-reading behavior.
 phone/laptop renderer checks, local assembly, `git diff --check`, and focused
 Rust/client suites.
 
-**Status:** Not Started
+**Status:** Complete
 
-- [ ] Replace `observations/episodes/HV-001.json` through `HV-008.json` with supported opening cells from the capability matrix.
-- [ ] Rewrite matching caption drafts in Nathan's casual voice without adding unshown capabilities or roadmap language.
-- [ ] Record omitted settlement, occupation, population, temporal, relational, and close-reading cells as internal capability requirements.
-- [ ] Generate each candidate at least seven days before its intended review/publication window.
-- [ ] Keep all package statuses `draft` until exact video and copy review.
-- [ ] Commit `docs: reorder opening observation batch`.
+- [x] Apply the smallest truthful amendment: retain `HV-001` through `HV-008` as the internal underworld pilot and make witnessed `HV-009` the sole current opening candidate rather than fabricating eight supported cells.
+- [x] Add an advisory `HV-009` caption draft in Nathan's casual voice without unshown capabilities or roadmap language.
+- [x] Record omitted settlement, occupation, population, temporal, relational, and close-reading cells as internal capability requirements.
+- [x] Record the 2026-09-09 generation date and 2026-09-16 earliest review/publication date for the active candidate.
+- [x] Keep all package statuses `draft` until exact video and copy review.
+- [x] Commit `docs: reorder opening observation batch`.
 
 ### Task 9: Assemble and review the reserve
 

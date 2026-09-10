@@ -22,14 +22,17 @@
     "seed": 42
   },
   "comparison_reference": null,
-  "lead_time": null,
+  "lead_time": {
+    "generated_at": "2026-09-09",
+    "earliest_review_or_publication_date": "2026-09-16"
+  },
   "source_data": [
     "hornvale scene/neighbors/v1 stdout"
   ],
   "render_output": null,
   "caption_draft": [
-    "Five other stars are close enough to stand out in this world's night sky.",
-    "These are seed 42's notable neighbors, placed by apparent brightness and position rather than a hand-drawn constellation."
+    "Five notable neighbor stars stand out in seed 42's sky.",
+    "This view keeps their supplied apparent brightness and sky positions intact. No hand-drawn constellation needed."
   ],
   "editorial_status": "draft",
   "approval": null
