@@ -6969,3 +6969,19 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T03:49:05Z | sluice:gate | 848.398 | 25315.506 | 847.330 | 30.84 | 0 | b0f9f07ca |  | lefford | 40 |
 | 2026-09-10T03:52:35Z | sluice:clients | 209.248 | 3210.433 | 319.001 | 16.87 | 0 | 0895b0e43 |  | lefford | 40 |
 | 2026-09-10T04:00:15Z | sluice:heavy | 460.506 | 12876.342 | 299.182 | 28.61 | 0 | 406c12114 |  | lefford | 40 |
+| 2026-09-10T13:28:41Z | gate-commit | 2.533 | 2.333 | 0.143 | 0.98 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:29:06Z | gate-commit | 6.377 | 7.469 | 0.473 | 1.25 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:29:42Z | gate-commit | 17.481 | 41.019 | 4.519 | 2.60 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:30:37Z | gate-commit | 14.057 | 25.552 | 4.057 | 2.11 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:31:30Z | gate-commit | 20.105 | 31.770 | 4.177 | 1.79 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:32:44Z | gate-commit | 63.555 | 251.991 | 33.519 | 4.49 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:33:51Z | gate-commit | 40.328 | 79.833 | 20.970 | 2.50 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:38:21Z | gate-commit | 24.779 | 34.448 | 4.542 | 1.57 | 0 | f3faad829 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:39:20Z | gate-commit | 47.971 | 92.516 | 37.095 | 2.70 | 0 | f3faad829 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:47:16Z | gate-commit | 16.964 | 39.986 | 5.081 | 2.66 | 0 | c5be1a2bf | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:47:50Z | gate-commit | 20.016 | 31.397 | 4.652 | 1.80 | 0 | c5be1a2bf | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:49:23Z | gate-commit | 82.243 | 325.723 | 38.898 | 4.43 | 0 | c5be1a2bf | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:53:51Z | gate-commit | 15.537 | 26.187 | 5.184 | 2.02 | 0 | 9f984d343 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:54:21Z | gate-commit | 20.162 | 31.586 | 5.027 | 1.82 | 0 | 9f984d343 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:56:15Z | gate-commit | 102.670 | 278.434 | 38.550 | 3.09 | 0 | 9f984d343 | campaign/the-vent | MacBookPro | 10 |
+| 2026-09-10T13:57:31Z | gate-commit | 37.663 | 70.899 | 18.968 | 2.39 | 0 | 9f984d343 | campaign/the-vent | MacBookPro | 10 |
