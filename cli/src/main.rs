@@ -83,7 +83,8 @@ usage:
   hornvale scene system [--world <PATH>]              emit scene/system/v1 JSON to stdout
   hornvale scene moons [--world <PATH>]                emit scene/moons/v1 JSON to stdout
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
-  hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
+  hornvale scene eclipses --world W --from D --until D [--latitude LAT --longitude LON]
+                                                      emit scene/eclipses/v3 JSON
   hornvale scene surrounds [--world <PATH>] [--room <ID> | --depth <D>] [--radius <N>] [--day <D>]
                             [--render json|ascii] [--lens terrain|colour]
                                                       emit scene/surrounds/v1 JSON to stdout, or
@@ -2360,7 +2361,8 @@ fn cmd_attest() -> Result<(), String> {
 /// renders the night sky's two star populations, the notable neighbor
 /// stars and the background starfield (scene/neighbors/v1), and `scene
 /// eclipses` renders dated eclipse events over a closed `[from, until]` day window
-/// (scene/eclipses/v1), and `scene surrounds` renders the situated chart around
+/// (scene/eclipses/v3), optionally for one geographic observer, and `scene
+/// surrounds` renders the situated chart around
 /// an observer's room (scene/surrounds/v1) — JSON by default, or (`--render
 /// ascii`) the same picture the possession's own `map` verb draws, via
 /// `hornvale_scene::render_surrounds_ascii` — through the `terrain` lens by
@@ -2417,22 +2419,63 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         Some("eclipses") => {
-            let world = load_world(args)?;
             let parse_f64 = |flag: &str| -> Result<f64, String> {
                 flag_value(args, flag)
                     .ok_or_else(|| format!("scene eclipses requires {flag}"))?
                     .parse::<f64>()
-                    .map_err(|e| format!("{flag} must be a number: {e}"))
+                    .map_err(|e| format!("scene/eclipses/v3: {flag} must be a number: {e}"))
             };
             let from = parse_f64("--from")?;
             let until = parse_f64("--until")?;
+            let has_latitude = args.iter().any(|arg| arg == "--latitude");
+            let has_longitude = args.iter().any(|arg| arg == "--longitude");
+            let observer = match (has_latitude, has_longitude) {
+                (false, false) => None,
+                (true, true) => {
+                    let latitude = flag_value(args, "--latitude").ok_or_else(|| {
+                        "scene/eclipses/v3: --latitude requires a value".to_string()
+                    })?;
+                    let longitude = flag_value(args, "--longitude").ok_or_else(|| {
+                        "scene/eclipses/v3: --longitude requires a value".to_string()
+                    })?;
+                    let latitude = latitude.parse::<f64>().map_err(|e| {
+                        format!("scene/eclipses/v3: --latitude must be a number: {e}")
+                    })?;
+                    let longitude = longitude.parse::<f64>().map_err(|e| {
+                        format!("scene/eclipses/v3: --longitude must be a number: {e}")
+                    })?;
+                    if !latitude.is_finite() || !(-90.0..=90.0).contains(&latitude) {
+                        return Err(format!(
+                            "scene/eclipses/v3: observer latitude {latitude} is outside the finite range -90..=90"
+                        ));
+                    }
+                    if !longitude.is_finite() {
+                        return Err(format!(
+                            "scene/eclipses/v3: observer longitude {longitude} is not finite"
+                        ));
+                    }
+                    Some(hornvale_scene::EclipseObserverQuery {
+                        latitude_deg: latitude,
+                        longitude_deg: longitude,
+                    })
+                }
+                _ => {
+                    return Err(
+                        "scene/eclipses/v3: --latitude and --longitude must be supplied together"
+                            .to_string(),
+                    );
+                }
+            };
             // `--from`/`--until` are user-typed, so a non-finite value must
             // fail through the same Err path every other bad argument uses
             // rather than panicking inside the constructor.
-            let from = hornvale_astronomy::StdInstant::new(from).map_err(|e| e.to_string())?;
-            let until = hornvale_astronomy::StdInstant::new(until).map_err(|e| e.to_string())?;
-            let scene = hornvale_scene::eclipses_scene(&world, from, until, None)
-                .map_err(|e| e.to_string())?;
+            let from = hornvale_astronomy::StdInstant::new(from)
+                .map_err(|e| format!("scene/eclipses/v3: {e}"))?;
+            let until = hornvale_astronomy::StdInstant::new(until)
+                .map_err(|e| format!("scene/eclipses/v3: {e}"))?;
+            let world = load_world(args)?;
+            let scene = hornvale_scene::eclipses_scene(&world, from, until, observer)
+                .map_err(|e| format!("scene/eclipses/v3: {e}"))?;
             println!("{}", hornvale_scene::eclipses_json(&scene));
             Ok(())
         }

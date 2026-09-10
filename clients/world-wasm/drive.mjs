@@ -2,13 +2,24 @@
 // the native CLI's (the two-language golden contract at the wasm seam).
 // Usage: node drive.mjs <wasm> <native-system.json> <native-tiles.json> \
 //                       <tiles-width> <native-pinned-tiles.json> <native-region.json> \
-//                       <native-binary-system.json>
+//                       <native-binary-system.json> <native-eclipses.json> \
+//                       <native-observed-eclipses.json>
 import { readFileSync } from "node:fs";
 
-const [wasmPath, sysPath, tilesPath, widthStr, pinnedTilesPath, regionPath, binarySysPath] = process.argv.slice(2);
-if (!pinnedTilesPath || !regionPath || !binarySysPath) {
+const [
+  wasmPath,
+  sysPath,
+  tilesPath,
+  widthStr,
+  pinnedTilesPath,
+  regionPath,
+  binarySysPath,
+  eclipsesPath,
+  observedEclipsesPath,
+] = process.argv.slice(2);
+if (!pinnedTilesPath || !regionPath || !binarySysPath || !eclipsesPath || !observedEclipsesPath) {
   console.error(
-    "usage: node drive.mjs <wasm> <sys.json> <tiles.json> <width> <pinned-tiles.json> <region.json> <binary-system.json>",
+    "usage: node drive.mjs <wasm> <sys.json> <tiles.json> <width> <pinned-tiles.json> <region.json> <binary-system.json> <eclipses.json> <observed-eclipses.json>",
   );
   process.exit(2);
 }
@@ -37,6 +48,62 @@ expect(e.hw_scene_tiles(width), 0, "hw_scene_tiles");
 golden(out(), tilesPath, "scene/tiles/v1 (seed 42)");
 expect(e.hw_scene_tiles_region(0, 3, 4, 4, 16), 0, "hw_scene_tiles_region");
 golden(out(), regionPath, "scene/tiles-region/v1 (seed 42, face 0 L3 4,4 s16)");
+
+// Eclipse v3 has two explicit states at the ABI: no observer question, and a
+// fully supplied observer pair. Both must remain byte-identical to the native
+// CLI over the same typed scene producer.
+expect(e.hw_scene_eclipses(0, 2000), 0, "hw_scene_eclipses");
+const eclipses = out();
+golden(eclipses, eclipsesPath, "scene/eclipses/v3 (seed 42, no observer)");
+const eclipseDoc = JSON.parse(eclipses);
+if (eclipseDoc.schema !== "scene/eclipses/v3") {
+  fail("unobserved eclipse scene", `schema is ${eclipseDoc.schema}`);
+}
+if ("observer" in eclipseDoc || eclipseDoc.events.some((event) => "observer" in event)) {
+  fail("unobserved eclipse scene", "observer data was emitted without a query");
+}
+
+if (typeof e.hw_scene_eclipses_for_observer !== "function") {
+  fail("observer eclipse export", "hw_scene_eclipses_for_observer is missing");
+}
+expect(
+  e.hw_scene_eclipses_for_observer(0, 2000, 0, 540),
+  0,
+  "hw_scene_eclipses_for_observer",
+);
+const observedEclipses = out();
+golden(observedEclipses, observedEclipsesPath, "scene/eclipses/v3 (seed 42, observer 0,540)");
+const observedDoc = JSON.parse(observedEclipses);
+if (observedDoc.observer?.latitude_deg !== 0 || observedDoc.observer?.longitude_deg !== -180) {
+  fail("observed eclipse scene", "observer was not echoed with normalized longitude");
+}
+if (!observedDoc.events.every((event) => event.observer)) {
+  fail("observed eclipse scene", "an event omitted the supplied observer result");
+}
+if (!observedDoc.events.some((event) => event.observer.visibility === "unseen")) {
+  fail("observed eclipse scene", "supplied-but-unseen was collapsed into omission");
+}
+
+for (const [latitude, longitude, label] of [
+  [90.000001, 0, "latitude above 90"],
+  [-90.000001, 0, "latitude below -90"],
+  [NaN, 0, "NaN latitude"],
+  [Infinity, 0, "infinite latitude"],
+  [-Infinity, 0, "negative infinite latitude"],
+  [0, NaN, "NaN longitude"],
+  [0, Infinity, "infinite longitude"],
+  [0, -Infinity, "negative infinite longitude"],
+]) {
+  expect(e.hw_scene_eclipses_for_observer(0, 2000, latitude, longitude), 2, label);
+  const error = JSON.parse(out()).error;
+  if (!error?.includes("scene/eclipses/v3")) {
+    fail(label, `error envelope does not name scene/eclipses/v3: ${out()}`);
+  }
+}
+expect(e.hw_scene_eclipses(NaN, 2000), 2, "non-finite eclipse bound");
+if (!JSON.parse(out()).error?.includes("scene/eclipses/v3")) {
+  fail("non-finite eclipse bound", `error envelope does not name scene/eclipses/v3: ${out()}`);
+}
 
 // Pinned genesis (terrain pin: deterministic force, satisfiable on any seed).
 const pins = new TextEncoder().encode(JSON.stringify({ plates: "12" }));
@@ -182,11 +249,14 @@ if (e.hw_scene_tiles_selected(width, 2) !== -2) fail("non-UTF-8 field list", "ex
 expect(e.hw_scene_tiles(width), 0, "hw_scene_tiles after refused field lists");
 if (out() !== fullDoc) fail("world after refused field lists", "document changed");
 
-// Error paths: unknown pin → -3 with envelope; scene without world intact.
-const bad = new TextEncoder().encode(JSON.stringify({ nonsense: "1" }));
+// Observer coordinates are query arguments, never pins. A coordinate key in
+// pins JSON follows the ordinary unknown-pin refusal and clears the old world.
+const bad = new TextEncoder().encode(JSON.stringify({ latitude: 0 }));
 new Uint8Array(e.memory.buffer, e.hw_in_ptr(), bad.length).set(bad);
-if (e.hw_new_pinned(42n, bad.length) !== -3) fail("unknown pin", "expected -3");
-if (!JSON.parse(out()).error) fail("unknown pin", "no error envelope");
+if (e.hw_new_pinned(42n, bad.length) !== -3) fail("observer coordinate pin", "expected -3");
+if (!JSON.parse(out()).error?.includes("latitude")) {
+  fail("observer coordinate pin", "error envelope does not name the rejected key");
+}
 // A refused/errored pinned call cleared the world: scenes must refuse too.
 if (e.hw_scene_system() !== -3) fail("scene after cleared world", "expected -3");
 // Including the projecting one — and -3 there means "no world", never "bad
@@ -195,4 +265,4 @@ if (e.hw_scene_tiles_selected(width, writeIn(JSON.stringify(["elevation_m"]))) !
   fail("projected scene after cleared world", "expected -3");
 }
 
-console.log("world-wasm smoke OK (single and binary system scenes plus tiles and region are byte-identical; projection and error envelopes sound; scene context reset)");
+console.log("world-wasm smoke OK (system, tiles, region, and eclipse scenes are byte-identical; observer normalization/presence and error envelopes sound; scene context reset)");

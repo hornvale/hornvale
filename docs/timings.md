@@ -7073,3 +7073,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T18:15:18Z | gate-commit | 41.497 | 73.906 | 21.270 | 2.29 | 0 | ce424db11 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-10T18:28:13Z | gate-commit | 50.516 | 91.822 | 31.141 | 2.43 | 0 | 10812319d | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-10T18:30:19Z | gate-commit | 39.774 | 73.428 | 21.246 | 2.38 | 0 | 10812319d | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:42:30Z | world-check | 59.553 | 80.164 | 3.831 | 1.41 | 0 | a5536ef28 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:46:46Z | world-check | 44.930 | 47.951 | 1.862 | 1.11 | 0 | a5536ef28 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:51:29Z | world-check | 35.319 | 38.647 | 1.544 | 1.14 | 0 | a5536ef28 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:52:24Z | gate-commit | 39.888 | 72.712 | 20.416 | 2.33 | 0 | a5536ef28 | campaign/eclipse-rhythm-view | MacBookPro | 10 |

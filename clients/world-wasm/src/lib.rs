@@ -402,41 +402,90 @@ pub extern "C" fn hw_scene_tiles_region(
     }
 }
 
-/// Emit the current world's `scene/eclipses/v2` JSON over `[from, until]`
-/// standard days. 0 ok; 2 scene error (envelope set); -3 when no world is live.
-///
-/// The ABI keeps taking `f64` standard days, because that is what JavaScript
-/// has — the crossing onto the typed instant happens HERE, at the boundary,
-/// which is the only place a caller-supplied number can be validated. A
-/// non-finite argument becomes the ordinary scene-error path rather than a
-/// panic across the wasm boundary.
-#[unsafe(no_mangle)]
-pub extern "C" fn hw_scene_eclipses(from: f64, until: f64) -> i32 {
+fn scene_eclipses(
+    from: f64,
+    until: f64,
+    observer: Option<hornvale_scene::EclipseObserverQuery>,
+) -> i32 {
     let world_ptr = &raw const WORLD;
     let Some(world) = (unsafe { (*world_ptr).as_ref() }) else {
-        set_error("no world; call hw_new first");
+        set_error("scene/eclipses/v3: no world; call hw_new first");
         return -3;
     };
+    if let Some(observer) = observer {
+        if !observer.latitude_deg.is_finite() || !(-90.0..=90.0).contains(&observer.latitude_deg) {
+            set_error(&format!(
+                "scene/eclipses/v3: observer latitude {} is outside the finite range -90..=90",
+                observer.latitude_deg
+            ));
+            return 2;
+        }
+        if !observer.longitude_deg.is_finite() {
+            set_error(&format!(
+                "scene/eclipses/v3: observer longitude {} is not finite",
+                observer.longitude_deg
+            ));
+            return 2;
+        }
+    }
     let (from, until) = match (
         hornvale_astronomy::StdInstant::new(from),
         hornvale_astronomy::StdInstant::new(until),
     ) {
         (Ok(f), Ok(u)) => (f, u),
         (Err(e), _) | (_, Err(e)) => {
-            set_error(&e.to_string());
+            set_error(&format!("scene/eclipses/v3: {e}"));
             return 2;
         }
     };
-    match hornvale_scene::eclipses_scene(world, from, until) {
+    match hornvale_scene::eclipses_scene(world, from, until, observer) {
         Ok(s) => {
             set_out(hornvale_scene::eclipses_json(&s));
             0
         }
         Err(e) => {
-            set_error(&format!("{e}"));
+            set_error(&format!("scene/eclipses/v3: {e}"));
             2
         }
     }
+}
+
+/// Emit the current world's `scene/eclipses/v3` JSON over `[from, until]`
+/// standard days with no observer query. 0 ok; 2 scene error (envelope set);
+/// -3 when no world is live.
+///
+/// The ABI keeps taking `f64` standard days, because that is what JavaScript
+/// has — the crossing onto the typed instant happens here, at the boundary.
+/// A non-finite argument becomes the ordinary scene-error path rather than a
+/// panic across the wasm boundary.
+#[unsafe(no_mangle)]
+pub extern "C" fn hw_scene_eclipses(from: f64, until: f64) -> i32 {
+    scene_eclipses(from, until, None)
+}
+
+/// Emit the current world's `scene/eclipses/v3` JSON over `[from, until]`
+/// standard days for one geographic observer. 0 ok; 2 scene or coordinate
+/// error (envelope set); -3 when no world is live.
+///
+/// Latitude must be finite and inside `[-90, 90]`; longitude must be finite.
+/// The typed scene producer normalizes longitude to `[-180, 180)` and owns all
+/// observer visibility decisions. Coordinates are query arguments, never pins
+/// or saved world facts.
+#[unsafe(no_mangle)]
+pub extern "C" fn hw_scene_eclipses_for_observer(
+    from: f64,
+    until: f64,
+    latitude: f64,
+    longitude: f64,
+) -> i32 {
+    scene_eclipses(
+        from,
+        until,
+        Some(hornvale_scene::EclipseObserverQuery {
+            latitude_deg: latitude,
+            longitude_deg: longitude,
+        }),
+    )
 }
 
 /// Pointer to the 4096-byte input buffer JS writes pins JSON into.
