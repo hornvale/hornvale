@@ -201,3 +201,11 @@ rows are evidence-backed before later tasks consume them.
   HV-009 export checks, and `make gate-commit` passed.
 - **Review:** Approved with no findings. The reviewer confirmed that all
   statuses remain draft and that the batch does not claim unsupported coverage.
+
+## Task 9 ruling — rasterization prerequisite
+
+Ruling: pause Task 9 at local assembly because the supported HV-009 export has
+900 validated JSON packets and Atlas HTML previews but no PNG sequence. The
+film assembler correctly refuses this state while ffmpeg is available. Add a
+bounded rasterization task before attempting video assembly; do not create
+placeholder images, claim a no-ffmpeg result, or change editorial statuses.

@@ -481,3 +481,33 @@ validation, `make observation-check`, client checks, shellcheck,
 - [ ] Mark `reviewed` only after inspection and `approved` only after Nathan explicitly approves the exact package.
 - [ ] Record rejected or deferred packages without inflating the seven-package reserve.
 - [ ] Record the review boundary in the campaign ledger and keep generated local outputs out of the commit.
+
+### Task 10: Rasterize observation preview frames
+
+**Goal:** Connect the validated observation packets and Atlas HTML preview to
+the PNG frame sequence required by local film assembly.
+
+**Success Criteria:** A bounded local command renders one PNG for every
+validated packet at a declared review viewport, refuses missing or malformed
+packets, preserves packet ordering and episode identity, and writes no video
+or publication side effect. If the available environment has no sanctioned
+headless raster path, the command must refuse clearly and record that
+environmental boundary rather than emitting placeholder images.
+
+**Tests:** Focused raster-command tests for packet count, contiguous frame
+names, malformed input, deterministic repeated output, viewport dimensions,
+and refusal when the raster backend is unavailable; `make observation-check`,
+Atlas checks, shellcheck, and `git diff --check`.
+
+**Status:** Not Started
+
+**Files:** Create `scripts/observation-render.sh` and
+`scripts/test-observation-render.sh`; modify `Makefile` to exercise the
+renderer without publishing; modify `observations/README.md` to distinguish
+HTML inspection from authoritative PNG frame output.
+
+- [ ] Identify the existing supported browser/raster backend and record its exact invocation; do not add a new dependency without repository precedent.
+- [ ] Write failing tests for one PNG per packet, contiguous names, viewport dimensions, malformed packet refusal, and deterministic reruns.
+- [ ] Implement the smallest local renderer that consumes the existing Atlas preview HTML and writes only declared frame outputs.
+- [ ] Run the renderer twice on HV-009 and compare the complete PNG sequence; distinguish byte identity from visual identity if the backend is platform-local.
+- [ ] Run shellcheck, focused Atlas tests, `make observation-check`, and `git diff --check`; commit `build: render observation frames locally`.
