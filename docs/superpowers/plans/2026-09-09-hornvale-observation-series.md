@@ -10,6 +10,36 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-09-hornvale-observation-series-design.md`
 
+## Campaign close — Complete at the user-approved scope boundary
+
+**Status:** Complete. This campaign delivered the deterministic manifest and
+export contract, the Atlas preview, the Firefox PNG raster path, ffmpeg local
+assembly, and a technically verified HV-009 package. It did **not** deliver
+the intended fullscreen animated/subtitle-style presentation or a reserve of
+seven manually approved packages.
+
+The user approved closing at that narrower boundary. HV-009 remains draft:
+its evidence status and editorial status are `draft` and `approval` is `null`.
+Nothing in this close marks it reviewed, approved, published, or counted in a
+reserve.
+
+| Work | Close disposition |
+| --- | --- |
+| Tasks 1–4 | Complete: manifest validation, deterministic packets, Atlas preview, and local assembly/verification shipped. |
+| Task 5 | Superseded by the later evidence-backed opening-batch amendment; no eight-record public batch was fabricated. |
+| Tasks 6–8 | Complete: capability audit, one supported stellar path, and a truthful one-candidate opening record shipped. |
+| Task 9 | Technical HV-009 package assembly completed; its manual editorial review and the seven-package reserve are explicitly outside this campaign. |
+| Task 10 | Complete: Firefox-backed rasterization with clear absence refusal shipped. |
+
+The follow-up is required, not implied: a new renderer/presentation campaign
+must replace the technical HTML-to-Firefox-per-frame proof with a persistent,
+custom fullscreen animated presentation. It owns visual legibility and
+subtitle-style treatment. After it produces presentation-ready exact packages,
+Nathan's manual editorial review and the seven-approved-package reserve resume
+as a separate production boundary. See
+[`the-observation-series.md`](../../retrospectives/the-observation-series.md)
+and the raw renderer idea in the registry.
+
 ## Global Constraints
 
 - One episode observes one primary feature, axis, or dimension at one explicit scale.
@@ -392,7 +422,7 @@ precise gap. A domain type or debug print alone never qualifies as existing.
 determinism is claimed; run the observation validator and `make
 observation-check`; verify every output path against the source tree.
 
-**Status:** Blocked pending Task 10 raster backend
+**Status:** Complete
 
 **Files:** Create `observations/atlas/2026-09-opening-capability-matrix.md`;
 inspect `domains/astronomy/`, `domains/climate/`, `domains/terrain/`,
@@ -423,7 +453,7 @@ plan instead of a fabricated episode.
 **Tests:** Focused Rust packet tests, Atlas viewport tests, repeated checksum
 comparison, shell assembly tests, and `make observation-check`.
 
-**Status:** Not Started
+**Status:** Complete
 
 - [x] Select the first supported cell using visual legibility and dependency coverage.
 - [x] Write a failing test for its packet fields, unit, ordering, seed identity, and refusal boundary.
@@ -473,8 +503,9 @@ checksum when present, and final reviewed caption.
 validation, `make observation-check`, client checks, shellcheck,
 `git diff --check`, and a final `make gate-commit`.
 
-**Status:** In progress — HV-009's local package is assembled; it awaits
-Nathan's manual visual/editorial review.
+**Status:** Closed at the campaign's narrowed scope boundary — HV-009's
+technical package is assembled; manual visual/editorial review and the
+seven-package reserve are deferred outside this campaign.
 
 - [ ] Render each package into a clean ignored directory under `observations/render-output/HV-00N/`.
 - [ ] Assemble a derived film when ffmpeg is available; otherwise record no-video verification without claiming a film exists.
@@ -488,6 +519,10 @@ packets into a `1440×900` local PNG sequence, and ffmpeg assembled the derived
 30-second MP4 with an `HV-009.sha256` sidecar. The manifest and caption remain
 draft with `approval: null`; this technical assembly is not Nathan's manual
 visual/editorial review and does not count toward the seven-package reserve.
+The user-directed close records that the HTML-to-Firefox-per-frame assembly is
+a technical pipeline proof, not the intended fullscreen animated/subtitle-style
+presentation. The manual review, approval, and reserve checklist above remain
+unchecked and are deliberately carried to follow-up work.
 
 ### Task 10: Rasterize observation preview frames
 

@@ -286,3 +286,31 @@ status.
   date remains 2026-09-16. Nathan must manually inspect the exact film and
   caption for object, scale, axis, labels, sentence, duration, and legibility
   before any editorial state changes.
+
+## #4 [G6] — user-approved close at the technical scope boundary
+
+- **Question:** Should this campaign remain open for the intended presentation
+  and seven-package reserve after it technically verified HV-009?
+- **Decision:** Close the campaign. The user explicitly approved the narrower
+  completed scope: deterministic manifest/export, Atlas preview,
+  Firefox-per-frame rasterization, ffmpeg assembly, and a technically verified
+  HV-009 local package. Do not submit this branch to the sluice from this
+  close; the controller will review, gate, push, and enqueue the closure
+  commit.
+- **Why:** The exact raster loop launches Firefox once per frame, and the
+  output is a static text layout rather than the intended fullscreen animated,
+  subtitle-style presentation. The package establishes pipeline viability but
+  does not establish presentation readiness. HV-009 remains draft with
+  `approval: null`; manual review and a seven-approved-package reserve are
+  different work.
+- **Alternatives discarded:** Keeping the campaign open would mix a finished
+  deterministic transport/proof path with an unbounded presentation redesign
+  and editorial production queue. Marking HV-009 reviewed or approved, or
+  counting it toward a reserve, would contradict its unchanged manifest.
+- **Ideonomy passes / overturns:** N/A — explicit user G6 decision; no new
+  design choice was auto-resolved.
+- **Capture actions:** `docs/retrospectives/the-observation-series.md` routes
+  the custom renderer/presentation campaign, HV-009's later manual review,
+  and the reserve. `RENDER-observation-presentation` records the measured
+  renderer follow-up. The plan now records campaign status Complete at this
+  deliberate boundary.

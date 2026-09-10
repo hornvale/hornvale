@@ -488,6 +488,7 @@
 - [The Sett](./chronicle/the-sett.md)
 - [The Murrain](./chronicle/the-murrain.md)
 - [The Seedbed](./chronicle/the-seedbed.md)
+- [The Observation Series](./chronicle/the-observation-series.md)
 
 # Appendix: The Frontier
 
