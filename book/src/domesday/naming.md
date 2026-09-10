@@ -10,23 +10,23 @@ How things are named: the conventions and confusable forms a language's naming l
 
 Whether every committed goblin deity epithet carries a prepended honorific affix — DETECTED from the committed epithet content: the committed word, case-folded, must end with the independently re-derived honorific-OFF stem and be strictly longer (Rank status basis → honorifics on, spec §7); Absent if goblins hold no pantheon
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 1000 | 100.0% |
+| `true` | 999 | 100.0% |
 | `false` | 0 | 0.0% |
 
 ### `epithet-honorific-kobold`
 
 Whether every committed kobold deity epithet carries a prepended honorific affix — DETECTED from the committed epithet content (see epithet-honorific-goblin); kobold's Knowledge status basis leaves honorifics off, so the committed epithet equals the plain stem and this reads false; Absent if kobolds hold no pantheon
 
-n = 981 present, 19 absent (of 1000 worlds)
+n = 983 present, 17 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
 | `true` | 0 | 0.0% |
-| `false` | 981 | 100.0% |
+| `false` | 983 | 100.0% |
 
 ### `name-collision-rate`
 
@@ -36,7 +36,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.076086957 | 0.46180556 | 0.53302349 | 0.58508159 | 0.70855148 | 0.51520032 |
+| 0.12244898 | 0.48177083 | 0.54548971 | 0.59367397 | 0.71278195 | 0.53151943 |
 
 ### `name-gloss-true`
 
@@ -53,11 +53,11 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 Mean character length of every generated name (settlement, deity, epithet) attributed to goblins in this world; Absent if goblins produced no names
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 4.8 | 7.4090909 | 8.2939815 | 9.4130435 | 14.774194 | 8.4968946 |
+| 4.75 | 7.4090909 | 8.3653846 | 9.4210526 | 18.224719 | 8.5065485 |
 
 ### `name-length-goblin-twin`
 
@@ -69,11 +69,11 @@ n = 0 present, 1000 absent (of 1000 worlds) — no world reports a value.
 
 Mean character length of every generated name (settlement, deity, epithet) attributed to kobolds in this world; Absent if kobolds produced no names
 
-n = 981 present, 19 absent (of 1000 worlds)
+n = 983 present, 17 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2.7419355 | 5.6615385 | 6.6428571 | 7.7173913 | 18.857143 | 6.8736843 |
+| 2.6666667 | 5.6956522 | 6.6363636 | 7.6721311 | 20.684932 | 6.8906368 |
 
 ### `name-pattern-signatures`
 
@@ -83,7 +83,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 7 | 9 | 9 | 9 | 9 | 8.978 |
+| 5 | 9 | 9 | 9 | 9 | 8.978 |
 
 ### `name-people-recoverability`
 
@@ -93,7 +93,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.28571429 | 0.33333333 | 0.33333333 | 0.33333333 | 0.55555556 | 0.33613825 |
+| 0.22222222 | 0.26315789 | 0.26315789 | 0.26315789 | 0.41176471 | 0.26494382 |
 
 ### `name-prefix-region-full-stack`
 
@@ -103,7 +103,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.11580217 | 0.39226519 | 0.5060906 | 0.61359223 | 0.95692026 | 0.50512653 |
+| 0.14273995 | 0.36877828 | 0.47150691 | 0.58744395 | 0.85983827 | 0.48121661 |
 
 ### `name-prefix-region-scope`
 
@@ -113,7 +113,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 1 | 1 | 1 | 2 | 1.002 |
+| 1 | 1 | 1 | 1 | 1 | 1 |
 
 ### `name-prefix-settlement-scope`
 
@@ -123,27 +123,27 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.82131661 | 0.94594595 | 0.9624291 | 0.97536946 | 1 | 0.95992745 |
+| 0.87648456 | 0.94188596 | 0.95617378 | 0.96939891 | 1 | 0.95472781 |
 
 ### `name-syllables-goblin`
 
 Mean syllable count of every generated name (settlement, deity, epithet) attributed to goblins in this world, counted as maximal vowel runs in the committed surface (an orthographic proxy — see the metric's own doc comment for its measured error bound); the reading The Wearing's claim needs, since character length cannot tell shorter words from the same words spelled tighter. Target 2-3; Absent if goblins produced no names
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1.8461538 | 2.48 | 2.6666667 | 2.8965517 | 5.6060606 | 2.7094596 |
+| 1.75 | 2.4680851 | 2.6666667 | 2.8888889 | 6.4494382 | 2.710722 |
 
 ### `name-syllables-kobold`
 
 Mean syllable count of every generated name attributed to kobolds in this world (see name-syllables-goblin); Absent if kobolds produced no names
 
-n = 981 present, 19 absent (of 1000 worlds)
+n = 983 present, 17 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1.1 | 1.9375 | 2.1333333 | 2.3623188 | 7.7272727 | 2.2055805 |
+| 1.125 | 1.9375 | 2.1428571 | 2.3783784 | 7.7333333 | 2.2092432 |
 
 ### `name-transparency`
 
@@ -153,7 +153,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.26027397 | 0.64137931 | 0.72853481 | 0.80237154 | 0.96650718 | 0.71654414 |
+| 0.23809524 | 0.62096774 | 0.69858398 | 0.78125 | 0.96061269 | 0.69475955 |
 
 ### `toponymic-core-size`
 
@@ -173,31 +173,31 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 3 | 6 | 7 | 7 | 7 | 6.474 |
+| 4 | 6 | 7 | 7 | 7 | 6.541 |
 
 ## Weaknesses found here
 
 ### `epithet-honorific-goblin`
 
-- **D1**: "true" holds 1000/1000 worlds (100.0%), at or above the 80% threshold
+- **D1**: "true" holds 999/999 worlds (100.0%), at or above the 80% threshold
 
 ### `epithet-honorific-kobold`
 
-- **D1**: "false" holds 981/981 worlds (100.0%), at or above the 80% threshold
+- **D1**: "false" holds 983/983 worlds (100.0%), at or above the 80% threshold
 
 ### `name-pattern-signatures`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 2 min..max range), under the 5% bar
-- **D4**: median 9 equals the max (7 .. 9)
+- **D3**: p25..p75 spans 0 (0.00% of the 4 min..max range), under the 5% bar
+- **D4**: median 9 equals the max (5 .. 9)
 
 ### `name-people-recoverability`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 0.26984126999999997 min..max range), under the 5% bar
+- **D3**: p25..p75 spans 0 (0.00% of the 0.18954248999999998 min..max range), under the 5% bar
 
 ### `name-prefix-region-scope`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 1 min..max range), under the 5% bar
-- **D4**: median 1 equals the min (1 .. 2)
+- **D2**: min == median == max == 1 across 1000 worlds
+- **D4**: median 1 equals the min (1 .. 1)
 
 ### `toponymic-core-size`
 
@@ -206,5 +206,5 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `toponymic-roots-won`
 
-- **D4**: median 7 equals the max (3 .. 7)
+- **D4**: median 7 equals the max (4 .. 7)
 
