@@ -561,6 +561,9 @@ fn observations_export_neighbors_preserves_the_authoritative_scene_and_refuses_s
     );
     let first = temp_output_dir("neighbors-export-first");
     let second = temp_output_dir("neighbors-export-second");
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root");
 
     let source = Command::new(env!("CARGO_BIN_EXE_hornvale"))
         .args([
@@ -588,6 +591,7 @@ fn observations_export_neighbors_preserves_the_authoritative_scene_and_refuses_s
             .arg(&manifest)
             .arg("--out")
             .arg(output_dir)
+            .current_dir(workspace_root)
             .output()
             .expect("export neighbor observation packets");
         assert!(out.status.success(), "neighbor export failed: {out:?}");
@@ -668,6 +672,60 @@ fn observations_export_neighbors_preserves_the_authoritative_scene_and_refuses_s
     std::fs::remove_file(system_manifest).expect("remove system manifest");
     std::fs::remove_dir_all(first).expect("remove first neighbor export");
     std::fs::remove_dir_all(second).expect("remove repeated neighbor export");
+}
+
+/// claim: structural(declared observation artifacts)
+#[test]
+fn observations_export_neighbors_refuses_missing_or_mismatched_declared_world() {
+    // The command names an artifact, so export must read that artifact rather
+    // than silently replacing it with a world rebuilt from manifest.seed.
+    for (tag, seed, world_path, expected) in [
+        (
+            "missing-world-artifact",
+            42,
+            "cli/tests/fixtures/world-seed-does-not-exist.json",
+            "world artifact",
+        ),
+        (
+            "mismatched-world-artifact",
+            43,
+            "cli/tests/fixtures/world-seed-42.json",
+            "seed",
+        ),
+    ] {
+        let manifest = temp_manifest(
+            tag,
+            &manifest_json(&[
+                ("seed", serde_json::json!(seed)),
+                (
+                    "source_commands",
+                    serde_json::json!([format!(
+                        "cargo run -p hornvale -- scene neighbors --world {world_path}"
+                    )]),
+                ),
+            ]),
+        );
+        let output_dir = temp_output_dir(tag);
+        let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("workspace root");
+        let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+            .args(["observations", "export", "--manifest"])
+            .arg(&manifest)
+            .arg("--out")
+            .arg(&output_dir)
+            .current_dir(workspace_root)
+            .output()
+            .expect("attempt declared-world export");
+        assert!(!out.status.success(), "invalid declared world was accepted");
+        let stderr = String::from_utf8(out.stderr).expect("refusal is utf-8");
+        assert!(stderr.contains(expected), "{tag} refusal was: {stderr}");
+        assert!(
+            !output_dir.exists(),
+            "refused {tag} export created output packets"
+        );
+        std::fs::remove_file(manifest).expect("remove temporary manifest");
+    }
 }
 
 #[test]

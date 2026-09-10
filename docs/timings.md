@@ -6892,3 +6892,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T01:27:27Z | gate-commit | 38.549 | 71.545 | 20.262 | 2.38 | 0 | 953cbf0de | campaign/hornvale-observation-series | MacBookPro | 10 |
 | 2026-09-10T01:28:55Z | gate-commit | 38.190 | 70.456 | 19.562 | 2.36 | 0 | 953cbf0de | campaign/hornvale-observation-series | MacBookPro | 10 |
 | 2026-09-10T01:30:25Z | gate-commit | 37.567 | 70.795 | 19.274 | 2.40 | 0 | 953cbf0de | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:40:45Z | gate-commit | 2.607 | 2.314 | 0.159 | 0.95 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:41:43Z | gate-commit | 40.582 | 68.589 | 18.483 | 2.15 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:42:29Z | gate-commit | 37.657 | 65.427 | 16.853 | 2.18 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:44:17Z | gate-commit | 41.418 | 74.974 | 21.390 | 2.33 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:45:18Z | gate-commit | 38.802 | 71.566 | 19.642 | 2.35 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-10T01:46:28Z | gate-commit | 41.726 | 73.623 | 20.431 | 2.25 | 0 | 0f706fc73 | campaign/hornvale-observation-series | MacBookPro | 10 |

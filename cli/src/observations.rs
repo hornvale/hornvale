@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use hornvale_kernel::Seed;
+use hornvale_kernel::{Seed, World};
 use hornvale_worldgen as world_builder;
 
 /// Editorial state of an observation package.
@@ -642,30 +642,34 @@ fn underworld_source(manifest: &EpisodeManifest) -> Result<String, ObservationEr
     ))
 }
 
-fn neighbors_source(manifest: &EpisodeManifest) -> Result<String, ObservationError> {
-    let components =
-        world_builder::WorldComponents::assemble().map_err(|error| ObservationError::Build {
+fn neighbors_source(
+    manifest: &EpisodeManifest,
+    world_path: &Path,
+) -> Result<String, ObservationError> {
+    let mut world = World::load(world_path).map_err(|error| ObservationError::Build {
+        episode_id: manifest.id.clone(),
+        reason: format!("world artifact {}: {error}", world_path.display()),
+    })?;
+    world_builder::register_all(&mut world.registry).map_err(|error| ObservationError::Build {
+        episode_id: manifest.id.clone(),
+        reason: format!("world artifact {}: {error}", world_path.display()),
+    })?;
+    if world.seed != Seed(manifest.seed) {
+        return Err(ObservationError::Build {
+            episode_id: manifest.id.clone(),
+            reason: format!(
+                "world artifact {} has seed {}, expected manifest seed {}",
+                world_path.display(),
+                world.seed.0,
+                manifest.seed
+            ),
+        });
+    }
+    let scene =
+        hornvale_scene::neighbors_scene(&world).map_err(|error| ObservationError::Build {
             episode_id: manifest.id.clone(),
             reason: error.to_string(),
         })?;
-    let artifacts = world_builder::build_world_to_with_artifacts(
-        Seed(manifest.seed),
-        &hornvale_astronomy::SkyPins::default(),
-        &hornvale_terrain::TerrainPins::default(),
-        &world_builder::SettlementPins::default(),
-        &components,
-        world_builder::BuildDepth::Astronomy,
-    )
-    .map_err(|error| ObservationError::Build {
-        episode_id: manifest.id.clone(),
-        reason: error.to_string(),
-    })?;
-    let scene = hornvale_scene::neighbors_scene(&artifacts.world).map_err(|error| {
-        ObservationError::Build {
-            episode_id: manifest.id.clone(),
-            reason: error.to_string(),
-        }
-    })?;
     Ok(hornvale_scene::neighbors_json(&scene))
 }
 
@@ -674,28 +678,33 @@ fn spatial_source(manifest: &EpisodeManifest) -> Result<SpatialObservation, Obse
         "cargo run -p hornvale -- underworld --seed {}",
         manifest.seed
     );
-    let neighbors_command = format!(
-        "cargo run -p hornvale -- scene neighbors --world cli/tests/fixtures/world-seed-{}.json",
-        manifest.seed
-    );
     if manifest.source_commands.as_slice() == [underworld_command] {
         return Ok(SpatialObservation {
             source: "hornvale underworld stdout".to_string(),
             readout: underworld_source(manifest)?,
         });
     }
-    if manifest.source_commands.as_slice() == [neighbors_command] {
-        return Ok(SpatialObservation {
-            source: "hornvale scene/neighbors/v1 stdout".to_string(),
-            readout: neighbors_source(manifest)?,
-        });
+    if let [command] = manifest.source_commands.as_slice() {
+        const NEIGHBORS_PREFIX: &str = "cargo run -p hornvale -- scene neighbors --world ";
+        if let Some(world_path) = command.strip_prefix(NEIGHBORS_PREFIX) {
+            if world_path.is_empty() {
+                return Err(invalid(
+                    "source_commands",
+                    "scene neighbors requires a non-empty --world artifact path",
+                ));
+            }
+            return Ok(SpatialObservation {
+                source: "hornvale scene/neighbors/v1 stdout".to_string(),
+                readout: neighbors_source(manifest, Path::new(world_path))?,
+            });
+        }
     }
     Err(invalid(
         "source_commands",
         format!(
             "export currently requires exactly 'cargo run -p hornvale -- underworld --seed {}' or \
-             'cargo run -p hornvale -- scene neighbors --world cli/tests/fixtures/world-seed-{}.json'",
-            manifest.seed, manifest.seed
+             'cargo run -p hornvale -- scene neighbors --world <PATH>'",
+            manifest.seed
         ),
     ))
 }
