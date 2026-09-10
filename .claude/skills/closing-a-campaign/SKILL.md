@@ -143,6 +143,37 @@ not done until every one is checked or explicitly N/A.
    different thing from step 4's golden pins: pins re-pin in the drifting
    commit, keystones refreeze at merge.
 
+5b. **Write the close record INTO the merge, not after it.** Flip the
+   campaign's `docs/audits/campaign-reconciliation.tsv` row from `active`
+   to `shipped`, set the close date, and update the `**Status:**` headers in
+   the plan, the spec and the retrospective to say the merge gate passed —
+   all of it in the commit you are about to submit.
+
+   **Everything in a close record except the landing SHA is knowable before
+   you land**, and the SHA is not worth a second merge. Omit it: the
+   reconciliation row names the branch, and `git log --merges` finds the
+   commit in one command.
+
+   **The cost of getting this wrong is measured, not asserted.**
+   campaign/the-staple-d4 landed on 2026-09-09, then spent a SECOND merge
+   slot on a docs-only commit flipping `active` to `shipped`:
+
+       artifacts  331.2 s
+       outboard   102.4 s
+       gate       865.7 s
+       ---------------------
+       total     1299.3 s   ~22 minutes of canonical-box time, six lines of text
+
+   A prose-only candidate skips `clients` and `heavy` (decision 0426), which
+   is why it was 22 minutes and not 27. It does NOT skip `artifacts` or
+   `gate`, and neither of those scales with the size of the diff — `gate`
+   compiles and runs the whole workspace suite whether the commit touches a
+   kernel module or one status header. There is no cheap merge.
+
+   `scripts/sluice-vet.sh` reports `reconciliation disposition:` alongside the
+   other DoD lines, so a merge still reading `active` is visible at vet time,
+   while it is free to fix.
+
 6. **Submit to the merge queue — and note that this is step SIX, after
    step 3's artifacts, not before them.** Submitting first is the common
    failure and it is not free: the campaign then owes a second merge to
@@ -205,11 +236,16 @@ not done until every one is checked or explicitly N/A.
 | Gradient re-score | `book/src/open-questions.md` (if a bet moved) | decision 0030 |
 | Registry flips | `book/src/frontier/idea-registry.md` | registry header rules |
 | Keystone refreeze | `cli/tests/fixtures/` etc., from main's tip | merge-time discipline |
+| Close record | `campaign-reconciliation.tsv` row `active`→`shipped`, plus `**Status:**` headers in plan/spec/retrospective — IN the merge commit, landing SHA omitted | step 5b; a separate post-landing merge costs ~1,300 s for six lines |
 | Scratch promotion | `.superpowers/sdd/` (plugin `progress.md`, reports, reviews, mutation proofs) → retrospective + registry rows | step 2A; scratch is git-ignored and is swept when the worktree is recycled |
 | Ledger review | `docs/superpowers/ledgers/<slug>.md`, read for post-G3 entries → spec decisions section / decision record; every deferred minor in it → retrospective, with its outcome | step 2B; committed at write time, but unreviewed until read here |
 
 ## Common mistakes
 
+- **Landing, then submitting a second merge to record the close.** That is a
+  full merge slot — ~1,300 s measured — for a handful of status lines, and
+  every fact in it except the landing SHA was knowable before you landed. See
+  step 5b.
 - Declaring done from the final summary without the walk — the summary
   comes after step 8, and is not a substitute for steps 1–8.
 - Re-scoring nothing because "no bet obviously moved": grep the campaign's
