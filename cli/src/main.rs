@@ -2421,7 +2421,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
         Some("eclipses") => {
             let parse_f64 = |flag: &str| -> Result<f64, String> {
                 flag_value(args, flag)
-                    .ok_or_else(|| format!("scene eclipses requires {flag}"))?
+                    .ok_or_else(|| format!("scene/eclipses/v3: scene eclipses requires {flag}"))?
                     .parse::<f64>()
                     .map_err(|e| format!("scene/eclipses/v3: {flag} must be a number: {e}"))
             };

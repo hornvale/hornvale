@@ -137,6 +137,37 @@ fn scene_eclipses_rejects_invalid_observer_coordinates() {
 }
 
 #[test]
+fn scene_eclipses_missing_from_names_the_v3_contract_and_flag() {
+    let output = run(&[
+        "scene",
+        "eclipses",
+        "--world",
+        world_path(),
+        "--until",
+        "2000",
+    ]);
+    let error = String::from_utf8_lossy(&output.stderr);
+
+    assert!(!output.status.success(), "missing --from was accepted");
+    assert!(
+        error.contains("scene/eclipses/v3") && error.contains("--from"),
+        "missing --from error lacks v3 context or flag: {error}"
+    );
+}
+
+#[test]
+fn scene_eclipses_missing_until_names_the_v3_contract_and_flag() {
+    let output = run(&["scene", "eclipses", "--world", world_path(), "--from", "0"]);
+    let error = String::from_utf8_lossy(&output.stderr);
+
+    assert!(!output.status.success(), "missing --until was accepted");
+    assert!(
+        error.contains("scene/eclipses/v3") && error.contains("--until"),
+        "missing --until error lacks v3 context or flag: {error}"
+    );
+}
+
+#[test]
 fn help_names_the_v3_observer_query() {
     let output = run(&["help"]);
     let help = String::from_utf8_lossy(&output.stdout);
