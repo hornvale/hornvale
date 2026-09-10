@@ -684,3 +684,48 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 - Actual draft artifacts remain in Downloads/Hornvale Planetarium, with the
   dirty renderer and local Georgia font documented. They are early visual
   evidence; neither final visual acceptance nor a clean final package is claimed.
+
+## #17 [Q] — enforce the measured orbital camera envelope
+
+- Ruling: this pilot supports camera-center distances at least twice each
+  body's outer physical radius, including maximum positive terrain height above
+  the emitted sea reference. Reject nearer views before publishing a scene;
+  retain the source sizes/distances. Task 5's authored poses and dolly controls
+  must use the same boundary. Near-surface viewing needs subsequent precision
+  work and is not silently claimed by this orbital pilot.
+- Evidence: Task 3 fix-round probing used the actual f32 camera/body/projection
+  path. The saved focused test log `/tmp/planetarium-review-close-camera2.log`
+  reports `projection error 0,69120; distance=1000000 fov=0.005` for a camera
+  0.2km above a 999999.8km body, and exits with the assertion failed. The
+  implementer retained visible reference points beyond the near clip. The
+  previous center-only test could not detect that local/body cancellation.
+  Boundary witnesses for the enforced envelope are part of the ongoing fix;
+  this ruling does not predict their result.
+- Why: the approved spec requires an explicit bounded camera range and allows
+  a rejected unsupported view. It does not require orbital and near-surface
+  precision to be solved in one pilot. Existing captured compositions fit this
+  orbital range; source geometry is not a tuning parameter.
+- Conditioning grid (abstraction lift, direction and naturalness): the concrete
+  problem is subtracting/rotating body-scale f32 values near a tiny visible
+  separation. Its abstract form is a representation losing a small difference
+  between large quantities, familiar in numerical measurement generally.
+
+  ```text
+  camera direction   current source-preserving f32   new representation       altered physical size
+  approaching surface measured failure; reject       future precision work    false geometry; reject
+  bounded orbital     qualify boundary witnesses     unnecessary if passes    false geometry; reject
+  retreating farther  qualify range/projection       future larger envelope   false geometry; reject
+  ```
+
+- Ideonomy passes / overturns: two passes. The first distinguished source
+  facts from their synthetic coordinate representation and identified the
+  missing near-surface representation as future work. The convergence pass
+  followed an inward/outward camera movement through the boundary: consistent
+  rejection must also constrain interactive dolly and authored shots, not only
+  direct renderer calls. No additional physical model or size distortion helps.
+- Alternatives discarded: ignore the failed visible sample; change physical
+  dimensions; or expand this task into universal near-surface coordinates.
+  A measured supported envelope is the smallest option consistent with the spec.
+- Cost if wrong: expand the presentation coordinate implementation and its
+  supported range in a later refinement; no simulation/save data is changed.
+  G6 must disclose this camera limit alongside the other pilot limitations.
