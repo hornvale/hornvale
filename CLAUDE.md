@@ -433,9 +433,33 @@ make doctor        # the repo self-map — run this first in a fresh session
 #   make sweep [SWEEP_DAYS=30]  # reclaim generations older than N days, recursive
 #   make sweep-exact            # mark-and-sweep the workspace target (costs a full build)
 #
+# ITS SCOPE COMES FROM `git worktree list` NOW, AND UNTIL 2026-09-10 IT
+# REACHED ALMOST NOTHING (see `scripts/sweep-roots.sh`). This block used to
+# describe `make sweep` as though `-r .` swept the tree; measured from the repo
+# root, plain `-r .` visits **10** target dirs and the fixed pass visits **235**
+# across 39 worktrees. Two independent causes, and the second is the one that
+# matters for every future tool that walks this repo:
+#   1. `cargo sweep -r` SKIPS DOT-DIRECTORIES unless given `--hidden`. The
+#      campaign pool is `.claude/worktrees/`, so the pool was invisible to the
+#      one command whose job was reclaiming it.
+#   2. **THERE ARE TWO WORKTREE POOLS.** `~/.claude/CLAUDE.md` sets the
+#      worktree dir to `~/.config/superpowers/worktrees/<project>/`;
+#      `scripts/worktree-take.sh` uses `$ROOT/.claude/worktrees`. BOTH ARE
+#      LIVE — 30 members in the first, 9 in the second on the day this was
+#      found. Nothing in the repo references the first, so any check, sweep or
+#      audit rooted at the repo silently excludes 36% of this project's
+#      worktrees. Assume neither pool is the whole story; ask git.
+# Between them, 723 of 805 GB sat outside the reach of a command that exited 0.
+# The reclamation was 422 GiB, by hand, at 3.5 GiB free.
+#
 # NOTHING RUNS IT FOR YOU, on the seam-guard arrangement (0148) — and unlike
 # seam-guard there is no committed artifact that even hints at the state, so a
-# 40 GB tree reads exactly like a 4 GB one until you run `sweep-dry`. Both
+# 40 GB tree reads exactly like a 4 GB one until you run `sweep-dry`. THAT IS
+# THE FAILURE MODE TO FEAR HERE: this pass had a plausible-looking green output
+# for its whole life, so "I ran sweep" was never evidence it swept anything.
+# `scripts/test-sweep-roots.sh` (the `outboard` set) is what holds the scope
+# now, and its case 5 drives the real cargo-sweep both ways rather than
+# asserting the helper's own output back at itself. Both
 # automatic homes were measured and REFUSED: age-based inside `worktree-take`
 # destroys a parked member's warm target/ (all its artifacts are old, so
 # `--time 7` proposes the working set too), and stamp-based needs a COMPLETE

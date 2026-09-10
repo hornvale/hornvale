@@ -687,11 +687,26 @@ sweep-check: ## Fail with an install hint if cargo-sweep is missing
 # reclaiming a tree you accept rebuilding.
 SWEEP_DAYS ?= 30
 
+# SCOPE COMES FROM `git worktree list`, NOT FROM `.` (2026-09-10). Both of
+# these used to run `cargo sweep -r .`, which reached neither worktree pool:
+# `-r` skips dot-directories unless given `--hidden`, so `.claude/worktrees/`
+# was invisible, and the second pool under `~/.config/superpowers/worktrees/`
+# is outside the repo entirely. The pass exited 0 either way, which is why it
+# went unnoticed until the volume filled. `scripts/sweep-roots.sh` enumerates
+# every worktree git actually knows about; its header carries the measurement.
+#
+# The `|| exit` is load-bearing: without it a failed enumeration becomes an
+# empty pipe, xargs runs cargo-sweep with no PATH, and it falls back to its own
+# default — a green pass over the wrong scope, the exact failure being fixed.
 sweep-dry: sweep-check ## Report what a sweep would reclaim, deleting nothing (SWEEP_DAYS=<days>)
-	@cargo sweep --dry-run --time $(SWEEP_DAYS) -r .
+	@roots="$$(bash scripts/sweep-roots.sh)" || exit $$?; \
+	printf '%s\n' "$$roots" | tr '\n' '\0' | \
+	  xargs -0 cargo sweep --dry-run --time $(SWEEP_DAYS) -r
 
 sweep: sweep-check ## Reclaim dead build generations older than SWEEP_DAYS days (default 30, recursive)
-	@cargo sweep --time $(SWEEP_DAYS) -r .
+	@roots="$$(bash scripts/sweep-roots.sh)" || exit $$?; \
+	printf '%s\n' "$$roots" | tr '\n' '\0' | \
+	  xargs -0 cargo sweep --time $(SWEEP_DAYS) -r
 
 # THE EXACT MODE, AND WHY IT IS NOT THE DEFAULT. `--stamp` then a build then
 # `--file` is mark-and-sweep: it reclaims precisely the generations the build
