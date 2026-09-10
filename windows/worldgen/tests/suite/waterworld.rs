@@ -19,10 +19,10 @@ struct Fixture {
     climate: GeneratedClimate,
 }
 
-fn fixture(terrain_pins: TerrainPins) -> Fixture {
+fn fixture_for_seed(seed: Seed, terrain_pins: TerrainPins) -> Fixture {
     let components = WorldComponents::assemble().expect("the shipped component roster assembles");
     let built = build_world_to_with_artifacts(
-        Seed(42),
+        seed,
         &SkyPins::default(),
         &terrain_pins,
         &SettlementPins::default(),
@@ -37,6 +37,10 @@ fn fixture(terrain_pins: TerrainPins) -> Fixture {
         terrain,
         climate,
     }
+}
+
+fn fixture(terrain_pins: TerrainPins) -> Fixture {
+    fixture_for_seed(Seed(42), terrain_pins)
 }
 
 fn seed_42() -> Fixture {
@@ -408,7 +412,7 @@ mod succession {
     const CYCLE_END: i64 = 100 * DAY;
 
     fn source_zero(vent: &hornvale_worldgen::WaterVent) -> i64 {
-        -(i64::from(vent.vertex.0).rem_euclid(100) * DAY)
+        -vent.phase_offset_ticks
     }
 
     /// Catches an off-by-one phase selector, a reordered state, or a snapshot
@@ -477,14 +481,58 @@ mod succession {
                 .all(|field| field.chemistry.is_finite() && (0.0..=1.0).contains(&field.chemistry))
         );
     }
+
+    /// Catches a phase offset derived only from spatial identity instead of
+    /// the existing seeded vent source draws.
+    #[test]
+    fn changed_seeded_source_fields_change_phase_offset_at_a_shared_anchor() {
+        let first_fixture = fixture_for_seed(Seed(42), TerrainPins::default());
+        let second_fixture = fixture_for_seed(Seed(43), TerrainPins::default());
+        let first = active(&first_fixture);
+        let second = active(&second_fixture);
+        let (first_vent, second_vent) = first
+            .vents
+            .iter()
+            .find_map(|first_vent| {
+                second
+                    .vents
+                    .iter()
+                    .find(|second_vent| {
+                        second_vent.vertex == first_vent.vertex
+                            && (second_vent.strength != first_vent.strength
+                                || second_vent.temperature_delta != first_vent.temperature_delta
+                                || second_vent.chemistry != first_vent.chemistry)
+                    })
+                    .map(|second_vent| (first_vent, second_vent))
+            })
+            .expect("VACUOUS: seeds 42 and 43 have no shared admitted anchor with changed sources");
+
+        assert_eq!(first_vent.vertex, second_vent.vertex);
+        assert_ne!(
+            (
+                first_vent.strength.to_bits(),
+                first_vent.temperature_delta.to_bits(),
+                first_vent.chemistry.to_bits(),
+            ),
+            (
+                second_vent.strength.to_bits(),
+                second_vent.temperature_delta.to_bits(),
+                second_vent.chemistry.to_bits(),
+            ),
+            "VACUOUS: compared vent source fields did not change across seeds"
+        );
+        assert_ne!(
+            first_vent.phase_offset_ticks, second_vent.phase_offset_ticks,
+            "changed seeded vent source fields did not change the phase offset"
+        );
+    }
 }
 
 mod fields {
     use super::*;
 
     fn active_time(vent: &hornvale_worldgen::WaterVent) -> WorldTime {
-        let offset_days = i64::from(vent.vertex.0).rem_euclid(100);
-        WorldTime::from_ticks((35 - offset_days) * WorldTime::TICKS_PER_STD_DAY)
+        WorldTime::from_ticks(35 * WorldTime::TICKS_PER_STD_DAY - vent.phase_offset_ticks)
     }
 
     fn field_index(world: &WaterWorld, vertex: Vertex) -> usize {

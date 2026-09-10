@@ -462,14 +462,15 @@ pub fn waterworld_from(
             continue;
         }
         let strength = 0.25 + stream.next_f64() * 0.75;
+        let temperature_delta = 5.0 + stream.next_f64() * 95.0;
+        let chemistry = stream.next_f64();
         vents.push(WaterVent {
             id: vents.len(),
             vertex: sample.vertex,
             strength,
-            temperature_delta: 5.0 + stream.next_f64() * 95.0,
-            chemistry: stream.next_f64(),
-            phase_offset_ticks: i64::from(sample.vertex.0).rem_euclid(100)
-                * WorldTime::TICKS_PER_STD_DAY,
+            temperature_delta,
+            chemistry,
+            phase_offset_ticks: vent_phase_offset_ticks(strength, temperature_delta, chemistry),
         });
         vent_candidate_rings.push(build_vent_candidate_ring(
             terrain.geosphere(),
@@ -500,6 +501,15 @@ pub fn waterworld_from(
         vent_candidate_rings,
         propagation,
     }
+}
+
+/// Derive a cycle offset from the three existing seeded vent values without
+/// extending or reordering `WATERWORLD_VENT` consumption.
+fn vent_phase_offset_ticks(strength: f64, temperature_delta: f64, chemistry: f64) -> i64 {
+    let mixed = strength.to_bits()
+        ^ temperature_delta.to_bits().rotate_left(21)
+        ^ chemistry.to_bits().rotate_left(42);
+    (mixed % VENT_CYCLE_TICKS as u64) as i64
 }
 
 /// Shallow edge of each marine band, using the exact thresholds documented by
