@@ -1,6 +1,7 @@
 //! Compact Waterworld projection over generated terrain and climate.
 
 use hornvale_climate::{BiomeExpr, GeneratedClimate, Realm, Stratum};
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Vertex, World};
 use hornvale_terrain::landscape::FeatureId;
 use hornvale_terrain::{BoundaryKind, GeneratedTerrain, WaterKind};
@@ -41,13 +42,77 @@ pub struct WaterSubstrate {
     pub terrain_features: Vec<FeatureId>,
 }
 
-/// Stage-2 ambient fields; deliberately empty until their sources are tested.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct WaterFields;
+/// Ambient fields sampled at one existing marine substrate position.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(ratio: light), bare-ok(diagnostic-value: pressure), bare-ok(diagnostic-value: temperature_c), bare-ok(diagnostic-value: salinity), bare-ok(ratio: chemistry), bare-ok(diagnostic-value: current)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct WaterFields {
+    /// Depth below the water surface, in metres.
+    /// type-audit: bare-ok(diagnostic-value: depth_m)
+    pub depth_m: f64,
+    /// Existing marine depth band.
+    pub depth_band: Stratum,
+    /// Light remaining after depth attenuation.
+    /// type-audit: bare-ok(ratio: light)
+    pub light: f64,
+    /// Relative pressure, with one atmosphere at the surface.
+    /// type-audit: bare-ok(diagnostic-value: pressure)
+    pub pressure: f64,
+    /// Temperature at genesis, in Celsius.
+    /// type-audit: bare-ok(diagnostic-value: temperature_c)
+    pub temperature_c: f64,
+    /// Deterministic salinity proxy, in practical salinity units.
+    /// type-audit: bare-ok(diagnostic-value: salinity)
+    pub salinity: f64,
+    /// Local chemical-source indicator; vents refine this in the next pass.
+    /// type-audit: bare-ok(ratio: chemistry)
+    pub chemistry: f64,
+    /// Existing climate current vector.
+    /// type-audit: bare-ok(diagnostic-value: current)
+    pub current: [f64; 3],
+}
 
-/// Stage-2 vent source; deliberately empty until admission is tested.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct WaterVent;
+impl WaterFields {
+    /// Derive fields from one substrate sample and the live ambient sources.
+    /// type-audit: bare-ok(diagnostic-value: insolation), bare-ok(diagnostic-value: temperature_c), bare-ok(diagnostic-value: current)
+    pub fn from_substrate(
+        substrate: &WaterSubstrate,
+        insolation: f64,
+        temperature_c: f64,
+        current: [f64; 3],
+    ) -> Self {
+        let depth_m = substrate.depth_m;
+        Self {
+            depth_m,
+            depth_band: substrate.depth_band,
+            light: insolation * hornvale_kernel::math::exp(-depth_m / 1_000.0),
+            pressure: 1.0 + depth_m / 10.0,
+            temperature_c,
+            salinity: 35.0 + depth_m / 10_000.0,
+            chemistry: if substrate.has_edifice { 1.0 } else { 0.0 },
+            current,
+        }
+    }
+}
+
+/// A sparse localized hydrothermal source, separate from ambient chemistry.
+/// type-audit: bare-ok(index: id), bare-ok(ratio: strength), bare-ok(diagnostic-value: temperature_delta), bare-ok(ratio: chemistry)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct WaterVent {
+    /// Stable vent ordinal in seabed vertex order.
+    /// type-audit: bare-ok(index: id)
+    pub id: usize,
+    /// Seabed vertex hosting the source.
+    pub vertex: Vertex,
+    /// Positive source strength.
+    /// type-audit: bare-ok(ratio: strength)
+    pub strength: f64,
+    /// Local temperature delta in Celsius.
+    /// type-audit: bare-ok(diagnostic-value: temperature_delta)
+    pub temperature_delta: f64,
+    /// Local chemical availability.
+    /// type-audit: bare-ok(ratio: chemistry)
+    pub chemistry: f64,
+}
 
 /// Stage-3 aggregate stocks; deliberately empty until derivation is tested.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -58,11 +123,15 @@ pub struct WaterStocks;
 pub struct WaterWorld {
     /// Existing marine substrate projected in stable vertex/column order.
     pub substrate: Vec<WaterSubstrate>,
+    /// Ambient fields aligned one-for-one with `substrate`.
+    pub fields: Vec<WaterFields>,
+    /// Sparse derived vent sources in stable seabed order.
+    pub vents: Vec<WaterVent>,
 }
 
 /// Composition-root entry point for the Waterworld overlay.
 pub fn waterworld_from(
-    _world: &World,
+    world: &World,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     config: WaterWorldConfig,
@@ -121,7 +190,49 @@ pub fn waterworld_from(
             });
         }
     }
-    WaterWorld { substrate }
+    let fields = substrate
+        .iter()
+        .map(|sample| {
+            WaterFields::from_substrate(
+                sample,
+                climate.insolation(),
+                climate
+                    .temperature_at(sample.vertex, hornvale_kernel::WorldTime::GENESIS)
+                    .get(),
+                climate.current_at(sample.vertex),
+            )
+        })
+        .collect();
+    let mut vents = Vec::new();
+    for sample in substrate.iter().filter(|sample| sample.is_seabed) {
+        let source_exists = sample.has_edifice || sample.seafloor_boundary.is_some();
+        if !source_exists {
+            continue;
+        }
+        let key = format!("vertex/{}", sample.vertex.0);
+        let mut stream = world
+            .seed
+            .derive(crate::streams::WATERWORLD_VENT)
+            .derive(StreamLabel::dynamic(&key))
+            .stream();
+        let admission = stream.next_f64();
+        if admission >= 0.25 {
+            continue;
+        }
+        let strength = 0.25 + stream.next_f64() * 0.75;
+        vents.push(WaterVent {
+            id: vents.len(),
+            vertex: sample.vertex,
+            strength,
+            temperature_delta: 5.0 + stream.next_f64() * 95.0,
+            chemistry: stream.next_f64(),
+        });
+    }
+    WaterWorld {
+        substrate,
+        fields,
+        vents,
+    }
 }
 
 /// Shallow edge of each marine band, using the exact thresholds documented by

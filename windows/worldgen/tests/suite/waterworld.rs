@@ -294,3 +294,68 @@ mod seams {
         assert_eq!(after_sources, before_sources);
     }
 }
+
+#[test]
+fn ambient_fields_are_finite_and_depth_changes_light_and_pressure() {
+    let fixture = seed_42();
+    let generated = active(&fixture);
+    assert_eq!(generated.substrate.len(), generated.fields.len());
+    let sample = generated
+        .substrate
+        .iter()
+        .zip(&generated.fields)
+        .find(|(substrate, _)| !substrate.is_seabed)
+        .expect("VACUOUS: no open-column field witness");
+    let (substrate, fields) = sample;
+    assert!(fields.light.is_finite());
+    assert!(fields.pressure.is_finite());
+    assert!(fields.temperature_c.is_finite());
+    assert!(fields.salinity.is_finite());
+    assert!(fields.chemistry.is_finite());
+    assert_eq!(fields.depth_m, substrate.depth_m);
+    assert_eq!(fields.depth_band, substrate.depth_band);
+    let brighter = hornvale_worldgen::waterworld::WaterFields::from_substrate(
+        substrate,
+        fixture.climate.insolation() + 1.0,
+        fields.temperature_c,
+        fields.current,
+    );
+    assert_ne!(
+        brighter.light, fields.light,
+        "source changed but light did not"
+    );
+    let deeper = hornvale_worldgen::waterworld::WaterFields::from_substrate(
+        &WaterSubstrate {
+            depth_m: substrate.depth_m + 1.0,
+            ..substrate.clone()
+        },
+        fixture.climate.insolation(),
+        fields.temperature_c,
+        fields.current,
+    );
+    assert_ne!(
+        deeper.pressure, fields.pressure,
+        "depth changed but pressure did not"
+    );
+    assert_ne!(
+        deeper.light, fields.light,
+        "depth changed but light did not"
+    );
+}
+
+#[test]
+fn vents_are_sparse_seeded_and_require_a_live_seafloor_source() {
+    let fixture = seed_42();
+    let generated = active(&fixture);
+    assert!(!generated.vents.is_empty(), "VACUOUS: no vent witnesses");
+    assert!(generated.vents.iter().all(|vent| {
+        vent.strength > 0.0
+            && vent.strength <= 1.0
+            && vent.temperature_delta > 0.0
+            && vent.chemistry.is_finite()
+            && (fixture.terrain.has_edifice(vent.vertex)
+                || fixture.terrain.boundary_at(vent.vertex).is_some())
+    }));
+    let again = active(&fixture);
+    assert_eq!(generated.vents, again.vents);
+}

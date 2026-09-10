@@ -259,6 +259,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `skyworld/phenotype/v1` | sky-territory phenotype and stability traits |
 | `skyworld/lineage/v1` | sky-territory lineage and lifecycle metadata |
 | `skyworld/movement/v1` | sky-territory movement regime variation |
+| `waterworld/vent/v1` | seeded sparse hydrothermal-vent admission and source strength |
 
 ### hornvale-kernel (internal)
 
