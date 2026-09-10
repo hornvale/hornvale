@@ -473,7 +473,8 @@ checksum when present, and final reviewed caption.
 validation, `make observation-check`, client checks, shellcheck,
 `git diff --check`, and a final `make gate-commit`.
 
-**Status:** Blocked pending a supported Firefox executable
+**Status:** In progress — HV-009's local package is assembled; it awaits
+Nathan's manual visual/editorial review.
 
 - [ ] Render each package into a clean ignored directory under `observations/render-output/HV-00N/`.
 - [ ] Assemble a derived film when ffmpeg is available; otherwise record no-video verification without claiming a film exists.
@@ -481,6 +482,12 @@ validation, `make observation-check`, client checks, shellcheck,
 - [ ] Mark `reviewed` only after inspection and `approved` only after Nathan explicitly approves the exact package.
 - [ ] Record rejected or deferred packages without inflating the seven-package reserve.
 - [ ] Record the review boundary in the campaign ledger and keep generated local outputs out of the commit.
+
+Task 9 progress (2026-09-10): Firefox rasterized HV-009's 900 validated
+packets into a `1440×900` local PNG sequence, and ffmpeg assembled the derived
+30-second MP4 with an `HV-009.sha256` sidecar. The manifest and caption remain
+draft with `approval: null`; this technical assembly is not Nathan's manual
+visual/editorial review and does not count toward the seven-package reserve.
 
 ### Task 10: Rasterize observation preview frames
 

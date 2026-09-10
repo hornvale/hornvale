@@ -259,3 +259,24 @@ status.
 - **Evidence:** Shellcheck, 40 Atlas tests, 20 film checks, six renderer
   checks, and `git diff --check` passed. The full HV-009 output is deliberately
   absent because the only exact backend did not remain installed.
+
+## Task 9: HV-009 package assembled — manual review pending
+
+- **Result:** With Firefox 155.0.1 available at the sanctioned macOS path,
+  the foreground renderer wrote 900 `1440×900` HV-009 PNG frames. The
+  foreground film assembler then wrote the derived 30-second `HV-009.mp4` and
+  its 1,802-line `HV-009.sha256` sidecar under the ignored
+  `observations/render-output/HV-009/package/` directory.
+- **Evidence:** The exact render and film commands exited 0. Three sampled
+  frames (000, 450, and 899) report `1440×900`; `HV-009.mp4` is nonempty at
+  159,026 bytes and its SHA-256 is
+  `b3858d66bc33eee237e4a4c0f73333d2bf79d4cde5434ea26682bdc21cff438e`.
+  The sidecar contains the manifest, all 900 packets, all 900 PNGs, and the
+  video digest. A representative laptop raster was inspected for its supplied
+  title, labels, legend, and observation sentence.
+- **Review boundary:** This is technical package assembly only. HV-009's
+  manifest and caption remain draft, `approval` remains `null`, and nothing is
+  reviewed, approved, published, or counted toward the seven-package reserve.
+  Nathan must manually inspect the exact film and caption for object, scale,
+  axis, labels, sentence, duration, and legibility before any editorial state
+  changes.
