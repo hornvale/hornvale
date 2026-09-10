@@ -1,6 +1,6 @@
 # The Planetarium — decision ledger
 
-Status: design ready for G3 presentation; G3 has not been approved.
+Status: G3 approved on 2026-09-10; implementation plan in preparation.
 Branch: `campaign/the-planetarium`.
 Starting revision: `b6b374f6d2dea329d904b56322a09b1dfb29983f`.
 
@@ -270,3 +270,13 @@ moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
 - Capture actions: spec §6 and cache/verification requirements updated; existing
   RENDER-film-to-client already captures the wider direction, so no duplicate
   registry row. G3 remains pending; this question is not spec approval.
+
+## #6 [G3] — spec approved; proceed to planning
+
+- Nathan: “LGTM; let's proceed to the plan!”
+- Decision: the revised design, including reusable source/view libraries outside
+  the Planetarium application, is approved for implementation planning.
+- Scope: approved design boundaries remain in force; this is neither final
+  visual acceptance, publication approval nor authorization to merge.
+- Capture actions: spec status updated; detailed plan and four-stage tracker
+  follow on this branch. No ideonomy pass applies to a direct human approval.

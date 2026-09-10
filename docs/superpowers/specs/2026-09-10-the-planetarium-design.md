@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-10
 
-**Status:** Draft for G3 review; implementation is not yet authorized by this spec.
+**Status:** G3 approved by Nathan on 2026-09-10: “LGTM; let's proceed to the plan!” Implementation planning is authorized; final visual acceptance and merge remain at G6.
 
 **Campaign:** The Planetarium
 
