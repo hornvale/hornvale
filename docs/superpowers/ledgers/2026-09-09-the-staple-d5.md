@@ -79,3 +79,16 @@ portfolios and exchange-attempt counterparties, joins each witness once by
 sorts before reduction, and forces an underpowered verdict on invalid joins.
 The fixed-roster path uses this same reducer and remains ignored. Focused
 probe coverage is 7/7; the task review remains pending after this correction.
+
+## #5 [G5] — Task 3 boundary checks
+
+**Decision:** Treat source-diversity and phase-identity removal as explicit
+vacuity mutations, and treat repeated same-seed reduction as the read-only
+determinism witness. Control collapse and coercive-only prominence remain
+separate attribution branches; neither is permitted to clear a positive apex.
+
+**Result:** Added mutation-oriented probe tests and a repeated live reduction
+test. The final Task 2 reviewer did not return a written verdict after bounded
+finish requests; the implementation remains supported by the focused probe
+and commit-gate outputs, with that review limitation retained as an open
+process note rather than silently promoted to approval.

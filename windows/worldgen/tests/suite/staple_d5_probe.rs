@@ -478,6 +478,33 @@ fn live_d4_witness_join_has_a_per_seed_denominator() {
 }
 
 #[test]
+fn mutation_of_source_diversity_or_phase_identity_refuses_the_apex() {
+    let mut source_mutation = adequate_pair();
+    source_mutation[0].raw.inbound_distinct_source_count = 1;
+    source_mutation[0]
+        .provenance
+        .voluntary
+        .inbound_distinct_source_count = 1;
+    let report = summarize(8, 2, source_mutation, 2);
+    assert_eq!(report.verdict, D5ApexVerdict::QualifiedFailure);
+
+    let mut phase_mutation = adequate_pair();
+    for profile in &mut phase_mutation {
+        profile.phase_records.clear();
+    }
+    let report = summarize(9, 2, phase_mutation, 2);
+    assert_eq!(report.verdict, D5ApexVerdict::MixedOrUnderpowered);
+}
+
+#[test]
+fn reduction_is_deterministic_and_does_not_mutate_a_second_observation() {
+    let first = live_report(2);
+    let second = live_report(2);
+    assert_eq!(first, second);
+    assert_eq!(first.verdict, D5ApexVerdict::MixedOrUnderpowered);
+}
+
+#[test]
 /// claim: readout(off-gate, fixed D5 probe roster 1..=8; prints measurements
 /// only and remains ignored until the sanctioned campaign boundary)
 #[ignore = "probe: fixed-roster D5 readout; run only at the sanctioned campaign boundary"]
