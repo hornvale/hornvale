@@ -1,0 +1,36 @@
+{
+  "id": "HV-001",
+  "title": "How the underworld gathers into chambers",
+  "object": "geography",
+  "scale": "world",
+  "primary_axis": "spatial arrangement",
+  "phenomenon": "chamber lattice",
+  "visual_grammar": "spatial",
+  "observation_sentence": "Chambers gather into connected cave systems across depth bands.",
+  "count_unit": "chambers",
+  "world_revision": "ed8e6f3369f2b45097d702a5c28cc84f1ae35f56",
+  "seed": 42,
+  "time_window": null,
+  "frame_count": 900,
+  "frame_rate": 30.0,
+  "source_commands": [
+    "cargo run -p hornvale -- underworld --seed 42"
+  ],
+  "evidence_status": "draft",
+  "capability_state": "existing",
+  "controlled_inputs": {
+    "seed": 42
+  },
+  "comparison_reference": null,
+  "lead_time": null,
+  "source_data": [
+    "hornvale underworld stdout"
+  ],
+  "render_output": null,
+  "caption_draft": [
+    "The world below the world gathers into chambers and passages of its own.",
+    "This is seed 42: 30,537 chambers spread across five depth bands."
+  ],
+  "editorial_status": "draft",
+  "approval": null
+}

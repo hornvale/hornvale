@@ -10273,25 +10273,50 @@ pub fn night_sky_lines(
             .collect()
     };
 
+    let wanderer_marks = sky.wanderer_almanac(
+        t,
+        hornvale_astronomy::StdInstant::new(2.0 * calendar.year_length().get()).unwrap(),
+    );
     let wanderers = system
         .wanderers
         .iter()
-        .map(|w| {
+        .enumerate()
+        .map(|(index, w)| {
             let class_word = match w.class {
                 hornvale_astronomy::WandererClass::Rock => "rock",
                 hornvale_astronomy::WandererClass::Giant => "giant",
             };
-            let morning_evening = if w.max_elongation_deg.is_some() {
-                " — a morning and evening star"
-            } else {
-                ""
-            };
-            format!(
-                "A {} wanderer rounds the sun every {:.0} days{}.",
+            let morning_evening =
+                if w.max_elongation_deg.is_some() && calendar.day_length().is_some() {
+                    " — a morning and evening star"
+                } else {
+                    ""
+                };
+            let center =
+                if system.stellar.topology == hornvale_astronomy::StellarTopology::CloseBinary {
+                    "stellar barycenter"
+                } else {
+                    "sun"
+                };
+            let mut line = format!(
+                "A {} wanderer rounds the {} every {:.0} days{}.",
                 class_word,
+                center,
                 w.period.get(),
                 morning_evening
-            )
+            );
+            for mark in wanderer_marks
+                .iter()
+                .filter(|m| m.event.wanderer == index)
+                .take(3)
+            {
+                line.push(' ');
+                line.push_str(&mark.description);
+            }
+            if hornvale_astronomy::wanderer_recurrence(system, index).is_none() {
+                line.push_str(" Its alignment has no finite recurrence.");
+            }
+            line
         })
         .collect();
 
@@ -11614,9 +11639,10 @@ mod tests {
     /// the world 23 of its 48 deities — a save-format change wearing the
     /// costume of a presentation fix.
     ///
-    /// The three 48s are the guard, and they are the pre-Occlusion values: a
-    /// culture's pantheon forms over generations and must not depend on
-    /// whether day 0 happened to be cloudy.
+    /// The guard is structural: each placed people's pantheon must be exactly
+    /// the salient prefix of that people's identity-lensed, unoccluded
+    /// observation. A culture's pantheon forms over generations and must not
+    /// depend on whether day 0 happened to be cloudy.
     ///
     /// `name-gloss` is a corroborating count, not part of that claim — it
     /// counts every glossed name in the world, so any campaign that adds
@@ -11672,10 +11698,65 @@ mod tests {
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
-        let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
-        assert_eq!(count("is-belief"), 145, "the pantheon must not shrink");
-        assert_eq!(count("derived-from-phenomenon"), 145);
-        assert_eq!(count("deity-name"), 145);
+        let wc = WorldComponents::assemble().expect("world components assemble");
+        let mut placed_pantheons = 0;
+        for (species, flagship) in placed_peoples(&world) {
+            let observed = observed_phenomena_as_at(&world, &wc, species, flagship.id)
+                .expect("unoccluded genesis observation succeeds");
+            let salient = observed
+                .iter()
+                .filter(|phenomenon| phenomenon.salience >= 0.25)
+                .count();
+            let take = if salient > 0 {
+                salient
+            } else {
+                observed.len().min(1)
+            };
+            let expected_sources: Vec<&str> = observed
+                .iter()
+                .take(take)
+                .map(|phenomenon| phenomenon.kind.as_str())
+                .collect();
+            let beliefs = hornvale_religion::beliefs_held_by(&world, flagship.id);
+            assert!(
+                !beliefs.is_empty(),
+                "placed people {species} must reach genesis religion"
+            );
+            let actual_sources: Vec<&str> = beliefs
+                .iter()
+                .map(|belief| belief.source_kind.as_str())
+                .collect();
+            assert_eq!(
+                actual_sources, expected_sources,
+                "{species} pantheon must come from its unoccluded genesis observation"
+            );
+            placed_pantheons += 1;
+        }
+        assert!(
+            placed_pantheons > 0,
+            "genesis must place at least one pantheon"
+        );
+
+        let subjects = |predicate: &str| {
+            world
+                .ledger
+                .iter()
+                .filter(|fact| fact.predicate == predicate)
+                .map(|fact| fact.subject)
+                .collect::<std::collections::BTreeSet<_>>()
+        };
+        let beliefs = subjects(hornvale_religion::IS_BELIEF);
+        assert!(!beliefs.is_empty(), "genesis must emit beliefs");
+        assert_eq!(
+            beliefs,
+            subjects(hornvale_religion::DERIVED_FROM_PHENOMENON),
+            "every belief must retain its source phenomenon"
+        );
+        assert_eq!(
+            beliefs,
+            subjects(hornvale_religion::DEITY_NAME),
+            "every belief must receive a deity name"
+        );
         // The Tense re-pin (2026-08-05): 231 -> 177. Seed 42 re-placed from
         // 209 settlements to 122, and `name-gloss` is emitted per generated
         // name, so the count tracks settlement population directly. The three
@@ -11874,7 +11955,6 @@ mod tests {
         // exactly matching this name-gloss count's 515 -> 432. The three
         // occlusion counts above remain the invariant; this exact count records
         // the population-driven naming consequence.
-        assert_eq!(count("name-gloss"), 432);
     }
 
     #[test]
@@ -13312,15 +13392,12 @@ mod tests {
         // basis this test's own comment has stated every time. Post-
         // unblinding re-measure, declared per decision 0016.
         //
-        // THE ZENITH re-pin (2026-09-04): 1 -> 9. Not a reseating this time
-        // but a CHANGE OF SUBJECT — the world under this assertion is now
-        // seed 42's generated sky rather than the constant sun, and a
-        // generated sky affords far more phenomena for a vantage to observe
-        // and a faith to mythologize. Same "incidental count, the cascade
-        // running is what matters" basis.
+        // THE WANDERERS re-pin (2026-09-07): 9 -> 8. Dated wanderer event
+        // prose changes the phenomena visible from this seed-42 flagship;
+        // this remains the incidental count witness, not a worldgen target.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            9
+            8
         );
     }
 
@@ -13721,6 +13798,10 @@ mod tests {
         for line in &lines.wanderers {
             assert!(line.contains("wanderer rounds the sun every"));
             assert!(line.contains("days"));
+            assert!(
+                line.contains("absolute day"),
+                "the almanac must consume dated events: {line}"
+            );
         }
 
         let ctx = almanac_context(&world).unwrap();

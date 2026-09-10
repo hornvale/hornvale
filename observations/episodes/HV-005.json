@@ -1,0 +1,36 @@
+{
+  "id": "HV-005",
+  "title": "Chambers in basement rock",
+  "object": "chambers",
+  "scale": "rock layer",
+  "primary_axis": "distribution",
+  "phenomenon": "chambers by host rock",
+  "visual_grammar": "spatial",
+  "observation_sentence": "Basement rock holds 27,880 of the underworld's 30,537 chambers.",
+  "count_unit": "chambers",
+  "world_revision": "0d7067a0f20aafbe88fb67358537f56963fba5b0",
+  "seed": 42,
+  "time_window": null,
+  "frame_count": 900,
+  "frame_rate": 30.0,
+  "source_commands": [
+    "cargo run -p hornvale -- underworld --seed 42"
+  ],
+  "evidence_status": "draft",
+  "capability_state": "existing",
+  "controlled_inputs": {
+    "seed": 42
+  },
+  "comparison_reference": null,
+  "lead_time": null,
+  "source_data": [
+    "hornvale underworld stdout"
+  ],
+  "render_output": null,
+  "caption_draft": [
+    "Most of seed 42's underworld sits in basement rock: 27,880 chambers out of 30,537.",
+    "The smaller remainder is split between regolith and cover."
+  ],
+  "editorial_status": "draft",
+  "approval": null
+}

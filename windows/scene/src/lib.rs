@@ -844,6 +844,126 @@ pub struct StarElem {
     pub hz_outer_au: f64,
 }
 
+/// A star's topology-aware physical elements.
+/// type-audit: bare-ok(identifier-text: class_name), pending(wave-3: mass_rel), pending(wave-3: luminosity_rel)
+#[derive(Debug, Serialize)]
+pub struct StellarBodyElem {
+    /// Descriptive spectral class name.
+    /// type-audit: bare-ok(identifier-text: class_name)
+    pub class_name: String,
+    /// Stellar mass in solar masses.
+    /// type-audit: pending(wave-3: mass_rel)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub mass_rel: f64,
+    /// Luminosity in solar luminosities.
+    /// type-audit: pending(wave-3: luminosity_rel)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub luminosity_rel: f64,
+}
+
+/// The emitted binary orbit elements.
+/// type-audit: pending(wave-3: semi_major_axis_au), pending(wave-3: period_days), bare-ok(ratio: phase_offset)
+#[derive(Debug, Serialize)]
+pub struct BinaryOrbitElem {
+    /// Separation semi-major axis, AU.
+    /// type-audit: pending(wave-3: semi_major_axis_au)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub semi_major_axis_au: f64,
+    /// Two-body period, standard days.
+    /// type-audit: pending(wave-3: period_days)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub period_days: f64,
+    /// Binary phase at day zero, turns in [0, 1).
+    /// type-audit: bare-ok(ratio: phase_offset)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub phase_offset: f64,
+}
+
+/// The companion star and its binary orbit, absent for a single root.
+#[derive(Debug, Serialize)]
+pub struct CompanionElem {
+    /// The secondary star.
+    pub star: StellarBodyElem,
+    /// The secondary's orbit relative to the primary.
+    pub orbit: BinaryOrbitElem,
+}
+
+/// Topology-aware stellar elements appended to `scene/system/v1`.
+/// type-audit: bare-ok(identifier-text: topology), pending(wave-3: combined_luminosity_rel), pending(wave-3: anchor_hz_inner_au), pending(wave-3: anchor_hz_outer_au), pending(wave-3: circumprimary_outer_limit_au), pending(wave-3: circumbinary_inner_limit_au)
+#[derive(Debug, Serialize)]
+pub struct StellarElem {
+    /// `single`, `wide-binary`, or `close-binary`.
+    /// type-audit: bare-ok(identifier-text: topology)
+    pub topology: String,
+    /// The primary star, retained separately from the compatibility `star`.
+    pub primary: StellarBodyElem,
+    /// The secondary and orbit for a binary topology.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub companion: Option<CompanionElem>,
+    /// Sum of all root-star luminosities.
+    /// type-audit: pending(wave-3: combined_luminosity_rel)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub combined_luminosity_rel: f64,
+    /// Inner edge of the topology-aware anchor habitable zone, AU.
+    /// type-audit: pending(wave-3: anchor_hz_inner_au)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub anchor_hz_inner_au: f64,
+    /// Outer edge of the topology-aware anchor habitable zone, AU.
+    /// type-audit: pending(wave-3: anchor_hz_outer_au)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub anchor_hz_outer_au: f64,
+    /// Outer circumprimary stability limit, AU, for wide binaries.
+    /// type-audit: pending(wave-3: circumprimary_outer_limit_au)
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field"
+    )]
+    pub circumprimary_outer_limit_au: Option<f64>,
+    /// Inner circumbinary stability limit, AU, for close binaries.
+    /// type-audit: pending(wave-3: circumbinary_inner_limit_au)
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field"
+    )]
+    pub circumbinary_inner_limit_au: Option<f64>,
+}
+
+/// One wandering sibling's circular orbital elements.
+/// type-audit: pending(wave-3: orbit_au), pending(wave-3: period_days), bare-ok(ratio: phase_offset), bare-ok(identifier-text: class), bare-ok(ratio: albedo), pending(wave-3: synodic_period_days), pending(wave-3: max_elongation_deg)
+#[derive(Debug, Serialize)]
+pub struct WandererElem {
+    /// Orbital radius, AU.
+    /// type-audit: pending(wave-3: orbit_au)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub orbit_au: f64,
+    /// Orbital period, standard days.
+    /// type-audit: pending(wave-3: period_days)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub period_days: f64,
+    /// Circular phase at day zero, turns in [0, 1).
+    /// type-audit: bare-ok(ratio: phase_offset)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub phase_offset: f64,
+    /// `rock` or `giant`.
+    /// type-audit: bare-ok(identifier-text: class)
+    pub class: String,
+    /// Bond albedo.
+    /// type-audit: bare-ok(ratio: albedo)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub albedo: f64,
+    /// Synodic period against the anchor, standard days; may be infinite.
+    /// type-audit: pending(wave-3: synodic_period_days)
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub synodic_period_days: f64,
+    /// Maximum inner-body elongation, absent for outer bodies.
+    /// type-audit: pending(wave-3: max_elongation_deg)
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field"
+    )]
+    pub max_elongation_deg: Option<f64>,
+}
+
 /// The anchor world's orbital and rotational elements.
 /// type-audit: pending(wave-3: orbit_au), pending(wave-3: year_days), pending(wave-3: day_length_days), pending(wave-3: obliquity_deg), bare-ok(ratio: year_phase_offset)
 #[derive(Debug, Serialize)]
@@ -908,6 +1028,10 @@ pub struct SystemScene {
     pub world: WorldElem,
     /// The moons, generation order.
     pub moons: Vec<MoonElem>,
+    /// Topology-aware stellar root, appended for v1 compatibility.
+    pub stellar: StellarElem,
+    /// Wandering siblings, orbital order.
+    pub wanderers: Vec<WandererElem>,
 }
 
 /// Build the `scene/system/v1` scene for `world`.
@@ -937,6 +1061,54 @@ pub fn system_scene(world: &World) -> Result<SystemScene, SceneError> {
             node_longitude_deg: m.node_longitude_deg,
         })
         .collect();
+    let body = |star: &hornvale_astronomy::Star| StellarBodyElem {
+        class_name: star.class_name.clone(),
+        mass_rel: star.mass.get(),
+        luminosity_rel: star.luminosity.get(),
+    };
+    let stellar = StellarElem {
+        topology: match system.stellar.topology {
+            hornvale_astronomy::StellarTopology::Single => "single",
+            hornvale_astronomy::StellarTopology::WideBinary => "wide-binary",
+            hornvale_astronomy::StellarTopology::CloseBinary => "close-binary",
+        }
+        .to_string(),
+        primary: body(&system.star),
+        companion: system
+            .stellar
+            .companion
+            .as_ref()
+            .map(|companion| CompanionElem {
+                star: body(&companion.star),
+                orbit: BinaryOrbitElem {
+                    semi_major_axis_au: companion.orbit.semi_major_axis.get(),
+                    period_days: companion.orbit.period.get(),
+                    phase_offset: companion.orbit.phase,
+                },
+            }),
+        combined_luminosity_rel: system.stellar.combined_luminosity.get(),
+        anchor_hz_inner_au: system.stellar.anchor_habitable_zone.inner().get(),
+        anchor_hz_outer_au: system.stellar.anchor_habitable_zone.outer().get(),
+        circumprimary_outer_limit_au: system.stellar.circumprimary_outer_limit.map(|a| a.get()),
+        circumbinary_inner_limit_au: system.stellar.circumbinary_inner_limit.map(|a| a.get()),
+    };
+    let wanderers = system
+        .wanderers
+        .iter()
+        .map(|wanderer| WandererElem {
+            orbit_au: wanderer.orbit.get(),
+            period_days: wanderer.period.get(),
+            phase_offset: wanderer.phase_offset,
+            class: match wanderer.class {
+                hornvale_astronomy::WandererClass::Rock => "rock",
+                hornvale_astronomy::WandererClass::Giant => "giant",
+            }
+            .to_string(),
+            albedo: wanderer.albedo,
+            synodic_period_days: wanderer.synodic_period.get(),
+            max_elongation_deg: wanderer.max_elongation_deg,
+        })
+        .collect();
     Ok(SystemScene {
         schema: SYSTEM_SCHEMA.to_string(),
         seed: world.seed.0,
@@ -954,6 +1126,8 @@ pub fn system_scene(world: &World) -> Result<SystemScene, SceneError> {
             year_phase_offset: system.forcing.year_phase_offset,
         },
         moons,
+        stellar,
+        wanderers,
     })
 }
 

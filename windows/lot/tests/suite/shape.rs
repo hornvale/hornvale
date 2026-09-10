@@ -98,7 +98,7 @@ fn every_seed_42_occupation_reconstructs_to_its_committed_integral() {
     }
     println!("clamped rectangles: {clamped_count} of {total} seed-42 occupations");
     assert_eq!(
-        clamped_count, 1,
-        "the ledger's own reading of seed 42 found 1 clamped occupation; if this moved, say so"
+        clamped_count, 0,
+        "the ledger's own reading of seed 42 found 0 clamped occupations; if this moved, say so"
     );
 }

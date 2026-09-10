@@ -2,16 +2,17 @@
 #![warn(missing_docs)]
 
 use hornvale::{
-    attest, audio, concepts, dictionary, flag_value, phonology, proto, regularities, repl, streams,
-    systems, tropes,
+    attest, audio, concepts, dictionary, flag_value, observations, phonology, proto, regularities,
+    repl, streams, systems, tropes,
 };
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{EntityId, Facet, FacetId, Seed, World, WorldTime, math};
 use hornvale_worldgen as world_builder;
 use std::process::ExitCode;
 
-const SKY_FLAGS: &str =
-    "  [--moons N|MIN+K]                        pin the moon count, exact or graded
+const SKY_FLAGS: &str = "  [--stellar-topology single|wide-binary|close-binary]
+                                            pin the stellar-root topology
+  [--moons N|MIN+K]                        pin the moon count, exact or graded
   [--wanderers N]                          pin the wandering-planet count (0-4)
   [--rotation normal|locked]               pin the rotation regime
   [--day-hours F]                          pin the solar day length, in standard hours
@@ -134,6 +135,10 @@ usage:
                           `unmeasured` item — a read that asserts nothing and writes
                           nothing; default corpus:
                           regularities/sugarscape-1996.regularity.json)
+  hornvale observations validate --manifest <PATH>
+                          validate one internal observation episode manifest
+  hornvale observations export --manifest <PATH> --out <DIR>
+                          export deterministic renderer packets from an existing world surface
   hornvale streams                         dump the stream manifest as markdown
   hornvale underworld --seed <N>           dump one seed's chamber lattice as text (the underworld
                                             witness: chamber counts by band and by rock, plus the
@@ -217,6 +222,7 @@ fn main() -> ExitCode {
         Some("tropes") => cmd_tropes(&args),
         Some("systems") => cmd_systems(&args),
         Some("regularities") => cmd_regularities(&args),
+        Some("observations") => cmd_observations(&args),
         Some("streams") => cmd_streams(),
         Some("underworld") => cmd_underworld(&args),
         Some("circuit") => cmd_circuit(&args),
@@ -243,6 +249,82 @@ fn main() -> ExitCode {
     }
 }
 
+/// Validate one internal observation episode manifest without rendering it.
+fn cmd_observations(args: &[String]) -> Result<(), String> {
+    match args.get(1).map(String::as_str) {
+        Some("validate") => {
+            if args.get(2).map(String::as_str) != Some("--manifest") {
+                return Err(
+                    "observations validate: expected --manifest <PATH> after validate".to_string(),
+                );
+            }
+            let path = args.get(3).ok_or_else(|| {
+                "observations validate: --manifest <PATH> is required".to_string()
+            })?;
+            if let Some(unexpected) = args.get(4) {
+                return Err(format!(
+                    "observations validate: unexpected argument '{unexpected}'"
+                ));
+            }
+            let manifest = observations::read_manifest(std::path::Path::new(path))
+                .map_err(|error| error.to_string())?;
+            println!(
+                "validated observation {}: object={} scale={} axis={} frames={}",
+                manifest.id,
+                manifest.object,
+                manifest.scale,
+                manifest.primary_axis,
+                manifest.frame_count
+            );
+            Ok(())
+        }
+        Some("export") => {
+            if args.get(2).map(String::as_str) != Some("--manifest") {
+                return Err(
+                    "observations export: expected --manifest <PATH> after export".to_string(),
+                );
+            }
+            let manifest_path = args
+                .get(3)
+                .ok_or_else(|| "observations export: --manifest <PATH> is required".to_string())?;
+            if args.get(4).map(String::as_str) != Some("--out") {
+                return Err("observations export: expected --out <DIR> after manifest".to_string());
+            }
+            let out_dir = args
+                .get(5)
+                .ok_or_else(|| "observations export: --out <DIR> is required".to_string())?;
+            if let Some(unexpected) = args.get(6) {
+                return Err(format!(
+                    "observations export: unexpected argument '{unexpected}'"
+                ));
+            }
+            let manifest = observations::read_manifest(std::path::Path::new(manifest_path))
+                .map_err(|error| error.to_string())?;
+            let repository_root =
+                observations::repository_root(std::path::Path::new(manifest_path))
+                    .map_err(|error| error.to_string())?;
+            let report = observations::export_frames(
+                &manifest,
+                std::path::Path::new(out_dir),
+                &repository_root,
+            )
+            .map_err(|error| error.to_string())?;
+            println!(
+                "exported observation {}: frames={} source={} out={}",
+                report.episode_id,
+                report.frame_count,
+                report.source_digest,
+                std::path::Path::new(out_dir).display()
+            );
+            Ok(())
+        }
+        Some(other) => Err(format!(
+            "observations: unknown mode '{other}' (expected validate or export)"
+        )),
+        None => Err("observations: mode is required (expected validate or export)".to_string()),
+    }
+}
+
 /// Parse the sky-related flags shared by `new` and `scout` into pins. One
 /// parser: every flag becomes a `key=value` pin string and
 /// folds through `astronomy::parse_pin`, so pin-string syntax never drifts
@@ -250,6 +332,7 @@ fn main() -> ExitCode {
 fn parse_sky_args(args: &[String]) -> Result<SkyPins, String> {
     let mut pins = SkyPins::default();
     for (flag, key) in [
+        ("--stellar-topology", "stellar-topology"),
         ("--moons", "moons"),
         ("--wanderers", "wanderers"),
         ("--rotation", "rotation"),
@@ -2812,6 +2895,15 @@ mod tests {
     fn wanderers_flag_parses() {
         let pins = parse_sky_args(&args(&["--wanderers", "3"])).unwrap();
         assert_eq!(pins.wanderers, Some(3));
+    }
+
+    #[test]
+    fn stellar_topology_flag_parses() {
+        let pins = parse_sky_args(&args(&["--stellar-topology", "close-binary"])).unwrap();
+        assert_eq!(
+            pins.topology,
+            Some(hornvale_astronomy::StellarTopology::CloseBinary)
+        );
     }
 
     #[test]

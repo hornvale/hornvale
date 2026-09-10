@@ -272,12 +272,22 @@ fn moons_flip_the_calendar_and_seat_gods_no_moonless_world_can_hold() {
             "a three-moon world must seat a god derived from {absent}: {three_kinds:?}"
         );
     }
-    // Moons only ADD source kinds — the salvageable half of "coarse
-    // constrains fine", stated over the KINDS of god a sky affords.
+    // Moons only ADD non-fallback source kinds — the salvageable half of
+    // "coarse constrains fine", stated over the KINDS of god a sky affords.
+    // Religion deliberately falls back to the single most salient phenomenon
+    // when none clears its pantheon floor. Adding moons can promote eclipses
+    // and tides above that floor, so a moonless world's low-salience ambient
+    // fallback is not required to remain in the three-moon pantheon.
+    let zero_non_fallback_kinds: std::collections::BTreeSet<_> = zero_kinds
+        .iter()
+        .filter(|kind| kind.as_str() != "ambient")
+        .cloned()
+        .collect();
     assert!(
-        zero_kinds.is_subset(&three_kinds),
-        "moons must not retire a source kind a moonless sky already had: \
-         {zero_kinds:?} is not a subset of {three_kinds:?}"
+        zero_non_fallback_kinds.is_subset(&three_kinds),
+        "moons must not retire a non-fallback source kind a moonless sky \
+         already had: {zero_non_fallback_kinds:?} is not a subset of \
+         {three_kinds:?}"
     );
 
     // Calendar sections must differ

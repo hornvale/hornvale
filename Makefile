@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -872,6 +872,25 @@ gate-remote-teardown: ## Remove all remote-gate infra
 shellcheck: ## Lint all shell scripts
 	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/* scripts/scheduled/*.sh tools/census/*.sh
 
+observation-check: ## Validate/export observation fixtures and test local film assembly (never publishes)
+	@tmp="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	cargo run --quiet -p hornvale -- observations validate --manifest observations/episodes/HV-001.json; \
+	cargo run --quiet -p hornvale -- observations export --manifest observations/episodes/HV-001.json --out "$$tmp/frames"; \
+	cmp "$$tmp/frames/frame-000.json" observations/fixtures/HV-001/expected-frame-000.json; \
+	cmp observations/fixtures/HV-001/expected-frame-000.json observations/fixtures/HV-001/render-input.json; \
+	cargo run --quiet -p hornvale -- observations validate --manifest observations/episodes/HV-009.json; \
+	cargo run --quiet -p hornvale -- observations export --manifest observations/episodes/HV-009.json --out "$$tmp/neighbors-first"; \
+	cargo run --quiet -p hornvale -- observations export --manifest observations/episodes/HV-009.json --out "$$tmp/neighbors-second"; \
+	diff -qr "$$tmp/neighbors-first" "$$tmp/neighbors-second"; \
+	cmp "$$tmp/neighbors-first/frame-000.json" observations/fixtures/HV-009/expected-frame-000.json; \
+	cmp observations/fixtures/HV-009/expected-frame-000.json observations/fixtures/HV-009/render-input.json; \
+	HV_OBSERVATION_FFMPEG=hornvale-no-ffmpeg bash scripts/observation-film.sh --manifest observations/episodes/HV-009.json --frames "$$tmp/neighbors-first" --out "$$tmp/neighbors-film"; \
+	test -s "$$tmp/neighbors-film/HV-009.sha256"; \
+	shellcheck scripts/observation-film.sh scripts/test-observation-film.sh scripts/observation-render.sh scripts/test-observation-render.sh; \
+	bash scripts/test-observation-film.sh; \
+	bash scripts/test-observation-render.sh
+
 wasm-vessel: ## Build the Casement wasm into book/src/gallery (deploy runs this too; never committed)
 	rustup target add wasm32-unknown-unknown 2>/dev/null || true
 	cargo build --manifest-path clients/vessel/wasm/Cargo.toml --release --target wasm32-unknown-unknown
@@ -932,9 +951,11 @@ world-check-run: wasm-world
 	cargo run -p hornvale -- scene tiles-region --world /tmp/hv-wc.json --face 0 --level 3 --ix 4 --iy 4 --samples 16 > /tmp/hv-wc-region.json
 	cargo run -p hornvale -- new --seed 42 --plates 12 --out /tmp/hv-wc-pinned.json
 	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc-pinned.json --width 256 > /tmp/hv-wc-pinned-tiles.json
+	cargo run -p hornvale -- new --seed 42 --stellar-topology close-binary --wanderers 3 --out /tmp/hv-wc-binary.json
+	cargo run -p hornvale -- scene system --world /tmp/hv-wc-binary.json > /tmp/hv-wc-binary-system.json
 	node clients/world-wasm/drive.mjs \
 	  clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm \
-	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json
+	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json /tmp/hv-wc-binary-system.json
 	@# The gate is denominated in COMPRESSED bytes, because that is what a
 	@# visitor actually downloads: GitHub Pages serves the catalog gzipped
 	@# (brotli where the client offers it), so the raw figure overstates the

@@ -1,0 +1,36 @@
+{
+  "id": "HV-006",
+  "title": "Found chambers and made chambers",
+  "object": "chambers",
+  "scale": "world",
+  "primary_axis": "provenance",
+  "phenomenon": "found and made chamber origins",
+  "visual_grammar": "spatial",
+  "observation_sentence": "Of 30,537 chambers, 30,532 are found and 5 are made.",
+  "count_unit": "chambers",
+  "world_revision": "0d7067a0f20aafbe88fb67358537f56963fba5b0",
+  "seed": 42,
+  "time_window": null,
+  "frame_count": 900,
+  "frame_rate": 30.0,
+  "source_commands": [
+    "cargo run -p hornvale -- underworld --seed 42"
+  ],
+  "evidence_status": "draft",
+  "capability_state": "existing",
+  "controlled_inputs": {
+    "seed": 42
+  },
+  "comparison_reference": null,
+  "lead_time": null,
+  "source_data": [
+    "hornvale underworld stdout"
+  ],
+  "render_output": null,
+  "caption_draft": [
+    "Almost every chamber here was found in the generated cave lattice. Five were made.",
+    "That is 30,532 found chambers and 5 made ones in seed 42."
+  ],
+  "editorial_status": "draft",
+  "approval": null
+}

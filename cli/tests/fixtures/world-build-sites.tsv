@@ -34,6 +34,7 @@
 #
 cli/src/dictionary.rs	1	unmigrated:1
 cli/src/main.rs	10	unmigrated:8 production:2
+cli/src/observations.rs	1	production:1
 cli/src/repl.rs	6	unmigrated:6
 cli/src/tropes.rs	1	unmigrated:1
 cli/tests/suite/branches_coverage.rs	1	unmigrated:1
@@ -98,7 +99,7 @@ windows/scene/src/lib.rs	6	unmigrated:6
 windows/scene/src/region.rs	2	unmigrated:2
 windows/scene/src/surrounds.rs	1	identity:1
 windows/scene/tests/common/mod.rs	1	unmigrated:1
-windows/scene/tests/suite/golden.rs	2	unmigrated:2
+windows/scene/tests/suite/golden.rs	3	build-path:3
 windows/vessel/src/agent.rs	1	unmigrated:1
 windows/vessel/src/focalize.rs	1	unmigrated:1
 windows/vessel/src/knowledge.rs	2	unmigrated:2

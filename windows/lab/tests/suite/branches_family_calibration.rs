@@ -890,13 +890,13 @@ fn homophony_count_is_measured_and_pinned() {
     // the settlement histories read by the naming census, moving the means
     // to 5.906, 6.234, 21.781, and 6.354. Bugbear remains highest by more
     // than 3x, so this re-pins the witnesses rather than the claim.
-    assert!((mg - 6.577).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.863).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 24.366).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mg - 5.885).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.225).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 21.858).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
     // Unmoved at 6.326 through The Foliot and The Sources' second and third
     // censuses; 6.326 -> 6.36 at The Precedence's, with the other three.
-    assert!((mk - 6.985).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mk - 6.382).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

@@ -14,7 +14,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 3 | 6 | 26 | 4.209 |
+| 0 | 1 | 3 | 5 | 19 | 3.411 |
 
 ### `dominant-hazard`
 
@@ -34,7 +34,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 9 | 27 | 49 | 173 | 32.411 |
+| 0 | 4 | 19 | 37 | 140 | 24.66 |
 
 ### `epidemic-plague-endings`
 
@@ -44,7 +44,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 2 | 5 | 23 | 3.359 |
+| 0 | 0 | 2 | 4 | 28 | 2.987 |
 
 ### `first-day-is-person`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -24252.934 | -24252.934 | -24252.934 | -24252.934 | -24048.25 | -24248.84 |
+| -24252.934 | -24252.934 | -24252.934 | -24252.934 | -24048.25 | -24249.25 |
 
 ### `first-day-is-ruin`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 9131.25 | 18262.5 | 63918.75 | 9301.5174 |
+| 0 | 0 | 9131.25 | 18262.5 | 109575 | 14358.799 |
 
 ### `first-day-is-settlement`
 
@@ -86,21 +86,21 @@ n = 0 present, 1000 absent (of 1000 worlds) — no world reports a value.
 
 Earliest world-day on which any occupation ended by famine; Absent if none ever does
 
-n = 717 present, 283 absent (of 1000 worlds)
+n = 709 present, 291 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 63918.75 | 155231.25 | 219150 | 447431.25 | 712237.5 | 294008.42 |
+| 63918.75 | 155231.25 | 219150 | 401775 | 703106.25 | 281162.65 |
 
 ### `first-day-occ-cause-fled`
 
 Earliest world-day on which any occupation ended by its people fleeing; Absent if none ever does
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 998 present, 2 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 9131.25 | 18262.5 | 502218.75 | 9950.0492 |
+| 0 | 0 | 9131.25 | 18262.5 | 657450 | 17370.388 |
 
 ### `first-day-occ-cause-migrated`
 
@@ -110,17 +110,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 9131.25 | 18262.5 | 63918.75 | 9456.9617 |
+| 0 | 0 | 9131.25 | 18262.5 | 109575 | 14431.849 |
 
 ### `first-day-occ-cause-plague`
 
 Earliest world-day on which any occupation ended by plague; Absent if none ever does
 
-n = 743 present, 257 absent (of 1000 worlds)
+n = 691 present, 309 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 200887.5 | 337856.25 | 493087.5 | 721368.75 | 344173.16 |
+| 0 | 200887.5 | 374381.25 | 538743.75 | 721368.75 | 368223.27 |
 
 ### `first-day-occ-people-bugbear`
 
@@ -170,7 +170,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 0 | 0 | 73050 | 2264.7326 |
+| 0 | 0 | 0 | 0 | 91312.5 | 4693.6451 |
 
 ### `first-day-occ-tech-classical`
 
@@ -186,31 +186,31 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 Earliest world-day on which any occupation held an iron technological horizon; Absent if none ever does
 
-n = 991 present, 9 absent (of 1000 worlds)
+n = 971 present, 29 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 0 | 9131.25 | 301331.25 | 17627.397 |
+| 0 | 0 | 0 | 27393.75 | 410906.25 | 23538.689 |
 
 ### `first-day-occ-tech-neolithic`
 
 Earliest world-day on which any occupation held a neolithic technological horizon; Absent if none ever does
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 997 present, 3 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 0 | 0 | 45656.25 | 45.65625 |
+| 0 | 0 | 0 | 0 | 27393.75 | 27.476179 |
 
 ### `first-day-pays-tribute-to`
 
 Earliest world-day on which any community paid standing tribute to another; Absent if the world has none
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 996 present, 4 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 9131.25 | 18262.5 | 36525 | 621107.62 | 29809.696 |
+| 0 | 18262.5 | 36525 | 63918.75 | 712389.69 | 80041.579 |
 
 ### `first-day-person-died`
 
@@ -220,7 +220,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 14379.246 | 14379.246 | 14379.246 | 14379.246 | 78248.204 | 14854.006 |
+| 14379.246 | 14379.246 | 14379.246 | 14379.246 | 78248.204 | 14865.22 |
 
 ### `first-day-person-founded`
 
@@ -240,7 +240,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.30769231 | 0.53312303 | 0.60152098 | 0.67545639 | 0.94181818 | 0.61633938 |
+| 0.23015873 | 0.53493976 | 0.60529502 | 0.68972332 | 0.97245179 | 0.62389932 |
 
 ### `history-myth-hop-median`
 
@@ -250,7 +250,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 4 | 5 | 6 | 10 | 4.714 |
+| 1 | 4 | 5 | 6 | 10 | 4.706 |
 
 ### `lot-born-last-quarter-share`
 
@@ -260,7 +260,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.135 | 0.385 | 0.43 | 0.47 | 0.67 | 0.42413 |
+| 0.11 | 0.39 | 0.435 | 0.475 | 0.725 | 0.426555 |
 
 ### `lot-median-scaled-death-age`
 
@@ -270,7 +270,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 4.9758987 | 10.385449 | 12.217063 | 13.889184 | 21.545182 | 12.229927 |
+| 5.8444538 | 10.467686 | 12.152914 | 13.865666 | 21.588329 | 12.243207 |
 
 ### `lot-named-disease-deaths`
 
@@ -280,7 +280,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 49 | 69 | 75 | 81 | 97 | 74.967 |
+| 47 | 69 | 75 | 80 | 100 | 74.585 |
 
 ### `lot-silent-subsistence-share`
 
@@ -290,7 +290,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.625 | 0.855 | 0.885 | 0.915 | 0.985 | 0.88175 |
+| 0.645 | 0.855 | 0.89 | 0.92 | 0.995 | 0.88555 |
 
 ### `lot-slots-filled-mean`
 
@@ -300,7 +300,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 17.97 | 18.695 | 18.82 | 18.925 | 19.34 | 18.79948 |
+| 17.96 | 18.695 | 18.815 | 18.93 | 19.37 | 18.80186 |
 
 ### `lot-souls-ever`
 
@@ -310,7 +310,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 18428.685 | 130221.49 | 192484.74 | 248015.28 | 461897.55 | 186932.16 |
+| 9375.952 | 119278.44 | 179181.82 | 232927.19 | 406846.75 | 174572.03 |
 
 ### `lot-witness-community-end-share`
 
@@ -320,7 +320,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.02 | 0.03 | 0.05 | 0.27 | 0.04032 |
+| 0 | 0.015 | 0.03 | 0.05 | 0.305 | 0.042135 |
 
 ### `mean-warning-legibility`
 
@@ -330,7 +330,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.087722395 | 0.42587122 | 0.49925095 | 0.55815575 | 0.71786026 | 0.48098373 |
+| 0.037225376 | 0.41721203 | 0.50093505 | 0.56363704 | 0.82896869 | 0.47746099 |
 
 ### `vestige-density`
 
@@ -340,7 +340,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0053100794 | 0.01700868 | 0.022528463 | 0.028994939 | 0.059678911 | 0.023403719 |
+| 0.0045150324 | 0.014705882 | 0.019676521 | 0.025932448 | 0.058183298 | 0.020900806 |
 
 ## Weaknesses found here
 
@@ -360,7 +360,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `first-day-occ-cause-fled`
 
-- **D3**: p25..p75 spans 18262.5 (3.64% of the 502218.75 min..max range), under the 5% bar
+- **D3**: p25..p75 spans 18262.5 (2.78% of the 657450 min..max range), under the 5% bar
 
 ### `first-day-occ-people-bugbear`
 
@@ -384,8 +384,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `first-day-occ-tech-bronze`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 73050 min..max range), under the 5% bar
-- **D4**: median 0 equals the min (0 .. 73050)
+- **D3**: p25..p75 spans 0 (0.00% of the 91312.5 min..max range), under the 5% bar
+- **D4**: median 0 equals the min (0 .. 91312.5)
 
 ### `first-day-occ-tech-classical`
 
@@ -394,17 +394,12 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `first-day-occ-tech-iron`
 
-- **D3**: p25..p75 spans 9131.25 (3.03% of the 301331.25 min..max range), under the 5% bar
-- **D4**: median 0 equals the min (0 .. 301331.25)
+- **D4**: median 0 equals the min (0 .. 410906.25)
 
 ### `first-day-occ-tech-neolithic`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 45656.25 min..max range), under the 5% bar
-- **D4**: median 0 equals the min (0 .. 45656.25)
-
-### `first-day-pays-tribute-to`
-
-- **D3**: p25..p75 spans 27393.75 (4.41% of the 621107.62 min..max range), under the 5% bar
+- **D3**: p25..p75 spans 0 (0.00% of the 27393.75 min..max range), under the 5% bar
+- **D4**: median 0 equals the min (0 .. 27393.75)
 
 ### `first-day-person-died`
 

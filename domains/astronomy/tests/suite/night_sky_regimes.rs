@@ -45,6 +45,10 @@ fn locked_worlds_freeze_the_instrument() {
             calendar.sky_band(t, 35.0).is_none(),
             "seed {seed}: a locked world has no solar hour, so no sky band"
         );
+        for seen in hornvale_astronomy::wanderer_visibility(&system, 35.0, t) {
+            assert!(!seen.visible && seen.appearance.is_none() && seen.altitude.is_none());
+            assert!(hornvale_astronomy::wanderer_position_at(&system, seen.wanderer, t).is_some());
+        }
     }
 }
 
@@ -228,7 +232,11 @@ fn epoch_drift_moves_the_equinox_referenced_and_spares_the_orbital() {
         // anchor.rs and wanderers.rs declare. A future regression that
         // threads epoch (or anything else) into these derivations breaks
         // this recomputation.
-        let kepler = |orbit_au: f64| 365.25 * (orbit_au.powi(3) / system.star.mass.get()).sqrt();
+        let kepler = |orbit_au: f64| {
+            365.25
+                * (orbit_au.powi(3) / hornvale_astronomy::stellar_gravity_mass(&system).get())
+                    .sqrt()
+        };
         assert!(
             (calendar.year_length().get() - kepler(system.anchor.orbit.get())).abs() < 1e-9,
             "seed {seed}: year_length must be Kepler III of the anchor's orbit"

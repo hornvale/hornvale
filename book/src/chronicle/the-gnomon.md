@@ -705,11 +705,11 @@ The Murrain changed committed world facts by absorbing the social-household
 layer. The census surface grew by five columns — four epidemic metrics and
 `lot-named-disease-deaths` — while 17 injection fixture files were re-authored
 across all six scored arms and both baselines (+752/-192); the scorer itself was
-unchanged. The witness reads **64/120 = 0.5333**, with no void pairs. Arm for arm: geothermal 20/20,
-unconformity 2/20, aquifer 20/20, karst 2/20, pantheon 6/20, phonology 14/20.
+unchanged. The witness reads **63/120 = 0.5250**, with no void pairs. Arm for arm: geothermal 20/20,
+unconformity 2/20, aquifer 20/20, karst 2/20, pantheon 6/20, phonology 13/20.
 The bar stays at 0.60.
 
-This is the tenth canonical reading and the fourth consecutive incomparable
+This is the eleventh canonical reading and the fifth consecutive incomparable
 one. It is not a new point in the six-epoch comparable series, whose verdict
 remains “cannot tell.” The reusable distinction is that changed world facts
 can arrive with changed census and fixture inputs; a moved scorer input is not
