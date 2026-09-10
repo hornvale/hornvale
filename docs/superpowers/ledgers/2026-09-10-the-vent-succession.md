@@ -336,3 +336,20 @@ One source measured 6 versus 18 propagation candidates at one versus three
 hops; at three hops, one versus two sources measured 18 versus 36. Each pair
 changes one bound only. The corrected focused suite reported 29 passed, 0
 failed, and 0 ignored.
+
+## Task 4 — observation and close evidence
+
+The temporal snapshot observer is a pure consumer of stable source data and a
+`WaterWorldSnapshot`. Ordinary output reports present marine substrate,
+aggregate stocks, and current transport without naming causes. Diagnostic
+output adds the five-state phase counts, stable vent provenance, local versus
+transported stock split, and explicitly labels phase/source as inferred and
+uncertain at observation scale. Absent contribution, failed contribution, and
+zero ambient baseline are named separately.
+
+The focused Waterworld suite reported 32 passed, 0 failed, and 0 ignored,
+including repeated and reordered ordinary/diagnostic calls and nonzero
+observation-loop counters. `make docs-tests` reported 75 passed, 0 failed.
+The stream manifest diff and generated audit freshness checks exited 0. The
+implementation commit was `c1354be25`; its required `make gate-commit`
+completed with 1,425 sub-floor tests passed and `wall=228.694s ... rc=0`.
