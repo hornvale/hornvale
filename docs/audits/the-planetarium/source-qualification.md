@@ -73,24 +73,36 @@ That selection is compositional and makes no prevalence claim.
 
 ## Coordinate and orientation contract to qualify in Task 2
 
-The astronomy orbital frame is right-handed in the anchor's planetary plane:
-`+x` is the genesis phase-zero axis, `+y` is one quarter-turn ahead, and `+z`
-is the north normal. `Calendar::year_phase` and the private native anchor
-position evaluator share the orbital phase. The sightline from anchor to the
-orbital center therefore uses an explicit half-turn from the anchor position.
+The astronomy sources use two related right-handed frames. In the ephemeris
+system frame, `+x` is the anchor's genesis phase-zero axis, `+y` is one quarter
+turn ahead and `+z` is the orbital north normal. `Calendar::year_phase` uses
+the same phase, but `Calendar::solar_equatorial` describes the sun in the
+calendar's solar/equinox frame: at phase zero its vector is `+x`, while the
+native anchor is at system `+x` and the anchor-to-orbital-center sightline is
+system `-x`. These values are intentionally opposed rather than directly
+equal.
+
+Task 2 converts the exact calendar vector into the native system frame with
+`Rz(π) · Rx(-obliquity_at(t))`. `Rx(-obliquity)` removes the calendar's
+equatorial tilt and `Rz(π)` supplies the explicit center-sightline half-turn.
+For orbital longitude `λ`, the converted vector is
+`(-cos λ, -sin λ, 0)`, exactly the unit sightline opposite the native anchor
+position `(cos λ, sin λ, 0)`.
 
 Task 2's executable `planetarium_geometry` suite must cover these cases:
 
 1. At negative, zero and positive instants, the public anchor-position wrapper
    equals the native circular evaluator in AU. Its orbital-center sightline,
-   after the explicit half-turn and obliquity rotation, agrees with
-   `Calendar::solar_equatorial`. The resulting anchor basis columns are unit
-   length, mutually orthogonal, and satisfy `x × y = z`.
+   agrees with `Calendar::solar_equatorial` only after the explicit
+   `Rz(π) · Rx(-obliquity_at(t))` calendar-to-system conversion. The resulting
+   anchor basis columns are unit length, mutually orthogonal, and satisfy
+   `x × y = z`.
 2. The same basis checks hold for a tilted prograde anchor, a retrograde
    anchor, and a tidally locked anchor. Spin direction changes surface rotation
-   direction; it does not reverse the orbital frame. A locked world keeps its
-   surface orientation fixed under the existing prime-meridian substellar
-   convention.
+   direction; it does not reverse the orbital frame. A locked world keeps the
+   substellar body longitude fixed at the prime meridian. Its orientation is
+   not inertially fixed: it turns synchronously as the anchor advances around
+   the orbital center.
 3. For each moon, negative, zero and positive instants agree with
    `moon_ecliptic_longitude_deg`, `moon_ecliptic_latitude_deg` and
    `node_longitude_at`. The suite includes both a prograde inclination and the
