@@ -197,10 +197,24 @@ tolerance product varies on temperature alone.
 |---|---|---|---|---|---|---|
 | **triton** | Settled | Hetero | Endo | Diurnal | Rank | the baseline: a hierarchic, martial people of the column |
 | **merfolk** | **Gregarious** | Hetero | Endo | **Crepuscular** | Knowledge | settles nothing — follows the shoals |
-| **abyssal elf** | Settled | Hetero | **Ecto** | Nocturnal | Rank | the aquatic drow (below); `LifeSchedule::Paced` slow |
+| **abyssal elf** | Settled | Hetero | **Ecto** | Nocturnal | Rank | the aquatic drow (below); `LifeSchedule::Paced { factor: 5.0 }` — the elf family's value, not a free choice |
 | vent commensal | Settled | **Chemo** | Ecto | Nocturnal | Generosity | the only chemotroph; its habitat expires (§4) |
 | kelp tender | Settled | **Photo** | (unmodelled) | Diurnal | Generosity | a photosynthetic people, on `treant`/`shrieker` precedent |
 | reef mason | Settled | Hetero | Ecto | Diurnal | **Knowledge** | builds substrate; narrow `Dispersion`, high site fidelity |
+
+**`LifeSchedule` is family-owned, not habitat-owned.**
+`coverage.rs::only_the_dwarf_and_elf_families_depart_from_pure_allometry`
+enumerates the entire departure set and pins both factors — 4.0 for the three
+dwarves, 5.0 for the six elves — and its own message states the rule: "long life
+is a family trait, not a habitat one". So the abyssal elf takes **5.0**, the elf
+family's value, exactly as `drow` and `sea-elf` do; it is not a slow-living kind
+by authorial choice. The other five marine kinds stay `Allometric`, because a
+paced non-elf would make a third family and contradict the rule that test exists
+to hold.
+
+Consequence for M5: `LifeSchedule` still separates the abyssal elf from the other
+five marine kinds, which is what M5 measures. It does **not** separate it from
+`drow` or `sea-elf`, and it was never meant to — the realm gate does that.
 
 **The abyssal elf is the drow move, repeated.** Drow's *only* authored
 separation from the surface elves is the realm gate — "Drow's `elevation`
