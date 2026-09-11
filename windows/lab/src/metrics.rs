@@ -14350,12 +14350,12 @@ mod tests {
         // census: this campaign's refresh happens once, at pre-merge close, and
         // has not been run.
         //
-        // THE UNDERWORLD re-pin: 2.8 -> 2.357142857142857. Adding the four
+        // THE UNDERWORLD re-pin: 2.8 -> 2.3518518518518516. Adding the four
         // peoples changes the seed-42 settlement substrate and therefore the
         // named-site sample; the metric remains inside its stated 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.357142857142857)
+            MetricValue::Number(2.3518518518518516)
         );
     }
 
