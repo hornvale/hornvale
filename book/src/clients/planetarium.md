@@ -44,8 +44,9 @@ GPU history supplies scientific state.
 
 The [evaluated astronomy document](../reference/scene-astronomy-at-v1.md) owns
 identity, position, orientation, physical dimensions and source illumination.
-Within a shot, body-size and distance ratios remain physical. Stars and
-wanderers have no supplied radius and appear as points/inspection markers.
+Within a shot, body-size and distance ratios remain physical. Stars provide
+illumination without a rendered disk or point. Wanderers with no supplied radius
+appear as unresolved inspection markers.
 Source terrain elevation is reconstructed relative to its sea datum. Relief is
 not an invented walkable landscape. The Earth-like anchor radius is a declared
 mass–radius model, not a simulated interior.

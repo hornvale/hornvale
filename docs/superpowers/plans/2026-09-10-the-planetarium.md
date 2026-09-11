@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–9 local implementation and evidence are independently reviewed; Stages 1–3 have green canonical reports. The final clean 4K package, full moving review and performance/repeatability measurements are complete. Whole-branch review, final canonical integration and census accounting remain pending. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–9 local implementation and evidence are independently reviewed; Stages 1–3 have green canonical reports. The final clean 4K package, full moving review and performance/repeatability measurements are complete. Whole-branch technical review is approved with documentation corrections recorded; final canonical integration and census accounting remain pending. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
@@ -492,7 +492,7 @@ A cut has a declared boundary and resets render history.
 **Goal:** Capture every exact frame from the same scene and assemble a package that cannot mistake a partial or mismatched render for success.
 **Success Criteria:** 300 correct PNGs, MP4, per-frame source/camera records and hash verification; interruption/encoding failures remain incomplete.
 **Tests:** Tasks 6–7; small GPU runs followed by the full study.
-**Status:** In Progress
+**Status:** Complete; canonical report recorded in the ledger.
 
 ### Task 6: make GPU capture an acknowledged frame pipeline
 

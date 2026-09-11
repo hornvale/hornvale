@@ -1,7 +1,8 @@
 # The Planetarium — retrospective
 
-**Close state:** local implementation and moving review qualified; final independent
-review, canonical close results and Nathan's visual/merge decision remain pending. Product scope is in the
+**Close state:** local implementation and moving review qualified; whole-branch technical
+review approved, with three documentation findings corrected. Canonical close
+results and Nathan's visual/merge decision remain pending. Product scope is in the
 [chronicle](../../book/src/chronicle/the-planetarium.md); rulings and task outcomes
 are in the [ledger](../superpowers/ledgers/2026-09-10-the-planetarium.md).
 
@@ -43,6 +44,16 @@ not run the repository's commit hook. An explicit 43.565s local gate repaired
 the verification gap before further implementation; future absorptions use
 --no-commit followed by ordinary git commit. Main was absorbed during execution,
 not left for the final merge.
+
+A stale Task 1 brief sent the worker into broad local artifact regeneration.
+The controller applied the current canonical-placement rule after the world
+builder/reader groups and interrupted the run in Group D. No census option was
+set; no world, system or moon fixture diff remained. Transient glyph and
+underworld-panel touches also left no retained diff. The radius module's expected
+plumb-roster update did remain. Check inherited command placement before dispatch;
+unrelated expensive artifact authoring belongs to the canonical queue. The first
+task also ran the commit gate manually and then through the normal hook: use the
+hook as the commit gate instead of paying for the same verification twice.
 
 ## Deferred review items and their homes
 

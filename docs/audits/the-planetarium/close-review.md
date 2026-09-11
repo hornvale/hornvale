@@ -1,6 +1,7 @@
 # The Planetarium — close review and capture routing
 
-This is the review candidate's close record. Final independent review, canonical
+This is the review candidate's close record. Whole-branch technical review is
+approved with three documentation corrections recorded below. Canonical
 integration/census accounting and Nathan's G6 visual/merge decision remain pending.
 Nothing in this file grants publication or reports a landed campaign.
 
@@ -68,7 +69,7 @@ file-hash manifest will be recorded here after that review finishes.
 | Near-surface precision | Frontier row RENDER-near-surface-precision: raw follow-up motivated by the 6,342-point, 0.101748006-pixel orbital witness. |
 | Rendered consumer of the scene interface | Confidence Gradient's phenomena-interface bet: narrow measured support, no gameplay/general visualization claim. |
 | Observation Series provenance and useful packaging | Package audit and native client guide: exact per-frame records, acknowledged readback and verification retained in the new film structure. |
-| Process lessons | Retrospective: early moving witness, asset readiness, Retina/input review, misleading preview glyphs, clean build identity, encoder metadata, locale-safe mutation, hook gap and measurement origin/contention. |
+| Process lessons | Retrospective: early moving witness, asset readiness, Retina/input review, misleading preview glyphs, clean build identity, encoder metadata, locale-safe mutation, hook gap, measurement origin/contention, and interrupted broad local regeneration from a stale Task 1 brief. |
 
 ## Canonical checks
 
@@ -106,3 +107,18 @@ Final stage request `req-62fc0480f1e7-20260911T010052Z` is queued at
 `62fc0480f1e7de0448e8a848ad6652087ee8b54e`. Its normal push and request returned
 zero. Whole-branch review is evaluating that same candidate while the canonical
 queue works; no final stage or census result is claimed yet.
+
+
+## Final whole-branch review
+
+The independent review of `cb0331192..62fc0480f` approved the implemented
+technical scope and code quality with no new Critical or Important defect.
+Three Minor findings were corrected: the guide now distinguishes unrendered
+stellar illumination from unresolved wanderer markers; current plan/ledger
+summaries agree with the Stage 3 green report; and the retrospective now promotes
+the concrete Task 1 stale-brief/local-regeneration incident. It records the
+interruption and the exact retained plumb-roster versus absent fixture drift.
+The explicit scratch/ledger survival audit found no other unpromoted substantive
+ruling, parked finding or idea. Its report and the scoped documentation review
+are included in the campaign archive; these findings do not grant G6 or turn
+queued canonical requests into completed checks.

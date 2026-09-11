@@ -1,6 +1,6 @@
 # The Planetarium — decision ledger
 
-Status: execution authorized; Tasks 1–8 complete after review; Stage 3 canonical request queued; Task 9 final refinement in progress; G6 pending.
+Status: execution authorized; local Tasks 1–9 independently reviewed; Stages 1–3 canonical green; whole-branch technical review approved with documentation corrections; final stage and census queued; G6 visual/merge approval pending.
 Branch: `campaign/the-planetarium`.
 Starting revision: `b6b374f6d2dea329d904b56322a09b1dfb29983f`.
 
@@ -1411,3 +1411,27 @@ No optional operator nudge or message was sent. The queue preserves FIFO;
 root did not start a competing drain or operate another campaign's request.
 Actual census and final stage reports remain required before G6 preparation
 can claim those checks passed. The final review's pending state is deliberate.
+
+
+## Final whole-branch review — technical approval and documentation correction
+
+The independent final review covered `cb0331192..62fc0480f` (61 commits), including
+the production paths, test evidence, whole ledger and explicit scratch-to-durable
+survival audit. Spec/technical scope and code quality are approved. No new Critical
+or Important finding was established. This is not a merge or G6 approval.
+
+Root verified and corrected the three Minor findings in one documentation wave:
+(1) stars illuminate but have no rendered disk/point and are not pick targets;
+only missing-radius wanderers have inspection markers; (2) current permanent-plan
+Stage 3 and ledger summary now match the actual green report and reviewed local
+work; (3) the retrospective promotes Task 1's stale-brief broad local regeneration.
+That run was interrupted in Group D after world-builder/reader groups, with no
+census option and no retained world/system/moon or transient panel fixture diff.
+The expected plumb-roster update remained. The lesson is to reconcile inherited
+commands against current canonical placement before dispatch, not to claim the
+whole run moved nothing. Task 1's duplicated manual/hook commit gate is also named.
+
+The reviewer found no other lost substantive ruling, parked finding or idea;
+archive receipt and exact routing updates follow scoped documentation review.
+The final stage and census remain queued. Their actual outcomes, any subsequent
+main/source changes and Nathan's final visual/merge acceptance remain necessary.
