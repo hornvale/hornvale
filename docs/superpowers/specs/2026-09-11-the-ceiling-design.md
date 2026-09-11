@@ -228,9 +228,32 @@ second would have to clear The Tidemark's own rule — no two kinds may differ
 only by stratum — and this campaign does not take that on.
 
 **The measured consequence is the deliverable, not the row.** Authoring the
-kind is cheap; what this campaign owes is the readout — does it place, where,
-how many vertices, and at which rungs — against the `xorn` baseline of a kind
-that "moves capacity and occupancy but places no settlement."
+kind is cheap; what this campaign owes is the readout, and §4's M4 makes it an
+**ablation** rather than a description. An earlier draft of this section asked
+only "does it place, where, how many vertices, and at which rungs" — which
+cannot distinguish a working `CHEMOSYNTHATE` weight from a decorative one, and
+that is the campaign's own failure mode. `xorn`'s niche is 0.65 `MINERAL` /
+0.35 `CHEMOSYNTHATE`; a settled kind on that shape could place entirely on the
+mineral half while the chemotrophic weight does nothing, and a readout that
+only reported placement would call that success.
+
+**"At which rungs" is two questions, not one, and they have measurably
+different answers.** The Staple D5B's probe found underground endpoints where
+the **capacity-winning rung** differs from the **seated rung** — its
+chokepoint 2 — so "the rock supports X" and "the people occupy X" are distinct
+claims today. `per_species_capacity_at`'s `Subterranean` arm keeps only the
+best rung (`windows/worldgen/src/lib.rs:2425`), and seating is
+`delve_seating`'s own choice. Stage 2's readout **names which of the two it is
+reporting at every figure**, and reports both where both are available. It
+does not attempt to reconcile them — that is D5B's, per §6.
+
+**Source diversity is not realized ecological diversity, and the spec must not
+slide between them.** `dominant_source` is **diagnostic** — retained beside the
+sum, never consumed by any world number. That seven sources vary in which one
+dominates (§2) says nothing yet about whether any of that variety reaches a
+living thing; §2a is the proof it currently does not. M1 measures the
+*availability* of an allocation axis, and only M4 measures whether a consumer
+actually rides it.
 
 ## 4. Preregistered measurement
 
@@ -331,6 +354,47 @@ campaign adopts it.
 Under each rule, the corpus-band occupancy table (§2's five columns) and the
 realized max. No prediction; §3.4 makes it a deliverable either way.
 
+### M4 — Is the chemotrophic weight load-bearing, or decorative? (Stage 2)
+
+Frozen now, before the kind is authored, for the same reason M1 and M2 are.
+
+```text
+arm (a) FULL        the authored kind, unmodified
+arm (b) ABLATED     the same world with the CHEMOSYNTHATE supply zeroed
+arm (c) PER-SOURCE  seven variants, each zeroing one EnergySource in turn
+
+placed(arm)   = settlements placed for the kind, over the frozen seed set
+capacity(arm) = the kind's summed carrying capacity over cave-bearing vertices
+
+PREDICTION: placed(b) < placed(a)
+```
+
+**The falsifier is the campaign's own failure mode.** `placed(b) == placed(a)`
+means the `CHEMOSYNTHATE` weight is **decorative** — the kind places on its
+other niche axes and chemical energy underground still feeds nothing settled,
+which is precisely the defect §2a documents and this campaign exists to close.
+That is a RED, not a curiosity: the authoring returns to the niche rather than
+the finding being written up.
+
+**Arm (c) is the provenance half, reported and not asserted.** Zeroing each
+source in turn and reporting the placement and capacity delta per source says
+*which* rock chemistry the kind actually depends on. It is the direct
+measurement of the thing `subterranean_energy`'s mean destroys, and it is why
+the ablation is per-source rather than a single on/off.
+
+**`DetritalImport` is called out separately in arm (c)'s report**, because it
+is not rock: it reads `drainage` and is surface productivity flowing downward
+(§2). A kind that turns out to depend on `DetritalImport` is not living on
+chemical energy at all — it is eating the surface at a depth, and that would be
+a finding about the kind's authoring rather than a success.
+
+**What M4 does NOT measure: trade.** D5B's chokepoint 6 puts the real
+bottleneck at exchange topology (seed 5: 6,738 positive capacities, 105
+endpoints with neighbours, zero complementary neighbours, zero proposals).
+Reaching production and exchange from here would pull this campaign into D2.
+Capacity, placement and rung are measured; output and trade are named as the
+next consumer's question and handed off in §6.
+
 ## 5. Determinism and save format
 
 **This section changed materially when Stage 2 was re-pointed (ledger #5), and
@@ -385,11 +449,19 @@ calibration batteries assert against, and a new kind moves them.
 - **The marine half of rung 4.** The Tidemark's, by its spec §7 and ledger #5,
   confirmed on the wire both ways. This campaign authors no marine kind and
   gives no `Surface`-realm kind a `CHEMOSYNTHATE` weight.
-- **The capacity/seating rung mismatch.** The Staple D5B's chokepoint 2 — the
-  `Subterranean` arm keeps only the best rung (`windows/worldgen/src/lib.rs:2425`)
-  and nothing has measured whether the capacity-winning rung differs from the
-  seating rung. Adjacent and real; that campaign is measuring it and this one
-  inherits the number rather than racing it.
+- **The capacity/seating rung mismatch.** The Staple D5B's chokepoint 2, and
+  it is **measured, not open**: its probe found underground endpoints where the
+  capacity-winning rung differs from the seated rung, so "the rock supports X"
+  and "the people occupy X" are distinct claims. This campaign's readouts name
+  which of the two they report (§3.5) and reconcile neither. The reconciliation
+  is D5B's.
+- **Production, exchange and trade.** D5B's chokepoints 4-6: harvest discards
+  astronomical richness, goods collapse to generic A/B stocks, and exchange is
+  the real final bottleneck (seed 5: 6,738 positive capacities, 105 endpoints
+  with neighbours, **zero** complementary neighbours, zero proposals). M4 stops
+  at capacity, placement and rung deliberately. A settled chemotroph that
+  places and still trades nothing would be a D2 finding, not a refutation of
+  this campaign — and D5B is the campaign that can tell the difference.
 - **Naming the tenant.** The Winze §4.6/§7 refuses it (`thaumic` stays 0.0,
   nothing named). A settled people is not a tenant-with-a-range; this campaign
   authors an ordinary species row and names no horror.

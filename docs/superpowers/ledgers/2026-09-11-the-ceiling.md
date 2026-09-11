@@ -379,3 +379,66 @@ join was rebuilding; G3 re-issued.
   the capacity-winning rung differs from the seating rung. That campaign is
   measuring it; this one asked for the number on the board rather than racing
   it.
+
+---
+
+## #6 [G2] — The Staple D5B's review, and the hole it found
+
+**Received via Nathan** (D5B is an OpenAI model and reaches this session only
+through the board or him; the wire message sent to `resume-03` at #5 may never
+have arrived, and the board post below is the channel that counts).
+
+**It endorsed four things and corrected one.** Endorsed: 0966's hypothesis;
+M1's per-rung per-world shape; M2's mean-vs-max shape; and the positive
+control's necessity in the exact terms the spec already used ("must reproduce
+0.145249; otherwise the new measurement is not comparable"). Independent
+arrival at the same control requirement is worth recording — it was the
+verification that nearly did not happen.
+
+**THE HOLE, and it is a real one.** §3.5 asked Stage 2 for "does it place,
+where, how many vertices, and at which rungs". **That readout cannot
+distinguish a working `CHEMOSYNTHATE` weight from a decorative one.** `xorn`'s
+niche is 0.65 `MINERAL` / 0.35 `CHEMOSYNTHATE`; a settled kind on that shape
+could place entirely on its mineral half while the chemotrophic weight does
+nothing, and the readout as specified would have reported success. That is the
+campaign reproducing the exact defect §2a documents and it exists to close.
+
+The remedy is D5B's: an **ablation**, now frozen as M4 — full energy vs zeroed
+chemosynthate vs seven per-source variants, with `placed(b) < placed(a)` as the
+prediction and `placed(b) == placed(a)` as a RED that sends the authoring back
+to the niche rather than being written up as a finding. Arm (c) is the
+provenance half D5B asked to preserve, and it calls out `DetritalImport`
+separately because a kind depending on it is eating the surface at depth, not
+living on chemical energy.
+
+**A second correction, smaller and sharper.** "At which rungs" is two
+questions. D5B's probe has now **measured** that the capacity-winning rung and
+the seated rung differ at some underground endpoints — at #5 this ledger
+recorded that as unmeasured, on their earlier report, and it is no longer. So
+"the rock supports X" and "the people occupy X" are distinct claims, and every
+Stage 2 figure must name which one it reports. The reconciliation stays D5B's.
+
+**A third, taken as a guard on vocabulary.** "Do not treat source diversity as
+realized ecological diversity yet" — `dominant_source` is diagnostic and is
+consumed by no world number. §3.5 now says so explicitly: M1 measures whether
+an allocation axis is *available*; only M4 measures whether a consumer rides
+it. The spec was at risk of sliding between the two, and §2 already contained
+both claims without distinguishing them.
+
+**Scope held rather than expanded.** D5B asked for "capacity, placement, output
+and trade". M4 measures capacity, placement and rung and **stops**; output and
+exchange reach into D2, whose bottleneck D5B has already measured (seed 5: zero
+complementary neighbours, zero proposals). Named in §6 as the handoff, with the
+note that a chemotroph which places and still trades nothing is a D2 finding
+rather than a refutation of this campaign.
+
+**Ideonomy passes / overturns:** none; this is an incorporated external review,
+not a design space this session opened. The overturn is D5B's, and it is
+recorded as theirs.
+
+**Capture actions:** spec §3.5 rewritten, M4 added and M3/M4 ordered, §6
+extended with two handoffs; board post to D5B's channel carrying the
+acceptance, the M4 text, and the two facts this session verified that their
+report did not have (the `Subterranean` arm already dots `CHEMOSYNTHATE`
+against the niche, and `BIO-underworld-has-no-energy`'s capacity clause is
+stale).
