@@ -616,3 +616,86 @@ against the regenerated fixtures.
 **Capture actions:** this entry; task-0b-report.md in scratch per the
 dispatch contract; the Lost/Frustrated dual-exit finding flagged for review
 since it broadens the fix's stated scope.
+
+---
+
+## #10 [R] — Task 0b, fix round 1: a doc comment falsified by its own fix, and a traced arousal shift
+
+Review came back APPROVED with one Important finding (fix) and one item to
+explain, not fix.
+
+**Finding 1 (Important), fixed.** `Fatigue::act()`'s doc a few dozen lines
+from the predicate itself still read "keeps this drive engaged through the
+whole off-phase whatever its urgency — which is a stronger guarantee than a
+second threshold would have been, and it is why one is not authored here."
+Both clauses were false after the fix: the predicate now DOES consult
+urgency, and a threshold WAS authored at that exact site. Rewritten to keep
+the history rather than erase it — the reasoning was sound under its own
+unstated assumption (a creature entering the off-phase has fatigue to
+repay), and the fix is stated as what changed and why, not as though the
+threshold had always been there. **This is the same shape as the bug
+itself**: `fatigue_rise_registry`'s `xorn` row was justified by "the walk's
+ametabolic gate already excludes exactly that kind from the REST drive," an
+invariant that later moved (decision 0976, xorn `Absent` → `Unmodelled`)
+with nothing marking the move — this doc comment was a second instance of
+exactly that pattern, caught one fix round later rather than a campaign
+later. Worth carrying forward as a review habit: when a predicate changes,
+grep for prose describing its OLD guarantee, not just its call sites.
+
+**Finding 2, traced, not fixed — the answer is (a).** Coordinator asked why
+`rust-monster`'s arousal at tick 2 moved (`0.34978789` → `0.34965155`, label/
+valence/object unchanged) — ONE tick before its own first label divergence
+(tick 4) — given arousal is a pure function of physical state with no
+dependence on `active[]`/hysteresis, implying the two runs' physical
+trajectories had already diverged by tick 1 or 2.
+
+**Traced directly, not inferred.** Added temporary debug instrumentation
+(never committed): (1) inside `arbitrate`'s `active` computation, an
+`eprintln!` gated on `HV_DEBUG_FATIGUE` printing every drive's
+`u`/`awake`/`normally`/`active` for one entity; (2) in
+`windows/lab/src/health.rs`, a print of `rust-monster`'s entity id and its
+committed `agent_position` at each simulated day. Ran the affect-trace test
+once with the CURRENT (fixed) predicate, then temporarily reverted the one
+line (`!awake || normally`, the pre-fix form) and re-ran, capturing the same
+positions, then restored the fix immediately and re-verified `git diff`
+showed only the intended predicate line. Direct comparison of `agent_position`
+at each day:
+
+```
+day 1: OLD and NEW identical      path [...,1,0,2,2,1]
+day 2: OLD and NEW identical      path [...,1,0,2,2,1]
+day 3: OLD  path [...,1,2,1,0,2]
+       NEW  path [...,1,2,1,2,0]   <- DIVERGES
+```
+
+Day 3 is tick 2 (the trace pushes after `day += 1.0`, so day 1 = tick 0).
+**Position itself diverges starting exactly at tick 2** — confirming (a):
+an earlier Hold-vs-move decision changed, and the body was in a different
+place by tick 2, with the label/valence/object at that tick rendering
+identically only because Danger was still the loudest/pursued drive in both
+runs (the position shift moved the physical inputs Danger's own urgency
+reads, producing the small arousal delta without changing which drive won).
+The debug log also showed WHY a divergence was possible at all:
+`rust-monster` (ordinary `0.3` rise rate, not `xorn`) hit `u == 0` while
+asleep repeatedly across the 40-tick run, not only at genesis — direct,
+logged confirmation that this is the GENERAL case reproducing in committed
+production data, additional to what Task 0b's report already inferred from
+the label-only diff.
+
+**All temporary instrumentation removed before verification.** `git diff
+windows/lab/src/health.rs` is empty; `git diff windows/vessel/src/liveness.rs`
+contains only the doc-comment change (predicate line byte-identical to the
+shipped fix, reconfirmed by re-running
+`a_fully_rested_creature_asleep_is_not_frustrated_about_fatigue`,
+`xorn_asleep_is_never_frustrated_about_fatigue`, and the affect-trace golden,
+all green with the golden UNCHANGED, as expected for a doc-only diff).
+
+**Verification run.** `cargo fmt --check`: clean. `docs/audits/plumb-roster.md`
+regenerated (two line-number-only rows moved, from the doc comment growing) —
+`make gate-commit` failed once on this drift, then passed green after
+regenerating. Full `cargo nextest run -p hornvale-vessel` (1234 tests): green.
+
+**Ideonomy passes / overturns:** none; review-response tracing.
+
+**Capture actions:** this entry; fix-round report appended to
+`.superpowers/sdd/2026-09-11-the-trencher/task-0b-report.md`.

@@ -5013,9 +5013,24 @@ impl Fatigue {
     /// exhausted cannot fall asleep on its feet here: while awake it rests,
     /// and sleep arrives when its cycle brings it. The mandatory half of the
     /// ruling is delivered by the wake-gate instead — `seek_while_asleep`
-    /// keeps this drive engaged through the whole off-phase whatever its
-    /// urgency — which is a stronger guarantee than a second threshold would
-    /// have been, and it is why one is not authored here.
+    /// keeps this drive engaged through the whole off-phase.
+    ///
+    /// **This used to say "whatever its urgency", and a second threshold
+    /// would have been redundant with that guarantee — both clauses are now
+    /// false (The Trencher, Task 0b).** The reasoning was sound under its own
+    /// unstated assumption: that a creature entering the off-phase has
+    /// accrued fatigue — that there is something to repay. Nothing enforced
+    /// that assumption, and a body that finished repaying its whole debt while
+    /// still inside the off-phase (`xorn`, whose registered rise rate is
+    /// `0.0` forever, hit this every tick) stayed "engaged" with nothing left
+    /// to reduce — `arbitrate`'s blocked branch fired and the creature read
+    /// `Frustrated`/`Lost` about a need already fully met. `seek_while_asleep`
+    /// engages this drive at `(!awake && u > 0.0) || normally` now: a
+    /// threshold **was** authored at that exact site after all, chosen as
+    /// narrowly as possible so behaviour is unchanged everywhere it held
+    /// before — any nonzero debt still engages the drive for the whole
+    /// off-phase — and only the fully-repaid instant (`u == 0.0`) stops
+    /// claiming there is something left to chase.
     fn act(&self) -> Action {
         if self.awake {
             Action::Rest

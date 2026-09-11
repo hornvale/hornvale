@@ -216,8 +216,8 @@ counts are already the Coverage table above. 41 finding(s).
 | `windows/vessel/src/liveness.rs:3505` | `WAKE_SCAN_STEP` | per-world | the wake-scan step is a fixed fraction of the local day, not of the standard one |
 | `windows/vessel/src/liveness.rs:3522` | `SCAN_LIMIT` | per-world | the scan loop's search bound is a fraction of the local day, not of the standard one |
 | `windows/vessel/src/liveness.rs:3533` | `ONE_DAY` | per-world | the give-up fallback span is the local day, not the standard one |
-| `windows/vessel/src/liveness.rs:5085` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
-| `windows/vessel/src/liveness.rs:5672` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
+| `windows/vessel/src/liveness.rs:5100` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
+| `windows/vessel/src/liveness.rs:5687` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
 | `windows/vessel/src/purview.rs:19` | `PURVIEW_RADIUS` | per-species | a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here |
 | `windows/vessel/src/session.rs:527` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
 | `windows/vessel/src/session.rs:537` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
