@@ -493,6 +493,7 @@
 - [The Census Tail](./chronicle/the-census-tail.md)
 - [Skyworld Seams](./chronicle/skyworld-seams.md)
 - [The Observation Series](./chronicle/the-observation-series.md)
+- [Eclipse Rhythm and View](./chronicle/eclipse-rhythm-view.md)
 
 # Appendix: The Frontier
 
