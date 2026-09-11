@@ -12,6 +12,7 @@ pub mod crust;
 pub mod delve;
 pub mod drainage;
 pub mod elevation;
+pub mod facet;
 pub mod facts;
 pub mod features;
 pub mod globe;
@@ -55,6 +56,11 @@ pub use crust::SphereFbm;
 pub use delve::{
     HABITABLE_CEILING_K, delta_t_range_of, rung_at_delta_t, rung_at_depth, rung_evaluation_depth_m,
     rungs,
+};
+pub use facet::{
+    BoundaryParameter, EndpointSide, FacetAddress, FacetFieldSample, FeatureEndpoint, FeatureId,
+    FeatureKind, RealizedCurve, TerminalKind, canonical_corner_sample, canonical_edge_sample,
+    feature_sample,
 };
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
