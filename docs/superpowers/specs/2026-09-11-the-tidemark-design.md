@@ -108,17 +108,56 @@ the same construct at different realms**, which `Stratum`'s own doc already
 asserts ("the pelagic zones and (later) the underworld's geological layers are
 the same construct at different realms, rather than two parallel ones").
 
-### 3.4 The peopled kind
+### 3.4 Six marine peoples, and the rule that keeps them distinct
 
-One kind, following drow's precedent exactly: a single authored separation from
-its surface relatives — the realm gate — and no others. It is the **obligate**
-marine kind, defined by contrast with the `sea-elf` the roster already ships
-(§3.6): the sea elf holds the shelf and sleeps ashore, this kind holds the
-column and cannot. The trap `HabitatRealm`
-names is "distinguishing two kinds by DEPTH, which nothing in the model can
-say", so this campaign authors **one** marine people and not a merfolk/triton
-pair. It carries an `EnvironmentNiche` row scored against the marine names
-already in the basis, joining `drow` as the registry's second occupant.
+**The rule first, because it is the one the predecessors failed.** The Delvers
+authored two subterranean peoples and withdrew them: "a kind whose identity is
+DEPTH cannot be expressed by an axis measured in metres above sea level".
+`habitat_realm_registry` states the general form — "the trap is not authoring a
+subterranean kind, it is distinguishing two kinds by DEPTH, which nothing in the
+model can say."
+
+So this campaign's constraint, and it is testable rather than hortatory:
+
+> **No two marine kinds may differ only by stratum.** Every pair must be
+> separable on at least one axis the model already carries.
+
+That is what makes six kinds legitimate where the Delvers' two were not, and it
+is measured as M5 rather than asserted.
+
+**The axes available**, all shipped: `SocialForm` {Sessile, Solitary,
+Gregarious, Settled}, `Sociality` {Hierarchic, Communal}, `StatusBasis` {Rank,
+Knowledge, Generosity}, `ActivityCycle` {Diurnal, Nocturnal, Crepuscular},
+`ThermalStrategy` {Endothermic, Ectothermic, + the unmodelled third},
+`TrophicMode` {Heterotrophic, Phototrophic, Chemotrophic}, `LifeSchedule`
+{Allometric, Paced{factor}}, plus `MindVector`, `SocietyVector`,
+`PerceptionVector`, `Dispersion`, `Locomotion` and the `EnvironmentNiche`
+vector. `ActivityCycle::Crepuscular` is an explicitly reserved empty slot —
+"idle this campaign; authored now so a future species is a data change" — so
+filling it is invited.
+
+**The proposed slate.** The implementer authors the values; this table fixes the
+*discriminating* assignments, and every kind is `HabitatRealm::Marine`.
+
+| kind | SocialForm | Trophic | Thermal | Cycle | Status | the axis that makes it not-another |
+|---|---|---|---|---|---|---|
+| obligate column-dweller | Settled | Hetero | Endo | Diurnal | Rank | the baseline; realm gate separates it from `sea-elf` |
+| vent commensal | Settled | **Chemo** | Ecto | Nocturnal | Generosity | the only chemotroph; its habitat expires (§4) |
+| pelagic nomad | **Gregarious** | Hetero | Endo | **Crepuscular** | Knowledge | settles nothing — a people that forms no fixed place |
+| abyssal recluse | **Solitary** | Hetero | Ecto | Nocturnal | Rank | `LifeSchedule::Paced` slow; non-visual perception |
+| kelp tender | Settled | **Photo** | (unmodelled) | Diurnal | Generosity | a photosynthetic people, on `treant`/`shrieker` precedent |
+| reef mason | Settled | Hetero | Ecto | Diurnal | **Knowledge** | builds substrate; `Dispersion` narrow, high site fidelity |
+
+Two of these are structurally interesting beyond variety-for-its-own-sake. The
+**pelagic nomad** is `Gregarious`, so it is a people that settles nothing — the
+`SocialForm` doc's own distinction between living socially and living
+sedentarily ("a nomadic band is social without being sedentary", decision 0068)
+gets its first marine instance, and placement must handle a minded kind that
+forms no settlement. The **vent commensal** is the campaign's headline made
+flesh: the one people whose habitat can fail out from under it (§4).
+
+`sea-elf` remains `Surface` and is the seventh member of the contrast set, not a
+seventh marine kind (§3.6).
 
 ### 3.5 The two-way agreement test
 
@@ -157,6 +196,41 @@ load-bearing, and it is the campaign's positive control").
 there is one. It is the **obligate** kind: the one that cannot come ashore, at
 the far end of the scale from sea-elf's shelf. The realm gate is precisely the
 separation between them, and unlike depth it is something the model can say.
+
+### 3.7 The subsistence roster
+
+Six peoples need something to eat, and the roster is thin: the only marine kinds
+today are `giant-octopus`, `giant-squid`, `killer-whale` and `reef-shark` — two
+cephalopods, a cetacean and a shark, which is a predator guild with no base
+under it.
+
+**The line between a named kind and an aggregate stock.** `WaterStocks` already
+carries `plankton`, `chemosynthetic_bloom`, `nutrients` and `kelp_reef` as
+aggregates over every substrate sample. Those stay the *base*, and this campaign
+does not convert them into organisms. A **named kind** is authored when a people
+interacts with it as a thing — eats it, competes with it, is eaten by it, or
+builds from it. Everything below that line remains a field.
+
+The roster the six peoples require, by trophic position:
+
+- **Primary producers:** a kelp (Sessile, Phototrophic) and a reef-building coral
+  (Sessile) — the two that turn `kelp_reef` suitability into something standing.
+- **Grazers and filterers:** a bivalve/mollusk bed and an urchin-analogue
+  grazer, the pair that makes `urchin-barren` (already a name in the environment
+  basis) a reachable state rather than a label.
+- **Forage:** a schooling fish — the missing middle of the existing web, and
+  what a `Gregarious` pelagic people actually follows.
+- **Vent fauna:** a tube-worm analogue (Sessile, Chemotrophic) and a vent
+  scavenger, so the vent commensal has a community rather than a bare chemical
+  gradient.
+- **Scavengers:** a detritivore that closes the loop at depth.
+
+`SocialForm::Sessile` is exactly the slot for the rooted kinds — "Rooted; placed
+on the map, never agentified (autotrophs)" — and `treant`, `shrieker` and
+`twig-blight` are the terrestrial precedent for flora as kinds.
+
+**The web must close**, and that is M6: every marine people's subsistence must
+resolve to a named kind or an aggregate stock, with no dangling requirement.
 
 ## 4. The expiring habitat
 
@@ -220,17 +294,18 @@ tick and consumes no draws; the implementer verifies it rather than assuming it.
 
 ## 7. What is deliberately NOT in this campaign
 
-- **No trophic weight.** No marine kind gains a `CHEMOSYNTHATE` weight and no
-  `TrophicMode` changes. `marine_chemosynthate_supply_field`'s doc assigns that
-  to THE TENANT (underworld-larder metaplan, rung 4) by name. The split is by
-  question, not by realm, and it is the split the underworld already uses:
-  `drow` has a realm gate and no chemosynthate weight; `xorn` weights
-  `CHEMOSYNTHATE` and settles nothing.
+- **The underworld's trophic half stays THE TENANT's.** This campaign takes the
+  *marine* half of the larder metaplan's rung 4 only: the vent commensal weights
+  `CHEMOSYNTHATE` and consumes `marine_chemosynthate_supply_field`, which today
+  reaches no consumer at all. No underworld kind changes, no `Surface`-realm kind
+  gains the weight, and The Winze's unruled symmetric-budget question (metaplan
+  §"Rung 3") is untouched. Rationale in ledger #5: the marine supply is shipped
+  rung-2 work, so its consumer was queued behind an underworld ceiling it never
+  reads.
 - **No species, metabolism, reproduction or per-organism ecology.** Explicit
   non-goals in The Vent and The Living Vent; unchanged here.
 - **No aerial realm.** `MAP-11`'s third medium stays empty. The agreement test
   in §3.5 is what makes it cheap later; building it now would be speculative.
-- **No second merfolk/triton kind.** §3.4.
 - **No reef fragmentation, current networks or signal distortion.**
   `WAT-reef-fragmentation` and `WAT-signal-distortion` stay raw.
 
@@ -258,12 +333,19 @@ succession phase). Report `|A|`, `|B|` and `|A ∩ B|` as **counts** at seeds 42
   That is a larger finding than this campaign, and it is reported as the
   headline rather than absorbed.
 
-**M2 — Does a marine people actually place?** Count marine settlements at seed
-42 at `BuildDepth::Full`, with a floor **and** a ceiling: the campaign succeeds
-if the count is at least 1 and under the count of surface settlements. Zero
-means the realm gate admits nothing and the campaign has shipped an unreachable
-kind; exceeding the surface count means the marine realm is outcompeting land,
-which is a placement defect, not a success.
+**M2 — Do the marine peoples place, and does the nomad refuse to?** Count
+settlements **per marine kind** at seed 42 at `BuildDepth::Full`.
+
+- *Prediction, two-sided:* each of the five `Settled` kinds places at least one
+  settlement and fewer than the surface total; the `Gregarious` pelagic nomad
+  places **exactly zero**, because a kind that forms no fixed place must not
+  form one.
+- *A zero for a `Settled` kind* means the realm gate admits nothing for it and
+  that kind has shipped unreachable. *A non-zero for the nomad* means
+  `SocialForm` is not reaching placement, which is a defect in the opposite
+  direction and would be invisible to a one-sided floor.
+- *Exceeding the surface total* means the marine realm is outcompeting land — a
+  placement defect, not a success.
 
 **M3 — Does the habitat expire?** Over a world-time sweep at seed 42, count
 vertices whose marine availability is non-zero at one instant and zero at a
@@ -282,6 +364,24 @@ availability, before and after `HabitatRealm::Marine` exists, at seed 42.
   names its size. For `sea-elf` this would be visible as a settling people
   losing the shore it builds on.
 
+**M5 — Are the six kinds actually distinct?** For all 15 pairs of marine kinds,
+count the model-carried axes on which the pair differs, **excluding stratum**.
+Report the per-pair count and the minimum over all pairs.
+
+- *Prediction:* the minimum is at least 1 — no pair is separated by depth alone.
+- *If the minimum is 0*, that pair is the Delvers' defect reproduced, and the
+  remedy is to merge the two kinds or re-author one, not to argue the depths are
+  far apart.
+
+**M6 — Does the subsistence web close?** For each of the six peoples, resolve its
+subsistence to either a named kind in the roster or an aggregate `WaterStocks`
+field. Count dangling requirements — demands that resolve to neither.
+
+- *Prediction:* zero dangling.
+- *If non-zero*, the count names exactly which kinds the roster still owes, and
+  the campaign either authors them or moves the demand to an aggregate; it does
+  not ship a people that eats something the world does not have.
+
 **Negative control for M3:** the same sweep with vent phase held constant must
 produce a count of zero. Without it, M3's non-zero count could come from any
 time-varying term in the stack.
@@ -292,12 +392,13 @@ time-varying term in the stack.
    call and leads this list for that reason.
 2. **Which vent representation is authoritative** (§8, M1) — the campaign
    proposes `WaterVent` and measures before committing.
-3. **Is one marine people right?** The campaign now says yes with more
-   confidence than at first drafting: the contrast pair already exists. `sea-elf`
-   holds the shelf as a `Surface` people and the new kind holds the column as an
-   obligate `Marine` one, so the realm gate is doing visible discriminating work
-   from day one — which is what a second authored kind would otherwise have been
-   for. Drow's precedent (one occupant) agrees.
+3. **Is the slate in §3.4 the right six?** The axis assignments are the
+   campaign's proposal, constrained by M5 (no pair separated by depth alone) but
+   not determined by it — several other slates satisfy the same constraint. The
+   two picks worth your eye are the `Gregarious` pelagic nomad (a minded people
+   that settles nothing, which placement has never had to handle in this realm)
+   and the `Phototrophic` kelp tender (a photosynthetic people, precedented by
+   `treant` and `shrieker` but never before a settling kind).
 4. **The name.** "The Tidemark" is provisional; the branch is `campaign/the-tidemark`.
 5. **The reading of the row** (ledger #2): residents of the water column, not
    Bronze Age Collapse raiders.

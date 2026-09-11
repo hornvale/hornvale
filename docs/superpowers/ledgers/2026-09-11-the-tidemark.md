@@ -207,6 +207,59 @@ warm `target/` hands it stale paths (CLAUDE.md's worktree note, and
 `scripts/worktree-take.sh`'s own grep+touch mitigation). The branch is the
 identity that matters; the pool member's directory name is not.
 
+## #5 [G2] — Scope expansion: six peoples and a subsistence roster
+
+**Decision:** At Nathan's direction the campaign grows from one marine people to
+**six**, chosen for variety across shipped trait axes, plus the flora and fauna a
+marine subsistence web needs. The campaign also absorbs the **marine half** of
+the underworld-larder metaplan's rung 4, so the vent commensal weights
+`CHEMOSYNTHATE` and becomes the first consumer of
+`marine_chemosynthate_supply_field`.
+
+**Why the expansion does not reproduce the Delvers' defect:** because the
+instruction was "variety across relevant axes", not "more kinds". The hazard is
+specific and documented — `habitat_realm_registry` states it as "the trap is not
+authoring a subterranean kind, it is distinguishing two kinds by DEPTH, which
+nothing in the model can say", and The Delvers withdrew two peoples over it. The
+remedy is made **testable** rather than promised: spec §3.4 carries the rule
+"no two marine kinds may differ only by stratum", and M5 measures all 15 pairs
+and reports the minimum axis-difference count. A pair scoring 0 is the defect
+reproduced, and the stated remedy is to merge or re-author, never to argue the
+depths are far apart.
+
+**Why the Tenant absorption:** verified rather than assumed, after Nathan asked
+whether THE TENANT had closed. A campaign of that name **did** run and minted
+decision 0516 ("A reachable lock implies a reachable key is left empirical",
+2026-08-30) — chamber locks and keys, following The Chattel, and unrelated to
+the larder. It left no chronicle, retrospective, spec, plan, ledger or
+reconciliation row. The *larder's rung 4* is untouched and still open:
+`BIO-chemotrophy` is `raw` and still reads "no `Surface`-realm kind weights it
+yet, so a vent's own supply reaches no consumer — THE TENANT's job, rung 4", and
+`marine_chemosynthate_supply_field`'s doc still reserves it in the present tense.
+So the reservation is held by an unstarted rung, not by work in flight, and this
+ledger's own earlier Follow-up already argued the marine half is misfiled: the
+supply is shipped rung-2 work queued behind an underworld ceiling it never
+reads. The underworld half, and The Winze's unruled symmetric-budget question,
+stay with THE TENANT untouched.
+
+**Alternatives discarded:** leaving the chemotroph to THE TENANT (would ship the
+campaign's headline — a habitat that expires — with no people depending on a
+vent); absorbing rung 4 entirely (would require ruling The Winze's symmetric
+budget question, which is Nathan's and unruled).
+
+**Ideonomy passes / overturns:** None run for the expansion itself — it is a
+direction from Nathan, not a question the session resolved. One was run for the
+axis slate's *shape* in the sense that the axes were enumerated from the code
+rather than invented; the slate remains a proposal and G3 question 3 puts it to
+Nathan explicitly.
+
+**Capture actions:** Spec §3.4 (the slate and the distinctness rule), §3.7 (the
+subsistence roster and the named-kind-vs-aggregate line), §7 (the narrowed
+Tenant boundary), M5 (pairwise distinctness), M6 (the web closes), and M2
+rewritten two-sided so the nomad's zero settlements is a prediction rather than
+a failure. The observation that a decision-only campaign leaves no
+reconciliation row is recorded in Follow-ups.
+
 ## Follow-ups
 
 - **The aerial realm is the empty fourth sibling.** `MAP-11`'s medium axis is
@@ -235,3 +288,10 @@ identity that matters; the pool member's directory name is not.
   the five-state succession, and has no non-test caller. Which one seating reads
   is the spec's central design question, and "both, separately" is the answer to
   refuse.
+- **A campaign that ships only a decision leaves no reconciliation row.** "The
+  Tenant" minted decision 0516 and has no spec, plan, ledger, chronicle,
+  retrospective or row in `docs/audits/campaign-reconciliation.tsv`, so it is
+  invisible to the coverage test that refused this campaign's first commit
+  (which keys on spec-and-plan campaigns). Not this campaign's to fix, but it is
+  why "did The Tenant close?" could not be answered by looking where one would
+  look.
