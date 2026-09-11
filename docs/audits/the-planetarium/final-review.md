@@ -1,9 +1,7 @@
 # The Planetarium — final visual evidence
 
 The refined candidate has a complete, independently verifiable 4K package and
-measured interactive/repeatability evidence. **Nathan's final G6 visual/merge
-acceptance and publication remain ungranted.** Controller movie/UI review is recorded below; canonical close evidence and G6
-remain separate obligations. This audit does not complete the campaign or move main.
+measured interactive/repeatability evidence. **Nathan accepted the pilot and approved its merge at G6 on 2026-09-11; publication remains outside scope.** Further visual refinement belongs to future campaigns. Controller movie/UI review is recorded below; canonical close evidence and the approval receipt are in [close-review.md](close-review.md). This audit does not complete the campaign or move main.
 
 ## Exact delivered candidate
 

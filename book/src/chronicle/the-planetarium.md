@@ -1,6 +1,6 @@
 # The Planetarium
 
-**September 2026 · implementation review candidate; final visual acceptance and merge pending**
+**September 2026 · pilot accepted at G6; canonical landing pending**
 
 The Observation Series made a checked route from simulation data to a movie,
 but its rasterized text layouts did not deliver the intended visual experience.
@@ -62,10 +62,9 @@ recorded: other campaign builds were active on the desktop. First readiness from
 program entry took 3.027 seconds. Two fresh renderers produced identical pixels
 for the sixteen repeated frame requests; this is a measured result on this Mac,
 not a guarantee for every GPU. Manual mouse-drag delivery through the review tool
-remains unproven. Nathan's visual acceptance and merge remain pending.
+remains unproven. Nathan accepted this pilot and approved its merge on 2026-09-11, with further visual refinement reserved for future campaigns.
 
 The [client guide](../clients/planetarium.md) documents operation and limitations.
 The [campaign ledger](https://github.com/hornvale/hornvale/blob/main/docs/superpowers/ledgers/2026-09-10-the-planetarium.md)
 and [final visual audit](https://github.com/hornvale/hornvale/blob/main/docs/audits/the-planetarium/final-review.md)
-keep the measured provenance. Technical completion does not grant publication or
-settle whether this is the visual quality the project wants.
+keep the measured provenance. This is an accepted first pilot, with the broader visual ambition still ahead. Publication remains outside this campaign.
