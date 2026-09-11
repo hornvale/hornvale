@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-10
 
-**Status:** G3 approved by Nathan on 2026-09-10: “LGTM; let's proceed to the plan!” Implementation and technical qualification are complete. Nathan approved the final visual direction and merge at G6 on 2026-09-11, accepting this pilot for now with further refinement in future campaigns. Canonical landing remains pending; publication is outside scope.
+**Status:** G3 approved by Nathan on 2026-09-10: “LGTM; let's proceed to the plan!” Implementation and technical qualification are complete. Nathan approved the final visual direction and merge at G6 on 2026-09-11, accepting this pilot for now with further refinement in future campaigns. Canonical merge landed at `c0b76af87388ef33fa841b659684cfba52994a0a` on 2026-09-11; publication is outside scope.
 
 **Campaign:** The Planetarium
 
@@ -380,7 +380,7 @@ public film, replace final visual review, or authorize a merge.
 ## 12. Execution decisions for final review
 
 These post-G3 rulings sharpen the approved scope. Nathan accepted the pilot and
-approved its merge at G6 on 2026-09-11; canonical landing remains pending. The [ledger](../ledgers/2026-09-10-the-planetarium.md) records
+approved its merge at G6 on 2026-09-11; canonical merge landed at `c0b76af87388ef33fa841b659684cfba52994a0a` on 2026-09-11. The [ledger](../ledgers/2026-09-10-the-planetarium.md) records
 the alternatives, evidence and costs. Cross-campaign ownership is recorded in
 decisions [0956](../../decisions/0956-planetarium-schedules-a-directed-graphical-study.md),
 [0957](../../decisions/0957-evaluated-astronomy-stays-native.md) and

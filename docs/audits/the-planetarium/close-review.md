@@ -4,8 +4,8 @@ This is the review candidate's close record. Whole-branch technical review is
 approved with three documentation corrections recorded below. The final canonical
 stage passed after main integration, including the Linux visual-client checks.
 Census profiling/accounting is complete with the scope recorded below. Final
-close review is approved; Nathan approved G6 on 2026-09-11. Canonical landing remains pending.
-Nothing in this file grants publication or reports a landed campaign.
+close review is approved; Nathan approved G6 on 2026-09-11. Canonical merge landed at `c0b76af87388ef33fa841b659684cfba52994a0a` on 2026-09-11.
+The campaign is landed; publication remains outside scope.
 
 ## Review artifacts
 
@@ -269,3 +269,31 @@ future campaigns. It does not claim the broader visual ambition is finished.
 The post-approval changes record this decision and prepare the authorized merge;
 the frozen film/app identity remains `81ba2bfa6`. Publication is outside scope.
 The actual canonical merge and heavy result must be read before reporting landing.
+
+
+## Canonical landing — 2026-09-11
+
+Approved candidate `12d434ee5a4c95cf0ab8428ece49bf04d22e1516` landed through
+request `req-12d434ee5a4c-20260911T164738Z`. All five canonical phases passed.
+The actual merge product was `3e35133ea5c828cd09611e18d4b8edd26c59cc69`; the
+queue pushed and mirrored final revision `c0b76af87388ef33fa841b659684cfba52994a0a`. Root fetched main
+and the campaign branch at that revision and fast-forwarded the clean worktree.
+The workspace suite passed 6,089 tests (719.067 s); the heavy suite passed all
+65 (449.318 s); every client check, including visual-check-run, passed.
+The full log is archived at `task9-controller-review-02/canonical-merge.log`.
+The merge product to final revision changed only four operational files:
+generated-path write counts, timings, subfloor roster, and the lefford baseline
+(120 insertions / 94 deletions). No renderer, scientific fixture or source
+identity changed in that authoring delta. The accepted film/app remain bound
+to their original clean capture revision `81ba2bfa6`.
+
+The earlier running request at `2c3a535ad` was deliberately stopped by the
+operator after about two minutes so the corrected G6 acceptance text could land
+with the implementation; it was not a test failure, and main did not move.
+The replacement above is the completed qualification.
+
+All Planetarium stages are complete. Its section was removed from the temporary
+root tracker, preserving the inherited unfinished Eclipse tracker. Further
+visual refinement remains with future campaigns. This close receipt is a
+prose-only follow-up to the landed implementation, not a new visual candidate.
+Publication remains outside scope; leave the warm worktree in the pool.
