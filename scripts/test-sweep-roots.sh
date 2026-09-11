@@ -106,7 +106,16 @@ mk_crate() {
 mk_crate "$d/repo"
 mk_crate "$d/repo/.claude/worktrees/hidden"
 
-if command -v cargo-sweep >/dev/null 2>&1; then
+# The tool probe is a function with a SEAM so the absent-tool path is itself
+# testable (case 6). Without the seam the only way to exercise that path is to
+# uninstall cargo-sweep, which nobody does, so the message a future reader
+# actually meets would never have been read by anyone.
+have_cargo_sweep() {
+    [ -z "${HV_SWEEP_ROOTS_ASSUME_NO_TOOL:-}" ] || return 1
+    command -v cargo-sweep >/dev/null 2>&1
+}
+
+if have_cargo_sweep; then
     hid="$d/repo/.claude/worktrees/hidden/target"
     before="$(cd "$d/repo" && cargo sweep --dry-run --time 3650 -r . 2>&1)"
     after="$(cd "$d/repo" && bash "$roots_sh" | tr '\n' '\0' \
@@ -122,9 +131,43 @@ if command -v cargo-sweep >/dev/null 2>&1; then
         bad "roots-driven sweep still misses the dot-pool target"
     fi
 else
-    printf '  SKIP: cargo-sweep not installed — case 5 (the only control that\n'
-    printf '        can distinguish this fix from the bug) did not run.\n'
+    # NAME THE HOST AND THE REMEDY. This is the message a fresh chamber host
+    # meets, and on 2026-09-10 it was met by lefford mid-merge: without the
+    # host and the install line it reads as a code regression in the candidate
+    # rather than as a missing dev tool on the box. It stays a FAILURE and not
+    # a skip -- a scope test that opts out of measuring scope is the bug it was
+    # written against.
+    printf '  FAIL: cargo-sweep is not installed on %s.\n' "$(hostname -s 2>/dev/null || echo 'this host')"
+    printf '        A MISSING DEV TOOL ON THIS HOST -- not a code regression.\n'
+    printf '        Case 5 is the only case that distinguishes this fix from the\n'
+    printf '        bug it guards, and it cannot run without the real binary, so\n'
+    printf '        this suite fails rather than reporting a green 5/5.\n'
+    printf '        Install it (decision 0848; CLAUDE.md, the sweep block):\n'
+    printf '            cargo install cargo-sweep   # or: brew install cargo-sweep\n'
     fail=$((fail+1))
+fi
+
+# 6 — THE ABSENT-TOOL PATH ITSELF. Re-runs this script with the seam set and
+# requires it to fail, to name the host, and to print the install line. Skipped
+# when the seam is already set, which is what stops the recursion.
+if [ -z "${HV_SWEEP_ROOTS_ASSUME_NO_TOOL:-}" ]; then
+    out="$(HV_SWEEP_ROOTS_ASSUME_NO_TOOL=1 bash "${BASH_SOURCE[0]}" 2>&1)" && rc=0 || rc=$?
+    host="$(hostname -s 2>/dev/null || echo 'this host')"
+    if [ "$rc" -ne 0 ]; then
+        ok "absent tool fails the suite (rc=$rc), never a green skip"
+    else
+        bad "absent tool did not fail the suite"
+    fi
+    if grep -qF "$host" <<<"$out"; then
+        ok "absent-tool message names the host"
+    else
+        bad "absent-tool message does not name the host"
+    fi
+    if grep -qF "install cargo-sweep" <<<"$out"; then
+        ok "absent-tool message prints the install line"
+    else
+        bad "absent-tool message omits the install line"
+    fi
 fi
 
 printf 'test-sweep-roots: %d passed, %d failed\n' "$pass" "$fail"

@@ -15,6 +15,8 @@ mod anchor_radius;
 mod calendar_negative_time;
 #[path = "suite/day_is_a_whole_tick_count.rs"]
 mod day_is_a_whole_tick_count;
+#[path = "suite/eclipse_rhythm_view.rs"]
+mod eclipse_rhythm_view;
 #[path = "suite/genesis_properties.rs"]
 mod genesis_properties;
 #[path = "suite/golden_seed_42.rs"]

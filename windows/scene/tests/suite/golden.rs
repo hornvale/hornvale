@@ -5,8 +5,9 @@
 //! contract change.
 
 use hornvale_scene::{
-    TileFields, region_json, render_surrounds_ascii, scene_json, scene_json_selected,
-    surrounds_json, surrounds_scene, system_json, system_scene, tiles_region_scene, tiles_scene,
+    TileFields, eclipses_json, eclipses_scene, region_json, render_surrounds_ascii, scene_json,
+    scene_json_selected, surrounds_json, surrounds_scene, system_json, system_scene,
+    tiles_region_scene, tiles_scene,
 };
 
 // Integration tests can't see #[cfg(test)] helpers, and the public API
@@ -37,6 +38,31 @@ fn system_world(
         &Default::default(),
     )
     .expect("pinned system builds")
+}
+
+fn eclipses_seed_42_json() -> String {
+    eclipses_json(
+        &eclipses_scene(
+            &system_world(hornvale_astronomy::StellarTopology::Single, 0),
+            hornvale_astronomy::StdInstant::new(0.0).unwrap(),
+            hornvale_astronomy::StdInstant::new(2000.0).unwrap(),
+            None,
+        )
+        .expect("seed 42's pinned system has eclipses"),
+    )
+}
+
+#[test]
+fn eclipses_v3_bytes_are_pinned() {
+    hornvale_kernel::golden::assert_golden(
+        std::path::Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/eclipses-seed-42.json"
+        )),
+        &eclipses_seed_42_json(),
+        "scene/eclipses/v3 bytes moved; accept deliberately with REBASELINE=1 and review \
+         the complete recurrence, region, and absent-observer contract diff",
+    );
 }
 
 fn seed_1_json() -> String {

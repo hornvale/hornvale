@@ -35,12 +35,13 @@ pub use calendar::{
     wanderer_calendar_marks,
 };
 pub use eclipses::{
-    EclipseBody, EclipseCycle, EclipseEvent, EclipseKind, EclipseSight, GroundTrack,
-    LUNAR_SHADOW_FACTOR, TRACK_HALF_WIDTH_DEG, best_cycle, coincidence_days, draconic_month,
-    eclipse_events, eclipse_year, ground_track, lunar_eclipse_seen, moon_ecliptic_latitude_deg,
-    moon_ecliptic_longitude_deg, node_crossing_chance, node_longitude_at, node_regression_period,
-    parade_days_per_year, series_returns, solar_eclipse_sight, solar_eclipse_threshold_deg,
-    sub_solar_longitude_deg, sun_angular_rel_at,
+    EclipseBody, EclipseCycle, EclipseEvent, EclipseKind, EclipseObserverResult, EclipseRecurrence,
+    EclipseRegion, EclipseSide, EclipseSight, EclipseVisibility, GroundTrack, LUNAR_SHADOW_FACTOR,
+    TRACK_HALF_WIDTH_DEG, best_cycle, coincidence_days, draconic_month, eclipse_events,
+    eclipse_observer_result, eclipse_recurrences, eclipse_year, ground_track, lunar_eclipse_seen,
+    moon_ecliptic_latitude_deg, moon_ecliptic_longitude_deg, node_crossing_chance,
+    node_longitude_at, node_regression_period, parade_days_per_year, series_returns,
+    solar_eclipse_sight, solar_eclipse_threshold_deg, sub_solar_longitude_deg, sun_angular_rel_at,
 };
 pub use ephemeris::{
     OrbitalPosition, StellarIllumination, StellarLight, WandererAppearance, WandererEvent,

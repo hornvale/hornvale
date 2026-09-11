@@ -121,7 +121,7 @@ directory-shaped rows above.
 ### `book/src/reference/` — 12 unwritten, two authors
 
 - **11 hand-written prose pages** (verified by opening each): seven
-  scene-schema docs (`scene-eclipses-v2.md`, `scene-moons-v1.md`,
+  scene-schema docs (`scene-eclipses-v3.md`, `scene-moons-v1.md`,
   `scene-neighbors-v1.md`, `scene-surrounds-v2.md`, `scene-system-v1.md`,
   `scene-tiles-region-v1.md`, `scene-tiles-v1.md`), plus
   `concept-registry.md`, `layering.md`, `lexicon-of-place.md`,
@@ -144,7 +144,7 @@ directory-shaped rows above.
   one.
 
   (Full 11: `concept-registry.md`, `layering.md`, `lexicon-of-place.md`,
-  `stream-manifest.md`, `scene-eclipses-v2.md`, `scene-moons-v1.md`,
+  `stream-manifest.md`, `scene-eclipses-v3.md`, `scene-moons-v1.md`,
   `scene-neighbors-v1.md`, `scene-surrounds-v2.md`, `scene-system-v1.md`,
   `scene-tiles-region-v1.md`, `scene-tiles-v1.md`.)
 

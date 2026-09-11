@@ -84,6 +84,11 @@ hornvale-almanac::hornvale_almanac$tests::deep_time_section_renders_when_present
 hornvale-almanac::hornvale_almanac$tests::diurnal_lines_render_in_the_land_section
 hornvale-almanac::hornvale_almanac$tests::diurnal_range_is_positive_for_dry_land_and_near_zero_for_ocean
 hornvale-almanac::hornvale_almanac$tests::eclipse_lines_render_under_the_sky
+hornvale-almanac::hornvale_almanac$tests::eclipse_observer_reading_renders_every_physical_visibility_tier
+hornvale-almanac::hornvale_almanac$tests::eclipse_rhythm_names_every_moon_and_family_without_overclaiming_saros
+hornvale-almanac::hornvale_almanac$tests::eclipse_rhythm_names_the_calibrated_saros_only_at_223_over_242
+hornvale-almanac::hornvale_almanac$tests::eclipse_rhythm_states_the_three_return_exeligmos
+hornvale-almanac::hornvale_almanac$tests::empty_eclipse_window_names_both_absent_families
 hornvale-almanac::hornvale_almanac$tests::empty_world_renders_honestly
 hornvale-almanac::hornvale_almanac$tests::every_pantheon_is_named_when_two_peoples_hold_them
 hornvale-almanac::hornvale_almanac$tests::ground_section_names_the_dominant_rock_and_soil_and_is_skipped_when_empty
@@ -91,6 +96,7 @@ hornvale-almanac::hornvale_almanac$tests::ground_section_renders_between_land_an
 hornvale-almanac::hornvale_almanac$tests::land_section_names_point_observation_notables_when_present
 hornvale-almanac::hornvale_almanac$tests::lode_section_is_suppressed_when_empty
 hornvale-almanac::hornvale_almanac$tests::lode_section_renders_between_deep_and_deep_time
+hornvale-almanac::hornvale_almanac$tests::multi_moon_almanac_reports_coincidence_days_once
 hornvale-almanac::hornvale_almanac$tests::night_sky_lines_render_under_sky_before_calendar
 hornvale-almanac::hornvale_almanac$tests::night_sky_lines_render_when_present_and_are_skipped_when_absent
 hornvale-almanac::hornvale_almanac$tests::rains_lines_render_in_the_land_section
@@ -188,6 +194,13 @@ hornvale-astronomy::hornvale_astronomy$eclipses::tests::node_crossing_chance_is_
 hornvale-astronomy::hornvale_astronomy$eclipses::tests::node_regression_period_matches_the_180_minus_i_magnitude
 hornvale-astronomy::hornvale_astronomy$eclipses::tests::node_regression_reproduces_the_lunar_magnitude
 hornvale-astronomy::hornvale_astronomy$eclipses::tests::nodes_regress_westward_one_turn_per_period
+hornvale-astronomy::hornvale_astronomy$eclipses::tests::observer_result_follows_long_directed_sweeps
+hornvale-astronomy::hornvale_astronomy$eclipses::tests::observer_result_follows_retrograde_track_direction
+hornvale-astronomy::hornvale_astronomy$eclipses::tests::observer_result_keeps_locked_world_regions_static
+hornvale-astronomy::hornvale_astronomy$eclipses::tests::observer_result_reports_lunar_night_side_without_a_track
+hornvale-astronomy::hornvale_astronomy$eclipses::tests::observer_result_respects_track_edges_and_longitude_wrap
+hornvale-astronomy::hornvale_astronomy$eclipses::tests::observer_result_validates_latitude_and_normalizes_longitude
+hornvale-astronomy::hornvale_astronomy$eclipses::tests::recurrence_summary_makes_the_exeligmos_exactly_three_returns
 hornvale-astronomy::hornvale_astronomy$eclipses::tests::series_returns_is_symmetric_under_i_and_180_minus_i
 hornvale-astronomy::hornvale_astronomy$eclipses::tests::sight_tiers_partition_the_globe
 hornvale-astronomy::hornvale_astronomy$eclipses::tests::solar_events_cluster_at_the_node_line
@@ -417,6 +430,7 @@ hornvale-astronomy::suite$calendar_negative_time::solar_declination_is_bounded_b
 hornvale-astronomy::suite$day_is_a_whole_tick_count::a_pinned_day_length_is_quantized_too
 hornvale-astronomy::suite$day_is_a_whole_tick_count::every_spinning_worlds_day_is_a_whole_number_of_ticks
 hornvale-astronomy::suite$day_is_a_whole_tick_count::the_continuous_day_length_round_trips_through_the_lattice
+hornvale-astronomy::suite$eclipse_rhythm_view::recurrence_records_are_moon_ordered_with_solar_before_lunar
 hornvale-astronomy::suite$genesis_properties::a_locked_worlds_hemispheres_cull_the_sky
 hornvale-astronomy::suite$genesis_properties::a_spinning_worlds_sky_is_whole_from_any_placed_vantage
 hornvale-astronomy::suite$genesis_properties::alignment_battery_dating_round_trip
@@ -1359,7 +1373,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -1438,6 +1451,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
+hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -1681,7 +1695,6 @@ hornvale-lab::suite$health_calibration::one_stuck_creature_among_nine_recovering
 hornvale-lab::suite$health_calibration::searching_is_not_distress
 hornvale-lab::suite$health_calibration::the_chronic_threshold_is_exact_at_chronic_ticks
 hornvale-lab::suite$hearth_population_calibration::the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close
-hornvale-lab::suite$hearth_population_calibration::the_hearth_never_worsens_a_planted_cold_built_population
 hornvale-lab::suite$individuation::awakening_is_a_fact_and_the_large_owlbear_stays_large
 hornvale-lab::suite$individuation::mighty_things_in_the_cold_north
 hornvale-lab::suite$individuation::the_roster_passes_integrity_and_stays_out_of_the_canon
@@ -2222,6 +2235,7 @@ hornvale-scene::hornvale_scene$surrounds_ascii::tests::the_two_lenses_draw_the_s
 hornvale-scene::hornvale_scene$tests::a_malformed_layer_request_is_rejected
 hornvale-scene::hornvale_scene$tests::albedo_band_is_bright_for_icy_and_dark_for_rocky
 hornvale-scene::hornvale_scene$tests::an_unknown_layer_name_is_rejected_not_dropped
+hornvale-scene::hornvale_scene$tests::eclipse_track_wire_retains_directed_global_sweeps
 hornvale-scene::hornvale_scene$tests::icy_albedo_can_exceed_the_old_zero_point_five_cap
 hornvale-scene::hornvale_scene$tests::icy_composition_damps_maria_fraction_but_never_zeroes_it
 hornvale-scene::hornvale_scene$tests::mass_bias_actually_bites_across_seeds
@@ -3460,6 +3474,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -4478,6 +4493,7 @@ hornvale::suite$repertory_corpus::two_in_a_room_is_frozen_at_its_authored_size
 hornvale::suite$repose_byte_identity::no_rendered_artifact_names_a_geohazard
 hornvale::suite$retired_gate_signposts::retired_gate_targets_refuse
 hornvale::suite$scene_context_discipline::the_catalog_reuses_one_scene_context_per_world
+hornvale::suite$scene_eclipses_cli::help_names_the_v3_observer_query
 hornvale::suite$sentence_corpus::a_classify_only_entry_resolves_as_covered
 hornvale::suite$sentence_corpus::a_deep_ladder_rung_derives_its_full_transitive_closure
 hornvale::suite$sentence_corpus::a_ladder_rung_derives_its_transitive_demand_set
