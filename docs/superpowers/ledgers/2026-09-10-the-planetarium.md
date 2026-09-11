@@ -1649,3 +1649,37 @@ explain the run, but those two readings do not establish that claim. Root
 flagged this before any finding is written; the existing CPU-flat evidence
 stays qualified and the actual live profile is still required. The response
 and transport receipts are retained beside the original notice.
+
+
+## Census profiling — evidence received and inspected
+
+The operator's full reply `e31231fb7e580a7a05c8cfac866385449d98b6dc` reports
+a completed same-ref main-study profile on lefford. Root inspected the actual
+perf header, reports, study log, source HEAD/status and artifact hashes, then
+archived raw perf data and the matching executable outside temporary storage.
+2,789,455 samples, zero lost; 1000 rows, zero refusals; 4.71% largest symbol
+self time. The main-study-only scope, lack of a scaling proof, instrumented
+build, and distinct timing boundaries are retained in
+[the profile audit](../../audits/the-planetarium/census-profile.md).
+
+The per-run yellow-log row records actual live findings and their limits. It
+does not adopt the operator's claims of irreducibility, exclusion of quadratic
+work, first-ever profiling, or overage lying inside the smaller cited spread.
+Threshold recalibration is a separate proposal routed to the existing
+`PROC-census-budget-denominated-by-cpu-ratio` row; this campaign changes no
+alarm/refusal bound and performs no performance optimization.
+
+The original null-golden delivery `88e8aeb7` merges cleanly into the current
+branch, bringing six timing rows and two write-manifest count changes. The
+profile worktree's removed schema `backfilled` marker is not imported. The
+normal merge commit hook now gets the original duration together with its
+actual profiled finding; its outcome is recorded at completion.
+
+Before this delivery, main `007936ed6` was absorbed at `7f8947e5d`. Incoming
+changes were tools/prose/timings only; the Makefile declaration keeps both
+visual and reaper targets. The current user's explicit staging-file instruction
+and this campaign's approved plan retain `IMPLEMENTATION_PLAN.md` until
+completion despite main retiring that shared path. Its inherited block is
+Eclipse Rhythm and View (not the earlier remembered Murrain block), and the
+whole file was preserved byte-for-byte. No reaper was run. Scoped tooling
+checks and the ordinary 76-test hook passed, 4.289 s.

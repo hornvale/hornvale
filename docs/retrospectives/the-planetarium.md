@@ -111,3 +111,13 @@ Mac's synced board mirror. When Nathan identified the reply, direct canonical
 reading found it; reading its Git JSON blob also recovered text that even the
 board's full rendering had truncated. A synchronized read is evidence about
 the mirror, not proof that the authoring host has posted nothing.
+
+
+The census alarm was finally examined with a live same-ref, 1000-world
+main-study profile, with raw data and matching executable archived locally.
+The resulting finding is narrower than the operator's first interpretation:
+4.71% maximum individual self time neither proves noise evaluation irreducible
+nor excludes distributed quadratic work. The meeting study and pipeline tail
+were not profiled. The per-run acknowledgement states those limits and changes
+no timing threshold. A measurement with a bounded claim closes this referral;
+a broad claim inferred from a flat profile would merely hide a new uncertainty.
