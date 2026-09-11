@@ -16,14 +16,19 @@ use hornvale_species::{ThermalStrategy as T, TrophicMode as M, biosphere_registr
 use std::collections::BTreeSet;
 
 /// Every pair a kind is allowed to carry. Rung 1 of the Underworld Larder
-/// declared four; rung 2 adds `(Absent, Chemotrophic)`, witnessed by `xorn` —
-/// the visible moment the underworld gains a productive base.
+/// declared four; rung 2 added `(Absent, Chemotrophic)`, witnessed by `xorn`
+/// — the visible moment the underworld gains a productive base. Decision
+/// 0976 ("Ametabolic life is a category error", The Trencher) then closed
+/// that pair: a living kind always has a metabolism, so `xorn` moved to
+/// `Unmodelled` and this table sanctions `(Unmodelled, Chemotrophic)` in its
+/// place. `(Absent, Absent)` is unaffected — it stays the reserved
+/// ghost/construct/undead corner, not a creature's pair.
 const SANCTIONED: &[(T, M)] = &[
     (T::Endothermic, M::Heterotrophic),
     (T::Ectothermic, M::Heterotrophic),
     (T::Unmodelled, M::Phototrophic),
     (T::Absent, M::Absent),
-    (T::Absent, M::Chemotrophic),
+    (T::Unmodelled, M::Chemotrophic),
 ];
 
 #[test]
@@ -60,6 +65,15 @@ fn every_kind_carries_a_sanctioned_pair() {
 /// witness-count guard going forward: exactly one kind today, and a second
 /// carrier appearing (or `xorn` losing the variant) is exactly as much a
 /// finding as zero carriers was before rung 2.
+///
+/// **This is still true history, and it is about the TROPHIC half.**
+/// `xorn`'s thermal half moved separately, later: decision 0976 ("Ametabolic
+/// life is a category error", The Trencher) took `xorn`'s thermal strategy
+/// off `Absent` (it is alive, so `Absent`/`Chemotrophic` was never a stable
+/// resting point — a living kind with no metabolism at all is the category
+/// error). `xorn` carries `Unmodelled`/`Chemotrophic` today; only the pair's
+/// first element changed, and this test's own claim (exactly one
+/// `Chemotrophic` carrier, named `xorn`) is unaffected.
 #[test]
 fn chemotrophic_is_declared_and_unwitnessed() {
     let carriers: Vec<&str> = biosphere_registry()
@@ -204,8 +218,9 @@ fn sanctioned_thermal_keys_are_pairwise_distinct() {
     assert_eq!(
         SANCTIONED.len(),
         5,
-        "rung 1 declared four sanctioned pairs and rung 2 adds \
-         (Absent, Chemotrophic); if this count moved again, re-read this \
-         test's doc before adjusting the number"
+        "rung 1 declared four sanctioned pairs and rung 2 added a fifth \
+         (originally (Absent, Chemotrophic), replaced by decision 0976 with \
+         (Unmodelled, Chemotrophic)); if this count moved again, re-read \
+         this test's doc before adjusting the number"
     );
 }

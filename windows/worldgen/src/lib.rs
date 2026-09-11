@@ -12394,16 +12394,75 @@ mod tests {
         );
     }
 
+    /// **Decision 0976 moved this test's witness.** `xorn` used to be the
+    /// shipped roster's only ametabolic kind (`ThermalStrategy::Absent`),
+    /// and this test asserted that fact directly off its registry row. 0976
+    /// ("Ametabolic life is a category error", The Trencher) ruled that a
+    /// living kind always has a metabolism, moved `xorn` to `Unmodelled`,
+    /// and — by the same rule — closed off any future living kind ever
+    /// reaching `Absent` again: `biosphere_registry` will not carry an
+    /// ametabolic row going forward, so this guard can no longer be
+    /// witnessed through the registry at all. The mechanism it protects
+    /// (`cascade_regime_of` must read `life_history`'s honest `None`, never
+    /// the bare `lifespan` call, for an ametabolic kind) is still live code,
+    /// so the witness moves to a directly-constructed row — cloned from
+    /// `xorn`'s own (mass 55 kg, `Solitary`), with `thermal_strategy` forced
+    /// back to `Absent` — rather than disappearing with its registry
+    /// carrier.
     #[test]
     fn an_ametabolic_kind_is_never_asked_for_a_lifespan() {
-        // xorn is ametabolic: life_history reports no lifespan at all, yet the
-        // bare allometry returns 64.97 yr for its mass. The regime must not be
-        // decided by that number. Solitary + no lifespan banks at SETTLED.
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let xorn_bio = wc
+            .biosphere
+            .get_by_label("xorn")
+            .expect("xorn has a row")
+            .clone();
+        // A synthetic ametabolic fixture: xorn's own row (mass 55 kg,
+        // Solitary), with the one axis decision 0976 took off it forced back
+        // to Absent. `life_history` reports no lifespan at all for it, yet
+        // the bare allometry returns 64.97 yr for the same mass — see
+        // `xorn`'s own committed row in `life-history-all-kinds.txt`, which
+        // now carries that exact number for real. The regime must not be
+        // decided by that bare number. Solitary + no lifespan banks at
+        // SETTLED.
+        let ametabolic_bio = hornvale_species::BiosphereTraits {
+            thermal_strategy: hornvale_species::ThermalStrategy::Absent,
+            ..xorn_bio
+        };
+        assert_eq!(
+            cascade_regime_of(&ametabolic_bio),
+            hornvale_language::CascadeRegime::SETTLED
+        );
+    }
+
+    /// **`xorn` itself, post-0976: alive, `Unmodelled`, and still SETTLED.**
+    /// It now has a real lifespan (~64.97 yr, matching the synthetic fixture
+    /// above by construction — same mass, same pace multiplier) that sits
+    /// well under [`LIFESPAN_THRESHOLD_YEARS`], so its regime is unchanged
+    /// even though it is no longer reached through the ametabolic branch.
+    /// Read together with the test above: same numeric outcome, different
+    /// reason it holds.
+    #[test]
+    fn xorn_is_alive_and_still_settled() {
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         let xorn = wc.biosphere.get_by_label("xorn").expect("xorn has a row");
         assert_eq!(
             xorn.thermal_strategy,
-            hornvale_species::ThermalStrategy::Absent
+            hornvale_species::ThermalStrategy::Unmodelled,
+            "decision 0976: xorn is alive, so it is not ThermalStrategy::Absent"
+        );
+        let lifespan =
+            hornvale_species::life_history(xorn.mass, xorn.thermal_strategy, xorn.schedule)
+                .lifespan
+                .expect(
+                    "an Unmodelled kind has a metabolism, so life_history reports a real lifespan",
+                );
+        assert!(
+            lifespan.get() < LIFESPAN_THRESHOLD_YEARS,
+            "xorn's lifespan {} yr is expected to sit under the threshold \
+             ({LIFESPAN_THRESHOLD_YEARS} yr); if it moved above it, xorn's \
+             regime would change too",
+            lifespan.get()
         );
         assert_eq!(
             cascade_regime_of(xorn),

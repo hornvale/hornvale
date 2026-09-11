@@ -130,17 +130,27 @@ fn metabolic_class_coverage_matches_the_table() {
                 "rust-monster",
             ],
         ),
-        // WITNESSED but NOT exercised: allometry computes the old `Autotroph`
-        // exactly as an endotherm despite the class doc's surface-limited
-        // claim. See BIO-autotroph-physics and
-        // `autotroph_is_computed_as_an_endotherm_today` in this file.
+        // WITNESSED, by two unrelated debts (decision 0976 added the
+        // second). `shrieker`/`treant`/`twig-blight`: allometry computes the
+        // old `Autotroph` exactly as an endotherm despite the class doc's
+        // surface-limited claim — see BIO-autotroph-physics and
+        // `autotroph_is_computed_as_an_endotherm_today` in this file. `xorn`:
+        // a living chemolithotroph whose thermal coupling to the rock it
+        // burrows through is a modelling call nobody has made — moved here
+        // from `ThermalStrategy::Absent` by decision 0976 ("Ametabolic life
+        // is a category error"), which ruled that a living kind always has a
+        // metabolism.
         (
             ThermalStrategy::Unmodelled,
             Rung::Witnessed,
-            &["shrieker", "treant", "twig-blight"],
+            &["shrieker", "treant", "twig-blight", "xorn"],
         ),
-        // The sole carrier of the `None` life-history branch.
-        (ThermalStrategy::Absent, Rung::Witnessed, &["xorn"]),
+        // Reserved, not retired (decision 0976): no living kind may carry
+        // this value, so it is `Declared`-but-uninhabited until the project
+        // authors its first genuinely non-living kind (a ghost, a construct,
+        // an undead). `xorn` was its only carrier and moved to `Unmodelled`
+        // above.
+        (ThermalStrategy::Absent, Rung::Declared, &[]),
     ];
     for (class, rung, witnesses) in expected {
         let actual = thermal_witnesses(*class);
@@ -152,6 +162,27 @@ fn metabolic_class_coverage_matches_the_table() {
         };
         assert_eq!(&actual_rung, rung, "{class:?} rung");
     }
+}
+
+/// Decision 0976: a living kind always has a metabolism, so
+/// `ThermalStrategy::Absent` is for things that are not alive. Nothing in the
+/// shipped roster is such a thing, so the variant is `Declared`, not
+/// `Witnessed`.
+///
+/// **This going RED because someone added a carrier is the point.** The fix is
+/// not to delete this test — it is to ask whether the new kind is alive. If it
+/// is, it wants `Unmodelled` or a real thermal strategy; if it is not, it
+/// wants its own treatment rather than a `BiosphereTraits` row with the life
+/// nulled out.
+#[test]
+fn no_living_kind_is_ametabolic() {
+    let carriers = thermal_witnesses(ThermalStrategy::Absent);
+    assert!(
+        carriers.is_empty(),
+        "ThermalStrategy::Absent is carried by {carriers:?}, but decision 0976 \
+         reserves it for kinds that are not alive. A creature with a trophic \
+         mode has a metabolism."
+    );
 }
 
 #[test]

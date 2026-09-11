@@ -278,3 +278,117 @@ a question #4's pass surfaced and explicitly declined to answer.
 **Capture actions:** decision 0976 with README row and regenerated digest;
 plan Stage 0 / Task 0 rewritten from a doc fix into a real change with a
 rebaseline and a guard.
+
+---
+
+## #6 [R] — Task 0 executed: `xorn` moved `Absent` → `Unmodelled`
+
+**Files touched, beyond the brief's three.** The brief named
+`domains/species/src/lib.rs`, `tests/suite/coverage.rs` and
+`tests/suite/metabolic_pairs.rs`. Two more sites broke and needed fixing to
+get `make gate-commit` green, neither anticipated by the brief or the ledger
+above:
+
+- **`domains/species/tests/fixtures/life-history-all-kinds.txt`** (byte
+  golden) — `xorn`'s row moved from `0	-	-	-	-	0.38674726` to
+  `68.667452	64.972103	12.994421	0.5801209	28.587725	0.38674726`: real BMR,
+  lifespan, maturity, tempo and generation length where it had none; `pace`
+  unchanged (both `Absent` and `Unmodelled` carry pace multiplier `1.0`).
+  `domains/species/tests/suite/life_history_golden.rs`'s
+  `the_life_history_table_is_not_vacuous` asserted the fixture must witness
+  the ametabolic (`None`) branch — a requirement decision 0976 makes
+  permanently unsatisfiable through `biosphere_registry` (a future non-living
+  kind "will want their own treatment rather than a `BiosphereTraits` row
+  with the life nulled out", per 0976's own consequences). Removed that
+  clause; the branch itself is still guarded directly, by `allometry.rs`'s own
+  unit tests at `life_history(.., Absent, ..)` (lines 246, 356) and by
+  `is_ametabolic_is_true_only_for_the_absent_thermal_strategy` — neither needs
+  a registry carrier.
+- **`windows/worldgen/src/lib.rs`**: `tests::an_ametabolic_kind_is_never_asked_for_a_lifespan`
+  asserted `xorn.thermal_strategy == Absent` directly off the registry and
+  used that to exercise `cascade_regime_of`'s "read `life_history`'s honest
+  `None`, never the bare `lifespan()`" discipline. Since no living kind can
+  ever carry `Absent` again, the witness moved to a **directly-constructed**
+  `BiosphereTraits` (cloned from `xorn`'s own row, mass 55 kg, `Solitary`,
+  `thermal_strategy` forced back to `Absent`) rather than disappearing with
+  its registry carrier. Added a second test, `xorn_is_alive_and_still_settled`,
+  confirming `xorn` itself now carries `Unmodelled`, has a real lifespan
+  (~64.97 yr), and still resolves to `CascadeRegime::SETTLED` — same numeric
+  outcome as before, different reason it holds (its lifespan sits under
+  `LIFESPAN_THRESHOLD_YEARS = 120.0`, not because it has none).
+- **`windows/lab/tests/fixtures/affect-trace-seed-42.txt`** (byte golden,
+  found only by running the full `--no-fail-fast` suite across
+  species/worldgen/vessel/almanac/lab — `gate-commit`'s sub-floor tier does
+  not reach it). `xorn`'s entire 40-tick block moved from a flatlined
+  `Content arousal=0.0` (the ametabolic case: no drives ever fire) to real
+  `Searching`/`Eager`/`Frustrated` cycling through `Danger`/`Fatigue`/`Social`
+  objects — the same shape every other living creature's block already has.
+  Confirmed by diff that **only** `xorn`'s block moved (one hunk); no other
+  creature's trace changed. `affect_trace_golden.rs`'s own doc says a diff
+  here "needs investigation before acceptance" because it is meant to catch
+  semantic regressions from cache/memo work — investigated: this is `xorn`
+  newly experiencing hunger/fatigue/danger because it is alive, exactly
+  0976's claim, not a caching artifact. Rebaselined with
+  `REBASELINE=1 cargo test -p hornvale-lab --test suite -- affect_trace_golden`.
+
+**SANCTIONED pair count: 5 before, 5 after** (net unchanged — removed
+`(Absent, Chemotrophic)`, added `(Unmodelled, Chemotrophic)`). Every other
+`SANCTIONED`/`PINNED` assertion in `metabolic_pairs.rs` still passes for the
+right reason, re-verified rather than assumed: `sanctioned_thermal_keys_are_pairwise_distinct`
+still finds a duplicated thermal key (now at `Unmodelled`, was at `Absent`) so
+its per-kind `PINNED` guard is still load-bearing, not vestigial.
+
+**What moved, and it is real (Step 7's branch resolved: something moved, not
+nothing).** Two byte goldens (life-history, affect-trace) plus the
+`plumb-roster.md` line-number churn from doc edits and the ordinary
+`docs/timings.md` ledger rows from `make rebaseline`/`REBASELINE=1` runs.
+`make rebaseline`'s drift check against `docs/generated-paths.txt` shows only
+`docs/audits/plumb-roster.md` (line numbers) — no almanac, elevation map, or
+other committed seed-42 artifact moved, meaning `xorn`'s new BMR/lifespan
+did not visibly shift capacity/occupancy/placement in the specific
+already-committed seed-42 worlds this repo tracks (it may in other seeds; not
+probed).
+
+**Concerns for review, found but NOT fixed — out of this task's declared
+scope, and each risks silently making a modelling call `xorn` never asked
+for:**
+
+1. **`fatigue_rise_registry()` and `sleep_grade_registry()`
+   (`domains/species/src/lib.rs`) still hardcode `xorn` at the floor**
+   (`RATE=0.0` / `NO_GAIN=1.0`), with doc/plumb rationale explicitly reading
+   "`xorn` is ametabolic and can collect nothing" and "`ThermalStrategy::Absent`
+   and `SocialForm::Sessile` are the two traits that reach this floor"
+   (`lib.rs:4673` plumb tag; `coverage.rs`'s
+   `the_sleep_grade_table_carries_a_real_ladder_not_one_repeated_number` test,
+   `~L644-682`). Under the letter of that stated rule, `xorn` no longer
+   qualifies for either floor (it is `Unmodelled`, not `Absent`, and
+   `Solitary`, not `Sessile`) — yet the tables are untouched, since they are
+   `KindId`-keyed data, not derived from `thermal_strategy`. The affect-trace
+   golden confirms `xorn` **does** now accrue Fatigue/Danger/Social drives in
+   the walk band, so the "collects nothing from a bed" framing is already
+   half-stale in practice while the registry values are unchanged. Whether
+   `xorn` should keep gaining nothing from an afforded site is a fidelity
+   question this task did not have standing to answer (Task 0's own "do not
+   make a silent modelling call" discipline, applied to a different pair of
+   registries than the one 0976 named).
+2. **Several `windows/vessel/src/liveness.rs` unit-test fixtures build a
+   synthetic `Body` with `species: "xorn".to_string()` and
+   `thermal_strategy: ThermalStrategy::Absent` by hand** (lines ~17365,
+   19061, 19130 pre-edit), not read from the registry, so they are
+   functionally unaffected by this change (confirmed: full
+   `-p hornvale-vessel` run is green). They now describe a hypothetical
+   creature sharing `xorn`'s name but not its real (post-0976) thermal
+   strategy — cosmetic, not a defect, left alone.
+
+**Verification run.** `make gate-commit`: green (rc=0, two consecutive runs).
+Full `cargo nextest run --no-fail-fast` across
+`-p hornvale-species -p hornvale-worldgen -p hornvale-vessel -p hornvale-almanac -p hornvale-lab`:
+3160/3160 passed on the second pass (first pass found the two goldens above;
+both rebaselined and re-verified green).
+
+**Ideonomy passes / overturns:** none; execution of #5's ruling plus two
+unplanned repairs to keep the build honest.
+
+**Capture actions:** this entry; task-0-report.md in scratch per the
+dispatch contract; concerns above flagged for the controller/review rather
+than resolved unilaterally.

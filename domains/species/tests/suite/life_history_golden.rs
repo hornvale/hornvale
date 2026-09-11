@@ -69,6 +69,23 @@ fn every_kinds_life_history_is_frozen() {
 /// not all one value. A registry that yielded nothing, or a `life_history`
 /// that returned `None` everywhere, would freeze a table of dashes and the
 /// golden would be silently vacuous.
+///
+/// **The ametabolic-column witness is gone, and decision 0976 is why.**
+/// This test used to also assert that at least one row carried the dashed
+/// (`Option::None`) columns `life_history` returns for
+/// `ThermalStrategy::Absent` — `xorn`, before decision 0976 ("Ametabolic life
+/// is a category error", The Trencher). That decision ruled a living kind
+/// always has a metabolism, moved `xorn` to `Unmodelled`, and left
+/// `ThermalStrategy::Absent` reserved for things that are **not alive**
+/// (construct/undead/ghost) — its own consequences say such a kind "will
+/// want their own treatment rather than a `BiosphereTraits` row with the life
+/// nulled out." `biosphere_registry` therefore has no reason to ever carry
+/// that branch again, and requiring this fixture to witness it would fail
+/// forever by design, not report a real gap. The branch itself is not
+/// unguarded: `allometry`'s own unit tests and
+/// `is_ametabolic_is_true_only_for_the_absent_thermal_strategy`
+/// (`domains/species/src/lib.rs`) exercise `life_history(.., Absent, ..)`
+/// directly, with no registry carrier required.
 #[test]
 fn the_life_history_table_is_not_vacuous() {
     let rendered = render();
@@ -77,11 +94,6 @@ fn the_life_history_table_is_not_vacuous() {
         rows.len() >= 20,
         "only {} kinds rendered — the registry is not being read",
         rows.len()
-    );
-    assert!(
-        rows.iter().any(|r| r.contains("\t-\t")),
-        "no row has an absent life-history column — the ametabolic branch of \
-         `life_history` is not represented, so this fixture cannot witness it"
     );
     assert!(
         rows.iter().any(|r| !r.contains("\t-\t")),

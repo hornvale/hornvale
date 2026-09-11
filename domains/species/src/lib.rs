@@ -2579,8 +2579,34 @@ pub enum ThermalStrategy {
     /// divergence is pinned by `autotroph_is_computed_as_an_endotherm_today`
     /// in `tests/suite/coverage.rs`, so the fix will present as a visible
     /// diff.
+    ///
+    /// **A second, distinct debt joined this variant under decision 0976**
+    /// ("Ametabolic life is a category error"). `xorn` moved here from
+    /// [`Absent`](ThermalStrategy::Absent): it is a living chemolithotroph,
+    /// not an ametabolic construct, but whether a stone-dweller runs warm or
+    /// cold against the rock it burrows through is a modelling call nobody
+    /// has made either — the same "the honest answer is a value that says
+    /// the modelling call was never made" reasoning above, applied to a
+    /// second, unrelated axis. This is not the autotroph case: `xorn` is not
+    /// a phototroph, and the surface/area-limited argument two paragraphs up
+    /// does not apply to it. Read a carrier here as evidence for whichever
+    /// debt actually names it, not as evidence for the other one.
     Unmodelled,
-    /// No metabolism at all (construct/undead analogue): no life-history.
+    /// No metabolism at all — reserved for things that are **not alive**
+    /// (construct/undead/ghost analogue): no life-history.
+    ///
+    /// **Decision 0976** ("Ametabolic life is a category error"): a living
+    /// kind always has a metabolism, so this value is not a thermal strategy
+    /// a creature may carry — it names a *different* axis entirely (alive vs.
+    /// not) than the other three variants (how a living thing's metabolism
+    /// runs). Its only carrier, `xorn`, moved to
+    /// [`Unmodelled`](ThermalStrategy::Unmodelled): it is alive, so its
+    /// thermal behaviour being unmodelled is a different claim than having no
+    /// metabolism at all. This variant is **reserved, not retired**: it is
+    /// the correct value for the first genuinely non-living kind this
+    /// project authors (a ghost, a construct, an undead), and
+    /// `tests/suite/coverage.rs` records it as `Declared`-but-uninhabited
+    /// rather than deleting the branch.
     ///
     /// Named `Absent` rather than `None` because
     /// `rise_at_couples_heat_to_thirst_per_metabolic_class` glob-imports this
@@ -2643,31 +2669,32 @@ pub enum TrophicMode {
 /// trophic-`Absent` diverge — three `(Absent, <live trophic mode>)` and three
 /// `(<live thermal strategy>, Absent)` (spec §4.4); this count is a fact about
 /// the TYPE and does not move with sanctioning. Keep it distinct from the
-/// **eleven** UNSANCTIONED pairs (16 combinations less the 5 sanctioned rows,
-/// as of rung 2's `(Absent, Chemotrophic)`): eleven is what the pair table
-/// refuses, six is what the type merely admits, and only the second is the
-/// direction stated here.
+/// **eleven** UNSANCTIONED pairs (16 combinations less the 5 sanctioned
+/// rows): eleven is what the pair table refuses, six is what the type merely
+/// admits, and only the second is the direction stated here.
 ///
-/// **One of the six is now SANCTIONED AND WITNESSED, and this function did
-/// not go wrong.** This paragraph used to warn about that only
-/// hypothetically ("if that table is ever relaxed to admit a `(Absent, …)`
-/// pair with a live trophic mode, this function is the first place that goes
-/// wrong"); rung 2 of the Underworld Larder did exactly that, and `xorn`
-/// carries `(Absent, Chemotrophic)` today. The reason it is safe is worth
-/// stating rather than left to luck: this function answers "does this kind
-/// have zero basal metabolic rate", not "does this kind draw energy from
-/// nothing" — a chemolithotroph's chemical energy extraction is a non-thermal
-/// process that needs no BMR, so `xorn`'s `thermal_strategy` stayed `Absent`
-/// by construction (see the `xorn` row's own comment in `biosphere_registry`)
-/// precisely so this invariant would hold for it. The remaining five members
-/// of the six stay UNSANCTIONED, and `tests/suite/metabolic_pairs.rs`'s
+/// **Decision 0976 closed the one divergent pair that was ever sanctioned,
+/// and this function never had to change.** This paragraph used to describe
+/// `(Absent, Chemotrophic)` — `xorn`'s pair under rung 2 of the Underworld
+/// Larder — as a deliberate, safe exception: a chemolithotroph's chemical
+/// energy extraction is a non-thermal process that needs no BMR, so `xorn`'s
+/// `thermal_strategy` stayed `Absent` by construction precisely so this
+/// function's invariant would hold for it. Decision 0976 ("Ametabolic life is
+/// a category error") ruled that framing wrong at the root: a living kind
+/// always has a metabolism, so `xorn` moved to
+/// [`ThermalStrategy::Unmodelled`] instead, and `(Absent, Chemotrophic)` left
+/// `SANCTIONED` with it in favour of `(Unmodelled, Chemotrophic)`. As of that
+/// fix, **none** of the six divergent pairs is sanctioned — `SANCTIONED`
+/// pairs `Absent` only with itself (`(Absent, Absent)`, the
+/// ghost/construct/undead corner) — so this function's thermal-axis-only
+/// reading needs no special-case argument any more; it is correct for every
+/// kind in the registry today by the same argument that made it correct
+/// before rung 2 ever landed. `tests/suite/metabolic_pairs.rs`'s
 /// sanctioned-pair table — which consults every kind's pair in the workspace
 /// suite, and in the commit gate once a green chamber run records its
 /// baseline duration into `docs/timings/subfloor-roster.tsv` — is still what
-/// enforces that. If the table admits a live-thermal/`Absent`-trophic pair,
-/// or a second `Absent`-thermal/live-trophic pair whose kind lacks the same
-/// zero-BMR argument `xorn`'s has, this function is the first place that goes
-/// wrong.
+/// would catch a future kind reintroducing a divergent sanctioned pair; if it
+/// ever does, this is again the first place to check.
 ///
 /// A two-axis signature was specified and is not available: every one of the
 /// four call sites holds a `ThermalStrategy` and nothing else, because `Body`
@@ -3799,7 +3826,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             KindId("xorn"),
             BiosphereTraits {
                 mass: Mass::new(55.0).unwrap(),
-                thermal_strategy: ThermalStrategy::Absent,
+                thermal_strategy: ThermalStrategy::Unmodelled,
                 trophic_mode: TrophicMode::Chemotrophic,
                 niche: ResourceVector::new(&[(MINERAL, 0.65), (CHEMOSYNTHATE, 0.35)]).unwrap(),
                 condition_niche: xorn_condition_niche(),
@@ -3810,9 +3837,14 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 // through stone and lives IN the substrate, not on it, eating
                 // both mineral and the rock column's own chemical energy — a
                 // chemolithotroph, not merely ametabolic. `thermal_strategy`
-                // stays `Absent` (unchanged; ametabolism is a thermal-axis
-                // fact and `is_ametabolic` reads that axis only), so xorn's
-                // BMR and the life-history golden do not move.
+                // is `Unmodelled`, not `Absent` (decision 0976, "Ametabolic
+                // life is a category error", The Trencher): xorn is alive, so
+                // it has a metabolism — `Absent` is reserved for things that
+                // are not alive. Whether a stone-dweller runs warm or cold
+                // against its rock is a modelling call nobody has made, which
+                // is exactly what `Unmodelled` says. xorn's BMR and lifespan
+                // now DO move: it gains a `B0_ENDOTHERM`-scaled basal rate and
+                // a life history where it previously had neither.
                 //
                 // THE SOURCES, Task 9: the `CHEMOSYNTHATE` weight deferred
                 // from this row's authoring (Ruling P2) — it could not be
