@@ -45,57 +45,104 @@
 
 ## Stage 0 — A defect on `main`, ahead of the refactor
 
-### Task 0: `Absent` means three things, and one kind proves it
+### Task 0: `xorn` is alive — move it off `Absent`
 
 **Files:**
-- Modify: `domains/species/src/lib.rs` (`ThermalStrategy::Absent`'s doc)
-- Modify: `docs/superpowers/ledgers/2026-09-11-the-trencher.md`
+- Modify: `domains/species/src/lib.rs` (`xorn`'s `thermal_strategy`; `ThermalStrategy::Absent`'s and `Unmodelled`'s docs)
+- Modify: `domains/species/tests/suite/coverage.rs` (the witness table)
+- Modify: `domains/species/tests/suite/metabolic_pairs.rs` (if `SANCTIONED` names the pair)
 
-**Why this runs BEFORE Stage 1.** The split would otherwise propagate an
-ambiguous token into three places. Fixing the vocabulary's meaning first is
-cheaper than fixing it three times after.
+**Governing decision: 0976, "Ametabolic life is a category error."** Read it
+first; it is this task's authority and it was ruled today.
 
-- [ ] **Step 1: Read the three absences and confirm the finding for yourself**
+**Why this runs BEFORE Stage 1.** The split would otherwise copy an ambiguous
+token onto three axes. Fixing meaning once is cheaper than fixing it three
+times.
+
+- [ ] **Step 1: Confirm the state for yourself**
 
 ```bash
-sed -n '/pub enum ThermalStrategy/,/^}/p' domains/species/src/lib.rs
 grep -rn 'ThermalStrategy::Absent' --include='*.rs' domains/ windows/
+sed -n '50,80p' domains/species/src/allometry.rs
 ```
 
-Measured before this plan: `TrophicMode::Absent` has **zero** carriers;
-`ThermalStrategy::Absent` has **one** (`xorn`); `allometry.rs:71` returns
-basal rate `0.0` for it and `:125` returns `None` for lifespan. `xorn` is
-simultaneously `TrophicMode::Chemotrophic` with an authored `CHEMOSYNTHATE`
-weight of 0.35.
+Measured before this plan: `ThermalStrategy::Absent` has **one** carrier
+(`xorn`); `allometry.rs` returns basal rate `0.0` for it and nulls the
+biological traits, so a carrier has no lifespan; `coverage.rs` registers
+`xorn` as its `Rung::Witnessed` witness. `xorn` is simultaneously
+`TrophicMode::Chemotrophic` with a `CHEMOSYNTHATE` weight of `0.35`.
 
-- [ ] **Step 2: Correct the doc's gloss, and ONLY the gloss**
+- [ ] **Step 2: Write the failing test — `Absent` is uninhabited**
 
-`ThermalStrategy::Absent` reads "No metabolism at all (construct/undead
-analogue): no life-history." That sentence was written when the enum was
-`MetabolicClass` — it still references the deleted `MetabolicClass::Autotroph`
-— and on a purely **thermal** axis, post-Gossan, it claims more than the axis
-can say. Its own sibling `Unmodelled` shows the careful form: "Has a
-metabolism; its thermal behaviour is not modelled."
+```rust
+/// Decision 0976: a living kind always has a metabolism, so
+/// `ThermalStrategy::Absent` is for things that are not alive. Nothing in the
+/// shipped roster is such a thing, so the variant is `Declared`, not
+/// `Witnessed`.
+///
+/// **This going RED because someone added a carrier is the point.** The fix is
+/// not to delete this test — it is to ask whether the new kind is alive. If it
+/// is, it wants `Unmodelled` or a real thermal strategy; if it is not, it
+/// wants its own treatment rather than a `BiosphereTraits` row with the life
+/// nulled out.
+#[test]
+fn no_living_kind_is_ametabolic() {
+    let carriers = thermal_witnesses(ThermalStrategy::Absent);
+    assert!(
+        carriers.is_empty(),
+        "ThermalStrategy::Absent is carried by {carriers:?}, but decision 0976          reserves it for kinds that are not alive. A creature with a trophic          mode has a metabolism."
+    );
+}
+```
 
-Rewrite it to describe what the value means **on the thermal axis** and what
-it **does** (zero basal rate, no lifespan), without asserting anything about
-trophic mode.
+- [ ] **Step 3: Run it and watch it fail naming `xorn`**
 
-- [ ] **Step 3: Do NOT change `xorn`'s values, and do NOT resolve the tension**
+Run: `cargo nextest run -p hornvale-species --test suite -E 'test(no_living_kind_is_ametabolic)'`
+Expected: FAIL, listing `["xorn"]`.
 
-`xorn` is the authored, tested witness for `ThermalStrategy::Absent`
-(`coverage.rs:143`, `Rung::Witnessed`). Whether a kind with zero basal rate
-and no lifespan should be drawing chemosynthate capacity is a **fidelity
-question about what a xorn is**, and it is Nathan's. **Record it in the
-ledger with both numbers and stop.** Changing an authored witness to tidy a
-vocabulary is exactly the move this project's decision log exists to prevent.
+- [ ] **Step 4: Move `xorn` to `Unmodelled`, and say why at the row**
 
-- [ ] **Step 4: `cargo fmt`, gate, commit**
+`Unmodelled` is "Has a metabolism; its thermal behaviour is not modelled" —
+exactly `xorn`'s situation. **Do not assign `Ectothermic`**, however plausible
+a rock-dweller at cave temperature sounds: that is a modelling call nobody has
+made, and making it silently inside a vocabulary refactor is what 0976 §"Why
+`Unmodelled` rather than `Ectothermic`" forbids.
+
+- [ ] **Step 5: Update both docs**
+
+`ThermalStrategy::Absent` — re-gloss for a **thermal** axis, citing 0976, and
+say it is reserved-and-uninhabited rather than retired. `Unmodelled` — its doc
+is written entirely about the autotroph physics problem and now holds **two**
+debts; say so, or the next reader will think the chemolithotroph case was an
+accident.
+
+- [ ] **Step 6: Update the coverage witness table**
+
+`coverage.rs:143` registers `(ThermalStrategy::Absent, Rung::Witnessed,
+&["xorn"])`. It becomes `Rung::Declared` with no witnesses. **A demotion here
+is a correct outcome, not a coverage regression** — read the file's own doc on
+what the rungs mean before editing.
+
+- [ ] **Step 7: Rebaseline, and READ the diff**
+
+```bash
+make rebaseline
+git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)
+```
+
+**Worlds SHOULD move here** — `xorn` gains a basal metabolic rate where it had
+`0.0` and a lifespan where it had none. Confirm what moved is
+demography/capacity-dependent and consistent with one kind gaining a
+metabolism. **If NOTHING moves, that is the finding**: it would mean `xorn`'s
+thermal strategy reaches no world number, and the campaign should know that
+before Stage 1 builds on the same machinery.
+
+- [ ] **Step 8: `cargo fmt`, gate, commit**
 
 ```bash
 cargo fmt && make gate-commit
-git add domains/species/src/lib.rs docs/superpowers/ledgers/2026-09-11-the-trencher.md
-git commit -m "docs(the-trencher): ThermalStrategy::Absent describes a thermal axis, not a metabolism"
+git add domains/species/src/lib.rs domains/species/tests/suite/coverage.rs docs/superpowers/ledgers/2026-09-11-the-trencher.md $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)
+git commit -m "fix(the-trencher): xorn is alive -- decision 0976"
 ```
 
 ---

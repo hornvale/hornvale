@@ -221,3 +221,60 @@ answer is a split rather than a placement.
 **Capture actions:** plan Task 1 Step 1 carries the rule and the table as a
 requirement; plan gains Stage 0 / Task 0; the `xorn` behavioural question is
 recorded here for Nathan rather than resolved.
+
+---
+
+## #5 [Q] — Ametabolic life is a category error (decision 0976)
+
+**Nathan's ruling**, on the question #4 referred to him rather than resolving:
+ametabolic life does not make sense. If the world wants ametabolic things it
+should have **ghosts** — or constructs, or undead — and those are not
+creatures with a trophic mode.
+
+**Minted as decision 0976** rather than kept in this ledger, because it binds
+future campaigns: a kind needing `ThermalStrategy::Absent` is a signal that it
+is not a creature.
+
+**Consequences, scoped before writing the task rather than discovered in it:**
+
+- **`xorn` moves `Absent` → `Unmodelled`.** It is alive, burrows through
+  stone, and eats mineral and a chemical gradient. `Unmodelled` is literally
+  "Has a metabolism; its thermal behaviour is not modelled."
+- **`Ectothermic` was considered and refused.** A rock-dweller at cave
+  temperature is plausibly ectothermic — which is exactly why assigning it
+  here would be making a modelling call silently, inside a vocabulary
+  refactor, on a plausible-sounding inference. `Unmodelled` exists to say the
+  call was never made.
+- **`ThermalStrategy::Absent` becomes uninhabited**, demoting `Witnessed` →
+  `Declared`. Verified that this is a legal state: `coverage.rs`'s `Rung` enum
+  is exactly two values and `Declared` is "The variant or branch exists; no
+  kind carries it." **Reserved, not retired** — it is the right value for the
+  first genuinely non-living kind.
+- **Worlds move.** `xorn` gains `B0_ENDOTHERM` where it had `0.0`, and a
+  lifespan where `life_history` nulled it. Rebaseline, not epoch: no stream
+  label moves, no consumption order changes.
+- **`Unmodelled` now carries two debts.** Its doc is written entirely about
+  `BIO-autotroph-physics`; it now also holds "is a chemolithotroph thermally
+  coupled to its rock?" The task updates the doc, because a reader meeting two
+  cases under a one-case doc will read the second as an accident.
+
+**The task's guard is written to fail in the useful direction.**
+`no_living_kind_is_ametabolic` REDs if anyone gives `Absent` a carrier, and
+its message says the fix is to ask whether the new kind is alive — **not to
+delete the test.** An uninhabited variant is otherwise exactly the shape of
+thing a later campaign "fills in" to improve coverage, which is the error 0976
+names.
+
+**One branch written into the task deliberately.** Step 7 says worlds *should*
+move, and that **if nothing moves that is the finding** — it would mean a
+kind's thermal strategy reaches no world number, which the campaign needs to
+know before Stage 1 builds on the same machinery. Stated as a branch rather
+than a prediction, per this project's own repeated lesson about imperatives
+with outcomes hiding inside them.
+
+**Ideonomy passes / overturns:** none for this entry; it is Nathan's ruling on
+a question #4's pass surfaced and explicitly declined to answer.
+
+**Capture actions:** decision 0976 with README row and regenerated digest;
+plan Stage 0 / Task 0 rewritten from a doc fix into a real change with a
+rebaseline and a guard.
