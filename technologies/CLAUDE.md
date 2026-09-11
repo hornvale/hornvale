@@ -178,14 +178,56 @@ a fact about the whole instrument, and copying it onto N items states one fact N
 times, which decision 0261 forbids. The two levels are different instruments for
 different facts; keep both.
 
-**The workable cut, and it is enforceable:** a verdict is either **chosen** or
-**inherited**. Chosen verdicts carry a disclosure — every **root** (no
-`presupposes` edge, so nothing upstream forces it), plus every non-root where a
-specific candidate anchor or a non-`absent` verdict was **considered and
-refused**. A non-root whose verdict simply follows the weakest-demand rule from
-an `absent` prerequisite carries none, because the lattice decided it and no
-Hornvale fact did. **Roots are the class the original defect came out of, so
-assert that every root carries one.**
+**The cut, stated exactly because a proxy for it has already failed once:** a
+verdict is either **chosen** or **inherited**.
+
+> **An item's verdict is CHOSEN when no prerequisite anywhere in its derived
+> closure is `absent`.** Nothing upstream forces it, so it rests on a search of
+> the repository. Otherwise it is **inherited**: the weakest-demand rule reads it
+> off an `absent` prerequisite and no Hornvale fact decided it.
+
+**Chosen items carry a `disclosure`. Inherited items do not** — marking them
+would restore the noise decision 0261 and ledger #12 both refuse.
+
+**Do not key this on roots.** An item with no `presupposes` edge at all is a
+strict *subset* of chosen, and keying the check on it under-covers by exactly the
+items whose prerequisites are all non-`absent`. Ledger #13 was filed because a
+round that re-scored one item to `deferred` thereby made two of its dependents
+chosen, and the root-keyed check missed one of them *inside the commit that
+ratified the rule*. **A re-score moves items into the chosen set**, which is
+precisely when the proxy diverges.
+
+**A refusal that could not have changed the verdict is not a choice.** An item
+with an `absent` prerequisite scores `absent` whether or not a candidate anchor
+is accepted, so recording "considered and refused" in its note is evidence, not
+non-blindness. Put the argument in the `note`; leave the `disclosure` off.
+
+**Task 4's resolver enforces the chosen rule**, two-directionally: every chosen
+item carries a `disclosure`, and no inherited item does.
+
+## Do not claim an enforcement the tree does not hold
+
+**A corpus in this family is authored before its resolver exists**, so during its
+authoring task there is nothing to enforce anything, and the validation its author
+runs is a throwaway script in a session scratchpad. `provenance` may describe that
+validation **only in the past tense, naming what was run and that it is not
+committed.**
+
+`asimov-1989` shipped for one round claiming "the build refuses to write this
+file unless every root carries a disclosure." No such harness was committed — and
+the same file's `frozen` field asserts that no evaluation code exists, so two
+fields of one frozen artifact contradicted each other (ledger #13).
+
+**Committing the harness is not the repair.** It would make `frozen`'s claim
+false and break the Global Constraint that no evaluation code exists until the
+corpora land — the single property that makes decision 0016's freeze *structural*
+here rather than promised. **Correct the prose instead**, and let the rule pass to
+the resolver as a requirement.
+
+**Why this is worse than stating nothing:** a cited mitigation that does not
+exist removes the reason to build it. A resolver author reading "enforced" has no
+cause to re-implement the check, so the invariant ends up believed by everyone
+and held by nothing.
 
 ## Two rules for scoring `deferred`, both learned the hard way
 
