@@ -1085,3 +1085,72 @@ whether a pass-through field should exist is a separate question.
 
 **Ideonomy passes / overturns:** none; a structural ruling plus a correction
 of my own measurement.
+
+---
+
+## #14 [G5] — Tasks 1+2 complete: the trichotomy lands
+
+**Approved** (commit `1c234398b`), spec ✅, no Critical or Important findings.
+Workspace `cargo check` 6 → 0; 6070/6070 tests green.
+
+**The review verified exhaustively rather than sampling**, which is what the
+task needed: it extracted all 39 `(kind, TrophicMode)` pairs from the registry
+at `53f8344c4` and all 39 triples at `1c234398b` and diffed them
+programmatically — **0 mismatches**, independently reproducing the mapping and
+matching `metabolic_pairs.rs`'s own `PINNED` table.
+
+**The proof held, and its shape is worth recording.** The rebaseline was NOT
+empty: `book/src/gallery/generated/the-lot-seed-42.md` moved 10 lines. Every
+one is a derived-fact **citation string** naming the old field — a citation
+pointing at a field that no longer exists would be the actual defect. The
+review confirmed by reading the diff that no diet sentence moved at all.
+**A non-empty diff that is entirely citations is a better outcome than a
+literally empty one**, because it proves the citation mechanism is live rather
+than decorative.
+
+**`shrieker`'s known corpus error was PRESERVED, and that was the point.** It
+remains a photolithoautotroph despite eating `DETRITUS`, with
+`ThermalStrategy::Unmodelled`'s "a corpus error left standing on purpose,
+because a data fix inside a structural rename hides both" untouched. A rename
+that quietly corrected it would have hidden two changes in one diff.
+
+**The split justified itself in `slots.rs`.** `diet()` used to key on
+`TrophicMode::Chemotrophic` alone; it cannot any more, because chemo- is now
+**shared between ordinary heterotrophs and `xorn`**. The match moved to the
+full triple and selects identical sets. The old flattened value was conflating
+"gets energy from chemistry" with "eats rock rather than creatures", and
+nothing could see it until the axes came apart — which is the trichotomy's
+whole thesis, demonstrated by the first consumer to meet it.
+
+**The `unreachable!()` is a DISCIPLINE guarantee, not a type-level one**, and
+the review traced it rather than accepting it: every `WorldComponents` path
+routes through `assemble()`, which reads the live registry unfiltered, and
+`every_kind_carries_a_sanctioned_combination` iterates that registry rather
+than a pinned list, so later kinds are covered automatically. But
+`BiosphereTraits`'s fields are `pub`, so nothing in the type system forbids a
+hand-constructed unsanctioned triple outside the registry. Consistent with how
+this repo enforces invariants generally (test ratchets, not types); recorded
+as the soft spot rather than a defect.
+
+## Carried into Stage 2: a name collision this campaign is about to worsen
+
+`hornvale_species::EnergySource` (new — `Phototrophic`/`Chemotrophic`) shares
+its name with the pre-existing `hornvale_worldgen::energy::EnergySource` (the
+seven chemistries — `Serpentinization`, `Radiolysis`, `SulphideOxidation`, …).
+
+Pre-existing and not Tasks 1+2's to fix. **But this campaign puts them in the
+same room:** Stage 2 reworks the worldgen seven into metabolites, Stage 4
+authors kinds on the species two, and someone will need both in one file.
+
+**Which is misnamed is answerable, not a matter of taste.** The species one is
+the **term of art** — microbiology's trichotomy is literally *energy source*
+(photo/chemo) × *electron donor* × *carbon source*. Worldgen's seven are
+energy-yielding **reactions**, not sources in that sense.
+
+**Ruling: defer the rename into Stage 2**, where that vocabulary is being
+redesigned anyway. Renaming during a rework costs a hunk; renaming standalone
+costs a churn commit across a file Stage 2 is about to rewrite. *Cost if
+wrong: Stage 2's implementer meets two `EnergySource`s and has to disambiguate
+imports before the rename lands.*
+
+**Task 1+2: complete** (commits `53f8344c4..1c234398b`, review clean).
