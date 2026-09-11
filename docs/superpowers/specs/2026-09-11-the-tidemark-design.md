@@ -145,7 +145,7 @@ at Task 2's landing and re-verified under review:
 | input | reaches the placement path? | varies across bands? |
 |---|---|---|
 | `height_asl_m` (= `-depth_m`) | yes — the elevation term, and it hard-gates first | **yes**, but four of five are the global constants {0, 200, 1000, 4000, 6000} m; only the seabed band varies per vertex |
-| `temperature_c` | yes | **no** — `WaterFields::from_substrate` passes one `climate.temperature_at(vertex, GENESIS)` to every sample of a vertex |
+| `temperature_c` | **reaches the call and is then discarded** — `tolerance_liebig`'s elevation fast path fires at every vertex for a PREPARED people, so the temperature term is computed and dropped (measured, Task 3) | no — one `climate.temperature_at(vertex, GENESIS)` per vertex, shared by every band |
 | `CHEMOSYNTHATE` supply | yes | **only at a vent vertex's seabed band** — ambient `chemistry` is `has_edifice ? 1.0 : 0.0`, per vertex, and `WaterWorld::at` applies vent deltas at `seabed_sample_index` alone |
 | `insolation` (`field.light`) | **no** — populated per band, read by nothing | (moot) |
 | `moisture` | **no** | no — a constant, `MARINE_MOISTURE` |
@@ -165,6 +165,14 @@ is `climate.insolation()` — a world **scalar** — attenuated by `exp(-depth/1
 It carries no latitude, so it is a deterministic function of depth and would
 duplicate the axis the ladder already has. The gap is not "light is missing"; it
 is that nothing in the pelagic column varies per vertex except the seabed depth.
+
+**This table has now been corrected three times, and the pattern is the lesson.**
+Draft 1 named light as the only missing axis. Draft 2 found temperature and
+chemosynthate band-invariant. Draft 3 found temperature discarded downstream of
+arriving at all. Each correction moved one step further along the path from
+*authored* to *stored* to *read* to *used*, and each draft was written by someone
+who had checked the step before. **An axis is only live at the last of those
+four, and nothing short of following it to the end is evidence.**
 
 **Consequences, all load-bearing:**
 
@@ -546,6 +554,26 @@ reaching placement**. Report the per-pair count and the minimum over all pairs.
   any authored difference, which would have let a pair separated only by
   insolation curves score 1 and pass — a distinctness test satisfied by a
   distinction the engine cannot see.
+
+**M8 — Does a shallow marine kind hold the whole ocean?** Report each marine
+kind's held-vertex count at seeds 42, 7 and 1234.
+
+- **Measured at Task 3's landing, and recorded rather than tuned away:**
+  `reef-mason` holds **26,344 / 18,213 / 26,769** — very nearly the ocean's
+  argmax, against settlement counts that are entirely normal (4).
+- *The cause is structural, not authored:* **depth confines downward only.**
+  Every ocean column has an epipelagic band at height 0, so a shallow kind is
+  near-optimal at *every* ocean vertex; among the shallow kinds the argmax is
+  then decided by a ~0.4% sovereignty-floor difference (reef-mason's 96 kg over
+  triton's 82 kg), because a `BiomeAffinity`'s default **is** the kind's floor.
+  That is a knife edge.
+- *Why it is not retuned here:* the number was found after the slate was
+  authored, so changing a mass or an affinity to move it would be post-unblinding
+  tuning to rescue an appearance. M2 cannot see it — settlements are normal — and
+  the honest report is the number plus the mechanism.
+- *What follows from it:* Task 5 must not lean on marine capacity **magnitude**;
+  and this is MAP-22's competitive-exclusion problem arriving in a new realm,
+  which is the row it belongs to rather than a knob this campaign turns.
 
 **M6 — Does the subsistence web close?** For each of the six peoples, resolve its
 subsistence to either a named kind in the roster or an aggregate `WaterStocks`
