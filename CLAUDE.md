@@ -1294,6 +1294,32 @@ promotion-at-close is the practice that failed five recorded times
 also why `scripts/hooks/pre-commit`'s `.superpowers/` guard comment carries
 the same correction, dated the same day.
 
+**THE SAME DEFECT HAD A SECOND INSTANCE AND IT IS NOW DELETED:
+`IMPLEMENTATION_PLAN.md`** (2026-09-10). The global CLAUDE.md told every
+campaign to stage its work in a file at the repo root, so it was one mutable
+path with no keying and no guard — the ledger's exact shape before The
+Cartulary, and it went unnoticed longer because a *plan* looks like a shared
+document in a way a decision ledger does not. What it actually held was
+whichever campaign wrote last: when this was found, **14 of the ~20 branches
+carrying the file held campaign/the-murrain's plan**, inherited by absorbing
+main, meaningless on every one of them. Only `eclipse-rhythm-view`,
+`the-planetarium` and the `codex/counterpart-*` branches had content of their
+own.
+
+The near-miss that prompted it: a session wrote the file with `cat >` — never
+having read it — and landed the clobber through a commit that staged other
+paths explicitly (`git commit` takes the whole INDEX, not the paths you last
+`add`ed). Zero lines of the-murrain's survived, the merge raised **no
+conflict**, and the-murrain was live with Stage 4 In Progress. No gate saw it;
+the merge queue's operator caught it by reading the file.
+
+**The file is now deleted and gitignored, and staging documents are scratch.**
+Put a staging document where exactly one effort will ever touch it — the
+session scratchpad, or `docs/superpowers/plans/<slug>.md` if it is durable
+enough to commit. **Deleting it is LOUD where the clobber was silent**: a
+branch carrying its own committed copy meets a modify/delete conflict on its
+next absorb and decides for itself, which is the whole point.
+
 On lefford, the regeneration worktree is **shared** — ask before reusing it,
 verify its HEAD, and sweep orphans rather than assuming it is parked where
 you left it.
