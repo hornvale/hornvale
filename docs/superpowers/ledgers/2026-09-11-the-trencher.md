@@ -1272,3 +1272,77 @@ reading into a ratchet. Raised to The Tidemark for their kelp tender as well.
 
 **Ideonomy passes / overturns:** none; a peer's near-miss, verified, which
 overturned its own premise and relocated the hazard.
+
+---
+
+## #17 [Q] — Load-bearingness is checkable only by ablation
+
+**Two findings from The Tidemark, one of which corrects me and one of which
+widens Stage 4.**
+
+**THE CORRECTION, in their words:** *"a guarantee that exists somewhere is not
+a guarantee that exists here."* I told them `no_living_kind_is_ametabolic`
+protected their authoring. It does not — **it lives on `campaign/the-trencher`
+and their tree returns 0 for it.** They acquire it at absorption, and their
+Task 4 authors nine fauna before that. I verified the guard existed *in my own
+tree* and asserted about theirs.
+
+**Same root as my `sentiment` error earlier today** (#13): I read `axes.rs`
+carefully, correctly concluded its uses were test-side, then reported its
+sibling `lib.rs` in the same sentence without checking a line number already
+on my screen. **Verified one thing, asserted about the adjacent one.** Twice in
+a day, in both directions. The generalisation is theirs and it is better than
+mine: *somewhere* is not *here*, and a tree is a "where".
+
+## Their kelp tender, and why it is this campaign's own thesis inverted
+
+```
+lib.rs:5018   kelp-tender niche = (PHOTOSYNTHATE, 0.40), (MARINE_FORAGE, 0.60)
+W5 measured   that PHOTOSYNTHATE weight moves capacity at 0 of 29,679 vertices
+lib.rs:4986   PHOTOSYNTHATE is fed by `base_carrying`, which is TERRESTRIAL
+```
+
+**Coherently authored, legally sanctioned, passes the agreement cross-check I
+proposed — and its photosynthesis does nothing.** Three green nets over an
+inert weight.
+
+**This is The Ceiling's finding inverted.** That campaign measured the
+underworld as *richly derived and thinly read* — nine lithology fields, a
+light ladder, and composition itself, all computed and reaching no consumer.
+Theirs is a **consumer reaching no supply**. An axis with no producer and a
+producer with no consumer are the same broken join seen from opposite ends,
+and **neither end can see it alone**.
+
+## The hierarchy, which I think is the day's durable form
+
+```
+  legality            checkable by a TABLE           (SANCTIONED)
+  coherence           checkable by an AGREEMENT test (two authored fields implying each other)
+  LOAD-BEARINGNESS    checkable ONLY by ABLATION     (remove it; did anything move?)
+```
+
+**Ablation is the only one that answers "does this do anything".** And the
+sting survives: none of the three runs unless someone schedules it. Their kelp
+tender is known decorative only because they instructed an implementer to
+verify the weight moves the score rather than assume it. **Nothing would have
+asked otherwise.**
+
+**This campaign already built the instrument and did not notice it
+generalises.** The Ceiling's M4 — forced into existence by The Staple D5B's
+review, which found that my specified readout could not distinguish a working
+`CHEMOSYNTHATE` weight from an ornamental one — is exactly per-weight
+ablation, run for one kind.
+
+**Consequence taken: plan Task 13's T2 now runs PER AUTHORED ORGANISM**, not
+only for the chemotroph. If that proves too expensive at 8-20 organisms, the
+task must **measure the cost and say so**, then take a sampled version
+deliberately — not decide it is too expensive in advance, which is how a
+measurement becomes an assumption.
+
+**Offered and not absorbed:** whether a marine `PHOTOSYNTHATE` supply is
+genuinely absent or merely unbuilt is a supply-side gap plausibly closer to
+this campaign's Stage 2 than to their Task 4. Offered to carry it; not taking
+it unasked.
+
+**Ideonomy passes / overturns:** none; two peer findings, one correcting my
+own claim.

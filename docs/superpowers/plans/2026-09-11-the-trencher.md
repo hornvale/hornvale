@@ -630,6 +630,20 @@ Kinds exploiting one chemistry — or thaumic flux — hard enough to live only 
 
 ### Task 13: T2 and T3 — is any of it load-bearing?
 
+**SCOPE WIDENED (ledger #17): T2 runs PER AUTHORED ORGANISM, not only for the
+one chemotroph.** The Tidemark measured its own kelp tender to be coherently
+authored, legally sanctioned, passing every cross-check — and its
+`PHOTOSYNTHATE` weight moves capacity at **0 of 29,679 vertices**, because
+that axis is fed by a terrestrial supply and the sea has none. Three green
+nets over an inert weight.
+
+**Ablation is the only instrument that answers "is this load-bearing".** A
+table answers legality; an agreement test answers coherence between two
+authored fields; neither can see a right triple whose supply axis has no
+producer in its realm. If per-organism ablation proves too expensive at 8-20
+organisms, **measure that cost and say so** — then take a sampled version
+deliberately. Do not decide it is too expensive in advance.
+
 **Files:**
 - Modify: `windows/worldgen/tests/suite/trencher_probe.rs`
 
