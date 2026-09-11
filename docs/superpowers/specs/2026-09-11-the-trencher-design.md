@@ -167,6 +167,21 @@ Give `thaumic` a real derivation instead of `0.0`, **gated so an inert world
 is byte-identical to today**. The Ground's reservation is the licence and its
 own terms are the constraint: additive, no epoch, mundane worlds unchanged.
 
+**THE GATE DOES NOT EXIST AND THIS CAMPAIGN BUILDS IT.** Corrected here after
+an earlier draft of this section assumed one: a grep for
+`Metaphysics`/`metaphysics:` across `kernel/`, `domains/`, `windows/` and
+`cli/` returns **no type, no field, no flag** — only doc comments describing
+"the metaphysically-inert tier this campaign builds", which is a statement
+that the current tier is inert *by construction*, not that anything selects
+it.
+
+The shape is settled by precedent rather than invention: `TerrainPins`
+(`domains/terrain/src/pins.rs:9`) is `#[derive(Debug, Clone, Copy, PartialEq,
+Default)]` with every field an `Option`. A metaphysics pin follows it —
+**default `None`, meaning inert**. An unpinned world therefore takes the
+existing code path unchanged, which is what makes The Ground's byte-identity
+condition satisfiable rather than aspirational.
+
 Thaumic then enters the biota as **values on §4.1's axes** — a thaumic donor,
 a thaumic acceptor — not as a new axis and not as a new mechanism.
 
@@ -281,10 +296,20 @@ different metabolites.
   them, which sends §4.5's roster back to authoring rather than the
   vocabulary back to design.
 
-**T4 — Does an inert world move? (a control, and it must not.)** With
-metaphysics inert, seed-42 artifacts must be **byte-identical** to the
-pre-`thaumic` baseline. This is The Ground's own condition on the reservation
-and the campaign fails if it is violated.
+**T4 — The metaphysics gate, TWO-WAY.** A default-off pin makes the
+byte-identity half hold because the new code path never runs, and **a control
+the type system guarantees is not a control**. So both directions are
+asserted:
+
+- **Unpinned (inert):** seed-42 artifacts **byte-identical** to the
+  pre-`thaumic` baseline. The Ground's own condition on the reservation, and
+  the campaign fails if it is violated.
+- **Pinned (thaumic present):** the same seed's artifacts **must differ**, and
+  the readout names *where* — which fields moved, at how many vertices. A pin
+  that changes nothing is a gate wired to a derivation that does not fire, and
+  that failure is invisible from the inert side alone.
+
+Both arms are required. The first alone is the vacuous half.
 
 ## 6. What is deliberately NOT in this campaign
 

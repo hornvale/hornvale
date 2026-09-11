@@ -90,3 +90,44 @@ boundaries").
   campaign's to fix and not depended on (spec §4.6); recorded because a
   `reset --hard` there would take work this campaign's §4.5 assumes will
   eventually exist.
+
+---
+
+## #3 [G2] — The metaphysics gate does not exist, and T4 was half a control
+
+Found at plan-writing time, one hour after the spec was approved. Both are my
+defects in a document I wrote today.
+
+**The gate does not exist.** Spec §4.4 said `thaumic` would be "gated on world
+metaphysics", and a grep for `Metaphysics`/`metaphysics:` across `kernel/`,
+`domains/`, `windows/` and `cli/` returns **no type, no field, no flag** —
+only doc comments saying "the metaphysically-inert tier this campaign builds",
+which describes the current tier as inert *by construction*. The Ground's
+reservation, `UNI-2`, and my own §4.4 all speak of a gate as though one
+existed. **Nothing selects metaphysics today.**
+
+I inherited that assumption from The Ground's prose without checking, which is
+the same error this campaign's predecessor made four separate times — reading
+a document's framing as a description of the code.
+
+**Ruling: the campaign builds the gate, as a default-off pin**, following
+`TerrainPins` (`domains/terrain/src/pins.rs:9`), which is `Default` with every
+field an `Option`. Default `None` means inert, so an unpinned world takes the
+existing path unchanged. *Cost if wrong: a pin is part of a world's
+generation inputs, so if pins turn out to carry a contract I have not found,
+this needs re-siting before stage 3 commits.*
+
+**And T4 was the vacuous half of a control.** With a default-off pin, "an
+inert world is byte-identical" holds **because the new code path never runs**
+— a guard the type system guarantees. T4 is now two-way: unpinned must be
+byte-identical AND pinned must differ, with the readout naming which fields
+moved at how many vertices. A pin that changes nothing is a gate wired to a
+derivation that never fires, and the inert arm alone cannot see that.
+
+**Ideonomy passes / overturns:** none; a verification that found a missing
+prerequisite and a vacuous control.
+
+**Capture actions:** spec §4.4 and §5 T4 corrected in place, with the
+correction stated rather than the text quietly replaced — the spec is
+pre-merge and this campaign's own, which is the only condition under which a
+record is repaired rather than superseded.
