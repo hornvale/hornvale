@@ -292,3 +292,90 @@ not by ideation, which is the distinction autopilot's own fold-in rule draws.
 **Capture actions:** decision 0966 committed at `2d799dfa8` with README row and
 regenerated digest, 45 docs-consistency tests green; spec committed; G3 package
 next.
+
+---
+
+## #5 [Q] — Stage 2 re-pointed from the ceiling to the consumer
+
+**Surfaced at G3, ruled by Nathan.** New information arrived after #1's scope
+ruling and cut against the argument #1 was decided on.
+
+**What arrived.** The Staple D5B reported its chokepoint 1: the seven sources
+are averaged into one scalar, and "the only chemosynthate consumer is Xorn,
+which is excluded from settled history. Thus geothermal/redox energy currently
+cannot sustain settled communities."
+
+**Re-verified rather than taken on report** (an inherited diagnosis is a
+hypothesis; this campaign had already been burned once today by a peer's
+correction that was itself wrong — see the wire exchange behind #4). All three
+legs hold at `26003913d`, and the citations are in spec §2a.
+
+**Why it overturns #1's reasoning.** #1 chose rung 3 because rung 4 "Needs
+1-3" and building the consumer first would invert the program's dependency
+order. Two facts break that argument:
+
+1. **The dependency does not exist in the code.**
+   `per_species_capacity_at`'s `Subterranean` arm already reads
+   `chemosynthate_per_rung` and dots it against the kind's own niche weights
+   (`windows/worldgen/src/lib.rs:2425`, `:2390`). A `Settled`, `Subterranean`
+   kind weighting `CHEMOSYNTHATE` draws real carrying capacity **today**, with
+   no rung-3 ceiling in the path. Verified before the re-scope was accepted,
+   because the whole ruling rests on it.
+2. **The Tidemark already won this argument for the marine half.** Its ledger
+   #5: the marine consumer "is waiting on an underworld ceiling it never
+   reads." The same reasoning transfers, and #1 did not notice that it had
+   accepted the argument for one half while rejecting it for the other.
+
+**And the scheduling fact.** Three campaigns now converge on rung 4's
+underworld consumer and **nobody owns it** — The Staple D5B's D6 is blocked on
+it, The Tidemark holds only the marine half, and the name it was reserved
+under ("THE TENANT") belongs to an unrelated landing. Nothing needs rung 3
+today.
+
+**Decision.** Stage 1's measurement is unchanged. Stage 2 authors a settled
+underworld chemotroph instead of the ceiling. The ceiling moves to a successor
+**with the measurement in hand**, and decision 0966 stands and governs it.
+
+**Alternatives discarded.** *Continue as spec'd* (ships a derivation with no
+settled consumer; leaves D5B blocked on unowned work). *Both, staged* (larger,
+and The Winze C.4 puts a consumer's field/variant/draw in its own epoch, so it
+likely crosses a save-format boundary the spec claimed it did not). *Ceiling
+here, consumer as a separate concurrent campaign* (two campaigns over the same
+files in the same week — the collision shape CLAUDE.md says no gate has an
+opinion about).
+
+**The name is NOT changed, deliberately.** "The Ceiling" now covers a campaign
+whose Stage 2 is not the ceiling. Renaming would touch the branch, decision
+0966's own `**Campaign:**` line, the reconciliation row, the ledger filename
+and the spec path; The Tidemark renamed mid-campaign this week and its
+commits record a sweep that still missed a site. A slightly loose name is
+cheaper than a rename with residue, and §1 states the re-scope in the document
+a reader meets first.
+
+**Ideonomy passes / overturns:** none run for this entry, and this is the
+second `Q` in this ledger to say so. It is a scheduling-and-dependency
+question settled by a verified code read plus Nathan's ruling, not a design
+space — the design pass that matters (#3) already produced the
+intensive/extensive fork that this re-scope acts on. Flagged in the re-issued
+G3 package so it can be pushed back on rather than buried.
+
+**Capture actions:** spec §1, §2a, §3.1, §3.3, §3.5, §5 and §6 rewritten;
+`BIO-underworld-has-no-energy`'s stale capacity clause recorded in §2a;
+wire message to The Staple D5B confirming its finding, warning about the
+pooling hazard, and pointing at the existing probe scaffolding its stalled
+join was rebuilding; G3 re-issued.
+
+## Follow-ups (added at #5)
+
+- **`BIO-underworld-has-no-energy` carries a stale capacity clause.** "Capacity
+  is computed from INSOLATION and never reads `EnvironmentNiche` … fed by
+  sunlight" is false for the `Subterranean` arm since The Sources wired both
+  the supply and the tolerance. The row's *size* clause is unaffected. Not
+  edited here — the row is another campaign's evidence and the correction
+  belongs with whoever next touches it, but it is recorded so the next reader
+  does not act on it.
+- **The capacity/seating rung mismatch** (The Staple D5B chokepoint 2): the
+  `Subterranean` arm keeps only the best rung and nothing has measured whether
+  the capacity-winning rung differs from the seating rung. That campaign is
+  measuring it; this one asked for the number on the board rather than racing
+  it.

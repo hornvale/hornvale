@@ -11,13 +11,16 @@ asymmetric allocation). **Predecessors:** The Gossan (rung 1), The Sources
 
 ## 1. The one-sentence claim
 
-The underworld can say how much it supports and which kind of consumer it
-supports — **if** the mix of energy sources can tell worlds apart, which
-nothing has measured.
+Measure what the rock can support, then **give it a mouth**: a people that
+lives on chemical energy underground, where today nothing settled does.
 
-The conditional is the campaign. Decision 0966 fixed the shape of the answer
-before the measurement, deliberately (0016); Stage 1 asks whether the shape is
-inhabitable, and **both outcomes ship**.
+**The campaign was re-scoped at G3 (ledger #5) and this section replaces its
+original claim.** It opened as rung 3 alone — derive the ceiling. Three
+campaigns then turned out to be converging on rung 4's *underworld consumer*,
+which nobody owned, while nothing needed the ceiling at all. Stage 1's
+measurement is unchanged; Stage 2 now authors the consumer instead of the
+ceiling, and the ceiling's construction moves to a successor **with the
+measurement in hand**. Decision 0966 stands and governs whoever builds it.
 
 ## 2. What already exists — measured, not assumed
 
@@ -87,6 +90,38 @@ both are run by hand.
 
 **Rung 3 has never run.** No spec, no branch, no chronicle before this one.
 
+### 2a. The budget has no settled consumer — verified at this base
+
+Reported by The Staple D5B (chokepoint 1) and **re-verified here rather than
+taken on report**, because a peer's diagnosis is a hypothesis until re-run:
+
+- `xorn` is the **only** kind in the registry carrying a `CHEMOSYNTHATE`
+  weight — one `ResourceVector`, `domains/species/src/lib.rs:3804`.
+- `xorn` is `SocialForm::Solitary` (`:3807`), not `Settled`.
+- Settlement placement filters on `SocialForm::Settled`
+  (`windows/worldgen/src/lib.rs:5552`, `:5902`, `:8088`), and the codebase
+  states the consequence itself at `domains/species/src/lib.rs:3300` about
+  another non-`Settled` kind: it "moves capacity and occupancy but places no
+  settlement."
+
+**So chemical energy underground cannot sustain a settled community today**,
+and a ceiling derived over it would be a quantity history cannot observe.
+
+**But the machinery to consume it is already wired, and that is the finding
+that makes Stage 2 cheap.** `per_species_capacity_at`'s `Subterranean` arm
+(`windows/worldgen/src/lib.rs:2425`) reads `chemosynthate_per_rung` at each
+rung of `Band::habitation()` and passes it into `score_at`, whose `per_axis`
+array carries `(CHEMOSYNTHATE, chemosynthate)` and is dotted against the
+kind's own `niche_weights` (`:2390`). A `Settled`, `Subterranean` kind
+weighting `CHEMOSYNTHATE` therefore draws real carrying capacity from rock
+chemistry **with no rung-3 ceiling in the path**.
+
+**This retires a standing registry claim.**
+`BIO-underworld-has-no-energy` says "Capacity is computed from INSOLATION and
+never reads `EnvironmentNiche` … a people seated 800 m down is fed by
+sunlight." That is **stale for the `Subterranean` arm**: The Sources wired
+both the supply and the tolerance. The row's size clause is unaffected.
+
 ## 3. Design
 
 ### 3.1 Two quantities, one field, read twice
@@ -98,9 +133,15 @@ the seven-vector prematurely**:
 - **Allocation** — which consumer class it favours. Composition.
 
 `subterranean_energy` is the monolith (mean of seven); `dominant_source` is the
-first crack in it. This campaign does not replace either. It asks whether the
-composition half carries enough signal to be the allocation axis, and builds
-the ceiling the answer supports.
+first crack in it. This campaign replaces neither. It asks whether the
+composition half carries enough signal to be the allocation axis, then — per
+the re-scope in §1 — **builds the consumer that makes the budget observable at
+all**, and hands the measurement to whoever builds the ceiling.
+
+**Which is the order the evidence supports, not a retreat from rung 3.** A
+ceiling is a bound on consumption, and §2a establishes there is no settled
+consumption underground to bound. Deriving the bound first would have produced
+a quantity nothing eats and history cannot see.
 
 ### 3.2 Stage 1 — the measurement, and nothing else
 
@@ -127,47 +168,69 @@ no new world generation, no new stream, no draw.
 
 ### 3.3 The branch table — decision rules, not predictions
 
-Stage 2's shape is determined by Stage 1's result, and the branches are
-enumerated here so the implementer meets a decision rule rather than a
-prediction to rescue.
+Stage 1's result no longer decides whether a ceiling gets built here; it
+decides **what kind of consumer Stage 2 authors** and **what the successor
+inherits**. Enumerated as branches so the implementer meets a decision rule
+rather than a prediction to rescue.
 
-| M1 (composition separates?) | M2 (compression cause) | Stage 2 builds |
-|---|---|---|
-| **≥ 3 at some rung** | either | The ceiling on the seven-vector: budget from magnitude, allocation from composition. 0966 stands as written, and the allocation axis is **rich**. |
-| **exactly 2** | either | The same ceiling, and the spec records that the allocation axis is **binary, not rich** — the quadrants are reachable but coarse, and a successor wanting finer grain must widen the read rather than assume it. 0966 stands, narrowed. |
-| **exactly 1** | mean is a major cause | **The combination rule is the deliverable.** Composition is real within a world but the shipped scalar hides it; Stage 2 fixes `subterranean_energy`'s combination and re-measures M1 against the fixed field. 0966 held in abeyance, not superseded. |
-| **exactly 1** | rock is the cause | **The null is the headline.** Composition cannot carry allocation. 0966 is superseded by a record choosing between C.3's original two, and Stage 2 ships the magnitude-only ceiling plus §3.4's calibration finding. |
+| M1 (composition separates?) | M2 (compression cause) | Stage 2 authors | the successor inherits |
+|---|---|---|---|
+| **≥ 3 at some rung** | either | a consumer whose niche favours a **named dominant source**, so where it can live is a fact about that world's chemistry | a rich allocation axis; 0966 stands as written |
+| **exactly 2** | either | the same, on a **binary** axis — the kind tracks one of two sources | a coarse but real axis; 0966 stands, narrowed |
+| **exactly 1** | mean is a major cause | a consumer on the **aggregate** supply, plus the finding that the shipped scalar hides an axis the successor must fix before building the ceiling | a combination rule to repair first |
+| **exactly 1** | rock is the cause | a consumer on the **aggregate** supply | **the null as headline**: composition cannot carry allocation, and 0966 is superseded by a record choosing between C.3's original two |
 
 **Row 2 is the one to expect.** No prior measurement supports richness, and
-§4's own depth evidence shows the strongest composition signal running along an
-axis (depth) that every world shares. Naming the expected row here is not a
+§4's own depth evidence shows the strongest composition signal running along
+an axis (depth) that every world shares. Naming the expected row is not a
 prediction to rescue — §4's prediction is `M1 >= 2` and nothing below asserts
-on which row lands — it is so that a result landing on row 1 or row 3 is
+on which row lands — it is so that a result landing on row 1 or row 4 is
 recognised as surprising and gets the scrutiny a surprise deserves.
 
-Nothing in that table is a failure. The bottom row is the outcome this
-project's own precedent treats as publishable (0016; The Sources shipped two
-falsifications as its most valuable output).
+**Stage 2 ships in every row.** The bottom row is the outcome this project's
+own precedent treats as publishable (0016; The Sources shipped two
+falsifications as its most valuable output), and even there the consumer gets
+built — it simply eats the aggregate rather than a named source.
 
 ### 3.4 The calibration finding is a deliverable in every branch
 
-S2's result is independent of M1 and M2 and is not conditional on either: **a
-ceiling derived from a field that never exceeds `0.424277` cannot say
-"teeming."** `BIO-subterranean-energy-sources`' "an Underworld as lush as the
-Overworld needs its own productive base" is arithmetically unreachable while
-that holds, whatever the allocation axis does.
+S2's result is independent of M1 and M2: **a budget whose field never exceeds
+`0.424277` cannot say "teeming."** `BIO-subterranean-energy-sources`' "an
+Underworld as lush as the Overworld needs its own productive base" is
+arithmetically unreachable while that holds, whatever the allocation axis
+does.
 
-Stage 2 therefore reports, in every branch, the realized range of whatever
-quantity it makes the budget, against the ruler the consumer reads. Whether to
-*correct* the calibration is **not** decided here (§6) — this campaign
-establishes the gap with a number and names who must close it.
+Stage 1 therefore reports the realized range against the ruler the consumer
+reads, and **Stage 2 must state what band its kind actually sits in** rather
+than assuming a habitable one. Whether to *correct* the calibration is not
+decided here (§6): this campaign establishes the gap with a number and names
+who must close it.
 
-### 3.5 What the ceiling IS, in the branches that build one
+### 3.5 What Stage 2 builds
 
-A derived per-world (and per-rung) reading with two coordinates, no authored
-constant on either axis — 0966's consequence clause. It is a **pure function of
-committed terrain and climate**, re-derived on read, and it commits nothing.
-That keeps it intensive, which §6 explains is deliberate.
+**A settled people that lives on chemical energy underground.** Concretely,
+and each item is a change the compiler or an existing registry will force
+rather than a new mechanism:
+
+- a `BiosphereTraits` row with `TrophicMode::Chemotrophic` and a niche
+  weighting `CHEMOSYNTHATE`, alongside whatever else its authoring argues for;
+- `SocialForm::Settled`, which is the single property `xorn` lacks and the
+  whole reason the supply reaches nothing today (§2a);
+- a `HabitatRealm::Subterranean` entry in the sparse `habitat_realm_registry`;
+- whatever `metabolic_pairs.rs`' sanctioned-pair table and
+  `environment_niche_registry` demand of any new kind.
+
+**It is one kind, not a roster.** The Delvers authored two subterranean
+peoples and withdrew both, and `habitat_realm_registry` records why: "the trap
+is not authoring a subterranean kind, it is distinguishing two kinds by DEPTH,
+which nothing in the model can say." One kind cannot fall into that trap. A
+second would have to clear The Tidemark's own rule — no two kinds may differ
+only by stratum — and this campaign does not take that on.
+
+**The measured consequence is the deliverable, not the row.** Authoring the
+kind is cheap; what this campaign owes is the readout — does it place, where,
+how many vertices, and at which rungs — against the `xorn` baseline of a kind
+that "moves capacity and occupancy but places no settlement."
 
 ## 4. Preregistered measurement
 
@@ -270,44 +333,66 @@ realized max. No prediction; §3.4 makes it a deliverable either way.
 
 ## 5. Determinism and save format
 
-**Nothing here touches either, and that is verified rather than argued.**
+**This section changed materially when Stage 2 was re-pointed (ledger #5), and
+the change is the one a reader must not skim.** The original spec said the
+campaign touched neither, which was true of a measurement-only Stage 2 and is
+no longer true of one that authors a species kind.
 
-Stage 1 reads existing fields over existing worlds through the existing probe's
-own construction path. It draws nothing, registers no stream label, commits no
-fact, and writes no artifact. Stage 2's ceiling (§3.5) is a pure re-derivation
-from committed terrain and climate.
+**Stage 1 is unchanged and still touches nothing.** It reads existing fields
+over existing worlds through the existing probe's construction path, draws
+nothing, registers no stream label, commits no fact, writes no artifact.
 
-Consequently: no epoch suffix, no save-format break, no stream-order change, no
-`docs/generated-paths.txt` entry. **If Stage 2's branch turns out to require a
-committed quantity, that is a scope change and returns to Nathan** rather than
-being absorbed — The Winze's amendment C.4 already anticipates it: "A tenant
-with a range would add all three [a field, a variant, a draw], which is a
-second reason it belongs to its own campaign and its own epoch."
+**Stage 2 adds a kind, and a kind moves worlds.** Placement, capacity and
+occupancy all change, so every artifact whose content depends on placement
+moves — which is the intended observable and is handled by `make rebaseline`,
+not by an epoch. The precedent is directly on point: The Tidemark's §6 argues
+that adding peoples is additive because `Seed::derive(label)` keys every
+stream independently, so a draw on one label cannot perturb another's
+sequence.
+
+**That precedent is a hypothesis here, not a licence, and Stage 2 verifies it
+before committing.** The branch table, so the implementer meets a rule:
+
+- *No new stream label and no reordering of an existing stream's consumption*
+  → additive. Rebaseline, commit the moved artifacts in the same commit, no
+  epoch suffix.
+- *A new stream label is required* → still additive (independently keyed), but
+  it is a save-format contract and goes in the stream manifest deliberately.
+- *An existing stream's consumption order moves* → **STOP.** That silently
+  corrupts every world. It needs an epoch suffix and returns to Nathan before
+  any of it is written.
+
+**A census refresh is expected at close** — the committed goldens are what the
+calibration batteries assert against, and a new kind moves them.
 
 ## 6. What is deliberately NOT in this campaign
 
+- **The ceiling itself.** Rung 3's two-coordinate derived object is not built
+  here. It moves to a successor **with Stage 1's measurement in hand**, which
+  is strictly more than it would have had. Decision 0966 governs it and stands
+  whether or not this campaign ever returns to it.
 - **The extensive stock.** A budget that can be *eaten* and *spread through*
-  must be extensive (energy density × habitable volume); `subterranean_energy`
-  is an intensive ratio and cannot be consumed. That fork is real and is rung
-  4's, per The Winze C.4's placement of the field/variant/draw. **This
-  campaign derives the density and leaves the volume integral unbuilt**, and
-  says so rather than discovering it at rung 4.
-- **Correcting the calibration.** §3.4 establishes the gap with a number. Which
-  of {retune a source, change the combination rule, rescale the corpus ruler}
-  closes it is a separate decision with its own blast radius across every
+  must be extensive (energy density × habitable volume);
+  `subterranean_energy` is an intensive ratio and cannot be consumed. Rung
+  4's, per The Winze C.4's placement of the field/variant/draw.
+  `[[BIO-underworld-budget-is-intensive]]`.
+- **A second underworld kind, and any roster.** §3.5's one-kind rule.
+- **Correcting the calibration.** §3.4 establishes the gap with a number.
+  Which of {retune a source, change the combination rule, rescale the corpus
+  ruler} closes it is a separate decision with blast radius across every
   shipped reading — and retuning a source to move a measured number is the
   exact act The Sources' probes forbid in their own doc comments.
 - **The marine half of rung 4.** The Tidemark's, by its spec §7 and ledger #5,
-  confirmed on the wire both ways. This campaign authors no marine kind,
-  touches no `TrophicMode`, and gives no `Surface`-realm kind a `CHEMOSYNTHATE`
-  weight.
+  confirmed on the wire both ways. This campaign authors no marine kind and
+  gives no `Surface`-realm kind a `CHEMOSYNTHATE` weight.
+- **The capacity/seating rung mismatch.** The Staple D5B's chokepoint 2 — the
+  `Subterranean` arm keeps only the best rung (`windows/worldgen/src/lib.rs:2425`)
+  and nothing has measured whether the capacity-winning rung differs from the
+  seating rung. Adjacent and real; that campaign is measuring it and this one
+  inherits the number rather than racing it.
 - **Naming the tenant.** The Winze §4.6/§7 refuses it (`thaumic` stays 0.0,
-  nothing named) and rung 4 inherits that refusal. A budget bounds something
-  the model still declines to name, and `CauseOfEnd::Breached`'s own doc states
-  why the silence is the design.
-- **Re-cutting the metaplan's rung 4.** Now split between The Tidemark and a
-  successor; the edit belongs with the successor's spec. Carried in this
-  campaign's ledger Follow-ups.
+  nothing named). A settled people is not a tenant-with-a-range; this campaign
+  authors an ordinary species row and names no horror.
 
 ## 7. Provenance
 
