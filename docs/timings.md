@@ -7254,3 +7254,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T22:38:59Z | gate-commit | 77.725 | 87.912 | 20.227 | 1.39 | 0 | c6e43fe7d | campaign/the-kiln | MacBookPro | 10 |
 | 2026-09-11T22:53:34Z | gate-commit | 65.897 | 96.993 | 21.637 | 1.80 | 0 | 3d49e1732 | campaign/the-kiln | MacBookPro | 10 |
 | 2026-09-11T23:24:13Z | gate-commit | 44.468 | 84.560 | 19.725 | 2.35 | 0 | 4c7397db8 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T23:25:26Z | gate-commit | 42.178 | 81.391 | 19.302 | 2.39 | 0 | 4c7397db8 | campaign/the-kiln | MacBookPro | 10 |
