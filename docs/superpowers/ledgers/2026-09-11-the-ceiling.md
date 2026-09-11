@@ -525,3 +525,71 @@ answered by reading the code and the registry, plus Nathan's ruling.
 **Capture actions:** `DOM-two-environment-bases` amended with the measured
 facts and Nathan's ruling; `BIO-lithology-is-not-a-tolerance-axis` added;
 spec §3.5 gains the axis-discrimination readout (next commit).
+
+---
+
+## #8 [Q] — Light underground is not zero, and this ledger said it was
+
+**Nathan's correction at G3 approval:** light underground is not zero
+everywhere — torches, magical fire, bioluminescence — and "a sufficiently
+strong magical light might end up having a few sprigs of grass growing
+underneath it." He added that it does not necessarily change the campaign,
+"but that's not a completely correct statement."
+
+**He is right, and the error is mine twice over.** #7 and spec §3.5 both said
+light is "documented constant zero underground", citing
+`kernel/src/ecology.rs:391`. Two things are wrong with that:
+
+1. **The kernel doc is stale against a measurement in another domain's own
+   suite.** `domains/climate/tests/suite/underworld.rs:232-248` carries
+   preregistered H5, measured 2026-08-17: the `LIGHT` axis takes **`{0.0,
+   0.2}`** across the underworld corpus — 0.0 below the entrance rung, 0.2 for
+   the four communities that break the surface. So "constant zero" was already
+   false by measurement, three weeks before this campaign quoted it.
+2. **The test names the two absent mechanisms itself**, and they are exactly
+   Nathan's: "there is no bioluminescence term and `MaterialBuffer::thaumic`
+   is identically zero in this tier."
+
+**And the emitters already exist, one layer over.** The Lantern shipped
+`windows/vessel/src/light.rs` with a torch at 1900 K, a hearth, lava and
+fungi, and `windows/worldgen/tests/suite/lantern_probe.rs:34` models
+bioluminescence explicitly as "a narrow emission near 490 nm".
+`MAP-interior-light` calls it "the first light in the project that is not the
+star." **None of it reaches the ecology axis** — the same shape as #7's
+lithology finding: computed, then discarded at the niche boundary.
+
+**So the correct statement is that the axis is UNFED, not meaningless**, and a
+lit underworld is a supply problem rather than a modelling refusal. That is a
+materially different thing to hand a successor: "this axis is dead" closes a
+door that "this axis is dark" leaves open, and Nathan's grass-under-a-lamp is
+the case that proves it.
+
+**The methodological failure, stated plainly because it is the third of its
+kind in this campaign.** I read a doc comment and repeated its claim without
+checking whether a measurement had overtaken it — the same error The Tidemark
+made about `OccupationRecord` this morning and that this session corrected, and
+the same error #2 corrected in C.3's own cost claim. A committed doc is a
+claim with a date. This campaign has now been on both sides of it in one
+sitting.
+
+**Scope: unchanged, and Nathan said so.** This campaign feeds no light source
+and authors no emitter. What changed is one sentence of spec §3.5 and one
+registry row, so the successor is not told an axis is dead when it is merely
+dark.
+
+**Ideonomy passes / overturns:** none; a factual correction from Nathan,
+verified against the climate suite before being recorded.
+
+**Capture actions:** `BIO-underground-light-is-unfed` added, carrying the H5
+measurement, the two named absent mechanisms, the shipped-emitter pointers and
+the stale kernel doc; spec §3.5 corrected from "degenerate/constant zero" to
+"starved/unfed" with the distinction stated; `kernel/src/ecology.rs:391`'s
+stale sentence recorded as a follow-up rather than edited — it is a kernel-layer
+edit outside this campaign's surface, and the row now carries the correction.
+
+## Follow-ups (added at #8)
+
+- **`kernel/src/ecology.rs:391` says `LIGHT` is "constant zero underground".**
+  Falsified by climate's own H5 (`{0.0, 0.2}`, 2026-08-17). Not edited here;
+  a kernel-layer doc fix belongs with whoever next opens that file, and
+  `BIO-underground-light-is-unfed` carries the correction meanwhile.

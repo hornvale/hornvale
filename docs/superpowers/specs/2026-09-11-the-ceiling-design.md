@@ -250,11 +250,25 @@ does not attempt to reconcile them — that is D5B's, per §6.
 **And Stage 2 reports how many tolerance axes actually discriminate its
 kind** (ledger #7). A kind's tolerance is `ConditionNiche`'s closed four —
 temperature, moisture, insolation, elevation — and underground **two are
-degenerate**: insolation is documented constant zero, and elevation is metres
-above *sea level*, i.e. the surface above the chamber rather than its depth,
-which is verbatim The Delvers' withdrawal reason. So the authored kind has
-roughly two live axes, one of which (temperature) is gradient-driven and close
-to a proxy for depth. The readout states the count and which axes moved,
+starved**: elevation is metres above *sea level*, i.e. the surface above the
+chamber rather than its depth (verbatim The Delvers' withdrawal reason), and
+light is near-zero. So the authored kind has roughly two live axes, one of
+which (temperature) is gradient-driven and close to a proxy for depth.
+
+**"Starved", not "dead", and the distinction is Nathan's correction of an
+earlier draft of this line.** That draft said light is "documented constant
+zero underground", quoting `kernel/src/ecology.rs:391`. **That doc is stale
+against a measurement in climate's own suite**: preregistered H5
+(`domains/climate/tests/suite/underworld.rs:232-248`, measured 2026-08-17)
+found the `LIGHT` axis takes `{0.0, 0.2}` over the underworld corpus, and
+named the two absent mechanisms itself — "there is no bioluminescence term and
+`MaterialBuffer::thaumic` is identically zero". The Lantern meanwhile shipped
+real emitters — torch at 1900 K, hearth, lava, fungi — in `windows/vessel`,
+which never reach the ecology axis. So the axis is **unfed, not meaningless**,
+and a lit underworld is a supply problem rather than a modelling refusal
+(`[[BIO-underground-light-is-unfed]]`). This campaign feeds nothing and
+authors no emitter; it reports the axis count honestly so the successor is not
+told an axis is dead when it is merely dark. The readout states the count and which axes moved,
 because the successor that unifies `ConditionNiche` and `Substrate` into the
 kernel's open basis (`[[DOM-two-environment-bases]]`, Nathan's ruling
 2026-09-11) should inherit a **measurement** of the poverty rather than an
