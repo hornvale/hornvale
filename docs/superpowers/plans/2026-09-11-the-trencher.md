@@ -449,7 +449,15 @@ git commit -m "feat(the-trencher): the metabolite resource axes"
 
 **Files:**
 - Modify: `windows/worldgen/src/energy.rs`
-- Modify: `windows/worldgen/src/lib.rs` (`score_at`'s `per_axis`, ~line 2390)
+- Modify: `windows/worldgen/src/lib.rs` — **FOUR `per_axis` sites plus the
+  order constant and its pin**, not the one this line used to name
+  (amended 2026-09-11, ledger #23):
+  - `SUPPLY_AXIS_ORDER` (~1537) — `[ResourceAxis; 7]`, a fixed-size type
+  - capacity loop 1 (~1975) — suitability form, reads bare locals
+  - capacity loop 2 (~2391) — dimensional form, reads a `hoisted` struct
+  - the hoist-agreement test's fixture (~11256)
+  - `the_supply_axis_order_matches_both_capacity_loops` (~11283) — add one
+    ident→label match arm per new axis, or `other => other` fails the compare
 
 **Interfaces:**
 - Consumes: Task 3's axes.

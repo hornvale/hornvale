@@ -1751,3 +1751,111 @@ members) is recorded as predicted-and-inert-today, load-bearing from Task 4 —
 carried into Task 4's dispatch rather than closed.
 
 **Ideonomy passes / overturns:** none; a task acceptance with one mutation.
+
+---
+
+## #23 [Ruling] — Task 4's brief names one edit site of four, and the term it moves was justified by a prediction that was then falsified
+
+Verification before dispatch, against `windows/worldgen/src/lib.rs` and
+`energy.rs`. Five findings. The first is the same shape as #20.A one task
+later, which is itself worth noting: **a brief that names "the" site is
+asserting a census.**
+
+### A. There are FOUR `let per_axis = [` sites. The plan names one.
+
+```
+1975   capacity loop 1 — suitability form   (saturated = supply / (1 + supply))
+2391   capacity loop 2 — dimensional form   (headcount = V_MAX * supply / (K_M + supply))
+11256  the hoist-agreement test's fixture
+11287  the ORDER PIN's own source-scan
+```
+
+The plan's Task 4 says "`score_at`'s `per_axis`, ~line 2390" — loop 2 only.
+Adding the metabolites to loop 2 alone would leave loop 1 with a 7-entry
+supply array against an 11-entry weight array.
+
+**That particular miss fails loudly** — `axis_supply_with` asserts
+`weights.len() == per_axis.len()` — so it is a panic, not a silent wrong
+answer. Recording it anyway, because the *reason* it is loud is an assertion
+someone wrote, not anything structural, and the brief should not rely on luck
+it did not know it was relying on.
+
+**The two loops are not copy-paste.** Loop 1 reads bare locals
+(`*mineral.get(vertex)`); loop 2 reads a hoisted struct
+(`*hoisted.mineral.get(vertex)`). Same order, different plumbing, different
+output units. Thread the metabolites into each in its own idiom.
+
+### B. `SUPPLY_AXIS_ORDER` is `[ResourceAxis; 7]` — a fixed-size type
+
+`lib.rs:1537`. Adding four makes it `[_; 11]`, which changes the type and
+breaks every use site until updated. Loud, and unmentioned by the plan.
+
+### C. The order pin SOURCE-SCANS, and carries a hardcoded label table
+
+`the_supply_axis_order_matches_both_capacity_loops` (`lib.rs:11283`) does
+`include_str!("lib.rs")`, splits on `"let per_axis = ["`, and maps identifiers
+to labels through a literal match:
+
+```rust
+"CHEMOSYNTHATE" => "chemosynthate",
+other => other,
+```
+
+A new axis with no arm falls to `other => other`, yielding `"HYDROGEN"` where
+`"hydrogen"` is expected — so it fails, loudly. **Four arms must be added.**
+
+**And the scan's filter is the part to be careful with:** it skips any block
+not containing `"(vertex)"`. `assert_eq!(found, 2)` catches both loops
+vanishing, but **nothing catches a metabolite entry that does not read at
+`vertex`** — that entry is simply invisible to the order check while the loop
+still matches. Supply the metabolites as per-vertex reads, in the idiom of
+their neighbours.
+
+### D. The U-SHAPE IS ALREADY DEAD, AND THIS DE-RISKS THE `DetritalImport` MOVE
+
+This is the finding worth the verification budget on its own.
+
+`energy.rs`'s module doc (the "seventh term" section) records that
+`DetritalImport` is **not** one of `BIO-subterranean-energy-sources`'s six —
+it was added because, without an import term, *"the sum built in Task 5 would
+have no shallow arm and could not produce the U that task measures."*
+
+Task 5 then measured, and the test is named for the answer:
+`derived_energy_is_monotone_not_a_trough`. Per-rung `ENERGY` medians,
+`Undercroft` → `Nadir`:
+
+```
+0.168609  0.200822  0.265342  0.281421  0.281449   — strictly non-decreasing
+```
+
+**There is no U.** The term added to produce a shallow arm did not produce
+one. Its own justifying prediction was falsified by the very measurement it
+was added to enable, and nothing since has re-argued it.
+
+**Consequence for Task 4:** routing `DetritalImport` to `DETRITUS` is not
+removing a load-bearing shallow arm from the chemical supply — it is removing
+a term whose stated purpose was never realized, from a vocabulary it never
+belonged to (the module doc says so in its own words). The move gets *easier*,
+not harder, and the implementer should know that rather than treading
+carefully around a U that is not there.
+
+**It also will not red the gate:** that probe is `#[ignore]`d (demoted by The
+Governor, 2026-08-28), so it runs only by hand.
+
+**What this does NOT license.** Expect the chemical sum to become *more*
+steeply depth-weighted once the shallow detrital term leaves it. That is the
+correct direction — chemical food should be deep — but it is a real change to
+a measured shape, and Task 5's T1 reads a ceiling off this. Report the new
+per-rung medians beside the five numbers above rather than only the ceiling.
+
+### E. Ruling
+
+Task 4 edits all four `per_axis` sites, `SUPPLY_AXIS_ORDER`, and the pin's
+match arms, in one commit. Folded into the dispatch. The plan's file list is
+amended in the same commit as this entry.
+
+**Cost if wrong:** low. Every miss in A-C is a compile error or a failing
+assert. D is the one that could have cost real time — a careful implementer
+would have tried to preserve a U that does not exist.
+
+**Ideonomy passes / overturns:** none; a verification step with five findings.
