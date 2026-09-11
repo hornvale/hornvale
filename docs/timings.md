@@ -7223,3 +7223,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T13:23:02Z | sluice:gate | 834.027 | 25217.452 | 861.480 | 31.27 | 0 | 740085c1f |  | lefford | 40 |
 | 2026-09-11T13:26:20Z | sluice:clients | 197.908 | 3207.734 | 284.570 | 17.65 | 0 | 74d9dc5f7 |  | lefford | 40 |
 | 2026-09-11T13:33:59Z | sluice:heavy | 458.266 | 12864.136 | 287.987 | 28.70 | 0 | c6bab15c9 |  | lefford | 40 |
+| 2026-09-11T14:23:44Z | prewarm | 248.331 | 1622.487 | 58.646 | 6.77 | 0 | 26003913d | campaign/the-ceiling | MacBookPro | 10 |
+| 2026-09-11T15:46:36Z | gate-commit | 125.727 | 207.386 | 27.946 | 1.87 | 0 | 435a0f2c9 | campaign/the-ceiling | MacBookPro | 10 |
+| 2026-09-11T15:49:16Z | gate-commit | 128.716 | 93.083 | 21.076 | 0.89 | 0 | 435a0f2c9 | campaign/the-ceiling | MacBookPro | 10 |
+| 2026-09-11T15:52:10Z | gate-commit | 137.380 | 89.519 | 21.262 | 0.81 | 0 | 435a0f2c9 | campaign/the-ceiling | MacBookPro | 10 |
+| 2026-09-11T16:01:41Z | gate-commit | 51.986 | 86.044 | 20.516 | 2.05 | 0 | 840980a2c | campaign/the-ceiling | MacBookPro | 10 |
+| 2026-09-11T16:03:36Z | gate-commit | 58.626 | 87.076 | 21.677 | 1.86 | 0 | 840980a2c | campaign/the-ceiling | MacBookPro | 10 |
