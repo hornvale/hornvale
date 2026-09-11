@@ -119,6 +119,16 @@ and the cases it collects. **This is the one source choice I most want
 confirmed at G3**, because it determines the column's bias, and a
 loss-mechanism paper is a narrower object than a catalogue.
 
+**The two corpora carry incompatible theories of what a technology is, and
+that must be declared.** Asimov's chronology frames a technology as an
+*individual invention* — who made it, when. Henrich frames it as a
+*distribution of skill in a population* that can drift below a
+self-sustaining threshold. They are not reconcilable, and under 0095 that is
+the point: the disagreement is the finding. Worth stating plainly, because the
+population framing is **much closer to the project's own doctrine** — TECH-1's
+"capability threshold the world crosses when a computed bar is cleared" is
+Henrich's shape, not Asimov's.
+
 This column reads **entirely `unmeasured` on freeze**, because nothing in
 Hornvale can lose a technology. That looks like nothing and is the
 preregistration working; §7 requires the report to say so where a reader meets
@@ -164,12 +174,38 @@ reachable if reach already succeeded, so one field loses no information
 | **`lost`** | **measured: acquired, then given up** | `doc:` |
 | `unmeasured` | frozen, not yet scored | none; a lifecycle state, tallied separately |
 
+**`lost` names a scope, and must say which.** A technology can be given up by
+one community, by a whole people, or by every people in the world — three
+different claims. Leaving it unsaid is how `systems/` acquired the defect
+0136 clause 2 was written to fix: an instrument that silently switches subject
+across its own corpus, with the choice tracking whichever produced the nicer
+verdict, invisible to five reviews because every anchor resolved. **`lost` in
+this corpus means: a people that held the capability no longer holds it**, and
+the resolver's doc comment states that scope in the direction it enforces.
+
 **`lost` is the one new value and owes its own justification**, exactly as
 0936 justified its two. A sibling family can express only degrees of absence
 and, in regularities' case, a measured miss. Neither can express a capability
 that was held and released — which is the single thing this campaign exists
 to make expressible, and the axis on which Hornvale's model is provably
 silent (F2).
+
+### 5.2a The criterion — why a bare verdict is not enough
+
+A bare `grown`/`flat` is **blind to the pathology that motivated this
+campaign.** F4's finding is not that Hornvale fails to acquire technologies —
+it is that *every surviving community acquires all of them*. Under a boolean
+verdict, "every people has bronze" and "half the peoples have bronze" both
+score `grown`, so the instrument could not see the defect it exists to detect.
+
+The fix is precedented and already in the sibling: `sugarscape-1996` items
+carry a `statistic` and a `criterion`
+(`{"kind": "median-in-band", "lo": -1.2, "hi": -0.8}`), and the verdict is
+whether the criterion is met. A technology item therefore carries a statistic
+over the **distribution across peoples**, not a boolean over the world. Under
+such a criterion today's world scores `flat` — the holding fraction is 1.0,
+outside any band that expresses divergence — which is the honest reading, and
+a bare boolean would have reported `grown`.
 
 An item's reach verdict is **authored** as its weakest demand. That is 0136
 clause 2's discipline over **homogeneous** components — every demand asks the
