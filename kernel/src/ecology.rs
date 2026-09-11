@@ -118,6 +118,76 @@ pub const CHEMOSYNTHATE: ResourceAxis = ResourceAxis {
     kind: ResourceKind::Field,
 };
 
+/// Molecular hydrogen from chemolithotrophic rock-water chemistry — the
+/// campaign's first metabolite axis (The Trencher, spec §4.2). Two
+/// `EnergySource` reactions both yield H₂ (`windows/worldgen/src/energy.rs`):
+/// serpentinization (peridotite + water → serpentine + H₂) and radiolysis
+/// (radioactive decay splitting porewater). Per the spec's rule — "two
+/// reactions both yielding H₂ feed one axis" — they are one metabolite, not
+/// two.
+///
+/// `Field` rather than `Stock`, by the same argument as `CHEMOSYNTHATE`: both
+/// source reactions run continuously wherever their rock/water preconditions
+/// hold, so this is the base of a lightless food web (a flux), not the
+/// standing biomass a base supports. `MINERAL` is the counter-example that
+/// makes this a real choice rather than a reflex — it is also rock-derived
+/// and is `Stock` — but `MINERAL` names a finite reserve a consumer draws
+/// down directly, where this axis names an ongoing reaction rate; this axis
+/// is in fact a disaggregation of `CHEMOSYNTHATE` itself (ledger #1's
+/// aggregate), which settles the question by identity.
+pub const HYDROGEN: ResourceAxis = ResourceAxis {
+    id: 7,
+    label: "hydrogen",
+    kind: ResourceKind::Field,
+};
+
+/// Reduced iron (Fe²⁺) from microbial/abiotic Fe(III) reduction in mafic rock
+/// (`EnergySource::IronReduction`), per the spec's reaction→metabolite table
+/// (§2).
+///
+/// `Field`, for the same reason as `HYDROGEN`: the reaction runs continuously
+/// wherever mafic rock and at least a moisture film are present (its water
+/// gate saturates at a trace — the electron-transfer medium, not a
+/// stoichiometric reactant), so what a consumer draws on is the ongoing
+/// production rate, not an accumulating deposit.
+pub const REDUCED_IRON: ResourceAxis = ResourceAxis {
+    id: 8,
+    label: "reduced iron",
+    kind: ResourceKind::Field,
+};
+
+/// Reduced sulphur compounds from pyrite/sulphide oxidation at the redox
+/// front where descending oxidant meets ascending reduced sulphur
+/// (`EnergySource::SulphideOxidation`), per the spec's reaction→metabolite
+/// table (§2).
+///
+/// `Field`: the front is sustained by an actually-connected, flowing fluid
+/// pathway (its own doc's firmest water gate among the non-stoichiometric
+/// reactions) rather than by a static, exhaustible deposit — consumption
+/// draws on the ongoing flux the pathway maintains, not a stock that thins
+/// with use.
+pub const REDUCED_SULPHUR: ResourceAxis = ResourceAxis {
+    id: 9,
+    label: "reduced sulphur",
+    kind: ResourceKind::Field,
+};
+
+/// Methane from microbial methanogenesis in carbonate rock with sufficient
+/// porosity for fluid flow and a microbial habitat
+/// (`EnergySource::Methanogenesis`), per the spec's reaction→metabolite table
+/// (§2).
+///
+/// `Field`: like serpentinization, water is consumed/produced by the
+/// reaction itself rather than merely mediating it, so yield tracks ongoing
+/// reaction conditions rather than an accumulated pool — the same continuous-
+/// production argument as the three metabolites above, not a standing gas
+/// reserve.
+pub const METHANE: ResourceAxis = ResourceAxis {
+    id: 10,
+    label: "methane",
+    kind: ResourceKind::Field,
+};
+
 /// The registered resource-axis basis, in ascending id order. The basis is
 /// open — later campaigns may register further axes with higher ids — so this
 /// slice is a snapshot of what's registered today, not a closed enum. The
@@ -152,6 +222,10 @@ pub fn v1_basis() -> &'static [ResourceAxis] {
         MINERAL,
         MARINE_FORAGE,
         CHEMOSYNTHATE,
+        HYDROGEN,
+        REDUCED_IRON,
+        REDUCED_SULPHUR,
+        METHANE,
     ]
 }
 
@@ -703,7 +777,7 @@ mod tests {
         let ids: Vec<u16> = v1_basis().iter().map(|a| a.id).collect();
         assert_eq!(
             ids,
-            vec![0, 1, 2, 3, 4, 5, 6],
+            vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             "the basis is append-only: ids must be dense and ascending from 0, \
              and a new axis takes the next free id at the END"
         );
@@ -713,6 +787,33 @@ mod tests {
     fn chemosynthate_takes_the_next_free_id_and_is_ambient() {
         assert_eq!(CHEMOSYNTHATE.id, 6);
         assert_eq!(CHEMOSYNTHATE.kind, ResourceKind::Field);
+    }
+
+    #[test]
+    fn the_metabolite_axes_are_registered_and_reachable_via_the_basis() {
+        // Ledger #20.A: a `pub const ResourceAxis` that compiles but is never
+        // appended to `v1_basis()` is invisible to every consumer that
+        // iterates the basis (`dominant_axis`, the herbivory fraction,
+        // `total_non_detritus`) — the axis would exist and be orphaned, and
+        // `the_basis_ids_are_append_only` above (which pins the id
+        // SEQUENCE) does not catch that on its own, because a const with a
+        // matching id could in principle be a different value entirely. This
+        // test pins the JOIN itself: each named metabolite const must be the
+        // very axis reachable at its id inside `v1_basis()`.
+        for axis in [HYDROGEN, REDUCED_IRON, REDUCED_SULPHUR, METHANE] {
+            assert_eq!(
+                v1_basis().iter().find(|a| a.id == axis.id),
+                Some(&axis),
+                "{} (id {}) must be reachable via v1_basis(), not merely a \
+                 const with a matching id",
+                axis.label,
+                axis.id
+            );
+        }
+        assert_eq!(
+            CHEMOSYNTHATE.id, 6,
+            "CHEMOSYNTHATE must keep id 6 — a live peer campaign (The Tidemark) weights it"
+        );
     }
 
     #[test]

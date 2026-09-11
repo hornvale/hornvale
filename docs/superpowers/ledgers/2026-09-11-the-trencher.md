@@ -1627,3 +1627,74 @@ save-format-contract file, which is not.
 
 **Ideonomy passes / overturns:** none; three constraints read off a neighbour's
 board notices plus a scope collision confirmed against the branch list.
+
+---
+
+## #22 [R] — Task 3 executed: the four metabolite resource axes
+
+Ruling #20's corrections applied in full: `v1_basis()` extended, the
+sequence pin in `the_basis_ids_are_append_only` widened to
+`[0..10]`, the test written inline in `mod tests` with `super::*`, and the
+sketch's redundant `>= 7`/dedup checks dropped in favour of the extended
+sequence pin plus a new test asserting the join (each const is the axis
+`v1_basis()` actually returns at its id, not merely a value with a matching
+number) and the `CHEMOSYNTHATE.id == 6` guard.
+
+**Four axes, ids 7-10, all `Field`.** Reaction→metabolite mapping taken
+directly from spec §2's table, per the rule "two reactions both yielding H₂
+feed one axis":
+
+| id | const | label | kind | reactions |
+|---|---|---|---|---|
+| 7 | `HYDROGEN` | hydrogen | Field | Serpentinization + Radiolysis (both yield H₂) |
+| 8 | `REDUCED_IRON` | reduced iron | Field | IronReduction |
+| 9 | `REDUCED_SULPHUR` | reduced sulphur | Field | SulphideOxidation |
+| 10 | `METHANE` | methane | Field | Methanogenesis |
+
+`Geothermal` and `DetritalImport` are deliberately absent — spec §4.2 (ledger
+#2) already routes them out of the food vocabulary, and Task 4 is where that
+routing is wired, not Task 3.
+
+**The `kind` argument, stated once because it is one argument repeated four
+times.** All four are `Field`, not `Stock`, and the doc comment on each
+argues it against the same counter-example: `MINERAL` (id 4) is also
+rock-derived and is `Stock`, so "produced by rock chemistry" alone does not
+settle it. What does: each of these four reactions runs *continuously*
+wherever its rock/water precondition holds (per `energy.rs`'s own docs — a
+stoichiometric `* moisture` multiply for Serpentinization/Methanogenesis, a
+saturating trace-moisture gate for IronReduction/Radiolysis, a
+connected-flow gate for SulphideOxidation), so what a consumer draws on is an
+ongoing production *rate*, not an accumulating deposit `MINERAL` names.
+Decisively: all four are a disaggregation of `CHEMOSYNTHATE` itself (the
+aggregate ledger #1 keeps, `Field`), so consistency with the aggregate they
+refine settles the question rather than merely arguing it by analogy.
+
+**Re-exports.** `kernel/src/lib.rs`'s `ecology::{...}` list gained
+`HYDROGEN, METHANE, REDUCED_IRON, REDUCED_SULPHUR`, re-sorted into the
+existing ASCII-byte-order placement (case-sensitive: uppercase before
+lowercase at the first differing byte) rather than appended out of order.
+
+**The consequence ledger #20 flagged, re-confirmed rather than assumed.**
+`coexist.rs:298` sums weights over `v1_basis()` as a denominator; widening
+the basis from 7 to 11 members widens that denominator for any niche
+carrying metabolite weight. No niche does yet (grepped — nothing in
+`domains/species` weights ids 7-10), so this is inert today and becomes
+load-bearing at Task 4/9-12, exactly as #20 predicted.
+
+**What is NOT in this commit.** No organism, no supply, no wiring into
+`windows/worldgen` — this task registers vocabulary only, per the brief's own
+scope line. `windows/worldgen/src/lib.rs:1147`'s stale "sixth `v1_basis()`
+member" wording (noted, not fixed, in #20) is untouched; it is Task 4's file.
+
+**Verification.** `cargo nextest run -p hornvale-kernel -E 'test(basis) or
+test(metabolite) or test(chemosynthate)'`: 4/4 passed, including the new join
+test and the widened sequence pin. `make gate-commit`: reported in the
+commit below.
+
+**Ideonomy passes / overturns:** none; execution of #20's ruling plus a
+mapping decision (which reactions feed which axis, and the axes' `kind`)
+that #20 left to this task, resolved directly from spec §2's table and
+`energy.rs`'s own reaction docs rather than invented.
+
+**Capture actions:** this entry; task-3-report.md in scratch per the
+dispatch contract.
