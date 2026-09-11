@@ -138,44 +138,57 @@ vector. `ActivityCycle::Crepuscular` is an explicitly reserved empty slot —
 "idle this campaign; authored now so a future species is a data change" — so
 filling it is invited.
 
-**Which axes actually ARRIVE at placement — verified, and binding on the slate.**
-A kind may be authored to differ on any axis; only some of them reach the
-scoring path, and a difference that does not arrive is a distinction on paper.
-Measured at Task 2's landing:
+**Which axes arrive, and which VARY BY BAND — two different questions.**
+An earlier draft of this section conflated them and was wrong for it. Verified
+at Task 2's landing and re-verified under review:
 
-| input | per band? | read at placement? |
+| input | reaches the placement path? | varies across bands? |
 |---|---|---|
-| `temperature_c` | yes | yes — `tolerance_liebig_with_fixed` |
-| `height_asl_m` (= `-depth_m`) | **yes** | yes — the elevation term, and it hard-gates below the floor |
-| `CHEMOSYNTHATE` supply | yes | yes — the only per-band supply axis |
-| `insolation` (`field.light`) | yes | **NO** — populated per band and read by nothing |
-| `moisture` | no (`MARINE_MOISTURE`) | no |
-| every other supply axis | no (per vertex) | yes, but identically for all bands |
+| `height_asl_m` (= `-depth_m`) | yes — the elevation term, and it hard-gates first | **yes**, but four of five are the global constants {0, 200, 1000, 4000, 6000} m; only the seabed band varies per vertex |
+| `temperature_c` | yes | **no** — `WaterFields::from_substrate` passes one `climate.temperature_at(vertex, GENESIS)` to every sample of a vertex |
+| `CHEMOSYNTHATE` supply | yes | **only at a vent vertex's seabed band** — ambient `chemistry` is `has_edifice ? 1.0 : 0.0`, per vertex, and `WaterWorld::at` applies vent deltas at `seabed_sample_index` alone |
+| `insolation` (`field.light`) | **no** — populated per band, read by nothing | (moot) |
+| `moisture` | **no** | no — a constant, `MARINE_MOISTURE` |
+| every other supply axis | yes | no — per vertex, identical for all bands |
 
 `tolerance_liebig_with_fixed` reads only `s.height_asl_m` and `s.temperature_c`
-off the per-band substrate; the moisture and insolation halves come from
-`EraInvariantTolerance`, whose `fixed` is `Vec<VertexMap<f64>>` — per species per
-**vertex**, built from surface moisture and surface insolation, with no band
-dimension at all.
+off the per-band substrate; `EraInvariantTolerance`'s `fixed` is per species per
+**vertex**, from surface moisture and surface insolation, with no band dimension.
 
-**Consequences, both load-bearing:**
+**So the five strata are distinguished at placement by depth alone**, except the
+seabed band at a vent vertex. That is a narrower instrument than §3.3's "scores
+the five pelagic strata" implies, and it is stated here rather than discovered in
+Task 3.
 
-- **The slate may be differentiated on temperature, depth and chemosynthate.
-  It may NOT be differentiated on light or moisture** — two kinds differing only
-  there are identical at placement while reading as distinct in the registry.
-- **The kelp tender is the kind this endangers**, and it is the one the G3
-  package already flagged as least defended. A phototrophic people of the photic
-  zone is *naturally* a light-differentiated kind, and light is the one axis that
-  does not arrive. It must instead be separated by shallow depth and temperature,
-  with its phototrophy carried by `TrophicMode` and the `PHOTOSYNTHATE` weight
-  rather than by an insolation curve. Task 3 verifies this rather than assuming
-  it.
+**Threading light through would add nothing.** The light that reaches the readout
+is `climate.insolation()` — a world **scalar** — attenuated by `exp(-depth/1000)`.
+It carries no latitude, so it is a deterministic function of depth and would
+duplicate the axis the ladder already has. The gap is not "light is missing"; it
+is that nothing in the pelagic column varies per vertex except the seabed depth.
+
+**Consequences, all load-bearing:**
+
+- **Kind-vs-kind differentiation** (what M5 measures) may use temperature, depth
+  and `CHEMOSYNTHATE` — all three vary *between vertices* and so separate kinds.
+  It may **not** use light or moisture, which are constant everywhere relevant.
+- **Stratum differentiation is depth, and only depth.** A kind whose identity is
+  "lives where the water is warmer at depth" cannot be expressed: the column has
+  one temperature.
+- **The kelp tender is the endangered kind.** A phototrophic people of the photic
+  zone is naturally light-differentiated, and light does not arrive. Separate it
+  by shallow depth, carrying phototrophy through `TrophicMode` and the
+  `PHOTOSYNTHATE` weight — then verify that weight moves its score.
+- **The marine tolerance substrate is frozen at genesis** across every
+  paleoclimate era (`marine_habitat` rides `EraInvariantSupply`, while the
+  surface and per-rung substrates are rebuilt per era with the era's temperature
+  offset and sea-level re-datum). This campaign's headline is **vent-driven**
+  expiry, not climate-driven, so M3 is unaffected — but a marine kind's
+  tolerances are scored against genesis conditions through a multi-millennia
+  bake, and that is a stated limitation rather than an oversight.
 
 This is the marine half of a finding campaign/the-ceiling made on the underworld
-side, where the situation is worse: a subterranean kind's `height_asl_m` is the
-*surface* height, constant across rungs, so the delve ladder's tolerance product
-varies on temperature alone. The marine ladder is better off only because
-`marine_habitat` encodes depth as elevation.
+side, where `height_asl_m` is the constant surface height and the delve ladder's
+tolerance product varies on temperature alone.
 
 **The slate.** The implementer authors the values; this table fixes the
 *discriminating* assignments, and every kind is `HabitatRealm::Marine`.
