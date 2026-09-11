@@ -442,3 +442,86 @@ acceptance, the M4 text, and the two facts this session verified that their
 report did not have (the `Subterranean` arm already dots `CHEMOSYNTHATE`
 against the niche, and `BIO-underworld-has-no-energy`'s capacity clause is
 stale).
+
+---
+
+## #7 [Q] — Multiple nutrient / medium axes: was it lost, and does it belong here?
+
+**Nathan asked** whether the project has, or has ever captured, the axes a real
+niche varies on — soil pH, texture (clay vs sand), NPK, moisture tolerance,
+height above the water table — so the Underworld shows "tremendous richness and
+variety" on a graph, "just as (I hope) we have on the surface."
+
+**Answer to the first half: CAPTURED, NOT LOST, NOT IMPLEMENTED.**
+`DOM-two-environment-bases` (raw), raised by The Hallmark §5 on 2026-09-01. It
+even records the coordination note that it should follow campaign/the-sources,
+which has since shipped. So the idea is ten days old and unstarted.
+
+**Answer to the second half, and it is worse than the row knew.** Measured at
+`26003913d`:
+
+- A kind's tolerance is `species::ConditionNiche` — a **closed struct of four
+  fields**: temperature, moisture, insolation, elevation
+  (`domains/species/src/lib.rs:387`). Its dual, the place's reading, is
+  `worldgen::Substrate`, the same four (`windows/worldgen/src/lib.rs:2981`).
+  **Adding an axis is a struct change, not a registry addition.**
+- **Underground, two of the four are degenerate.** `LIGHT`'s kernel doc says
+  it is "constant zero underground"; `elevation` is metres above **sea
+  level** — the height of the surface above the chamber, not the chamber's
+  own depth, which is verbatim The Delvers' withdrawal reason ("a kind whose
+  identity is DEPTH cannot be expressed by an axis measured in metres above
+  sea level"). So a subterranean kind has effectively **two** live tolerance
+  axes, and one of them (temperature) is gradient-driven and therefore close
+  to a proxy for depth.
+- **The richness is already computed and thrown away.**
+  `terrain::MaterialBuffer` carries nine fields — silica, grain, induration,
+  carbonate, metamorphic_grade, porosity, soil_depth, basement, margin. They
+  feed `EnergySource` yields and collapse into one scalar. Nothing can have a
+  *tolerance* on any of them. Captured as
+  `BIO-lithology-is-not-a-tolerance-axis`.
+- **`SUBSTRATE` does not rescue it.** The six-axis kernel basis has a
+  `SUBSTRATE` axis, but its valence is **Nominal** — "the numeric value indexes
+  an unordered set and is never a magnitude" (`kernel/src/ecology.rs:381`). A
+  gradient like "more clay than sand" is unsayable on a nominal axis by
+  construction.
+
+**So the hoped-for surface richness is not there either.** The surface carries
+the same four axes; it simply has more of them live. That half of Nathan's
+sentence is answered "no", and it is the more important half.
+
+**Nathan's ruling, same sitting:** `ConditionNiche` and `Substrate` should move
+into the kernel and be unified.
+
+**Verified before recording, because the ruling turns on it:** the kernel
+**already holds the general form of both** —
+`EnvironmentNiche(BTreeMap<u16, (EnvironmentAxis, AxisPreference)>)` at
+`kernel/src/ecology.rs:187` is the preference,
+`EnvironmentVector(BTreeMap<u16, f64>)` at `:428` is a place's reading, over
+`environment_v1_basis()` (append-only, typed valences). So the work is
+**deleting a duplicate, not designing a mechanism**, and the kernel is the only
+layer both current homes can depend on: `species` is a domain and `worldgen` a
+window, and a domain may not depend on a window, which is exactly why the four
+fields are "spelled twice" with nothing enforcing agreement. Same forced-
+duplication shape The Tidemark met with `HabitatRealm` vs `climate::Realm`.
+
+**One clarification the ruling needs, recorded so it is not lost in
+execution:** "unified" must mean *collapsing the closed four-axis pair onto
+the kernel's open basis*, **not** merging niche and reading into one type.
+They are duals — a niche is a response over axis values, a reading is a point
+in axis space — and the kernel's existing pair already models that correctly.
+Merging them would be a category error.
+
+**Scope: NOT this campaign.** It touches every kind's authored niche, the
+capacity and suitability paths, and the tolerance product, and it will move
+world numbers. Recorded as the successor, and it is now a better-specified one
+than the ceiling was. This campaign's Stage 2 readout gains one obligation
+instead: **report how many tolerance axes actually discriminate its kind**, so
+the successor inherits a measurement of the poverty rather than an argument
+for it.
+
+**Ideonomy passes / overturns:** none; this was a factual audit of what exists,
+answered by reading the code and the registry, plus Nathan's ruling.
+
+**Capture actions:** `DOM-two-environment-bases` amended with the measured
+facts and Nathan's ruling; `BIO-lithology-is-not-a-tolerance-axis` added;
+spec §3.5 gains the axis-discrimination readout (next commit).
