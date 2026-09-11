@@ -675,12 +675,16 @@ pub fn temperature_grid_in(
 pub(crate) fn features_of(world: &World) -> Vec<Feature> {
     let flagship = hornvale_settlement::village_info(world);
     let flagship_id = flagship.as_ref().map(|v| v.id);
+    let flagship_position = flagship_id.and_then(|id| place_latlon(world, id));
     let mut features = Vec::new();
     for place in hornvale_terrain::places(world) {
         if Some(place.id) == flagship_id {
             continue;
         }
         if let Some((latitude, longitude)) = place_latlon(world, place.id) {
+            if Some((latitude, longitude)) == flagship_position {
+                continue;
+            }
             features.push(Feature {
                 name: place.name,
                 kind: "settlement".to_string(),
