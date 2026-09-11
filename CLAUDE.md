@@ -468,6 +468,25 @@ make doctor        # the repo self-map — run this first in a fresh session
 # builds. `SWEEP_DAYS` is namespaced because bare `DAYS` is already
 # `board-digest`'s, defined nowhere so its tool applies its own 14-day default.
 #
+# REAPING IS THE OTHER HALF, AND IT IS NOT SWEEPING (`make worktree-reap-dry`
+# / `worktree-reap`). `sweep` reclaims dead build GENERATIONS inside a
+# `target/`; the reaper removes whole worktrees whose branch already landed.
+# Sweeping a finished campaign's worktree keeps the corpse and its working set;
+# reaping it returns the space and the pool slot. Population comes from `git
+# worktree list`, so it spans BOTH pools — which is the entire point, since
+# `worktree-take` filters to the pool it owns and therefore never reached the
+# 29 under `~/.config/superpowers/worktrees/`. Measured at first dry run:
+# 17 reapable, 22 skipped.
+#
+# IT DOES NOT REFUSE ON THE TWO FILES `gate-run` WRITES, AND THAT IS
+# DELIBERATE. `docs/timings.md` and `docs/timings/test-baseline-<host>.tsv` are
+# written by every green local gate, including the last one a campaign runs
+# after its final commit, so "has run a gate" — the normal end state — would
+# otherwise make every worktree unreapable and the tool would report success
+# having done nothing. That is The Sexton's `worktree-take` bug exactly. Since
+# `docs/timings.md` is append-only and NOT regenerable, the rows a reap would
+# destroy are PRINTED first; the dry run is the moment to rescue one.
+#
 # AND DO NOT TRY TO SHARE OR CLONE A `target/` BETWEEN WORKTREES to avoid the
 # cost. It dedupes (cargo reports `Fresh` across two paths, one rlib) and it is
 # WRONG: `env!("CARGO_MANIFEST_DIR")`, `CARGO_TARGET_TMPDIR` and

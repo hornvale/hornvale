@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: worktree-reap worktree-reap-dry context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -673,6 +673,18 @@ worktree-take: ## Claim a recycled campaign worktree (NAME=<campaign> [BASE=main
 #     intervening build did not touch, and `worktree-take` deliberately does
 #     not build. Verified: stamp -> partial build -> `--file` proposes deleting
 #     the live test binaries.
+# REAPING IS NOT SWEEPING, and the two are easy to confuse. `sweep` reclaims
+# dead build GENERATIONS inside a target/; `worktree-reap` removes whole
+# worktrees whose branch already landed. Sweeping a finished campaign's
+# worktree keeps the corpse; reaping it is what actually returns the space and
+# the pool slot. Population comes from `git worktree list`, so it spans BOTH
+# pools — see scripts/worktree-reap.sh's header for why that matters.
+worktree-reap-dry: ## Show which merged worktrees would be reaped, removing nothing
+	@bash scripts/worktree-reap.sh
+
+worktree-reap: ## Remove every worktree whose branch is merged (across all pools)
+	@bash scripts/worktree-reap.sh --apply
+
 sweep-check: ## Fail with an install hint if cargo-sweep is missing
 	@command -v cargo-sweep >/dev/null 2>&1 || { \
 		echo "cargo-sweep not found — install it (decision 0848):"; \
