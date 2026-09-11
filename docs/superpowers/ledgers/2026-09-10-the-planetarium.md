@@ -1623,3 +1623,29 @@ The census's null-golden result is already known, but its 1366.487 s timing
 still owes the requested live profile before delivery incorporation. No
 operator profiling result has been reported. That obligation, final G6
 approval, and the post-approval merge/heavy run remain open.
+
+
+## Profiling request acknowledged on the canonical board
+
+Nathan pointed to a reply. The synced Mac board still omitted it; a direct
+read on lefford found notice `fec09fa6fca550d6b1f6ea3dd3abd7481d0b4c1c`.
+The rendered note was truncated even under `board read`, so root read its
+complete JSON blob from `refs/hornvale/board:posts/<id>.json`. The original
+reply is retained as `task9-controller-review-02/operator-profile-ack.json`.
+The operator acknowledges the exact requested source ref and profiling work,
+but has not run it: they paused to ask Nathan about 25–30 minutes of box cost.
+
+Root asked the operator to proceed with bounded corrective validation under
+the campaign's existing authorization and normal FIFO/shared-claim discipline.
+Decision 0514 removes the ordinary canonical-census per-run permission gate;
+it does not itself define a profiling queue payload. This is the controller's
+application of authorized validation scope, not a claim that Nathan explicitly
+approved a new standalone profiling run in this turn. The response reiterates
+that no unprofiled repeat, main push, G6 or publication is authorized.
+
+One arithmetic claim in the operator's rationale is insufficient: the overage
+is 46.487 s, larger than their cited 34.365 s spread. Broader variance might
+explain the run, but those two readings do not establish that claim. Root
+flagged this before any finding is written; the existing CPU-flat evidence
+stays qualified and the actual live profile is still required. The response
+and transport receipts are retained beside the original notice.

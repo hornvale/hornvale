@@ -104,3 +104,10 @@ error annotations, regenerated the two audit reports, and passed scoped plus
 normal commit checks. Independent review found no issues, and a CPU replay
 matched all 300 recorded observation replies exactly, preserving the original
 capture's bounded claim without relabeling it as a newer GPU run.
+
+
+A later operator acknowledgement existed on lefford before appearing in the
+Mac's synced board mirror. When Nathan identified the reply, direct canonical
+reading found it; reading its Git JSON blob also recovered text that even the
+board's full rendering had truncated. A synchronized read is evidence about
+the mirror, not proof that the authoring host has posted nothing.
