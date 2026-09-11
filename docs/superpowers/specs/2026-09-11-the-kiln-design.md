@@ -1,6 +1,6 @@
 # The Kiln — a technology corpus, frozen before the model that would move it
 
-**Status:** draft for G3 review · **Date:** 2026-09-11 · **Campaign:** The Kiln
+**Status:** approved at G3 (Nathan, 2026-09-11) · **Date:** 2026-09-11 · **Campaign:** The Kiln
 · **Ledger:** [`docs/superpowers/ledgers/2026-09-11-the-kiln.md`](../ledgers/2026-09-11-the-kiln.md)
 
 ## 1. Why
@@ -64,11 +64,14 @@ adds is (a) a **unit** that is a capability held by a people rather than a
 statistic over a population, (b) **demands derived by closure over a
 prerequisite lattice**, which regularities has no notion of, and (c) the value
 `lost`. A reviewer who concludes this is regularities with extra fields is
-making a defensible argument, and the G3 decision is exactly whether the
-three additions constitute a basis or an extension.
+making a defensible argument, and it was put to Nathan at G3 as the
+campaign's lead flagged item.
 
-**Either way this campaign mints a decision record**, as 0135 did for
-`systems/` and 0936 for `regularities/`.
+**Ratified at G3 (Nathan, 2026-09-11): `technologies/` is a sixth family.**
+This campaign therefore mints a decision record opening it, as 0135 did for
+`systems/` and 0936 for `regularities/`. The counterargument above stays in
+this spec deliberately — a ratification that erases the case against it leaves
+the next reader unable to tell a decision from an assumption.
 
 ## 4. Two corpora, not one
 
@@ -112,12 +115,24 @@ Technologies documented as held and then lost. Every sibling corpus is a
 **named external source with a year** (`polti`, `tvtropes-2012`,
 `wolverson-2021`, `sugarscape-1996`), and this one must be too.
 
-**Proposed anchor: Henrich (2004)**, "Demography and Cultural Evolution: How
-Adaptive Cultural Processes Can Produce Maladaptive Losses — the Tasmanian
-Case," *American Antiquity* 69(2), the canonical treatment of technology loss
-and the cases it collects. **This is the one source choice I most want
-confirmed at G3**, because it determines the column's bias, and a
-loss-mechanism paper is a narrower object than a catalogue.
+**Anchor: Henrich (2004)**, "Demography and Cultural Evolution: How Adaptive
+Cultural Processes Can Produce Maladaptive Losses — the Tasmanian Case,"
+*American Antiquity* 69(2) — the canonical treatment of technology loss.
+Accepted at G3, **with latitude to range more speculatively** (Nathan,
+2026-09-11).
+
+**What that latitude costs, and how it is paid.** Every sibling corpus is a
+single named source, which is what lets `provenance` state one bias. A corpus
+ranging past Henrich is **not** one source, so it declares a different
+provenance character: Henrich supplies the *theory of loss* (a skill
+distribution drifting below a self-sustaining threshold), and each item beyond
+his cases **carries its own citation**, with contested cases — Roman concrete,
+Greek fire, Antikythera-class gearing, Polynesian deep-water voyaging — marked
+contested in the item rather than silently promoted to fact. This is a
+deliberate departure from sibling convention and is named as one, because an
+authored corpus that reads like a sourced one is the failure 0095 exists to
+prevent. It remains externally sourced per item; what it is not is
+single-sourced.
 
 **The two corpora carry incompatible theories of what a technology is, and
 that must be declared.** Asimov's chronology frames a technology as an
