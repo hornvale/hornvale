@@ -1154,3 +1154,60 @@ wrong: Stage 2's implementer meets two `EnergySource`s and has to disambiguate
 imports before the rename lands.*
 
 **Task 1+2: complete** (commits `53f8344c4..1c234398b`, review clean).
+
+---
+
+## #15 [Q] — A faithful bijection is blind to the distinctions the new vocabulary exists for
+
+**The Tidemark's finding, recorded with attribution because it is a defect
+class rather than a note about their campaign**, and it lands on this one
+harder than on theirs:
+
+> A faithful bijection is faithful to the OLD vocabulary's distinctions, and
+> is therefore exactly blind to the ones the new vocabulary was built to
+> express.
+
+**Their worked example is what makes it undeniable.** Tasks 1+2's migration
+maps every old `Chemotrophic` to chemo/litho/auto — correct, because that is
+what preserves rename behaviour. But:
+
+- their **vent commensal** is a people that EATS chemosynthetic bacteria:
+  chemo-**organo**-hetero;
+- their **tube worm**, hosting chemoautotrophic symbionts, is the one that is
+  genuinely chemo-**litho**-auto.
+
+**The two kinds the bijection collapses into one triple are precisely the two
+the new axes exist to distinguish.** And it would collapse them **silently** —
+the bijection is behaviour-preserving by construction, so nothing goes red.
+Applied mechanically, it would ship their commensal as an autotroph that eats
+nothing.
+
+**Taken as a binding constraint on this campaign's Stage 4**, which authors
+8-20 organisms against these axes. Any authoring that reaches for the
+migration table as a shortcut inherits exactly the blindness the split was
+meant to remove. **The bijection is a MIGRATION table for existing rows, never
+an AUTHORING table for new ones**, and Stage 4's tasks must say so where an
+implementer would otherwise reach for it.
+
+**A correction I owed them and have sent.** My migration notice said the
+bijection let them "translate your slate table mechanically". Given the above
+that sentence is wrong for exactly the kinds it matters for, and I have
+retracted it to them in those terms.
+
+**Their question, answered from the file rather than from my review's summary
+of it:** `chemo-organo-hetero` **is** already sanctioned — it is the 35
+ordinary kinds' triple. Their whole roster migrates without touching
+`SANCTIONED`, and the count guard stays at 3. If they ever do need a fourth,
+that is a real signal rather than paperwork.
+
+**One thing worth keeping about method.** A mechanism's first genuine test
+case turning out to be the one it gets wrong is worth more than a page of
+reasoning about the mechanism. Tasks 1+2 shipped with 39/39 verified, a clean
+review and an exhaustive programmatic check — and none of that could have
+found this, because every one of those instruments asks whether the OLD
+distinctions survived.
+
+**Ideonomy passes / overturns:** none; a peer's finding, verified and adopted.
+
+**Capture actions:** this entry; Stage 4's authoring constraint recorded above
+for its tasks to carry; the retraction sent.
