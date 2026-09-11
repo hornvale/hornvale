@@ -354,3 +354,14 @@ sea-elf would have.
   after the claim had already been repeated twice in this campaign's own
   documents. Not edited here because the row belongs to another line of work;
   recorded so whoever picks it up does not inherit the error.
+- **Plan defect caught at dispatch-time verification (Task 1, M4).** The plan
+  said to count "vertices at which `sea-elf` and `giant-crocodile` each have
+  non-zero **availability**". `availability` is a local term inside
+  `per_species_suitability_masked` and is never returned, so the measurement as
+  written was unobservable. The observable is `per_species_suitability`'s
+  returned per-species `VertexMap<f64>`. Better: `species_realm` is a
+  caller-supplied slice, so both arms score in ONE run against the same tree —
+  the idiom `windows/worldgen/tests/suite/deep_realm_rehome.rs` already uses
+  (`k_live` vs `k_surface_forced`). That converts M4 from a fragile
+  before/after baseline into a permanent two-arm test. Plan text corrected
+  before Task 1 was dispatched.

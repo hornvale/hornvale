@@ -64,10 +64,16 @@ no world moves.
 `giant-crocodile` carry explicitly stated realms; M4 measures zero movement;
 seed-42 artifacts are byte-identical.
 
-- [ ] Before touching the enum, capture M4's **before** counts: the vertices at
-  which `sea-elf` and `giant-crocodile` each have non-zero availability at seed
-  42. Record the exact numbers in the ledger — they are the baseline the rest of
-  this task is measured against, and a count taken afterwards cannot serve.
+- [ ] Write M4 as a **two-arm test in one run**, not a before/after across the
+  code change. `availability` is internal to `per_species_suitability_masked` and
+  is never returned; the observable is `per_species_suitability`'s
+  `Vec<(u32, VertexMap<f64>)>`, and `species_realm` is a **caller-supplied
+  slice**, so one run can score `sea-elf` and `giant-crocodile` under the realm
+  vector the registry yields and under a forced vector, and compare. Follow
+  `windows/worldgen/tests/suite/deep_realm_rehome.rs`, which does exactly this
+  (`k_live` vs `k_surface_forced`) — it is the shipped idiom for this question.
+  Count vertices whose returned suitability is non-zero. Record both counts in
+  the campaign ledger.
 - [ ] Add `HabitatRealm::Marine` with its doc comment. Do **not** hunt for call
   sites by grep: `substrate_response`'s own doc says the `match` is exhaustive
   with no wildcard, so build the workspace and let the compiler enumerate them.
@@ -90,9 +96,11 @@ seed-42 artifacts are byte-identical.
   in the water… Not `ALREADY_BUOYED`"), giant-crocodile's is that it is
   land-dominant at 0.6 `ANIMAL_PREY`. The registry is sparse and absence already
   means `Surface`, so state in the doc why these two are nevertheless listed.
-- [ ] Re-run M4 and compare against the recorded baseline. Equality is the
-  prediction; any difference means the variant silently reclassified a shipped
-  kind and must be resolved before the task closes, not noted.
+- [ ] Require M4's two arms equal. Equality is the prediction; any difference
+  means the variant silently reclassified a shipped kind and must be resolved
+  before the task closes, not noted. Because both arms run against the same tree,
+  this test keeps working after the task — it is a permanent guard, not a
+  one-off measurement.
 - [ ] Run `make rebaseline` and `git diff --exit-code` over the paths in
   `docs/generated-paths.txt`. Branch table, because the response differs by what
   moved: **only `docs/audits/` moved** → the type-audit report drifted on the new
