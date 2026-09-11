@@ -376,3 +376,46 @@ render treatment. Their existence is not a requirement to finish this pilot.
 
 Approval accepts this campaign's scope and boundaries. It does not approve a
 public film, replace final visual review, or authorize a merge.
+
+## 12. Execution decisions for final review
+
+These post-G3 rulings sharpen the approved scope; final visual/merge acceptance
+remains pending. The [ledger](../ledgers/2026-09-10-the-planetarium.md) records
+the alternatives, evidence and costs. Cross-campaign ownership is recorded in
+decisions [0956](../../decisions/0956-planetarium-schedules-a-directed-graphical-study.md),
+[0957](../../decisions/0957-evaluated-astronomy-stays-native.md) and
+[0958](../../decisions/0958-visual-libraries-are-independent-of-the-film.md).
+
+- **Radius (#8–9):** the approved prerequisite uses eight frozen knots from
+  Zeng's Earth-like rocky curve, piecewise-linearly interpolated on 0.5–2 Earth
+  masses. Its 32.5% Fe / 67.5% MgSiO3 composition is an assumption. No stored
+  Anchor field, new random draw or existing-dynamics feedback was added.
+- **Source coordinates and validity (#12, #14):** map calendar equatorial
+  directions into the native system plane with Rz(pi) * Rx(-obliquity). Refuse
+  nonpositive/nonfinite native luminosity at unsupported instants rather than
+  clamping it or disallowing every negative tick.
+- **Elevation and illumination (#15–16):** the physical bulk radius is the
+  view's spherical sea reference, with positive (elevation minus sea level)
+  displaced 1:1. This does not assert a source geoid. Actual-position stellar
+  point lights illuminate solid bodies; separate anchor-directional feeds
+  drive the cosmetic atmosphere. No apparent stellar disk or eclipse shadow
+  is claimed. Static cloud shapes and their 12 km shell are cosmetics; the
+  atmosphere's 80 km extent is a presentation choice.
+- **Supported camera (#17):** orbital views remain at least twice a body's
+  outer physical radius from its center; the pilot bounds camera distance to
+  2e9 km. The measured finite precision grid is not a near-surface guarantee.
+- **Time and lifecycle (#18):** presentation frames are half-open, while rounded
+  simulation ticks may repeat or reach the end tick. Reset empties displayed
+  entities and pending observations without requiring an invalid anchorless
+  native document.
+- **Clean capture (#19):** freeze an external film copy to the actual clean
+  compiled revision and produce fresh observations and images. Do not relabel
+  old output. A later documentation commit does not rewrite a capture's identity.
+- **Failure deadlines (#20):** source waiting is bounded and late replies cannot
+  publish into failed state. This is not forced preemption of native worker,
+  operating-system or GPU calls.
+- **Implementation sequence (#7, #10–11, #13):** Bevy 0.19.1 and Rust 1.96.1 are
+  pinned; real moving GPU witnesses precede final package tooling. Source
+  conformance wrappers belong to the evaluated-source task after the radius
+  prerequisite. The initial native GPU qualification established feasibility,
+  not final aesthetic or performance acceptance.

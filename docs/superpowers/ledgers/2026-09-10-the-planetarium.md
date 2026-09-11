@@ -1243,3 +1243,30 @@ an unauthorized local full regeneration.
 Task 9 follows with the preserved Task 7 clean movie as its comparison, the
 already-recorded moon/detail and clean-provenance test follow-ups, and the final
 performance/GPU evidence. No final visual approval, merge or publication granted.
+
+
+## Task 9 — close preparation during refinement
+
+Task 9 dispatched from `f3e79ba3fd65a5c320c268969fb1ff3b2d0a228d` after live
+signature preflight. The worker owns the actual moon-detail comparison,
+measurement helpers, complete raw timing/repeatability evidence and a fresh clean
+package. Root owns canonical results, independent moving/UI review and close
+artifacts. No final result is assumed from the earlier package.
+
+The complete ledger through Task 8 and this campaign's scratch reports/reviews
+were read before preparing the chronicle and retrospective. Deferred review
+items now have explicit outcomes in the retrospective; Task 9's remaining
+outcomes are still marked pending. The approved camera boundary and candidate
+future film stories have dedicated raw frontier rows. The existing presentation
+row remains spec'd until G6, with its implementation evidence and visual-review
+status corrected; the game and climate/migration rows retain their later scope.
+The Confidence Gradient's phenomena/scene-interface bet gains a narrow actual
+300-frame rendered-consumer witness, without asserting game or general world
+coverage. Spec section 12 promotes the post-G3 material rulings and links the
+three cross-campaign decision records. These are routing and evidence updates,
+not new design choices.
+
+Stage 3 request `req-2dd219cef400-20260910T233741Z` is running as observed from
+`make sluice-status`; no green report is claimed. Final canonical integration,
+census, Task 9 review, final artifact archive and G6 remain outstanding. A fresh
+scratch/ledger delta sweep is required after Task 9 before the final handoff.

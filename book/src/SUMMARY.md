@@ -499,6 +499,7 @@
 - [Skyworld Seams](./chronicle/skyworld-seams.md)
 - [The Observation Series](./chronicle/the-observation-series.md)
 - [The Vent](./chronicle/the-vent.md)
+- [The Planetarium](./chronicle/the-planetarium.md)
 
 # Appendix: The Frontier
 
