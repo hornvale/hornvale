@@ -144,8 +144,32 @@ population framing is **much closer to the project's own doctrine** — TECH-1's
 "capability threshold the world crosses when a computed bar is cleared" is
 Henrich's shape, not Asimov's.
 
-This column reads **entirely `unmeasured` on freeze**, because nothing in
-Hornvale can lose a technology. That looks like nothing and is the
+**This column is mostly `absent`, with `unmeasured` reserved for the items that
+land the finding** — and an earlier draft of this paragraph said "entirely
+`unmeasured` on freeze", which contradicted §5.2.
+
+The contradiction was inherited: that sentence was written while the design
+carried **two** verdict fields (a reach verdict and a trajectory verdict), so
+the trajectory field would indeed have read `unmeasured` on every row. Ledger
+#6 withdrew the two-field shape after reading `sugarscape-1996`'s actual data
+and collapsed both into one **pipelined** field, where a measured value is only
+reachable once reach has succeeded. §4.2 was not updated with it.
+
+Under the ratified pipeline the collapse column scores like any other:
+
+- A documented loss whose technology Hornvale **cannot model at all** — Roman
+  concrete, Linear B literacy, Polynesian deep-water voyaging — fails reach and
+  scores `absent`. Most items are here.
+- A documented loss whose technology Hornvale **does** model scores
+  `unmeasured`: reach passes, and the loss cannot be measured because the model
+  is monotone. **`TechHorizon::Bronze` exists**, so "bronze-working, lost" is
+  exactly such an item.
+
+That second class is the campaign's sharpest statement, and the one-field
+pipeline is what makes it sayable: *of N documented losses, Hornvale can
+represent K of the technologies at all, and of those K it can represent the
+loss of exactly zero.* "Entirely `unmeasured`" would have flattened the two
+classes together and thrown away the K. That looks like nothing and is the
 preregistration working; §7 requires the report to say so where a reader meets
 the column, not only in this spec.
 
@@ -300,7 +324,8 @@ campaign is built against.
 
 ## 9. Accepted costs
 
-- A column that is entirely `unmeasured` until a later campaign.
+- A column whose `unmeasured` rows stay `unmeasured` until a later campaign —
+  the rows that matter most, and the ones that look emptiest.
 - A sixth loader, resolver and report that will never share code with its
   siblings — 0936 accepted exactly this for the fourth.
 - Two corpora authored by people who know the model, mitigated by §4.1 and
