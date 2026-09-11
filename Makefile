@@ -976,13 +976,16 @@ world-check-run: wasm-world
 	cargo run -p hornvale -- scene system --world /tmp/hv-wc.json > /tmp/hv-wc-system.json
 	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc.json --width 256 > /tmp/hv-wc-tiles.json
 	cargo run -p hornvale -- scene tiles-region --world /tmp/hv-wc.json --face 0 --level 3 --ix 4 --iy 4 --samples 16 > /tmp/hv-wc-region.json
+	cargo run -p hornvale -- scene eclipses --world /tmp/hv-wc.json --from 0 --until 2000 > /tmp/hv-wc-eclipses.json
+	cargo run -p hornvale -- scene eclipses --world /tmp/hv-wc.json --from 0 --until 2000 --latitude 0 --longitude 540 > /tmp/hv-wc-observed-eclipses.json
 	cargo run -p hornvale -- new --seed 42 --plates 12 --out /tmp/hv-wc-pinned.json
 	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc-pinned.json --width 256 > /tmp/hv-wc-pinned-tiles.json
 	cargo run -p hornvale -- new --seed 42 --stellar-topology close-binary --wanderers 3 --out /tmp/hv-wc-binary.json
 	cargo run -p hornvale -- scene system --world /tmp/hv-wc-binary.json > /tmp/hv-wc-binary-system.json
 	node clients/world-wasm/drive.mjs \
 	  clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm \
-	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json /tmp/hv-wc-binary-system.json
+	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json /tmp/hv-wc-binary-system.json \
+	  /tmp/hv-wc-eclipses.json /tmp/hv-wc-observed-eclipses.json
 	@# The gate is denominated in COMPRESSED bytes, because that is what a
 	@# visitor actually downloads: GitHub Pages serves the catalog gzipped
 	@# (brotli where the client offers it), so the raw figure overstates the

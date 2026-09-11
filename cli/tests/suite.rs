@@ -88,6 +88,8 @@ mod retired_gate_signposts;
 mod scene_context_discipline;
 #[path = "suite/scene_cost.rs"]
 mod scene_cost;
+#[path = "suite/scene_eclipses_cli.rs"]
+mod scene_eclipses_cli;
 #[path = "suite/scene_moons_cli.rs"]
 mod scene_moons_cli;
 #[path = "suite/scene_surrounds_colour_cli.rs"]
