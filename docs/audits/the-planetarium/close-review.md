@@ -84,3 +84,19 @@ the final candidate before using the eventual census result.
 Heavy and the actual merge remain after G6 through the canonical queue. The
 Planetarium tracker stays in progress until an approved candidate actually lands;
 the unrelated inherited tracker is preserved.
+
+
+## Task review and retained qualification
+
+All allocated local implementation tasks have passed independent review, including
+Task 9's terminal benchmark-write error fix after a compiled behavioral regression.
+The successful GPU capture and review app remain at `81ba2bfa6`; the later
+terminal failure propagation has CPU/scoped-review evidence only. The final visual
+audit names that distinction and the retained shutdown warning.
+
+Exact routing locations at this close-preparation revision are: spec section 12
+at line 380; retrospective deferred-items section at line 47; final visual audit
+refinement at line 36 and UI evidence at line 124; frontier game/climate/camera/
+story rows at lines 2244/2245/2246/2247; Confidence Gradient witness at line 2267;
+client library ownership at line 8. These are lookup locations, not frozen line
+contracts; the named headings and row IDs remain the durable identifiers.

@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–8 implemented and independently reviewed; Stages 1–3 have green canonical reports. Task 9 final clean 4K package, full moving review and performance/repeatability measurements are complete; independent Task 9 review, final canonical integration and census accounting remain pending. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–9 local implementation and evidence are independently reviewed; Stages 1–3 have green canonical reports. The final clean 4K package, full moving review and performance/repeatability measurements are complete. Whole-branch review, final canonical integration and census accounting remain pending. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 

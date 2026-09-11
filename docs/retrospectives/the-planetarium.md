@@ -60,6 +60,11 @@ not left for the final merge.
 - Manual mouse-drag delivery remains unproven after three tool attempts. The
   pointer did not move; no renderer failure or successful manual orbit was inferred.
   The final audit names the actual UI records and separates scripted controls.
+- Task 9's benchmark-output failure falsely returned CLI success. A real failed
+  write reproduced it; terminal AppExit propagation fixed it and passed scoped
+  independent re-review. The successful capture retains its original revision.
+- The post-completion Bevy destroyed-window warning remains nonblocking and
+  documented in the performance/final audits; it was not suppressed.
 - Near-surface precision and future film stories remain frontier follow-ups.
   They do not imply a universal renderer or a scheduled film series.
 

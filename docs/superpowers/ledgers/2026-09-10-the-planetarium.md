@@ -1358,3 +1358,39 @@ scope; no new design ruling or fidelity cut was adopted. The retrospective names
 each deferred item's outcome. Final whole-branch review, canonical integration,
 census accounting and G6 still remain; technical qualification grants no merge or
 publication approval.
+
+
+## Task 9 — implementation approved after one fix round
+
+Independent review found one Important terminal error: live::run discarded
+Bevy's AppExit, allowing failed benchmark output to return CLI success. The
+worker reproduced it with a real removed output directory (compiled RED: one
+pass, one failure), then propagated the returned error through the existing CLI
+boundary. All twelve app unit tests and scoped clippy passed; the normal local
+gate passed all four subfloor chunks in 75.626 s. Fix commit
+`06e986fac0e2ab97d5f5e25f82fcb35c55e342dc` and timing commit
+`e4b83de247af781612c5b71cee5672abd0621669` are independently re-reviewed:
+spec compliant, quality Approved, I1 resolved. The normal timing prose hook
+passed 76 tests in 4.257 s. The finalized worker report now consistently names
+the corrected-clock -02 qualification.
+
+The reviewer explicitly confirmed that this terminal failure-only fix does not
+change the successful measurement, source, film, material or renderer path.
+Focused CPU regression and scoped re-review suffice; the exact successful GPU
+capture and review app remain at `81ba2bfa6`, not the later fix revision. The
+retained destroyed-window shutdown warning is a nonblocking limitation, recorded
+without suppression. No warning-free GPU log or later GPU qualification is claimed.
+
+Root's actual Stage 3 merge-product-to-final-tree diff contains only
+`docs/generated-path-writes.tsv`, `docs/timings.md`, the subfloor roster and the
+lefford test baseline (four files, 109 insertions / 85 deletions). The diff is
+preserved in `task9-controller-review-02/canonical-stage3-artifact-diff.txt`.
+No scientific fixture movement is inferred from these operational artifacts.
+At `e4b83de24`, direct diffs confirm the seed-42 world keystone equals absorbed
+main `cb0331192`, and census-relevant kernel/domain/window/CLI/visual-source paths
+still equal the queued census ref `fa1223fd7`. Final main/census checks remain
+required if the canonical queue advances those inputs.
+
+Task 9's allocated local implementation and visual/performance evidence are
+approved. Whole-branch review and final canonical integration remain next;
+G6 is still Nathan's final visual and merge decision, not an automatic task gate.
