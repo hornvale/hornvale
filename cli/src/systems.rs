@@ -237,7 +237,14 @@ impl RepoFacts {
     /// How `spec` (`<crate>::<fn>`) resolves against the live repo. A cheap
     /// text search, not a compile — the resolver never shells out to
     /// `cargo`. See [`TestResolution`] for what each outcome means.
-    fn test_resolution(&self, spec: &str) -> TestResolution {
+    ///
+    /// `pub(crate)`, not private: `crate::technologies` resolves this
+    /// family's own `test:` anchors through the SAME mechanism-anchor
+    /// machinery rather than a second boundary-scanning implementation —
+    /// see that module's doc comment on why it reuses this rather than
+    /// `RepoFacts`'s public `decision_in_force`/`registry_status` pair
+    /// alone.
+    pub(crate) fn test_resolution(&self, spec: &str) -> TestResolution {
         let Some((crate_name, symbol)) = spec.rsplit_once("::") else {
             return TestResolution::Missing;
         };
@@ -245,6 +252,14 @@ impl RepoFacts {
             return TestResolution::Missing;
         };
         directory_defines_symbol(&self.root.join(dir), symbol)
+    }
+
+    /// Whether `path:p`'s content still exists on disk, given `p` already
+    /// passed [`path_anchor_is_well_formed`]. `pub(crate)` for the same
+    /// reason [`RepoFacts::test_resolution`] is: `crate::technologies`
+    /// reuses this rather than re-deriving a root-relative existence check.
+    pub(crate) fn path_exists(&self, p: &str) -> bool {
+        self.root.join(p).exists()
     }
 }
 
@@ -448,8 +463,10 @@ fn is_identifier_boundary(c: char) -> bool {
 /// <symbol>` cannot see that the match is `#[ignore]`d, so an anchor citing
 /// a heavy or otherwise-skipped battery read as resolved exactly like one
 /// the gate actually exercises.
+/// `pub(crate)`: `crate::technologies::resolve_anchor` matches on this
+/// directly rather than re-deriving it (see [`RepoFacts::test_resolution`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TestResolution {
+pub(crate) enum TestResolution {
     /// No boundary-valid `fn <symbol>` definition found anywhere searched
     /// (an unknown crate counts as this too).
     Missing,
@@ -924,7 +941,11 @@ fn deferral_repair_advice(status: &str) -> &'static str {
 /// absolute path outright; and a leading `../` escapes the repo into
 /// whatever sits beside it on disk. None of those is a location inside this
 /// repo, which is the only thing a `path:` anchor can mean.
-fn path_anchor_is_well_formed(p: &str) -> bool {
+///
+/// `pub(crate)`: `crate::technologies` reuses this well-formedness check for
+/// its own `path:` anchors rather than re-deriving the three malformed
+/// shapes above.
+pub(crate) fn path_anchor_is_well_formed(p: &str) -> bool {
     if p.is_empty() || p.starts_with('/') {
         return false;
     }

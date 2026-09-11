@@ -5,6 +5,7 @@
 //! its RESOLVER (decision 0011). Nothing in `domains/*` or `windows/*`
 //! reads a corpus file.
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 const FIXTURE: &str = r#"{
@@ -67,6 +68,30 @@ const DANGLING_FIXTURE: &str = r#"{
   "items": [
     { "id": "a", "title": "A", "introduces": "tok-a",
       "presupposes": ["nope"], "verdict": "absent", "anchor": "" }
+  ]
+}"#;
+
+/// `d` presupposes both `b` and `c`, and both `b` and `c` presuppose `a` —
+/// two paths converge on a shared ancestor. This is the normal shape family
+/// law calls a LATTICE rather than a tree, and it is NOT a cycle: Task 4's
+/// reviewer verified this by hand with a standalone program (`d -> {b, c}
+/// -> a`), but nothing committed held it before this fixture (Task 5's
+/// brief, "One addition folded in from Task 4's review").
+const DIAMOND_FIXTURE: &str = r#"{
+  "corpus": "fixture",
+  "unit": "technology",
+  "ordered": false,
+  "provenance": "a fixture",
+  "frozen": "never",
+  "items": [
+    { "id": "a", "title": "A", "introduces": "tok-a",
+      "presupposes": [], "verdict": "absent", "anchor": "" },
+    { "id": "b", "title": "B", "introduces": "tok-b",
+      "presupposes": ["a"], "verdict": "absent", "anchor": "" },
+    { "id": "c", "title": "C", "introduces": "tok-c",
+      "presupposes": ["a"], "verdict": "absent", "anchor": "" },
+    { "id": "d", "title": "D", "introduces": "tok-d",
+      "presupposes": ["b", "c"], "verdict": "absent", "anchor": "" }
   ]
 }"#;
 
@@ -146,5 +171,32 @@ fn a_cycle_in_the_lattice_is_a_parse_error() {
 fn presupposes_naming_an_unknown_item_is_a_parse_error() {
     assert!(
         std::panic::catch_unwind(|| { hornvale::technologies::parse(DANGLING_FIXTURE) }).is_err()
+    );
+}
+
+/// A diamond-shaped lattice (`d -> {b, c} -> a`) is NOT a cycle, and its
+/// shared ancestor's token appears exactly once in the closure — the
+/// `presupposes` lattice's normal "lattice, not tree" shape (family law),
+/// which had no committed test before this one (Task 4's review).
+#[test]
+fn a_diamond_lattice_parses_and_its_shared_ancestor_is_not_duplicated() {
+    let result = std::panic::catch_unwind(|| hornvale::technologies::parse(DIAMOND_FIXTURE));
+    assert!(
+        result.is_ok(),
+        "a diamond (two paths converging on one ancestor) must not be \
+         mistaken for a cycle"
+    );
+    let c = result.expect("checked above");
+    let d = hornvale::technologies::derived_demands(&c, "d");
+    assert_eq!(
+        d,
+        BTreeSet::from([
+            "tok-a".to_string(),
+            "tok-b".to_string(),
+            "tok-c".to_string(),
+            "tok-d".to_string(),
+        ]),
+        "the shared ancestor tok-a must appear exactly once in the closure, \
+         alongside every other rung"
     );
 }
