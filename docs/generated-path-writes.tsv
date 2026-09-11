@@ -31,7 +31,7 @@ book/src/reference/layering.md	0	1
 book/src/reference/lexicon-of-place.md	0	1
 book/src/reference/individuals.md	0	1
 book/src/reference/stream-manifest.md	0	1
-book/src/reference/scene-eclipses-v2.md	0	1
+book/src/reference/scene-eclipses-v3.md	0	1
 book/src/reference/scene-moons-v1.md	0	1
 book/src/reference/scene-neighbors-v1.md	0	1
 book/src/reference/scene-surrounds-v2.md	0	1
@@ -99,3 +99,4 @@ docs/audits/plumb-roster.md	1	1
 docs/audits/regularity-coverage-sugarscape-1996.md	1	1
 book/src/gallery/possession-carry-seed-14.md	1	1
 clients/game/core/tests/fixtures/session-seed-14-carrying.json	1	1
+observations/fixtures/HV-001/expected-frame-000.json	1	1

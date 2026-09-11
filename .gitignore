@@ -97,3 +97,8 @@ book/src/laboratory/generated/gnomon-injection/
 # Observation films and their local render inputs are derived review output.
 # Manifests and small deterministic fixtures remain committed under observations/.
 observations/render-output/
+
+# Staging documents are per-effort scratch, never a shared tracked path.
+# See CLAUDE.md (Process): a root IMPLEMENTATION_PLAN.md was one mutable path
+# every campaign wrote, and a `cat >` over it clobbered a live campaign silently.
+IMPLEMENTATION_PLAN.md

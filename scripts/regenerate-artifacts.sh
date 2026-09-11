@@ -1306,6 +1306,29 @@ spawn env HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-anomalies -- \
     cargo run -q -p hornvale -- lab anomalies
 reap
 
+# The HV-001 observation fixture (wired up 2026-09-10). The committed
+# `expected-frame-000.json` IS the producer's own first frame, and it pins a
+# `world_revision` hash — so any campaign that changes world derivation drifts
+# it and `observations_hv_001_fixture_is_producer_backed_and_contains_no_client_classification`
+# reds. Until now nothing here regenerated it and nothing declared it, so that
+# red's only remedy was a command written down nowhere, rediscovered from a
+# byte-array assertion failure by whoever moved the world next. That is a tax
+# paid by an unrelated campaign, invisible until it fires:
+# campaign/underworld-peoples hit it first, ~90 minutes after the fixture
+# landed. Regenerating it here makes the chamber's `artifacts` phase absorb the
+# drift the way it absorbs every other generated artifact.
+#
+# THE EXPORT WRITES 900 FRAMES AND ONLY THE FIRST IS THE FIXTURE, so it lands
+# in the throwaway `$work` dir (cleaned by the EXIT trap above) and exactly one
+# file is copied out. Do not point `--out` at the fixture directory: that would
+# leave 899 untracked frames in the tree.
+echo "regenerate-artifacts: the HV-001 observation fixture" >&2
+run -p hornvale -- observations export \
+    --manifest observations/episodes/HV-001.json \
+    --out "$work/observations" >&2
+cp "$work/observations/frame-000.json" \
+    observations/fixtures/HV-001/expected-frame-000.json
+
 echo "regenerate-artifacts: done." >&2
 
 # Emit the write-set capture (Task 4, The Attestation): one row per declared

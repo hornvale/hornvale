@@ -112,7 +112,7 @@
 - [Scene Schema: system v1](./reference/scene-system-v1.md)
 - [Scene Schema: moons v1](./reference/scene-moons-v1.md)
 - [Scene Schema: neighbors v1](./reference/scene-neighbors-v1.md)
-- [Scene Schema: eclipses v2](./reference/scene-eclipses-v2.md)
+- [Scene Schema: eclipses v3](./reference/scene-eclipses-v3.md)
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [Proto-dwarf](./reference/proto-dwarf-generated.md)
@@ -494,6 +494,9 @@
 - [The Census Tail](./chronicle/the-census-tail.md)
 - [Skyworld Seams](./chronicle/skyworld-seams.md)
 - [The Observation Series](./chronicle/the-observation-series.md)
+- [The Vent](./chronicle/the-vent.md)
+- [The Living Vent](./chronicle/the-living-vent.md)
+- [Eclipse Rhythm and View](./chronicle/eclipse-rhythm-view.md)
 
 # Appendix: The Frontier
 

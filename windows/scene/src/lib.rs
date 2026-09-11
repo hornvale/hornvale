@@ -37,7 +37,7 @@ pub const MIN_WIDTH: u32 = 16;
 pub const MAX_WIDTH: u32 = 1024;
 
 /// Scene construction failed; the reason, loudly (the GenesisError manner).
-/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0), bare-ok(identifier-text: UnknownTileField.0), bare-ok(prose: MalformedTileFields.0)
+/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0), bare-ok(identifier-text: UnknownTileField.0), bare-ok(prose: MalformedTileFields.0), bare-ok(diagnostic-value: ObserverLatitudeOutOfRange.0), bare-ok(diagnostic-value: ObserverLongitudeNonFinite.0)
 #[derive(Debug, Clone, PartialEq)]
 pub enum SceneError {
     /// Width must be even (height is width / 2).
@@ -74,6 +74,10 @@ pub enum SceneError {
     /// Tile-field selection: the request was not a JSON array of strings.
     /// Carries the parser's message.
     MalformedTileFields(String),
+    /// Eclipse observer latitude was non-finite or outside `[-90, 90]`.
+    ObserverLatitudeOutOfRange(f64),
+    /// Eclipse observer longitude was non-finite.
+    ObserverLongitudeNonFinite(f64),
 }
 
 impl std::fmt::Display for SceneError {
@@ -116,6 +120,13 @@ impl std::fmt::Display for SceneError {
                 f,
                 "tile fields must be a JSON array of strings, e.g. [\"elevation_m\",\"ocean\"]: {e}"
             ),
+            SceneError::ObserverLatitudeOutOfRange(latitude) => write!(
+                f,
+                "observer latitude {latitude} is outside the finite range -90..=90"
+            ),
+            SceneError::ObserverLongitudeNonFinite(longitude) => {
+                write!(f, "observer longitude {longitude} is not finite")
+            }
         }
     }
 }
@@ -1494,12 +1505,12 @@ pub fn neighbors_json(scene: &NeighborsScene) -> String {
     serde_json::to_string(scene).expect("a NeighborsScene always serializes")
 }
 
-/// The `scene/eclipses/v1` schema tag.
+/// The `scene/eclipses/v3` schema tag.
 /// type-audit: bare-ok(identifier-text)
-pub const ECLIPSES_SCHEMA: &str = "scene/eclipses/v2";
+pub const ECLIPSES_SCHEMA: &str = "scene/eclipses/v3";
 
 /// One solar eclipse's shadow band on the globe.
-/// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-2: duration_days)
+/// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-2: duration_days), pending(wave-1: sweep_deg), bare-ok(flag: global_coverage)
 #[derive(Debug, Serialize)]
 pub struct GroundTrackElem {
     /// Band-center latitude at mid-event, degrees.
@@ -1517,31 +1528,106 @@ pub struct GroundTrackElem {
     /// Crossing duration, standard days.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub duration_days: f64,
+    /// Signed, unwrapped longitude sweep, degrees. Positive is eastward and
+    /// negative is westward; magnitudes above 360 preserve completed turns.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub sweep_deg: f64,
+    /// Whether every surface longitude lies inside the directed sweep.
+    pub global_coverage: bool,
+}
+
+/// Optional geographic observer input for an eclipse query.
+/// type-audit: pending(wave-1: latitude_deg), pending(wave-1: longitude_deg)
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct EclipseObserverQuery {
+    /// Geographic latitude in degrees, inclusive `[-90, 90]`.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub latitude_deg: f64,
+    /// Geographic longitude in degrees, normalized to `[-180, 180)`.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub longitude_deg: f64,
+}
+
+/// One observer's result for one eclipse event.
+///
+/// The event owns its physical `region` and `track`; this result says only
+/// which hemisphere contains the observer and what that observer sees.
+/// type-audit: bare-ok(identifier-text: side), bare-ok(identifier-text: visibility)
+#[derive(Debug, Serialize)]
+pub struct EclipseObserverElem {
+    /// `"day"` or `"night"` at the event midpoint. Central solar
+    /// visibility is event-wide and may occur away from that midpoint.
+    pub side: String,
+    /// Solar: `"whole-sun"`, `"burning-ring"`, `"bitten"`, or
+    /// `"unseen"`; lunar: `"visible"` or `"unseen"`.
+    pub visibility: String,
+}
+
+/// One bounded synodic/draconic return.
+/// type-audit: bare-ok(index: synodic_count), bare-ok(index: draconic_count), pending(wave-1: period_days), pending(wave-1: node_slip_deg)
+#[derive(Debug, Serialize)]
+pub struct EclipseCycleElem {
+    /// Synodic months per return.
+    pub synodic_count: u32,
+    /// Draconic months per return.
+    pub draconic_count: u32,
+    /// Return period in standard days.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub period_days: f64,
+    /// Draconic-phase miss per return, degrees.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub node_slip_deg: f64,
+}
+
+/// The recurrence ladder for one moon and eclipse family.
+/// type-audit: bare-ok(index: moon_index), bare-ok(identifier-text: body), pending(wave-1: draconic_month_days), pending(wave-1: eclipse_year_days), bare-ok(count: series_returns), pending(wave-1: series_lifetime_days), pending(wave-1: exeligmos_period_days), pending(wave-1: exeligmos_node_slip_deg), pending(wave-1: exeligmos_surface_longitude_shift_deg), pending(wave-1: parade_days_per_year)
+#[derive(Debug, Serialize)]
+pub struct EclipseRecurrenceElem {
+    /// Distance-sorted index into the system's moons.
+    pub moon_index: usize,
+    /// `"solar"` or `"lunar"`.
+    pub body: String,
+    /// The moon's draconic month, standard days.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub draconic_month_days: f64,
+    /// The sun's return to the moon's node line, standard days.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub eclipse_year_days: f64,
+    /// The selected bounded return.
+    pub cycle: EclipseCycleElem,
+    /// Estimated number of returns in the eclipse series.
+    pub series_returns: u32,
+    /// Estimated eclipse-series lifetime, standard days.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub series_lifetime_days: f64,
+    /// Three selected-cycle periods, standard days.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub exeligmos_period_days: f64,
+    /// Node-phase slip accumulated over the exeligmos, degrees.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub exeligmos_node_slip_deg: f64,
+    /// Signed residual surface-longitude shift after the exeligmos, degrees.
+    /// Zero is exact rotational closure; positive is eastward.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub exeligmos_surface_longitude_shift_deg: f64,
+    /// Backward eclipse-season migration through one civil year, standard
+    /// days per year.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub parade_days_per_year: f64,
 }
 
 /// One dated eclipse.
 ///
-/// **The `*_ticks` fields are deliberately bare `i64` and NOT `WorldTime`**
-/// (The Escapement, ruling 12 — the same reasoning governs
-/// [`EclipsesScene`]'s `from_day_ticks`/`until_day_ticks`). `WorldTime` is
+/// **The `day` field is deliberately a bare `i64`, not `WorldTime`** (The
+/// Escapement, ruling 12 — the same reasoning governs [`EclipsesScene`]'s
+/// `from`/`until`). `WorldTime` is
 /// `#[serde(transparent)]`, so typing them as `WorldTime` would serialize
-/// identically and shed three type-audit tags and one `.ticks()` call. That
-/// is a real simplification and it is refused, because `scene/eclipses/v1` is
-/// a **cross-repo, additive-or-versioned-only contract** that the external
-/// Orrery consumes from a released catalog.
+/// identically. The explicit conversion keeps a future representation change
+/// as a compile-time decision at the wire boundary.
 ///
-/// The two options fail *differently*, and that is the whole argument. With a
-/// bare `i64` and an explicit `.ticks()`, a future change to `WorldTime`'s
-/// representation breaks at **compile time**, at the one line that has to
-/// make a decision. With a `serde(transparent)` `WorldTime`, the same change
-/// is a **silent wire break**, discovered by a sibling repo reading a catalog
-/// that was already released. "Fails loudly at the boundary" beats "three
-/// fewer tags" by a wide margin here — and coupling a published schema to the
-/// kernel's internal representation is the exact class of coupling this
-/// campaign spent itself undoing. If a later pass sees redundant tags and a
-/// manual conversion: that redundancy is the point, and the cost of being
-/// wrong about it was priced at three tags and one call.
-/// type-audit: bare-ok(count: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind)
+/// With a `serde(transparent)` `WorldTime`, that same internal change could
+/// become a silent wire break. The manual conversion is the intended seam.
+/// type-audit: bare-ok(count: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind), bare-ok(identifier-text: region)
 #[derive(Debug, Serialize)]
 pub struct EclipseElem {
     /// The syzygy, as an exact tick count since genesis.
@@ -1565,97 +1651,213 @@ pub struct EclipseElem {
     pub body: String,
     /// "total" or "annular".
     pub kind: String,
+    /// `"ground-track"` for solar events or `"night-hemisphere"` for
+    /// lunar events. This is the event's physical region, independent of
+    /// any observer query.
+    pub region: String,
     /// The shadow band — `Some` for solar events, `None` (serialized as JSON
     /// `null`) for lunar (the anchor's shadow is the whole night side). NOT
     /// `skip_serializing_if` — the field is always present so the client sees
     /// an explicit `"track": null`, matching the spec's `track | null`.
     pub track: Option<GroundTrackElem>,
+    /// One supplied observer's result. The key is omitted when no observer
+    /// was requested; an unseen result remains present as `"unseen"`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub observer: Option<EclipseObserverElem>,
 }
 
-/// One `scene/eclipses/v1` document: the dated eclipses in a queried window.
+/// One `scene/eclipses/v3` document: recurrence and dated eclipses in a
+/// queried window.
 ///
-/// `from_day_ticks`/`until_day_ticks` are bare `i64` rather than `WorldTime`
-/// for the reason set out on [`EclipseElem`]: on a cross-repo wire, a
-/// compile-time break beats a silent one.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(count: from), bare-ok(count: until)
+/// `from`/`until` are bare `i64` rather than `WorldTime` for the reason set
+/// out on [`EclipseElem`].
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(count: from), bare-ok(count: until), bare-ok(count: coincidence_days)
 #[derive(Debug, Serialize)]
 pub struct EclipsesScene {
-    /// Always `scene/eclipses/v1`.
+    /// Always `scene/eclipses/v3`.
     pub schema: String,
     /// The world's seed.
     pub seed: u64,
-    /// The queried window start, echoed back (standard days).
     /// The queried window start, echoed back as an exact tick count.
     pub from: i64,
-    /// The queried window start as an exact tick count, added beside
-    /// `from_day` for the same reason as `EclipseElem::day_ticks`.
-
-    /// The queried window end.
     /// The queried window end, echoed back as an exact tick count.
     pub until: i64,
-    /// The queried window end as an exact tick count.
-
+    /// The normalized observer query. Omitted when no observer was supplied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub observer: Option<EclipseObserverQuery>,
+    /// Integer days carrying admitted events from at least two moons.
+    pub coincidence_days: u32,
+    /// Recurrence records in moon order, solar then lunar per moon.
+    pub recurrences: Vec<EclipseRecurrenceElem>,
     /// The dated eclipses, day-ascending.
     pub events: Vec<EclipseElem>,
 }
 
-/// Build the `scene/eclipses/v1` scene for `world` over `[from, until]`
-/// standard days. Errors when the window itself is invalid (`from`/`until`
-/// negative or non-finite) — mirrors [`moons_scene`]. Pure read: consumes no
-/// draws.
+fn normalized_eclipse_observer(
+    observer: Option<EclipseObserverQuery>,
+) -> Result<Option<EclipseObserverQuery>, SceneError> {
+    observer
+        .map(|mut observer| {
+            if !observer.latitude_deg.is_finite()
+                || !(-90.0..=90.0).contains(&observer.latitude_deg)
+            {
+                return Err(SceneError::ObserverLatitudeOutOfRange(
+                    observer.latitude_deg,
+                ));
+            }
+            if !observer.longitude_deg.is_finite() {
+                return Err(SceneError::ObserverLongitudeNonFinite(
+                    observer.longitude_deg,
+                ));
+            }
+            observer.longitude_deg = (observer.longitude_deg + 180.0).rem_euclid(360.0) - 180.0;
+            Ok(observer)
+        })
+        .transpose()
+}
+
+fn eclipse_body_name(body: hornvale_astronomy::EclipseBody) -> &'static str {
+    match body {
+        hornvale_astronomy::EclipseBody::Solar => "solar",
+        hornvale_astronomy::EclipseBody::Lunar => "lunar",
+    }
+}
+
+fn eclipse_observer_elem(result: hornvale_astronomy::EclipseObserverResult) -> EclipseObserverElem {
+    let side = match result.side {
+        hornvale_astronomy::EclipseSide::Day => "day",
+        hornvale_astronomy::EclipseSide::Night => "night",
+    };
+    let visibility = match result.visibility {
+        hornvale_astronomy::EclipseVisibility::Solar(sight) => match sight {
+            hornvale_astronomy::EclipseSight::WholeSun => "whole-sun",
+            hornvale_astronomy::EclipseSight::BurningRing => "burning-ring",
+            hornvale_astronomy::EclipseSight::Bitten => "bitten",
+            hornvale_astronomy::EclipseSight::Unseen => "unseen",
+        },
+        hornvale_astronomy::EclipseVisibility::Lunar { visible: true } => "visible",
+        hornvale_astronomy::EclipseVisibility::Lunar { visible: false } => "unseen",
+    };
+    EclipseObserverElem {
+        side: side.to_string(),
+        visibility: visibility.to_string(),
+    }
+}
+
+fn ground_track_elem(track: hornvale_astronomy::GroundTrack) -> GroundTrackElem {
+    GroundTrackElem {
+        center_lat_deg: track.center_lat_deg,
+        half_width_deg: track.half_width_deg,
+        start_lon_deg: track.start_lon_deg,
+        end_lon_deg: track.end_lon_deg,
+        duration_days: track.duration_days,
+        sweep_deg: track.sweep_deg,
+        global_coverage: track.global_coverage,
+    }
+}
+
+/// Build the `scene/eclipses/v3` scene for `world` over the closed
+/// `[from, until]` standard-day window and an optional geographic observer.
+/// Observer latitude must be finite and in `[-90, 90]`; finite longitude is
+/// normalized to `[-180, 180)`. Pure read: consumes no draws.
 pub fn eclipses_scene(
     world: &World,
     from: StdInstant,
     until: StdInstant,
+    observer: Option<EclipseObserverQuery>,
 ) -> Result<EclipsesScene, SceneError> {
+    let observer = normalized_eclipse_observer(observer)?;
+    let from_ticks = WorldTime::from_std_days(from.get())
+        .map_err(|e| SceneError::Build(e.to_string()))?
+        .ticks();
+    let until_ticks = WorldTime::from_std_days(until.get())
+        .map_err(|e| SceneError::Build(e.to_string()))?
+        .ticks();
+    let query_from = StdInstant::new(WorldTime::from_ticks(from_ticks).as_std_days())
+        .expect("an i64 tick is always a finite standard-day instant");
+    let query_until = StdInstant::new(WorldTime::from_ticks(until_ticks).as_std_days())
+        .expect("an i64 tick is always a finite standard-day instant");
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
     let system = sky.system();
-    // The bounds arrive already typed and already validated -- StdInstant's
-    // constructor refuses a non-finite value, so the caller cannot hand in
-    // one. This is what closes The Escapement review's Minor 5: the bound
-    // conversions used to run AFTER the events map, so an out-of-range
-    // `until` hit an `expect` inside the map and panicked before it could
-    // reach the graceful error. There is no conversion left to mis-order.
+    // StdInstant admits every finite point, while the wire contract is the
+    // narrower i64 tick axis. Converting both bounds before enumeration makes
+    // every event inside the requested window representable too.
     let calendar = hornvale_astronomy::calendar_of(system);
-    let events = hornvale_astronomy::eclipse_events(system, &calendar, from, until)
+    let recurrences = hornvale_astronomy::eclipse_recurrences(system, &calendar)
         .into_iter()
-        .map(|ev| {
-            let track =
-                hornvale_astronomy::ground_track(system, &calendar, &ev).map(|g| GroundTrackElem {
-                    center_lat_deg: g.center_lat_deg,
-                    half_width_deg: g.half_width_deg,
-                    start_lon_deg: g.start_lon_deg,
-                    end_lon_deg: g.end_lon_deg,
-                    duration_days: g.duration_days,
-                });
-            EclipseElem {
-                day: WorldTime::from_std_days(ev.day.get())
+        .map(|recurrence| EclipseRecurrenceElem {
+            moon_index: recurrence.moon,
+            body: eclipse_body_name(recurrence.body).to_string(),
+            draconic_month_days: recurrence.draconic_month.get(),
+            eclipse_year_days: recurrence.eclipse_year.get(),
+            cycle: EclipseCycleElem {
+                synodic_count: recurrence.cycle.synodic_count,
+                draconic_count: recurrence.cycle.draconic_count,
+                period_days: recurrence.cycle.period.get(),
+                node_slip_deg: recurrence.cycle.node_slip_deg,
+            },
+            series_returns: recurrence.series_returns,
+            series_lifetime_days: recurrence.series_lifetime.get(),
+            exeligmos_period_days: recurrence.exeligmos_period.get(),
+            exeligmos_node_slip_deg: recurrence.exeligmos_node_slip_deg,
+            exeligmos_surface_longitude_shift_deg: recurrence.exeligmos_surface_longitude_shift_deg,
+            parade_days_per_year: recurrence.parade_days_per_year,
+        })
+        .collect();
+    let domain_events =
+        hornvale_astronomy::eclipse_events(system, &calendar, query_from, query_until);
+    let coincidence_days = hornvale_astronomy::coincidence_days(&domain_events);
+    let mut events = domain_events
+        .into_iter()
+        .map(|event| {
+            let track = hornvale_astronomy::ground_track(system, &calendar, &event);
+            let region = match event.body {
+                hornvale_astronomy::EclipseBody::Solar => "ground-track",
+                hornvale_astronomy::EclipseBody::Lunar => "night-hemisphere",
+            };
+            let observer_result = observer
+                .map(|observer| {
+                    hornvale_astronomy::eclipse_observer_result(
+                        system,
+                        &calendar,
+                        &event,
+                        observer.latitude_deg,
+                        observer.longitude_deg,
+                    )
+                    .map(eclipse_observer_elem)
+                    .ok_or_else(|| {
+                        SceneError::Build(
+                            "astronomy rejected a validated eclipse observer or event".to_string(),
+                        )
+                    })
+                })
+                .transpose()?;
+            Ok(EclipseElem {
+                day: WorldTime::from_std_days(event.day.get())
                     .expect("an eclipse's own instant is finite and in range")
                     .ticks(),
-                moon_index: ev.moon,
-                body: match ev.body {
-                    hornvale_astronomy::EclipseBody::Solar => "solar",
-                    hornvale_astronomy::EclipseBody::Lunar => "lunar",
-                }
-                .to_string(),
-                kind: match ev.kind {
+                moon_index: event.moon,
+                body: eclipse_body_name(event.body).to_string(),
+                kind: match event.kind {
                     hornvale_astronomy::EclipseKind::Total => "total",
                     hornvale_astronomy::EclipseKind::Annular => "annular",
                 }
                 .to_string(),
-                track,
-            }
+                region: region.to_string(),
+                track: track.map(ground_track_elem),
+                observer: observer_result,
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, SceneError>>()?;
+    events.sort_by_key(|event| (event.day, event.moon_index));
     Ok(EclipsesScene {
         schema: ECLIPSES_SCHEMA.to_string(),
         seed: world.seed.0,
-        from: WorldTime::from_std_days(from.get())
-            .map_err(|e| SceneError::Build(e.to_string()))?
-            .ticks(),
-        until: WorldTime::from_std_days(until.get())
-            .map_err(|e| SceneError::Build(e.to_string()))?
-            .ticks(),
+        from: from_ticks,
+        until: until_ticks,
+        observer,
+        coincidence_days,
+        recurrences,
         events,
     })
 }
@@ -2473,16 +2675,37 @@ mod tests {
             &w,
             StdInstant::new(0.0).unwrap(),
             StdInstant::new(2000.0).unwrap(),
+            None,
         )
         .expect("mooned world has eclipses");
-        assert_eq!(a.schema, "scene/eclipses/v2");
+        assert_eq!(a.schema, "scene/eclipses/v3");
         assert_eq!(a.seed, w.seed.0);
         // Echoed back as exact ticks now, not quantized days (v2).
         assert_eq!(a.from, 0);
         assert_eq!(a.until, 2000 * WorldTime::TICKS_PER_STD_DAY);
+        assert_eq!(a.coincidence_days, 0);
         assert!(
             !a.events.is_empty(),
             "seed 42's moons eclipse within 2000 days"
+        );
+        let json = serde_json::to_value(&a).expect("scene serializes");
+        assert_eq!(
+            json["recurrences"]
+                .as_array()
+                .expect("v3 carries recurrence records")
+                .iter()
+                .map(|record| {
+                    (
+                        record["moon_index"].as_u64().unwrap(),
+                        record["body"].as_str().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>(),
+            vec![(0, "solar"), (0, "lunar"), (1, "solar"), (1, "lunar")]
+        );
+        assert!(
+            json.get("observer").is_none(),
+            "an omitted observer query emits no top-level observer"
         );
         // Day-ascending, inside the window.
         for e in &a.events {
@@ -2491,7 +2714,10 @@ mod tests {
             assert!(e.kind == "total" || e.kind == "annular");
         }
         for win in a.events.windows(2) {
-            assert!(win[0].day <= win[1].day, "events are day-ascending");
+            assert!(
+                (win[0].day, win[0].moon_index) <= (win[1].day, win[1].moon_index),
+                "events are tick-ascending with moon-index tie breaks"
+            );
         }
         // Solar events carry a track; lunar events carry none.
         for e in &a.events {
@@ -2499,9 +2725,25 @@ mod tests {
                 let t = e.track.as_ref().expect("a solar event has a ground track");
                 assert!((-90.0..=90.0).contains(&t.center_lat_deg));
                 assert!((-180.0..180.0).contains(&t.start_lon_deg));
+                assert_ne!(t.sweep_deg, 0.0);
+                assert_eq!(t.global_coverage, t.sweep_deg.abs() >= 360.0);
             } else {
                 assert!(e.track.is_none(), "a lunar event has no ground track");
             }
+        }
+        for event in json["events"].as_array().unwrap() {
+            assert!(
+                event.get("observer").is_none(),
+                "events omit observer results when no observer was requested"
+            );
+            assert_eq!(
+                event["region"],
+                if event["body"] == "solar" {
+                    "ground-track"
+                } else {
+                    "night-hemisphere"
+                }
+            );
         }
         // Byte-identical on rebuild.
         assert_eq!(
@@ -2510,15 +2752,27 @@ mod tests {
                 &eclipses_scene(
                     &w,
                     StdInstant::new(0.0).unwrap(),
-                    StdInstant::new(2000.0).unwrap()
+                    StdInstant::new(2000.0).unwrap(),
+                    None,
                 )
                 .unwrap()
             )
         );
+        for token in
+            eclipses_json(&a).split(|c: char| !(c.is_ascii_digit() || c == '.' || c == '-'))
+        {
+            if token.is_empty() || !token.contains('.') {
+                continue;
+            }
+            assert!(
+                significant_digits(token) <= 8,
+                "unquantized float in eclipse scene JSON: {token}"
+            );
+        }
     }
 
     /// Every instant this schema emits is an exact tick count, and NO float
-    /// instant survives beside it (v2, The Foliot).
+    /// instant survives beside it (inherited from v2, The Foliot).
     ///
     /// This test is the inverse of the one it replaces. The Escapement added
     /// the tick fields ADDITIVELY at v1 and pinned exactly that — schema
@@ -2536,14 +2790,15 @@ mod tests {
         let w = mooned_world();
         let scene = eclipses_scene(
             &w,
-            StdInstant::new(0.0).unwrap(),
-            StdInstant::new(2000.0).unwrap(),
+            StdInstant::new(0.125).unwrap(),
+            StdInstant::new(2000.375).unwrap(),
+            None,
         )
         .expect("mooned world has eclipses");
         let json = serde_json::to_value(&scene).expect("serializes");
 
         assert_eq!(
-            json["schema"], "scene/eclipses/v2",
+            json["schema"], "scene/eclipses/v3",
             "the version moved with the shape, so a returning consumer fails \
              loudly on an unknown schema rather than on a missing field"
         );
@@ -2552,7 +2807,7 @@ mod tests {
         for gone in ["from_day", "from_day_ticks", "until_day", "until_day_ticks"] {
             assert!(
                 json.get(gone).is_none(),
-                "v1's {gone} must not survive into v2 — checking only that the \
+                "v1's {gone} must not survive into v3 — checking only that the \
                  tick fields EXIST would pass with the floats left behind"
             );
         }
@@ -2571,10 +2826,10 @@ mod tests {
         // The tick fields are exact conversions of the standard-day window
         // bounds and event days actually passed/produced, not the quantized
         // f64 round-tripped back through ticks.
-        assert_eq!(scene.from, WorldTime::from_std_days(0.0).unwrap().ticks());
+        assert_eq!(scene.from, WorldTime::from_std_days(0.125).unwrap().ticks());
         assert_eq!(
             scene.until,
-            WorldTime::from_std_days(2000.0).unwrap().ticks()
+            WorldTime::from_std_days(2000.375).unwrap().ticks()
         );
         // THE ESCAPEMENT'S MINOR 6, CLOSED BY DELETION. This asserted that an
         // event's tick field agreed with converting its own emitted `f64`
@@ -2583,12 +2838,13 @@ mod tests {
         // The review named it tautological and asked for the interesting
         // comparison instead: the tick against the EMITTED, quantized day.
         //
-        // v2 removes the subject. There is no emitted f64 day any more, so
-        // that comparison has nothing to compare and the tautology has
-        // nothing to be tautological about. What is worth asserting is that
-        // the event lands inside the window the caller asked for, in the same
-        // units the window is expressed in — which the old pair could not
-        // check, since one side was days and the other ticks.
+        // v2 removed the subject and v3 preserves that choice. There is no
+        // emitted f64 day, so that comparison has nothing to compare and the
+        // tautology has nothing to be tautological about. What is worth
+        // asserting is that the event lands inside the window the caller
+        // asked for, in the same units the window is expressed in — which the
+        // old pair could not check, since one side was days and the other
+        // ticks.
         assert!(
             (scene.from..=scene.until).contains(&scene.events[0].day),
             "an event's instant lies inside the queried window: {} not in {}..={}",
@@ -2596,6 +2852,191 @@ mod tests {
             scene.from,
             scene.until
         );
+    }
+
+    /// Two caller bounds that emit the same tick must enumerate the same
+    /// events. Querying with their hidden sub-tick residues would let equal
+    /// v3 documents disagree about whether a boundary event exists.
+    #[test]
+    fn eclipse_event_enumeration_uses_the_emitted_tick_bounds() {
+        let w = mooned_world();
+        let broad = eclipses_scene(
+            &w,
+            StdInstant::new(0.0).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+            None,
+        )
+        .unwrap();
+        let boundary = broad.events[0].day;
+        let per_day = WorldTime::TICKS_PER_STD_DAY as f64;
+        let before = (boundary as f64 - 0.49) / per_day;
+        let after = (boundary as f64 + 0.49) / per_day;
+        assert_eq!(
+            WorldTime::from_std_days(before).unwrap().ticks(),
+            WorldTime::from_std_days(after).unwrap().ticks()
+        );
+
+        let before_scene = eclipses_scene(
+            &w,
+            StdInstant::new(before).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+            None,
+        )
+        .unwrap();
+        let after_scene = eclipses_scene(
+            &w,
+            StdInstant::new(after).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(before_scene.from, after_scene.from);
+        assert_eq!(
+            before_scene
+                .events
+                .iter()
+                .map(|event| (event.day, event.moon_index))
+                .collect::<Vec<_>>(),
+            after_scene
+                .events
+                .iter()
+                .map(|event| (event.day, event.moon_index))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// The v3 track keeps the direction and unwrapped magnitude that wrapped
+    /// endpoints cannot represent, including a full-world sweep.
+    #[test]
+    fn eclipse_track_wire_retains_directed_global_sweeps() {
+        let track = ground_track_elem(hornvale_astronomy::GroundTrack {
+            center_lat_deg: 12.0,
+            half_width_deg: 2.0,
+            start_lon_deg: 170.0,
+            end_lon_deg: 80.0,
+            duration_days: 0.25,
+            sweep_deg: -450.0,
+            global_coverage: true,
+        });
+
+        assert_eq!(track.sweep_deg, -450.0);
+        assert!(track.global_coverage);
+        let wire_track = serde_json::to_value(&track).unwrap();
+        assert_eq!(wire_track["sweep_deg"], -450.0);
+        assert_eq!(wire_track["global_coverage"], true);
+    }
+
+    #[test]
+    fn eclipses_scene_rejects_a_lower_bound_below_the_wire_tick_range() {
+        let w = mooned_world();
+        let axis_edge_days = i64::MAX as f64 / WorldTime::TICKS_PER_STD_DAY as f64;
+        let result = eclipses_scene(
+            &w,
+            StdInstant::new(-axis_edge_days - 2000.0).unwrap(),
+            StdInstant::new(-axis_edge_days + 2000.0).unwrap(),
+            None,
+        );
+
+        assert!(
+            matches!(result, Err(SceneError::Build(message)) if message.contains("outside the representable tick range")),
+            "a finite lower bound below i64::MIN ticks must return a scene error"
+        );
+    }
+
+    #[test]
+    fn eclipses_scene_rejects_an_upper_bound_above_the_wire_tick_range() {
+        let w = mooned_world();
+        let axis_edge_days = i64::MAX as f64 / WorldTime::TICKS_PER_STD_DAY as f64;
+        let result = eclipses_scene(
+            &w,
+            StdInstant::new(axis_edge_days - 2000.0).unwrap(),
+            StdInstant::new(axis_edge_days + 2000.0).unwrap(),
+            None,
+        );
+
+        assert!(
+            matches!(result, Err(SceneError::Build(message)) if message.contains("outside the representable tick range")),
+            "a finite upper bound above i64::MAX ticks must return a scene error"
+        );
+    }
+
+    /// Omitting an observer removes both the echoed query and every event's
+    /// observation key. Supplying one keeps the physical region on the event
+    /// and emits a distinct result even when that result is `unseen`.
+    #[test]
+    fn eclipses_scene_distinguishes_absent_observer_from_unseen() {
+        let w = mooned_world();
+        let observed = eclipses_scene(
+            &w,
+            StdInstant::new(0.0).unwrap(),
+            StdInstant::new(2000.0).unwrap(),
+            Some(EclipseObserverQuery {
+                latitude_deg: 0.0,
+                longitude_deg: 540.0,
+            }),
+        )
+        .expect("finite observer coordinates are valid");
+        let json = serde_json::to_value(&observed).expect("scene serializes");
+
+        assert_eq!(json["observer"]["latitude_deg"], 0.0);
+        assert_eq!(
+            json["observer"]["longitude_deg"], -180.0,
+            "finite longitude is normalized to [-180, 180)"
+        );
+        let events = json["events"].as_array().unwrap();
+        assert!(!events.is_empty());
+        assert!(events.iter().all(|event| event["observer"].is_object()));
+        assert!(
+            events
+                .iter()
+                .any(|event| event["observer"]["visibility"] == "unseen"),
+            "a supplied observer's unseen result is data, not absence"
+        );
+        for event in events {
+            let result = event["observer"].as_object().unwrap();
+            assert!(result.contains_key("side"));
+            assert!(result.contains_key("visibility"));
+            assert!(!result.contains_key("region"));
+            assert!(!result.contains_key("track"));
+            assert!(event.get("region").is_some());
+            assert!(event.get("track").is_some());
+        }
+    }
+
+    #[test]
+    fn eclipses_scene_rejects_invalid_observer_coordinates() {
+        let w = mooned_world();
+        let scene = |observer| {
+            eclipses_scene(
+                &w,
+                StdInstant::new(0.0).unwrap(),
+                StdInstant::new(1.0).unwrap(),
+                Some(observer),
+            )
+        };
+
+        assert!(matches!(
+            scene(EclipseObserverQuery {
+                latitude_deg: 90.000_001,
+                longitude_deg: 0.0,
+            }),
+            Err(SceneError::ObserverLatitudeOutOfRange(_))
+        ));
+        assert!(matches!(
+            scene(EclipseObserverQuery {
+                latitude_deg: f64::NAN,
+                longitude_deg: 0.0,
+            }),
+            Err(SceneError::ObserverLatitudeOutOfRange(_))
+        ));
+        assert!(matches!(
+            scene(EclipseObserverQuery {
+                latitude_deg: 0.0,
+                longitude_deg: f64::INFINITY,
+            }),
+            Err(SceneError::ObserverLongitudeNonFinite(_))
+        ));
     }
 
     #[test]
@@ -2609,6 +3050,10 @@ mod tests {
             &w,
             StdInstant::new(0.0).unwrap(),
             StdInstant::new(2000.0).unwrap(),
+            Some(EclipseObserverQuery {
+                latitude_deg: 12.5,
+                longitude_deg: -33.25,
+            }),
         )
         .unwrap();
         let after = serde_json::to_string(&w).unwrap();

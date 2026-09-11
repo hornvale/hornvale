@@ -162,6 +162,26 @@ run "post-merge hook" bash scripts/test-post-merge.sh
 # worktrees against a design that assumed ~3, ~700 GB. Runs entirely against
 # throwaway repos under `mktemp -d`; it never touches the real pool.
 run "worktree take"   bash scripts/test-worktree-take.sh
+# The reclamation pass's SCOPE. Registered in the same commit that fixed it,
+# for the reason this file has now given six times. The failure mode here is
+# the quietest yet: `cargo sweep -r .` reached 10 of 235 target dirs — neither
+# worktree pool — while printing a plausible total and exiting 0, so the only
+# symptom was a volume filling at 805 GB. Case 5 is the control; without a real
+# cargo-sweep it FAILS rather than skipping quietly, because a scope test that
+# opts out of measuring scope is the bug it was written against.
+# PREREQUISITE: cargo-sweep must be installed ON THIS HOST (CLAUDE.md, the
+# sweep block). This set is the only automatic path that needs it — the sweep
+# targets themselves refuse with an install hint and are typed by a human.
+# lefford lacked it on 2026-09-10 and red a candidate whose code was fine.
+run "sweep roots"     bash scripts/test-sweep-roots.sh
+# The reaper's population and, more importantly, its REFUSALS -- this tool
+# deletes worktrees. Case 5 is the load-bearing one in the other direction: a
+# worktree dirty only with the two files `gate-run` writes must still be
+# reapable, or the reaper refuses every finished campaign and reports success
+# having done nothing. That is the defect The Sexton found in `worktree-take`
+# (9 of 11 stale members blocked by one machine-written file), and this tool
+# would have inherited it. Runs entirely in throwaway repos under `mktemp -d`.
+run "worktree reap"   bash scripts/test-worktree-reap.sh
 run "shellcheck"       make --no-print-directory shellcheck
 
 if [ "$fails" -ne 0 ]; then

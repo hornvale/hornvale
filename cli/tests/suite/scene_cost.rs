@@ -385,6 +385,7 @@ fn scene_api_cost_is_bounded_on_seed_42() {
             &world,
             hornvale_astronomy::StdInstant::new(0.0).unwrap(),
             hornvale_astronomy::StdInstant::new(365.0).unwrap(),
+            None,
         )
         .expect("eclipses scene"),
     )

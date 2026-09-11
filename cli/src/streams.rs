@@ -756,6 +756,7 @@ mod tests {
                 // halves of one mountain two identities and two names). See
                 // `windows/worldgen/src/volcano.rs`'s `volcano_key`.
                 "volcano v1",
+                "waterworld/vent v1",
             ]
         );
     }

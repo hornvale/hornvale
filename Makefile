@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: worktree-reap worktree-reap-dry context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -277,7 +277,38 @@ gate-run:
 # failure rather than as success. A gate that reports green when it does not
 # know is worse than one that reports red when it is unsure.
 	@rm -f target/nextest/ci/nextest.rc
+# `--no-fail-fast` IS LOAD-BEARING HERE AND IS NOT A STYLE CHOICE. Without it
+# nextest CANCELS PENDING TESTS at the first failure — those already in flight
+# finish and report, everything not yet started never runs. So a red chamber
+# reports the failures it happened to have running and leaves the rest of the
+# suite unexecuted. (Verified both ways on two injected failures: the default
+# prints `Cancelling due to test failure`, `--no-fail-fast` does not.) That is
+# fine locally,
+# where a re-run is a keystroke. It is not fine here: a chamber re-run is a
+# slot on the one serial box everything else queues behind, so each red buys
+# the submitter exactly one bit at ~20 minutes a bit.
+#
+# MEASURED, 2026-09-11: campaign/underworld-peoples spent NINE chamber runs
+# landing one campaign, and its eighth red read
+# `4816/6073 tests run: 4815 passed, 1 failed` — 1,257 tests never executed,
+# each subsequent red revealing exactly one more pin its four new peoples had
+# always been going to move. With this flag that is one red listing all of
+# them, and roughly two attempts instead of nine.
+#
+# THE COST IS ASYMMETRIC AND THAT IS THE WHOLE ARGUMENT. A GREEN run is
+# UNCHANGED — there is nothing to fail fast on, so it neither runs nor skips a
+# single extra test. Only a RED run costs more: it finishes the suite instead
+# of stopping early, bounded above by a green run's own wall time (~850 s on
+# lefford), which against that run's 681 s is ~3 minutes. Three minutes on a
+# run that has already failed, to save a ~20-minute slot per additional
+# failure.
+#
+# This is the project's stated position for local runs already — CLAUDE.md's
+# iteration guidance says "Run ONCE, inspect many" and prescribes
+# `--no-fail-fast` for the whole failure list in one pass. The chamber was the
+# one place that most needed it and the one place not doing it.
 	@{ NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
+	    --no-fail-fast \
 	    --message-format libtest-json-plus \
 	    2>&1 1>target/nextest/ci/run.json; \
 	   echo $$? > target/nextest/ci/nextest.rc; \
@@ -673,6 +704,18 @@ worktree-take: ## Claim a recycled campaign worktree (NAME=<campaign> [BASE=main
 #     intervening build did not touch, and `worktree-take` deliberately does
 #     not build. Verified: stamp -> partial build -> `--file` proposes deleting
 #     the live test binaries.
+# REAPING IS NOT SWEEPING, and the two are easy to confuse. `sweep` reclaims
+# dead build GENERATIONS inside a target/; `worktree-reap` removes whole
+# worktrees whose branch already landed. Sweeping a finished campaign's
+# worktree keeps the corpse; reaping it is what actually returns the space and
+# the pool slot. Population comes from `git worktree list`, so it spans BOTH
+# pools — see scripts/worktree-reap.sh's header for why that matters.
+worktree-reap-dry: ## Show which merged worktrees would be reaped, removing nothing
+	@bash scripts/worktree-reap.sh
+
+worktree-reap: ## Remove every worktree whose branch is merged (across all pools)
+	@bash scripts/worktree-reap.sh --apply
+
 sweep-check: ## Fail with an install hint if cargo-sweep is missing
 	@command -v cargo-sweep >/dev/null 2>&1 || { \
 		echo "cargo-sweep not found — install it (decision 0848):"; \
@@ -687,11 +730,26 @@ sweep-check: ## Fail with an install hint if cargo-sweep is missing
 # reclaiming a tree you accept rebuilding.
 SWEEP_DAYS ?= 30
 
+# SCOPE COMES FROM `git worktree list`, NOT FROM `.` (2026-09-10). Both of
+# these used to run `cargo sweep -r .`, which reached neither worktree pool:
+# `-r` skips dot-directories unless given `--hidden`, so `.claude/worktrees/`
+# was invisible, and the second pool under `~/.config/superpowers/worktrees/`
+# is outside the repo entirely. The pass exited 0 either way, which is why it
+# went unnoticed until the volume filled. `scripts/sweep-roots.sh` enumerates
+# every worktree git actually knows about; its header carries the measurement.
+#
+# The `|| exit` is load-bearing: without it a failed enumeration becomes an
+# empty pipe, xargs runs cargo-sweep with no PATH, and it falls back to its own
+# default — a green pass over the wrong scope, the exact failure being fixed.
 sweep-dry: sweep-check ## Report what a sweep would reclaim, deleting nothing (SWEEP_DAYS=<days>)
-	@cargo sweep --dry-run --time $(SWEEP_DAYS) -r .
+	@roots="$$(bash scripts/sweep-roots.sh)" || exit $$?; \
+	printf '%s\n' "$$roots" | tr '\n' '\0' | \
+	  xargs -0 cargo sweep --dry-run --time $(SWEEP_DAYS) -r
 
 sweep: sweep-check ## Reclaim dead build generations older than SWEEP_DAYS days (default 30, recursive)
-	@cargo sweep --time $(SWEEP_DAYS) -r .
+	@roots="$$(bash scripts/sweep-roots.sh)" || exit $$?; \
+	printf '%s\n' "$$roots" | tr '\n' '\0' | \
+	  xargs -0 cargo sweep --time $(SWEEP_DAYS) -r
 
 # THE EXACT MODE, AND WHY IT IS NOT THE DEFAULT. `--stamp` then a build then
 # `--file` is mark-and-sweep: it reclaims precisely the generations the build
@@ -949,13 +1007,16 @@ world-check-run: wasm-world
 	cargo run -p hornvale -- scene system --world /tmp/hv-wc.json > /tmp/hv-wc-system.json
 	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc.json --width 256 > /tmp/hv-wc-tiles.json
 	cargo run -p hornvale -- scene tiles-region --world /tmp/hv-wc.json --face 0 --level 3 --ix 4 --iy 4 --samples 16 > /tmp/hv-wc-region.json
+	cargo run -p hornvale -- scene eclipses --world /tmp/hv-wc.json --from 0 --until 2000 > /tmp/hv-wc-eclipses.json
+	cargo run -p hornvale -- scene eclipses --world /tmp/hv-wc.json --from 0 --until 2000 --latitude 0 --longitude 540 > /tmp/hv-wc-observed-eclipses.json
 	cargo run -p hornvale -- new --seed 42 --plates 12 --out /tmp/hv-wc-pinned.json
 	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc-pinned.json --width 256 > /tmp/hv-wc-pinned-tiles.json
 	cargo run -p hornvale -- new --seed 42 --stellar-topology close-binary --wanderers 3 --out /tmp/hv-wc-binary.json
 	cargo run -p hornvale -- scene system --world /tmp/hv-wc-binary.json > /tmp/hv-wc-binary-system.json
 	node clients/world-wasm/drive.mjs \
 	  clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm \
-	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json /tmp/hv-wc-binary-system.json
+	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json /tmp/hv-wc-binary-system.json \
+	  /tmp/hv-wc-eclipses.json /tmp/hv-wc-observed-eclipses.json
 	@# The gate is denominated in COMPRESSED bytes, because that is what a
 	@# visitor actually downloads: GitHub Pages serves the catalog gzipped
 	@# (brotli where the client offers it), so the raw figure overstates the

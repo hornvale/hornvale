@@ -427,15 +427,56 @@ make doctor        # the repo self-map — run this first in a fresh session
 #
 # cargo-sweep is a dev tool on the 0040 pattern (`cargo install cargo-sweep` /
 # `brew install cargo-sweep`); `make sweep-check` fails with an install hint.
+#
+# **IT IS ALSO A PREREQUISITE OF THE `outboard` SET, ON EVERY CHAMBER HOST.**
+# Unlike the sweep targets — which a human types, and which refuse with an
+# install hint when it is absent — `scripts/test-sweep-roots.sh` runs in
+# `outboard` on whatever box the chamber is using, and its case 5 (the only
+# case that distinguishes the fix from the bug it guards) needs the real
+# binary. It FAILS rather than skipping when the tool is missing, deliberately:
+# a scope test that opts out of measuring scope is the bug it was written
+# against. So a chamber host without cargo-sweep reds `outboard`, and the red
+# looks like a code regression to whoever meets it first.
+#
+# THIS IS NOT HYPOTHETICAL AND IT IS WHY THE LINE IS HERE. lefford lacked the
+# tool on 2026-09-10 and red the `sweep-scope` candidate on its first run; the
+# operator installed 0.8.0 by hand and requeued. That install is host state the
+# repo does not record, so a rebuilt lefford reproduces the red with no trace
+# of the cause — which is strictly worse than the original gap, because a
+# working box now hides the dependency. Provision it with nextest.
 # Cargo cannot do it itself: `cargo clean` has no age or reachability option and
 # `-Z gc` is nightly-only and governs the GLOBAL REGISTRY cache, not `target/`.
 #   make sweep-dry              # what would go, deleting nothing
 #   make sweep [SWEEP_DAYS=30]  # reclaim generations older than N days, recursive
 #   make sweep-exact            # mark-and-sweep the workspace target (costs a full build)
 #
+# ITS SCOPE COMES FROM `git worktree list` NOW, AND UNTIL 2026-09-10 IT
+# REACHED ALMOST NOTHING (see `scripts/sweep-roots.sh`). This block used to
+# describe `make sweep` as though `-r .` swept the tree; measured from the repo
+# root, plain `-r .` visits **10** target dirs and the fixed pass visits **235**
+# across 39 worktrees. Two independent causes, and the second is the one that
+# matters for every future tool that walks this repo:
+#   1. `cargo sweep -r` SKIPS DOT-DIRECTORIES unless given `--hidden`. The
+#      campaign pool is `.claude/worktrees/`, so the pool was invisible to the
+#      one command whose job was reclaiming it.
+#   2. **THERE ARE TWO WORKTREE POOLS.** `~/.claude/CLAUDE.md` sets the
+#      worktree dir to `~/.config/superpowers/worktrees/<project>/`;
+#      `scripts/worktree-take.sh` uses `$ROOT/.claude/worktrees`. BOTH ARE
+#      LIVE — 30 members in the first, 9 in the second on the day this was
+#      found. Nothing in the repo references the first, so any check, sweep or
+#      audit rooted at the repo silently excludes 36% of this project's
+#      worktrees. Assume neither pool is the whole story; ask git.
+# Between them, 723 of 805 GB sat outside the reach of a command that exited 0.
+# The reclamation was 422 GiB, by hand, at 3.5 GiB free.
+#
 # NOTHING RUNS IT FOR YOU, on the seam-guard arrangement (0148) — and unlike
 # seam-guard there is no committed artifact that even hints at the state, so a
-# 40 GB tree reads exactly like a 4 GB one until you run `sweep-dry`. Both
+# 40 GB tree reads exactly like a 4 GB one until you run `sweep-dry`. THAT IS
+# THE FAILURE MODE TO FEAR HERE: this pass had a plausible-looking green output
+# for its whole life, so "I ran sweep" was never evidence it swept anything.
+# `scripts/test-sweep-roots.sh` (the `outboard` set) is what holds the scope
+# now, and its case 5 drives the real cargo-sweep both ways rather than
+# asserting the helper's own output back at itself. Both
 # automatic homes were measured and REFUSED: age-based inside `worktree-take`
 # destroys a parked member's warm target/ (all its artifacts are old, so
 # `--time 7` proposes the working set too), and stamp-based needs a COMPLETE
@@ -443,6 +484,47 @@ make doctor        # the repo self-map — run this first in a fresh session
 # live test binaries — which `worktree-take` cannot supply because it never
 # builds. `SWEEP_DAYS` is namespaced because bare `DAYS` is already
 # `board-digest`'s, defined nowhere so its tool applies its own 14-day default.
+#
+# THE SECOND POOL WAS OUTSIDE EVERY RECYCLING AND REAPING MECHANISM, AND IS
+# NOT ANY MORE (measured 2026-09-10; fixed the same night). `worktree-take.sh`
+# enumerates correctly — from `git worktree list`, never `find` — and then
+# filters to the pool it owns (`case "$wt" in "$POOL"/*`), so the 29 worktrees
+# under `~/.config/superpowers/worktrees/` were unreachable by it. 11 sat on
+# merged branches holding ~161 GB. The Sexton's rationale for the pool (73
+# branches in a month against 3 live worktrees, each new one paying a measured
+# 771 s cold build) applied to those 29 exactly and reached none of them: a
+# campaign taking a worktree there always paid the cold build and always left
+# the corpse behind.
+#
+# REAPING IS THE REMEDY, AND IT IS NOT SWEEPING (`make worktree-reap-dry` /
+# `worktree-reap`). `sweep` reclaims dead build GENERATIONS inside a `target/`;
+# the reaper removes whole worktrees whose branch already landed. Sweeping a
+# finished campaign's worktree keeps the corpse and its working set; reaping it
+# returns the space and the pool slot — which is why `make sweep` reaching the
+# second pool did not close this hazard by itself. The reaper's population also
+# comes from `git worktree list`, so it spans BOTH pools, which is the entire
+# point. First dry run: 17 reapable, 22 skipped; the reap freed ~99 GiB and took
+# this repo from 805 GB to 300 GB.
+#
+# IT DOES NOT REFUSE ON THE TWO FILES `gate-run` WRITES, AND THAT IS
+# DELIBERATE. `docs/timings.md` and `docs/timings/test-baseline-<host>.tsv` are
+# written by every green local gate, including the last one a campaign runs
+# after its final commit, so "has run a gate" — the normal end state — would
+# otherwise make every worktree unreapable and the tool would report success
+# having done nothing. That is The Sexton's `worktree-take` bug exactly, which
+# this tool would have inherited verbatim. Since `docs/timings.md` is
+# append-only and NOT regenerable, the rows a reap would destroy are PRINTED
+# first; the dry run is the moment to rescue one.
+#
+# THE FIX IS NOT A SOURCE-SCAN RATCHET, AND THAT WAS CHECKED RATHER THAN
+# ASSUMED. A default-deny scan for a hardcoded pool prefix was specified and
+# abandoned on reading all 11 files it would cover: every enumerator already
+# derives from `git worktree list`, so the violation set is EMPTY and the
+# allowlist would be the whole population — and, decisively, such a scan could
+# not have caught the bug that motivated it, because `cargo sweep -r .`
+# hardcoded no pool path at all. What catches that class is an assertion that a
+# scope covers every worktree git reports, which is
+# `scripts/test-sweep-roots.sh`.
 #
 # AND DO NOT TRY TO SHARE OR CLONE A `target/` BETWEEN WORKTREES to avoid the
 # cost. It dedupes (cargo reports `Fresh` across two paths, one rlib) and it is
@@ -1269,6 +1351,70 @@ promotion-at-close is the practice that failed five recorded times
 (`docs/superpowers/specs/2026-08-30-the-cartulary-design.md` §1), which is
 also why `scripts/hooks/pre-commit`'s `.superpowers/` guard comment carries
 the same correction, dated the same day.
+
+**THE SAME DEFECT HAD A SECOND INSTANCE AND IT IS NOW DELETED:
+`IMPLEMENTATION_PLAN.md`** (2026-09-10). The global CLAUDE.md told every
+campaign to stage its work in a file at the repo root, so it was one mutable
+path with no keying and no guard — the ledger's exact shape before The
+Cartulary, and it went unnoticed longer because a *plan* looks like a shared
+document in a way a decision ledger does not. What it actually held was
+whichever campaign wrote last: when this was found, **14 of the ~20 branches
+carrying the file held campaign/the-murrain's plan**, inherited by absorbing
+main, meaningless on every one of them. Only `eclipse-rhythm-view`,
+`the-planetarium` and the `codex/counterpart-*` branches had content of their
+own.
+
+The near-miss that prompted it: a session wrote the file with `cat >` — never
+having read it — and landed the clobber through a commit that staged other
+paths explicitly (`git commit` takes the whole INDEX, not the paths you last
+`add`ed). Zero lines of the-murrain's survived and the merge raised **no
+conflict**. No gate saw it; the merge queue's operator caught it by reading
+the file.
+
+**AND THE CONTENT IT WOULD HAVE DESTROYED WAS ITSELF STALE, WHICH IS THE
+STRONGER ARGUMENT.** It was first reported — by the operator, and repeated
+here — that the-murrain was *live* with Stage 4 In Progress. Checked
+afterwards: `campaign/the-murrain` and `campaign/the-murrain-across-world` are
+both merged into main, and `book/src/chronicle/the-murrain.md` and
+`docs/retrospectives/the-murrain.md` are both present there. The campaign was
+finished. The file said `Stage 4: In Progress` because this guide's own
+instruction to delete a staging document when its stages are done was never
+carried out — so the one copy that looked alive was abandoned residue too.
+
+That is the real indictment, and it is duller than a race between two writers:
+**the typical content of this path was a finished campaign's abandoned
+staging, inherited by every branch that absorbed main.** Not merely shared —
+usually wrong. A path whose common case is unwitting inheritance of stale
+state is not one anyone can be careful enough with.
+
+**AND IT LEVIED A STANDING TAX ON EVERY CAMPAIGN CLOSE, WHICH IS THE THIRD
+ARGUMENT AND THE ONE THAT COSTS SOMETHING EVERY TIME.** `sluice_is_prose_only`
+(`scripts/sluice-phases.sh`) allowlists `docs/*`, `book/src/chronicle/*`,
+`book/src/frontier/*`, `book/src/open-questions.md`, `book/src/SUMMARY.md` and
+`.claude/skills/*`. `IMPLEMENTATION_PLAN.md` sits at the repo **root** and
+matches none of them — so *deleting it*, the very act this guide prescribes at
+close, disqualified an otherwise pure-prose candidate and bought the full
+phase ladder. Measured against `campaign/eclipse-rhythm-view`'s own close
+(2026-09-11), whose changed set is six files, five of them `docs/*`:
+
+```text
+with    IMPLEMENTATION_PLAN.md -> prose-only: NO   (all five phases)
+without IMPLEMENTATION_PLAN.md -> prose-only: YES  (skips clients + heavy)
+```
+
+The file was the sole disqualifier. At that night's measurements — `clients`
+~207 s, `heavy` ~460 s — that is **~11 minutes of serial canonical-box time per
+campaign close**, paid by whoever happened to be closing, on the one resource
+every other campaign queues behind. Unlike the clobber (a race) and the
+inherited-stale-content measurement (the common case), this one was charged
+every single time.
+
+**The file is now deleted and gitignored, and staging documents are scratch.**
+Put a staging document where exactly one effort will ever touch it — the
+session scratchpad, or `docs/superpowers/plans/<slug>.md` if it is durable
+enough to commit. **Deleting it is LOUD where the clobber was silent**: a
+branch carrying its own committed copy meets a modify/delete conflict on its
+next absorb and decides for itself, which is the whole point.
 
 On lefford, the regeneration worktree is **shared** — ask before reusing it,
 verify its HEAD, and sweep orphans rather than assuming it is parked where

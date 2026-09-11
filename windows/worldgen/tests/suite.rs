@@ -273,6 +273,8 @@ mod warren_readout;
 mod waterline_probe;
 #[path = "suite/watershed_measure.rs"]
 mod watershed_measure;
+#[path = "suite/waterworld.rs"]
+mod waterworld;
 #[path = "suite/weft_controls.rs"]
 mod weft_controls;
 #[path = "suite/weft_fieldpack.rs"]
