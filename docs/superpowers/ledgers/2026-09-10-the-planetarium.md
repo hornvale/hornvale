@@ -1,6 +1,6 @@
 # The Planetarium — decision ledger
 
-Status: execution authorized; local Tasks 1–9 independently reviewed; Stages 1–3 canonical green; whole-branch technical review approved with documentation corrections; final canonical stage green including Linux visual-client checks; census returned no scientific golden changes; same-ref main-study profiling and timing incorporation complete with scope limits; final close review and G6 visual/merge approval pending.
+Status: execution authorized; local Tasks 1–9 independently reviewed; Stages 1–3 canonical green; whole-branch technical review approved with documentation corrections; final canonical stage green including Linux visual-client checks; census returned no scientific golden changes; same-ref main-study profiling and timing incorporation complete with scope limits; final close review approved; G6 visual/merge approval pending.
 Branch: `campaign/the-planetarium`.
 Starting revision: `b6b374f6d2dea329d904b56322a09b1dfb29983f`.
 
@@ -1701,3 +1701,19 @@ simulation or visual-client source changed after the successful stage and
 no fresh physical or GPU claim is inferred from these operational/doc changes.
 The [profile audit](../../audits/the-planetarium/census-profile.md) is the final scope of census attribution.
 The G6 decision and subsequent queue merge/heavy phase are still required.
+
+
+## Final independent review — ready for G6
+
+The scoped final integration/profile review approved `e8fdb804c` with no
+findings. It explicitly found the measured main-study-only attribution adequate
+to discharge this referral, while retaining the unproven full-pipeline/scaling
+claims as limits. Its report is durably preserved with the controller evidence.
+All campaign implementation, visual, canonical and census-accounting work needed
+for the G6 package is now complete; Nathan's visual/merge decision remains open.
+
+The controller evidence snapshot contains 92 file hashes at
+`task9-controller-review-02/pre-g6-evidence-manifest.json`, SHA-256
+`174766c0f6267812500da122924782288895909dc056392f73e46297659b7696`. It precedes this final approval-receipt metadata;
+the original 4K package and census raw-profile archive retain their separate
+manifests. This does not grant publication or report a landed campaign.

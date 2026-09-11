@@ -4,7 +4,7 @@ This is the review candidate's close record. Whole-branch technical review is
 approved with three documentation corrections recorded below. The final canonical
 stage passed after main integration, including the Linux visual-client checks.
 Census profiling/accounting is complete with the scope recorded below. Final
-close review and Nathan's G6 visual/merge decision remain pending.
+close review is approved; Nathan's G6 visual/merge decision remains pending.
 Nothing in this file grants publication or reports a landed campaign.
 
 ## Review artifacts
@@ -241,3 +241,19 @@ simulation or visual-client source changed after the successful stage and
 no fresh physical or GPU claim is inferred from these operational/doc changes.
 The [profile audit](census-profile.md) is the final scope of census attribution.
 The G6 decision and subsequent queue merge/heavy phase are still required.
+
+
+## Final independent review — ready for G6
+
+The scoped final integration/profile review approved `e8fdb804c` with no
+findings. It explicitly found the measured main-study-only attribution adequate
+to discharge this referral, while retaining the unproven full-pipeline/scaling
+claims as limits. Its report is durably preserved with the controller evidence.
+All campaign implementation, visual, canonical and census-accounting work needed
+for the G6 package is now complete; Nathan's visual/merge decision remains open.
+
+The controller evidence snapshot contains 92 file hashes at
+`task9-controller-review-02/pre-g6-evidence-manifest.json`, SHA-256
+`174766c0f6267812500da122924782288895909dc056392f73e46297659b7696`. It precedes this final approval-receipt metadata;
+the original 4K package and census raw-profile archive retain their separate
+manifests. This does not grant publication or report a landed campaign.
