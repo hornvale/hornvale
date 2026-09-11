@@ -183,11 +183,22 @@ stratum; M2 is two-sided green; M7 shows no map domination.
   drow's `elevation` response is wood-elf's byte for byte, the abyssal elf's
   inherited responses should likewise be its family's, and the doc comment must
   say that this is deliberate.
-- [ ] The **vent commensal** weights `CHEMOSYNTHATE` and consumes
-  `marine_chemosynthate_supply_field`, whose doc currently says no consumer
-  exists. Update that doc: it reserves the work for THE TENANT's rung 4, and this
-  campaign has taken the marine half only. Leave the underworld half's wording
-  intact.
+- [ ] The **vent commensal** weights `CHEMOSYNTHATE` and reads **the same**
+  `marine_chemosynthate_supply_field` the `Surface` arm reads — not a marine
+  twin. Nothing forces a second field (contrast `HabitatRealm` vs
+  `climate::Realm`, which layering does force), and that field's doc is the thing
+  reserving the consumer.
+- [ ] **In the same commit that lands the vent commensal**, update two prose
+  sites, because after this campaign they become true sentences producing a false
+  conclusion: `marine_chemosynthate_supply_field`'s doc comment, and the
+  `BIO-chemotrophy` row in `book/src/frontier/idea-registry.md`. Both currently
+  say no `Surface`-realm kind weights `CHEMOSYNTHATE` so the supply reaches no
+  consumer — which stays **literally true** once our consumer is `Marine`, so a
+  reader checking whether rung 4 is open gets a true sentence and the wrong
+  answer. Rewrite each to say the **marine half is closed by this campaign** and
+  the **underworld half is open and belongs to THE TENANT**. Do not delete the
+  sentence — a successor needs to find it. (Raised by campaign/the-ceiling, which
+  is taking larder rung 3.)
 - [ ] Write M5 as a **test**, not a one-off measurement: for all 15 pairs, count
   the model-carried axes on which the pair differs, excluding stratum, and assert
   the minimum is ≥ 1. It names the offending pair when it fails. This is the

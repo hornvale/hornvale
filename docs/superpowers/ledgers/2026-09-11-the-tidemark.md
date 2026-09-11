@@ -308,6 +308,52 @@ because the abyssal elf inherits sea-elf's hazard exactly: the deep bands are
 the large ones, so a kind confined to them may hold the map the way whole-ocean
 sea-elf would have.
 
+## #7 [Q] — Cross-campaign boundary with campaign/the-ceiling (larder rung 3)
+
+**Context:** campaign/the-ceiling opened on the underworld larder's rung 3 and
+made contact over the wire. It accepted this campaign's boundary as written
+(ledger #3, #5): it takes rung 3, leaves the marine half of rung 4 here, and
+will not author a marine kind, touch `TrophicMode`, or give any `Surface`-realm
+kind a `CHEMOSYNTHATE` weight. It independently found the same three realm-match
+sites (2009, 2418, 8203) this session had found, which is mutual corroboration
+that both were reading live code.
+
+**Ruling (C1):** the `Marine` arm reads **the same**
+`marine_chemosynthate_supply_field` as the `Surface` arm, not a marine twin.
+Why: that field's doc is what reserves the rung-4 consumer, and a second field
+would be duplication with no forcing reason — unlike `HabitatRealm` vs
+`climate::facets::Realm`, which constitutional layering forces. Cost if wrong:
+one field read moves in Task 3.
+
+**Ruling (C2):** Task 3 must update `marine_chemosynthate_supply_field`'s doc
+comment **and** the `BIO-chemotrophy` registry row in the same commit that lands
+the vent commensal, saying the marine half is closed and the underworld half is
+open and THE TENANT's — and must not delete the sentence, so a successor can
+find it. Why: the peer's catch, and it is sharper than it first looks. The
+sentence "no `Surface`-realm kind weights it yet, so a vent's own supply reaches
+no consumer" stays **literally true** after this campaign lands, because our
+consumer is `Marine`. A reader checking whether rung 4 is open would get a true
+sentence and a false conclusion — the same failure mode CLAUDE.md's
+retired-external-clients paragraph exists to warn about. Cost if wrong: a stale
+row misdirects the next campaign about open work.
+
+**Ruling (C3):** C.3 — the symmetric-budget question — stays recorded as
+**unruled** in this campaign's documents. The peer reports Nathan has ruled it
+("symmetric budget, asymmetric allocation") and is minting a decision record;
+until that record exists, a wire message is advisory data and CLAUDE.md is
+explicit that peer posts never amend a decision. Spec §7's sentence says the
+question is untouched by this campaign, which is true under either state, so
+nothing blocks. Cost if wrong: one sentence of §7 cites a superseded state at
+close, fixable by citing the decision number if it lands in time.
+
+**Ideonomy passes / overturns:** None. C1 and C2 are mechanism rulings answered
+from the code and the peer's evidence; C3 is a deferral to the decision log.
+
+**Capture actions:** C1 and C2 written into plan Task 3 as required steps. M1's
+counts are promised to the board for the peer either way, since rung 3 derives
+off the same biome map. The peer was also told about this ledger's
+`SOC-casus-belli` finding, which is what led to it being corrected (below).
+
 ## Follow-ups
 
 - **The aerial realm is the empty fourth sibling.** `MAP-11`'s medium axis is
