@@ -150,19 +150,87 @@ success that does not exist.
 `docs/generated-paths.txt` gives a generator** (0936's rule). Hand-written
 prose is refused.
 
-## Non-blind items
+## Non-blind items — `disclosure` marks PER-ITEM non-blindness
 
-Any item not authored blind carries a `disclosure`, per the mechanism
-`sugarscape-1996` uses verbatim for `sug-wealth-skew`. These corpora are
-authored by people who know the model is a clock; the catalogue-driven
-selection rule is the structural mitigation and `disclosure` is the per-item
-escape where it does not hold.
+**Ratified by campaign ledger #12, which rejected the opposite rule; read that
+entry before changing this section.** `disclosure` means the same thing here as
+in `regularities/sugarscape-1996`, where the field marks the one item whose
+statistic had been looked at before authoring. So:
 
-**Where the non-blindness is uniform across a whole corpus, disclose it once in
-`provenance` and say so** — copying an identical sentence onto every item states
-one fact N times, which is the duplication 0261 forbids and the same argument
-that keeps the derived demand set out of the file. `asimov-1989` does this, and
-states the rule it used to decide which items still carry a per-item field.
+> **An item whose verdict turned on having read the model owes a
+> `disclosure` — `absent` included.**
+
+**The rejected rule, recorded because the next author will reach for it.** The
+first corpus in this family shipped with "`disclosure` is carried by every item
+whose verdict is not `absent`", on the reasoning that `absent` is the default
+that cites nothing, so model knowledge cannot have manufactured it. That
+rationale assumes `absent` is the *conservative* direction. **For this family it
+is the flattering one**: the thesis these corpora test is that Hornvale's
+technology model is impoverished, so a high `absent` count is the result that
+confirms the author's expectation, and an item that is really `deferred` but
+scored `absent` is the self-serving error. A rule exempting that direction from
+disclosure exempts the only direction that needed it — and it produced an
+instance immediately (a root scored `absent` while an idea-registry row named its
+demand, with no disclosure inviting anyone to audit the search).
+
+**Corpus-level non-blindness goes in `provenance`, not onto every item.** That is
+a fact about the whole instrument, and copying it onto N items states one fact N
+times, which decision 0261 forbids. The two levels are different instruments for
+different facts; keep both.
+
+**The workable cut, and it is enforceable:** a verdict is either **chosen** or
+**inherited**. Chosen verdicts carry a disclosure — every **root** (no
+`presupposes` edge, so nothing upstream forces it), plus every non-root where a
+specific candidate anchor or a non-`absent` verdict was **considered and
+refused**. A non-root whose verdict simply follows the weakest-demand rule from
+an `absent` prerequisite carries none, because the lattice decided it and no
+Hornvale fact did. **Roots are the class the original defect came out of, so
+assert that every root carries one.**
+
+## Two rules for scoring `deferred`, both learned the hard way
+
+**1. Sweep the whole `absent` column against every candidate row, not only the
+rows you happened to find.** `absent` is the cheap verdict and it is the one
+that needs the search. Checking `BIO-animal-domestication` while never checking
+`BIO-8` — whose first two words are "Sharpens [[BIO-8]]" — is how one root sat
+`absent` with a row naming its demand.
+
+**2. A row that plans a PREREQUISITE of an item's demand does not make the item
+`deferred`.** The row must name the capability the item's own `introduces` token
+names. Demands are derived by closure, so an item whose prerequisite becomes
+planned still has its own demand unplanned, and its verdict is its weakest
+demand. A row naming "metallurgy yields tools" does not discharge an item whose
+demand is a load-bearing fitting and whose metal is a *dropped* prerequisite.
+
+**Breadth is not a refusal.** A row broader than the item's demand can still
+name it; if you accept one broad row you may not refuse another for breadth
+alone. And a row that names a capability as an **input it assumes** genuinely
+does not plan it — but test that reading before using it: if one of the row's
+other enumerated elements has already *shipped* as a deliverable, the row
+enumerates deliverables and the refusal fails.
+
+## A frozen band over an undefined statistic freezes nothing
+
+The band is the easy half. **A corpus must define, in `provenance`, every degree
+of freedom the statistic leaves open**, or the session that scores it later holds
+exactly the discretion the freeze exists to remove. For a per-people statistic
+that is at least:
+
+- **Aggregation.** `tech` and `tech_offset` are fields on a **community**, not a
+  people, and the census reports them per **occupation**. A people's communities
+  can sit on different rungs, so "this people holds it" needs a rule —
+  any / all / latest / at-closure — and the rule must be chosen for what it does
+  to `lost`, not for convenience.
+- **Evaluation instant.** `peoples-placed` and `peoples-alive-at-bake-end` are
+  both census columns and give **different denominators**.
+- **The N the band's stated meaning depends on.** "At least one holds it and at
+  least one lacks it" is what a `[lo, hi]` fraction band means only while
+  `1/N >= lo`. State the N, measured, or express the criterion as a count —
+  otherwise the claim becomes false silently as worlds grow.
+
+**And keep the unit straight in the argument as well as in the field.** Evidence
+gathered per *community* does not establish a per-*peoples* fraction without an
+explicit step; write the step down.
 
 ## The corpus is an instrument, never a roadmap (decision 0095)
 

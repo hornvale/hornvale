@@ -1,738 +1,753 @@
 {
- "corpus": "asimov-1989",
- "unit": "capability",
- "ordered": true,
- "provenance": "Isaac Asimov, *Asimov's Chronology of Science and Discovery* (Harper & Row, 1989), as presented by invention.cards, whose own subtitle states the attribution verbatim: \"A visual chronology of Asimov's ~1500 scientific inventions and discoveries.\" Asimov is the catalogue; invention.cards is where it was encountered, and the date and counts of both fetches are recorded below.\n\nTWO INDEPENDENT FETCHES, AND WHAT EACH ONE HAD TO FIND OUT. The site root is a d3 canvas application: `curl -sL https://invention.cards/` returns 200 and 10,866 bytes of shell with no item list in it, and `https://invention.cards/universe.js` is a 404, so a naive fetch of the catalogue enumerates nothing and reports success. The enumeration is `https://invention.cards/browse/`, which is server-rendered and links every invention as `href=\"/<slug>/\"`. FETCH 1 (the campaign controller, 2026-09-11, before this task was dispatched): 150,326 bytes, 1,484 distinct invention slugs -- the \"~1,500\" the spec cites -- and exactly three named story arcs linked from the shell, `/story/knights/`, `/story/republic-of-letters/` and `/story/steam-diffusion/`, with 16, 10 and 15 linked inventions and a union of 41. FETCH 2 (this task, 2026-09-11T17:33:34Z, independently issued and independently parsed): 150,326 bytes, 1,484 distinct slugs after discarding the page's self-link, the same three arcs at 16, 10 and 15, the same union of 41 -- `diff` against fetch 1's saved slug list and arc union is empty in both cases. NO DISCREPANCY. There is no `/stories/` index; that URL 404s, and the three arcs were enumerated from the shell's own `href` set both times. Each of the 41 item pages was then fetched once (2026-09-11T17:34:02Z-17:34:09Z) for its title, attested date, attributed person and place, and -- the part that matters structurally -- its own \"Built on\" and \"Led to\" links, which are the catalogue's dependency chains in machine-readable form.\n\nTHE SELECTION RULE, STATED BEFORE ANYTHING WAS SELECTED, AND APPLICABLE WITHOUT READING A LINE OF HORNVALE. (1) Enumerate the catalogue's own named story arcs -- the curated sequences the site itself publishes under `/story/<name>/`, not a grouping anyone here invented. (2) Take every invention linked from every arc, whole, and take their union. (3) If the union is fewer than 40 items, widen by taking whole additional arcs; if more than 80, drop whole arcs. Never add or remove an individual item. The arcs taken are ALL THREE THAT EXIST: `knights` (16), `republic-of-letters` (10), `steam-diffusion` (15), union 41 distinct items. No arc was dropped, because none had to be. A rule keyed to Hornvale's own code would make the selection the measurement; hand-picking a single item would do the same thing one item at a time, which is why step 3 operates on arcs only.\n\nTHE RULE IS AT ITS FLOOR, NOT COMFORTABLY INSIDE IT, AND THE WIDEN BRANCH HAS NO ESCAPE HERE. 41 is one item above the spec's 40-item minimum. The widen branch did not fire, and it COULD NOT HAVE: three arcs is all the catalogue publishes, so \"take whole additional arcs\" has nothing to take. Recorded rather than repaired, because the repair would have been to invent a fourth grouping or to pick items by hand, and both are the thing the rule exists to forbid. A later reader should know that a single arc going missing upstream, or a single item being unlinked from one, would put this corpus below its own floor with no mechanical remedy.\n\nONE ALTERNATIVE READING OF THE RULE WAS MEASURED AND REFUSED. The spec says items come from the catalogue's own \"named story arcs AND dependency chains\", which can be read as: take the arcs, then close over the \"Built on\" links. Measured: the 41 arc items name 15 distinct prerequisites outside the arcs (`alchemy`, `artillery`, `biped`, `coke-iron`, `copper`, `crossbow`, `falling-motion`, `fire`, `geometry`, `heat-capacity`, `nation`, `plow`, `steel`, `stone-tool`, `university`), so one step of closure would give 56 items -- also inside the 40-80 band. That is exactly why it was refused: TWO readings both land in the band, and choosing between them after seeing which number is nicer is hand-picking at the level of the rule instead of the item. The arcs-whole reading was taken because it is the one the spec's own decision rule is written in terms of -- widen or narrow by whole ARCS -- and a one-step dependency ring is neither an arc nor an item, so the decision rule has no operation that produces it. The full transitive closure was not measured and is not proposed; it would plainly exceed 80.\n\nDEMANDS ARE DERIVED, NEVER WRITTEN (decision 0386). Each item names the ONE demand it `introduces` and the items it `presupposes`; the demand set is the transitive closure over `presupposes`, computed on read. No demand list appears anywhere in this file, and adding one would reopen 0386 rather than extend it.\n\n`presupposes` NAMES ITEMS IN THIS CORPUS AND NOTHING ELSE, WHICH DROPS REAL PREREQUISITES ON PURPOSE. Every `presupposes` edge is transcribed from the catalogue's own \"Built on\" list for that item, filtered to the 41. The 15 prerequisites listed above sit outside the corpus and are therefore ABSENT FROM `presupposes`, not approximated and not invented: `inv-cart` really is built on copper, `inv-writing` on the stone tool, `inv-printing-press` on steel, `inv-scientific-societies` on the university, and the lattice in this file says none of it. Each affected item's `note` names what was dropped. The consequence is that the derived demand set UNDER-DESCRIBES every such item's real prerequisites -- a known, bounded distortion of taking 41 items out of 1,484, and the price of a corpus whose every edge is checkable against the source.\n\nORDERING. `ordered` is true: items are in the catalogue's own chronological order, by attested date ascending, with the single tie that matters (`inv-arquebus` and `inv-standing-army` are both dated 1450) broken so that a prerequisite precedes its dependent. Every `presupposes` edge therefore points backwards in the file.\n\nDECLARED BIAS -- AN INSTRUMENT WITH KNOWN BIAS, NEVER A STANDARD (decision 0095). This is a mid-20th-century Western progress narrative, ordered by European and Mediterranean attestation, treating discovery as cumulative and one-directional, and under-recording non-material technique. The three arcs concentrate that bias rather than diluting it: `knights` is the European mounted-warfare sequence, `republic-of-letters` the alphabetic-literacy-to-printing sequence, `steam-diffusion` the 17th-18th century pneumatics-to-Watt sequence. Counted rather than asserted: the catalogue attributes a place to 37 of the 41 items, and 26 of those are in Europe, 5 more in Egypt and the Near East (Sumer twice, Assyria, Phoenicia, Egypt), and 6 elsewhere (China three times, India, Central Asia, and one attributed to \"Slavs\" rather than to a place). NOT ONE of the 41 is attested in the Americas, sub-Saharan Africa or Oceania. For a world of goblins, kobolds and drow this is load-bearing: the catalogue demands a horse and a printing press and never once asks whether a people can find its way in the dark, keep a lineage's obligations straight across ten generations, or name a place for the crop that grows there -- all of which Hornvale models. ASIMOV IS NOT OWED A WORLD. Coverage here measures reach against THIS catalogue only, and a 39-item `absent` column is a statement about the intersection of two rosters, not a deficiency score.\n\nTHE REACH QUESTION, STATED EXACTLY, BECAUSE EVERY VERDICT BELOW TURNS ON IT. Can a Hornvale world TODAY carry the capability this item introduces as a committed fact that CAN DIFFER BETWEEN TWO PEOPLES? The second half is the load-bearing half. A label every community carries by construction is not a capability a people acquires, and a label that conflates the demand with a neighbouring one -- so that no world can hold the one without the other -- does not meet the demand either. Such near-misses are scored `absent` WITH THE NEAR-MISS NAMED IN THE `note`, which is what makes this column auditable by someone who disagrees with the ruling: the evidence for the other verdict is printed beside the verdict.\n\nVERDICT TALLY AND THE TWO VALUES THAT DO NOT APPEAR. 39 `absent`, 2 `deferred`, 0 `present`, 0 `refused`, 0 `inapplicable`, 0 measured. `present` is the verdict this instrument is least entitled to and it earns none here. `refused` is unavailable as a matter of fact, not of judgement: a case-insensitive grep of `docs/digest/decisions-in-force.md` for technology, tech tree, economy, craft, metallurgy, gunpowder and invention returns NOTHING, so no in-force decision declines any of these 41 capabilities and none could be cited. `inapplicable` earns none either, and that is worth stating because spec section 4.1 provisions it explicitly for \"things a subterranean people would never want\": the verdict requires the world to DELIBERATELY lack a precondition, and the three arcs taken are surface-world European sequences whose preconditions Hornvale lacks by omission rather than by design. \"A people would not want it\" is in any case a claim about a people's preferences, and Hornvale models no preference over technologies at all -- which is itself a finding, and a cleaner one than six soft `inapplicable` verdicts would have been.\n\nTHE CEILING RULING, WHICH IS THE SINGLE MOST VERDICT-SHAPING CALL IN THIS FILE. `TechHorizon` (`domains/history/src/record.rs:60`) has four variants and its own doc calls Classical \"the ceiling this engine models\". It would be easy to score everything past that ceiling `inapplicable` or `refused`. Both are refused here, because spec finding F1 established that NO decision record covers the four-rung horizon -- its entire rationale is one paragraph, fact #7 of 12, in section 5.3 of a spec about ruins. An unratified code fact is not a deliberate world choice, and scoring it as one would launder the exact thing this campaign exists to put under measurement. Every item past the ceiling is therefore `absent`, with the ceiling named in its `note` as the cause.\n\nAND A TRAP THE CEILING SETS FOR THE NEXT READER, NAMED SO NOBODY WALKS INTO IT. `tech_for(year)` (`windows/worldgen/src/history_bake.rs:2900`) puts its rungs at 400, 900 and 1400 -- and those are WORLD years since genesis, read off a history bake whose `end_year` is 2000.0. The catalogue's dates are real-world attestation dates in BCE/CE. 1454 CE for the printing press and 1400 for the Classical rung are not the same kind of number and MUST NOT BE COMPARED; the near-coincidence of their magnitudes is an artifact of both being four-digit integers. No verdict or band in this file is keyed to a catalogue date.\n\nTHE CRITERION: ONE STATISTIC, ONE BAND, THE SAME BAND EVERYWHERE. Every item carries `statistic: fraction-of-peoples-holding` and `criterion: {fraction-in-band, lo 0.05, hi 0.95}`. Spec section 5.2a is the reason a criterion exists at all: the pathology this campaign was opened to detect is not that Hornvale fails to acquire technologies but that EVERY surviving community acquires all of them, and a boolean verdict scores \"every people has bronze\" and \"half the peoples have bronze\" identically, so it is blind to precisely the defect. The band is UNIFORM across all 41 items, deliberately and for two reasons. First, the corpus has exactly one hypothesis -- that a technology's holding varies across peoples -- and 0.05 to 0.95 is the minimal statement of it: at least one people lacks the capability and at least one holds it. Second, a per-item band would have been authored by a session that has read the model, which is the one thing section 4.1's selection rule is built to prevent; a uniform band cannot be tuned item by item to pass, because there is nothing item-specific in it to tune. FALSIFYING WORLDS, stated once because they are the same for every item: a world where no people ever holds the capability gives a fraction of 0.0, and a world where every surviving people holds it gives 1.0. BOTH REDDEN. The band is two-sided and both poles are real shapes this engine produces -- spec finding F4's committed gallery is 10 `classical` and 1 `bronze-working`, which is the 1.0 pole for whatever the rungs name and the 0.0 pole for everything else. Under this criterion today's world fails every item, in one direction or the other. That is the honest reading and a bare boolean would have reported some of it as success.\n\nTHE SINGLE `verdict` FIELD IS A PIPELINE, AND THE PIPELINE IS WHY THIS FILE CARRIES NO TRAJECTORY VALUE AT ALL. Per spec section 5.2 a measured value (`grown`/`flat`/`lost`) is reachable only if reach already succeeded. No item's reach succeeds, so no item is eligible for a measured verdict, and consequently this corpus carries ZERO `grown`, ZERO `flat`, ZERO `lost` AND ZERO `unmeasured`. `unmeasured` is for an item whose reach PASSES and whose trajectory is not yet scored; inventing one here to make the column look complete would assert a reach success that does not exist. The criterion above is therefore preregistered for a successor campaign to evaluate and is evaluated by nothing today -- which is the freeze working, not an omission. Nothing in Hornvale can lose a technology (`tech_for` is documented \"monotone in `year`, so tech only ever rises\"), so `lost` is unreachable on this column by construction as well as by pipeline.\n\nNON-BLINDNESS, DISCLOSED CORPUS-WIDE RATHER THAN PER ITEM. These verdicts were authored by a session that had read `tech_for`, `tech_weight`, `TechHorizon` and the spec's seven findings. That is uniform across all 41 items and to the same degree, which is why it is stated here ONCE at full strength instead of being copied into 41 identical `disclosure` fields -- stating one fact 41 times is the duplication decision 0261 forbids, and it is the same argument that keeps the derived demand set out of this file. The sibling corpus `regularities/sugarscape-1996` carries its disclosure per item because its situation was the inverse: 44 blind items and one non-blind one. PER-ITEM `disclosure` IS CARRIED BY EVERY ITEM WHOSE VERDICT IS NOT `absent` -- two items -- `inv-animal-dom` and `inv-coal-mining`. The rule is auditable and it is the right cut: `absent` is the default that cites nothing, so knowing the model cannot have manufactured it, whereas a non-`absent` verdict is a positive claim produced by SEARCHING the repository, and that search was not blind. What the selection rule does protect, and what it was the only available protection for, is WHICH 41 items are scored -- those came from the catalogue's own arcs before any Hornvale fact was consulted.\n\nWHY THE `absent` MASS IS STRUCTURAL RATHER THAN A SCORE. Hornvale's concept registry grows on demand, and the idea registry says so of itself: `LANG-registry-is-exotic-heavy-and-core-light` records that \"demand-driven growth built an almost entirely sim-specific vocabulary while the conversational core is missing\". The same asymmetry governs this column. Everyday material technique -- a cart, a plough, a harness, a written record -- has had no consumer in this engine, so no predicate was ever minted for it, while the registry carries 441 distinct keys across the 449 rows of `book/src/reference/concept-registry-generated.md`, including `anvil` (\"a heavy iron block a smith hammers metal against\") and `loom` (\"a frame for weaving thread into cloth\") as scene OBJECTS a possessed body can stand next to. A smith's anvil is a noun in a room while no people in any world holds smithing. That gap between the furniture and the capability is the most compact statement of what this corpus measures.",
- "frozen": "before first measurement, The Kiln (2026-09-11). THE FREEZE IS STRUCTURAL RATHER THAN PROMISED, which is the discipline decision 0936 established for `regularities/` and the reason decision 0016 means anything here. This file is Task 1 of 10 of its campaign, and NO EVALUATION CODE EXISTS IN THE REPOSITORY AS IT IS COMMITTED: there is no `cli/tests/suite/technology_corpus.rs`, no closure computation, no anchor resolver, no report generator and no `docs/audits/technology-coverage-asimov-1989.md`. Every one of them arrives in a later task of the same campaign, and nothing in `domains/*` or `windows/*` reads a corpus file at all (decision 0011: the corpus is data, the resolver is code). A reader can confirm the freeze from the git history rather than taking this sentence's word for it.\n\nTHE ITEM COUNT IS 41 AND IT IS ASSERTED BY THE RESOLVER, so changing this corpus is a deliberate act (decision 0016), exactly as `regularity_corpus.rs` asserts 45.\n\nRE-FREEZING IS NOT SOMETHING A LATER SESSION MAY DO, and for this corpus the disqualification has a specific shape. The criterion being frozen is a distribution across peoples of who holds a capability. The quantity that distribution is computed from is `occ-tech`, and `occ-tech`'s distribution is ALREADY PUBLISHED in several places a session reads for ordinary reasons -- spec finding F4 states it outright (10 `classical`, 1 `bronze-working` in the committed gallery), `book/src/laboratory/generated/the-census/` carries four census metrics over it, and the almanac and `windows/lot` render it as prose. A session that has read any of those may not tighten this band for any item, which is all 41 of them, because the band is uniform. The practical consequence is a scheduling constraint rather than a style note: band quality on this column can only be improved by a session that has not read `occ-tech`'s distribution, and after the successor campaign scores this corpus there will be no such session. Tighten it now or accept it.\n\nWHAT A LATER READER CAN ALWAYS DO WITHOUT DISQUALIFYING THEMSELVES is audit the discriminating power of the band from this file alone, with no data: the falsifying worlds are stated in `provenance` (a fraction of 0.0 and a fraction of 1.0, both reddening), and the argument for uniformity is stated there too so that it can be attacked directly.",
- "items": [
-  {
-   "id": "inv-animal-dom",
-   "title": "Animals domesticated — domestic animals kept",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/animal-dom/` (12,000 BCE, unattributed, no place recorded); arc 'knights'",
-   "introduces": "domestic-animals-kept",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "deferred",
-   "anchor": "registry:BIO-animal-domestication",
-   "disclosure": "NOT BLIND, per the corpus-wide disclosure in `provenance`: this verdict is `deferred` rather than `absent` because a search of `book/src/frontier/idea-registry.md` for a row naming this gap found one, and that search was run by a session that already knew Hornvale's technology model is a four-rung clock. The item's SELECTION was blind -- it is in the `knights` arc's own link list -- but its verdict was not.",
-   "note": "THE NEAREST MISS IN THE CORPUS, and it misses on the animal rather than on the institution. `subsistence` is a committed predicate (\"a settlement's subsistence mode\") whose values are Farming, Herding, Fishing and Foraging (`domains/culture/src/subsistence.rs`), it differs between settlements in one world, and Herding is documented \"Pastoral herding\" -- so a people that lives off animals is already a fact Hornvale commits and varies. What is missing is the animal: `BIO-animal-domestication` records that the registry \"already admits domestication for the plant kingdom (barley, wheat, rice, millet, tuber, with a crops model behind them) and refuses it for the animal kingdom -- every one of the ~30 registered `*-kind` fauna is wild\", and the registry bears that out: 39 `*-kind` rows in `book/src/reference/concept-registry-generated.md`, peoples and beasts together, and not one of the beasts domestic. A herding people herds nothing in particular. The row is `raw`, so this is `deferred` rather than `absent`: what it would take is the row's own content, a working animal as \"the missing half of an existing axis\". PREREQUISITE DROPPED: built on `biped` in the catalogue, outside the corpus."
-  },
-  {
-   "id": "inv-writing",
-   "title": "Writing — written record kept",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/writing/` (3,500 BCE, unattributed, Sumer); arc 'republic-of-letters'",
-   "introduces": "written-record-kept",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "TWO NEAR-MISSES, AND BOTH ARE INSTRUCTIVE FAILURES OF THE SAME KIND: the vocabulary for writing exists and nothing in any world writes. (1) `write` and `read` are registered concepts -- `write`, \"to set words down in writing\"; `read`, \"to take meaning from written words\" -- and they are INERT. `LANG-in-character-acts-are-unspeakable` records that seven minted concepts including `read` and `write` \"render `Gap | Gap` for every species in every world, because nothing grants them `Steeped` or `KnowsOf`\", verified in the committed `book/src/reference/concept-manifest-generated.md`. No culture can even SAY the act, let alone perform it. (2) `Orthography` (`domains/language/src/typology.rs:90`) looks like a writing system and is not: its own doc says \"How this family's segments are spelled in the romanization. A view over `Segment`, so this field alone moves no stream draw\". It is a reader-facing spelling convention for committed name strings, chosen per language family, with no in-world existence -- a fact about how the artifact prints, not about what a people can do. WHAT WOULD CHANGE THE VERDICT: a committed fact that some peoples keep written records and others do not. `NARR-monument-writes-itself` is the nearest plan (it makes literacy a gate on reading an inscription) and it is `elaborated`, not shipped; it was considered as a `deferred` anchor and refused here, because that row plans the RENDERING of a monument's text and treats literacy as a gate it assumes rather than as a capability a people acquires and loses, which is this corpus's demand. PREREQUISITE DROPPED: built on `stone-tool` in the catalogue, outside the corpus."
-  },
-  {
-   "id": "inv-cart",
-   "title": "Wheeled carts — wheeled land haulage",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/cart/` (3,500 BCE, unattributed, no place recorded); arc 'knights'",
-   "introduces": "wheeled-land-haulage",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Nothing in the engine has a wheel. The honest near-miss is elsewhere in the same economic space: `occ-function` commits Trade, \"a waypoint or market on a trade route\" (`domains/history/src/record.rs`), so a world has routes and market seats -- and no conveyance on them. Haulage capacity never enters any computation: a community's strength is population times `tech_weight` and its delving is metres per head per epoch, both of which read population where a cart would read carrying capacity. PREREQUISITE DROPPED: the catalogue builds this on `copper`, which is outside the corpus, so the derived demand set under-describes it."
-  },
-  {
-   "id": "inv-papyrus",
-   "title": "Papyrus — plant fibre writing surface",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/papyrus/` (3,000 BCE, unattributed, Egypt); arc 'republic-of-letters'",
-   "introduces": "plant-fibre-writing-surface",
-   "presupposes": [
-    "inv-writing"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-writing`, which is `absent`, so this cannot score higher; recorded with its own near-miss because the near-miss is a genuinely different one. Hornvale models plants as a CLIMATE fact rather than a material a people processes: `Crop` (`domains/climate/src/crops.rs`) carries barley, wheat, rice, millet, tuber and vine, and the module's own doc says \"A crop is a climate fact -- a band of temperature and moisture on arable ground\". There is no fibre, no sedge, and no step between a standing plant and a made thing. PREREQUISITE DROPPED: built on `nation` in the catalogue, outside the corpus."
-  },
-  {
-   "id": "inv-literature",
-   "title": "Literature — composed work transmitted as text",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/literature/` (2,500 BCE, unattributed, Sumer); arc 'republic-of-letters'",
-   "introduces": "composed-work-transmitted-as-text",
-   "presupposes": [
-    "inv-writing"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-writing`. The near-miss is the most substantial in the corpus and it is worth being exact about why it does not count: Hornvale has a large, shipped knowledge-and-transmission layer -- claims propagate between people, degrade with each boundary they cross, and `KNOW-boundary-not-accumulation` records damage accumulating \"as a continuous width, resolved to a rung only at emit\". All of it is ORAL. A composed work whose wording survives its teller is exactly the thing that layer's physics is built to deny, so this item's demand is not a gap in the transmission model but a different mechanism beside it."
-  },
-  {
-   "id": "inv-horse",
-   "title": "Horses — riding animal bred",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/horse/` (2,000 BCE, unattributed, no place recorded); arc 'knights'",
-   "introduces": "riding-animal-bred",
-   "presupposes": [
-    "inv-animal-dom"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "ITS PREREQUISITE IS `deferred` AND THIS ITEM IS STILL `absent`, which is the weakest-demand discipline doing its job rather than a contradiction. `inv-animal-dom` has a registry row behind it; a riding animal has none, and the gap is two-layered: there is NO EQUINE at all among the 39 `*-kind` rows -- the roster runs to `giant-elk-kind`, `giant-goat-kind`, `rhinoceros-kind` and `woolly-mammoth-kind` alongside `owlbear-kind`, `otyugh-kind` and `xorn-kind` -- so even the wild ancestor the catalogue's chain needs is missing, and `BIO-animal-domestication` names the domestication half without naming that. `inapplicable` was considered and refused: the absence of an equine reads as a roster that grew on demand, not as a world deliberately lacking a precondition."
-  },
-  {
-   "id": "inv-alphabet",
-   "title": "Phonetic alphabet — phonemic script",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/alphabet/` (1,500 BCE, unattributed, Phoenicia); arc 'republic-of-letters'",
-   "introduces": "phonemic-script",
-   "presupposes": [
-    "inv-writing"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-writing`. The near-miss is sharper here than anywhere else in the arc and it cuts the other way: `domains/language` DOES hold a per-family phoneme inventory, a syllable law, and a typology bundle, so the analysis a phonemic script encodes is already computed -- see `book/src/reference/phonology.md`. What no world has is a people that has NOTICED it. The catalogue's claim is that someone discovered one sign per sound; Hornvale's phonology is the author's model of the language, held outside the world, and `Orthography` spells it for the reader rather than for the speakers. A capability the engine exercises on a people's behalf is not a capability the people holds."
-  },
-  {
-   "id": "inv-bridle",
-   "title": "Bridle — animal guided by rein",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/bridle/` (1,500 BCE, unattributed, no place recorded); arc 'knights'",
-   "introduces": "animal-guided-by-rein",
-   "presupposes": [
-    "inv-horse"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-horse`. No tack, no harness and no control relationship between a person and an animal exists; the only committed person-to-creature relations in the registry are perceptual and social (`care`, `custody`, `dependency`, `association`), all of which hold between people."
-  },
-  {
-   "id": "inv-saddle",
-   "title": "Saddle — seated riding rig",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/saddle/` (700 BCE, unattributed, Central Asia); arc 'knights'",
-   "introduces": "seated-riding-rig",
-   "presupposes": [
-    "inv-bridle"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-bridle`. Nothing a people makes is modelled as a made thing with a use: the registry's manufactured objects (`anvil`, `loom`, `bench`, `brazier`, `bed`, `door`, `altar`) are scene furniture a possessed body stands beside, committed as `thing | object`, never as a capability a community holds or loses."
-  },
-  {
-   "id": "inv-library",
-   "title": "Libraries — collected holdings outliving their keepers",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/library/` (640 BCE, Ashurbanipal, Assyria); arc 'republic-of-letters'",
-   "introduces": "collected-holdings-outliving-their-keepers",
-   "presupposes": [
-    "inv-literature"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-literature`. The near-miss is an institutional one and it is real: `occ-function` commits Cult, \"a shrine or temple seat\", so a world already has a seat whose purpose outlives the individuals in it, and the history bake carries tenure across generations. What it does not carry is HOLDINGS -- a durable store of content, as against a durable store of food (community stores exist and are lost on closure). A library is the second kind of store and the engine models only the first. PREREQUISITE DROPPED: built on `nation` in the catalogue, outside the corpus."
-  },
-  {
-   "id": "inv-parchment",
-   "title": "Parchment — hide writing surface",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/parchment/` (170 BCE, Eumenes II, Pergamum (Greece)); arc 'republic-of-letters'",
-   "introduces": "hide-writing-surface",
-   "presupposes": [
-    "inv-animal-dom"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-animal-dom`, and doubly unreachable: it needs a herd animal (whose registry row is `raw`) and a written record (which is `absent`). No material is committed as coming off a creature at all; `blood` and `bone` are registered as substances in the scene vocabulary, not as yields a people takes and works."
-  },
-  {
-   "id": "inv-wooden-stirrup",
-   "title": "Wooden stirrups — foot support in the saddle",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/wooden-stirrup/` (100 BCE, unattributed, India); arc 'knights'",
-   "introduces": "foot-support-in-the-saddle",
-   "presupposes": [
-    "inv-saddle"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-saddle`. Included whole because the arc links it and the selection rule forbids dropping an item; nothing in the corpus builds on it, so it is a leaf of the catalogue's own chain and contributes one demand that no other item's closure inherits."
-  },
-  {
-   "id": "inv-basic-steam-engine",
-   "title": "Rudimentary steam motion — steam moves a mechanism",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/basic-steam-engine/` (50, Hero, Greece); arc 'steam-diffusion'",
-   "introduces": "steam-moves-a-mechanism",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "A root of the steam arc in this corpus, so its verdict is chosen rather than inherited. Hornvale has fire (`fire` is a registered substance and `brazier` a scene object) and it has no mechanism, no work, and no energy accounting anywhere: the only place a physical quantity is converted into an effect on a people is `tech_weight`, which multiplies population and is a scalar on a four-rung clock. PREREQUISITE DROPPED: built on `fire` in the catalogue, outside the corpus -- which is the one dropped prerequisite Hornvale would actually have satisfied."
-  },
-  {
-   "id": "inv-paper",
-   "title": "Paper — cheap pulped writing surface",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/paper/` (105, Tsai Lun, China); arc 'republic-of-letters'",
-   "introduces": "cheap-pulped-writing-surface",
-   "presupposes": [
-    "inv-parchment"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-parchment`. The demand that distinguishes it from its prerequisite is CHEAPNESS -- a surface abundant enough to change who writes -- and cost is the axis Hornvale most completely lacks: `ECON-livelihood` is `raw` and its row records that \"no economy domain exists yet\". Nothing in any world has a price."
-  },
-  {
-   "id": "inv-metal-stirrup",
-   "title": "Metal stirrups — load bearing metal stirrup",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/metal-stirrup/` (300, unattributed, China); arc 'knights'",
-   "introduces": "load-bearing-metal-stirrup",
-   "presupposes": [
-    "inv-horse"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-horse`. The metalworking half is the more interesting absence and it is the `anvil` case exactly: the registry carries `anvil`, \"a heavy iron block a smith hammers metal against\", as a scene object, so a possessed body can stand next to a smith's anvil in a world where no people holds smithing. `occ-tech`'s rungs NAME bronze-working and iron-working, which is the closest the engine comes -- and a rung is a date-derived label on a community, not a capability it acquired. PREREQUISITE DROPPED: built on `steel` in the catalogue, outside the corpus."
-  },
-  {
-   "id": "inv-turnplow",
-   "title": "Turnplows — traction tillage of heavy soil",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/turnplow/` (600, unattributed, Slavs); arc 'knights'",
-   "introduces": "traction-tillage-of-heavy-soil",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "A root, so the verdict is chosen. The near-miss is the second-closest in the corpus after `inv-animal-dom`: `subsistence: Farming` (\"Settled agriculture\") is committed per settlement and varies, `occ-function` commits Agrarian (\"Farming and herding\"), and the `Crop` model says which staple a place supports. What no world carries is HOW the ground is worked -- and the demand here is specifically traction tillage, which needs a draught animal (`inv-animal-dom`, `deferred`) and an implement (nothing). Note also that `occ-function`'s Agrarian CONFLATES farming with herding in one label, so a world cannot hold the one without the other; under the reach rule stated in `provenance` a label that cannot vary independently of its neighbour does not meet the demand. PREREQUISITES DROPPED: built on `plow` and `steel`, both outside the corpus."
-  },
-  {
-   "id": "inv-block-printing",
-   "title": "Block printing — text reproduced from a carved form",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/block-printing/` (700, unattributed, China); arc 'republic-of-letters'",
-   "introduces": "text-reproduced-from-a-carved-form",
-   "presupposes": [
-    "inv-paper"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-paper`. Reproduction-without-re-authoring has no analogue in the engine, and the transmission layer is built on the opposite assumption: every retelling degrades, by design (`KNOW-boundary-not-accumulation`). A carved form that makes the hundredth copy identical to the first is a mechanism that would CONTRADICT shipped physics rather than extend it, which is a more interesting `absent` than a missing predicate."
-  },
-  {
-   "id": "inv-high-backed-saddle",
-   "title": "High-backed saddle — braced saddle transmits shock",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/high-backed-saddle/` (750, unattributed, Europe); arc 'knights'",
-   "introduces": "braced-saddle-transmits-shock",
-   "presupposes": [
-    "inv-saddle",
-    "inv-metal-stirrup"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of two `absent` items. The demand is mechanical -- a rig that transmits an impact into a frame rather than into the rider -- and the engine has no force, no impact and no body mechanics at any scale; combat between peoples resolves as a comparison of population times `tech_weight`."
-  },
-  {
-   "id": "inv-iron-horseshoes",
-   "title": "Iron horseshoes — shod draught animal",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/iron-horseshoes/` (770, unattributed, Europe); arc 'knights'",
-   "introduces": "shod-draught-animal",
-   "presupposes": [
-    "inv-horse"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-horse`. What makes a horseshoe a capability rather than an object is that it extends an animal's WORKING LIFE on hard ground -- a durability term on a productive asset. Hornvale has no productive assets and no wear on anything a people owns; the only durability modelled is a community's stores, which decay at a flat per-epoch rate and are destroyed on closure. PREREQUISITE DROPPED: built on `steel`, outside the corpus."
-  },
-  {
-   "id": "inv-couched-lance",
-   "title": "Couched lance — mounted shock charge",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/couched-lance/` (780, unattributed, Europe); arc 'knights'",
-   "introduces": "mounted-shock-charge",
-   "presupposes": [
-    "inv-metal-stirrup",
-    "inv-high-backed-saddle"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of two `absent` items. Worth a note anyway because it names the thing `tech_weight` is standing in for: a tactic, held by some peoples and not others, that changes the outcome of a meeting between them. Hornvale's answer is a single scalar multiplier on population, 1.0/1.5/2.25/3.0 by rung -- which spec finding F5 identifies as \"the progress scalar ... a civilisation with a *level*\" that `book/src/frontier/frontier.md` rejects by name."
-  },
-  {
-   "id": "inv-horse-collar",
-   "title": "Horse collars — harness transmits animal draught",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/horse-collar/` (900, unattributed, Europe); arc 'knights'",
-   "introduces": "harness-transmits-animal-draught",
-   "presupposes": [
-    "inv-turnplow",
-    "inv-iron-horseshoes"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of two `absent` items. The catalogue's own chain is the interesting part: it builds the collar on the PLOUGH and the HORSESHOE rather than on the horse, i.e. on a use and a durability, which is a capability-shaped dependency rather than an artifact-shaped one. Nothing in Hornvale composes capabilities that way; `tech_for` is monotone in a year and has no inputs."
-  },
-  {
-   "id": "inv-coal-mining",
-   "title": "Coal mining — mineral fuel extracted",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/coal-mining/` (1228, unattributed, England); arc 'steam-diffusion'",
-   "introduces": "mineral-fuel-extracted",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "deferred",
-   "anchor": "registry:TECH-3",
-   "disclosure": "NOT BLIND, per the corpus-wide disclosure in `provenance`: `deferred` rather than `absent` because `TECH-3` was found by searching the idea registry, by a session that had already read `history_bake.rs` and knew `occ-delve-depth` existed. The selection was blind; the verdict was not.",
-   "note": "A root, and the only item in the steam arc that is not `absent`. Hornvale genuinely mines: `occ-function` commits Mine, \"Extraction -- ore, stone, salt\", `occ-delve-depth` commits \"how far below its seat the occupation drove a working, in metres\", both vary between occupations in one world, and ore deposits themselves shipped with The Lode (2026-07-22). `TECH-3` records precisely what is left: \"Ore deposits shipped (The Lode, 2026-07-22); mining/refinement/tech-gating still deferred (the event-features + economy rungs)\" -- the row is `raw`. What this item's demand adds beyond the shipped half is that the mineral is a FUEL: something extracted to be burnt, which is what makes coal a prerequisite of an engine rather than a commodity. Hornvale's mines yield no named mineral at all, only a depth. PREREQUISITE DROPPED: built on `steel`, outside the corpus."
-  },
-  {
-   "id": "inv-longbow",
-   "title": "Longbows — massed missile volley",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/longbow/` (1298, unattributed, Wales); arc 'knights'",
-   "introduces": "massed-missile-volley",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "A root, so the verdict is chosen. The demand is a capability whose value depends on being held COLLECTIVELY -- a volley, not an archer -- and the engine has no formation, no tactic and no per-individual contribution to a collective outcome. PREREQUISITE DROPPED: built on `crossbow`, outside the corpus."
-  },
-  {
-   "id": "inv-pike",
-   "title": "Pike — massed polearm formation",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/pike/` (1300, unattributed, Europe); arc 'knights'",
-   "introduces": "massed-polearm-formation",
-   "presupposes": [
-    "inv-couched-lance"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-couched-lance`. The catalogue puts the pike after the lance because it is an ANSWER to it -- a counter a people adopts because a neighbour has something. That is the shape spec finding F3 found missing: section 5.3 of the Living Community spec justified committing the tech horizon on the grounds that \"a people's trajectory is globally dependent (contact, displacement)\", and `tech_offset` is drawn once at genesis, inherited down the lineage, and never mutated. No people in any world has ever changed what it can do because of a neighbour."
-  },
-  {
-   "id": "inv-arquebus",
-   "title": "Arquebus — handheld firearm",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/arquebus/` (1450, unattributed, Spain); arc 'knights'",
-   "introduces": "handheld-firearm",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "A root, so the verdict is chosen, and this is the clearest case for the ceiling ruling stated in `provenance`. `TechHorizon`'s own doc calls Classical \"the ceiling this engine models\", so a firearm is past the end of the enum. It is scored `absent` rather than `inapplicable` or `refused` because spec finding F1 established that NO decision record covers the four-rung horizon -- its whole rationale is one paragraph, fact #7 of 12, in a spec about ruins -- and an unratified code fact is not a deliberate world choice. PREREQUISITES DROPPED: built on `artillery` and `crossbow`, both outside the corpus."
-  },
-  {
-   "id": "inv-standing-army",
-   "title": "Standing army — permanent force apart from population",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/standing-army/` (1450, unattributed, Europe); arc 'knights'",
-   "introduces": "permanent-force-apart-from-population",
-   "presupposes": [
-    "inv-arquebus",
-    "inv-pike"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of two `absent` items, and the item whose demand Hornvale contradicts most exactly. The near-miss is `occ-function: Fort`, \"a garrisoned defensive point\", committed and varying. But the demand is a force MAINTAINED APART FROM the population that feeds it, and `Bake::strength` and `roller_strength` both compute strength AS population times `tech_weight` -- so a people's fighting power is its headcount by construction, and an army cannot be distinguished from the people it is drawn from even in principle. This is the one item where `absent` understates the finding: the demand is not unmet, it is unrepresentable without changing a formula that raiding, delving depth and residue structures all read."
-  },
-  {
-   "id": "inv-printing-press",
-   "title": "Printing press — movable type mass reproduction",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/printing-press/` (1454, Johannes Gutenberg, Germany); arc 'republic-of-letters'",
-   "introduces": "movable-type-mass-reproduction",
-   "presupposes": [
-    "inv-paper",
-    "inv-alphabet"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of two `absent` items, and past the modelled ceiling. PREREQUISITE DROPPED: built on `steel`, outside the corpus. Recorded without further near-miss analysis because it inherits `inv-block-printing`'s contradiction with the transmission layer and `inv-paper`'s missing cost axis, and restating them here would duplicate two notes rather than add one."
-  },
-  {
-   "id": "inv-scientific-societies",
-   "title": "Scientific societies — corresponding body of inquirers",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/scientific-societies/` (1560, Giambattista Della Porta, Italy); arc 'republic-of-letters'",
-   "introduces": "corresponding-body-of-inquirers",
-   "presupposes": [
-    "inv-printing-press"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-printing-press`. Its demand is the most explicitly social-epistemic in the corpus -- a durable body whose members correspond -- and Hornvale's knowledge layer is the part of the engine with the most shipped machinery, which makes the miss specific rather than broad: transmission is modelled between INDIVIDUALS who meet, and `SOC-information-economy` (`raw`) proposes the strategic layer above it. An institution that outlives its members and transmits deliberately at a distance is neither. PREREQUISITE DROPPED: built on `university`, outside the corpus."
-  },
-  {
-   "id": "inv-hydrostatics",
-   "title": "Hydrostatics — quantitative law of fluids known",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/hydrostatics/` (1583, Simon Stevin, Netherlands); arc 'steam-diffusion'",
-   "introduces": "quantitative-law-of-fluids-known",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "A root, so the verdict is chosen, and it is the representative case for all six discovery items in the steam arc. Hornvale's knowledge model holds PARTICULAR FACTS -- where a thing is, who did what, what was seen -- and carries them with provenance, degradation and belief. A law of nature is a different object: a general claim, true of cases never observed, whose value is that it predicts. `KNOW-study` (`raw`) is the nearest row and it proposes measuring how much of a world's knowable TRUTH a walker covers, which is the particular kind again. No world can hold a general claim, correct or mistaken, so no people can hold or lose one. PREREQUISITE DROPPED: built on `geometry`, outside the corpus."
-  },
-  {
-   "id": "inv-gas",
-   "title": "Gas state — matter recognised in a third state",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/gas/` (1624, Jan Baptista von Helmont, Flanders); arc 'steam-diffusion'",
-   "introduces": "matter-recognised-in-a-third-state",
-   "presupposes": [
-    "inv-hydrostatics"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-hydrostatics`; a discovery item, see that item's note for the general argument. The engine's substances (`fire`, `earth`, `blood`, `bone`, `water`) are scene vocabulary for what a body can perceive and name, with no state, phase or quantity behind them. PREREQUISITE DROPPED: built on `alchemy`, outside the corpus."
-  },
-  {
-   "id": "inv-barometer",
-   "title": "Barometers — atmospheric pressure measured",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/barometer/` (1643, Evangelista Torricelli, Italy); arc 'steam-diffusion'",
-   "introduces": "atmospheric-pressure-measured",
-   "presupposes": [
-    "inv-gas"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-gas`. Distinct from the discovery items in one respect worth recording: its demand is an INSTRUMENT, a made thing that yields a number a people then reasons with. Hornvale has climate fields with real values at every point and no way for anyone inside the world to read one. PREREQUISITE DROPPED: built on `falling-motion`, outside the corpus."
-  },
-  {
-   "id": "inv-air-pump",
-   "title": "Air pumps — air evacuated from a vessel",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/air-pump/` (1645, Otto von Guericke, Germany); arc 'steam-diffusion'",
-   "introduces": "air-evacuated-from-a-vessel",
-   "presupposes": [
-    "inv-barometer"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-barometer`. An apparatus item: its demand is the ability to produce a condition that does not occur naturally, which is the step from observing the world to experimenting on it. Nothing in the engine lets a people construct a situation."
-  },
-  {
-   "id": "inv-air-pressure",
-   "title": "Early pneumatics — pressure as a motive force",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/air-pressure/` (1654, Otto von Guericke, Germany); arc 'steam-diffusion'",
-   "introduces": "pressure-as-a-motive-force",
-   "presupposes": [
-    "inv-air-pump"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-air-pump`; a discovery item, see `inv-hydrostatics`. The catalogue's own chain makes this the hinge of the whole arc -- everything from Boyle to Watt is built on it -- which is why the corpus keeps it as its own item rather than folding it into its neighbours."
-  },
-  {
-   "id": "inv-boyles-law",
-   "title": "Boyle's law — pressure volume relation known",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/boyles-law/` (1662, Robert Boyle, England); arc 'steam-diffusion'",
-   "introduces": "pressure-volume-relation-known",
-   "presupposes": [
-    "inv-air-pressure"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-air-pressure`; a discovery item, see `inv-hydrostatics`. Its specific demand -- a RELATION between two measured quantities, held as knowledge -- is the sharpest form of that item's argument: Hornvale's belief layer can carry a false claim about a place, and has no representation for a claim about how two quantities covary."
-  },
-  {
-   "id": "inv-pressure-cooker",
-   "title": "Pressure cookers — pressure vessel held above ambient",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/pressure-cooker/` (1679, Denis Papin, France); arc 'steam-diffusion'",
-   "introduces": "pressure-vessel-held-above-ambient",
-   "presupposes": [
-    "inv-basic-steam-engine",
-    "inv-boyles-law"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of two `absent` items. Its demand is containment -- a vessel that holds a condition against the world -- and the nearest thing the engine has is a community's stores, which are a scalar that decays."
-  },
-  {
-   "id": "inv-miners-friend",
-   "title": "Miner's friend — engine raises water from a working",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/miners-friend/` (1698, Thomas Savery, England); arc 'steam-diffusion'",
-   "introduces": "engine-raises-water-from-a-working",
-   "presupposes": [
-    "inv-air-pump",
-    "inv-coal-mining"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-air-pump` (`absent`) and `inv-coal-mining` (`deferred`), so `absent` by weakest demand. The catalogue's chain is doing something Hornvale's model cannot: the engine exists BECAUSE the mine flooded, so a constraint on one capability calls a second into being. `occ-delve-depth` accrues metres per head per epoch with no obstacle term at all, so a Hornvale working has no depth at which it needs anything."
-  },
-  {
-   "id": "inv-gas-volume-temperature",
-   "title": "Gas volume temperature — thermal expansion of gas known",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/gas-volume-temperature/` (1699, Guillaume Amontons, France); arc 'steam-diffusion'",
-   "introduces": "thermal-expansion-of-gas-known",
-   "presupposes": [
-    "inv-air-pressure"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-air-pressure`; a discovery item, see `inv-hydrostatics`. Recorded separately because the catalogue does, and because its demand names temperature, which Hornvale models richly as a field (`hornvale_kernel::Temperature` crosses domain boundaries as a typed quantity) and not at all as something anyone in the world knows a fact about."
-  },
-  {
-   "id": "inv-newcomen-steam-engine",
-   "title": "Newcomen steam engine — engine does sustained useful work",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/newcomen-steam-engine/` (1712, Thomas Newcomen, England); arc 'steam-diffusion'",
-   "introduces": "engine-does-sustained-useful-work",
-   "presupposes": [
-    "inv-miners-friend",
-    "inv-pressure-cooker"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of two `absent` items. PREREQUISITE DROPPED: built on `coke-iron`, outside the corpus. Its demand -- sustained useful work -- is the first item in the arc whose value is a RATE rather than a possibility, and the engine has exactly one rate of this shape, `DELVE_M_PER_PERSON_EPOCH`, whose own doc records that it was \"CHOSEN FOR DYNAMIC RANGE, AND THAT IS AN INSTRUMENT DECISION RATHER THAN A RESULT ONE\". A rate chosen to make a distribution legible is not a rate a people improves."
-  },
-  {
-   "id": "inv-latent-heat",
-   "title": "Latent heat — latent heat known",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/latent-heat/` (1762, Joseph Black, Scotland); arc 'steam-diffusion'",
-   "introduces": "latent-heat-known",
-   "presupposes": [],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "A root, so the verdict is chosen; a discovery item, see `inv-hydrostatics` for the general argument. PREREQUISITE DROPPED: built on `heat-capacity`, outside the corpus. Scored `absent` independently of its arc rather than inherited, which matters for the ratchet: it is one of ten items in this corpus whose verdict rests on its own evidence rather than on a prerequisite's."
-  },
-  {
-   "id": "inv-steam-engine",
-   "title": "Steam engine — engine efficient enough to spread",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/steam-engine/` (1764, James Watt, Scotland); arc 'steam-diffusion'",
-   "introduces": "engine-efficient-enough-to-spread",
-   "presupposes": [
-    "inv-latent-heat",
-    "inv-newcomen-steam-engine"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of two `absent` items, and the item whose demand is closest to what this corpus is FOR. Its content is not that an engine works but that it works well enough to SPREAD -- a capability crossing a threshold and then diffusing across peoples, which is the shape `TECH-1` proposes (\"a capability is crossed when biome resources x subsistence x surplus clear a bar\") and `tech_for` does not implement. It is `absent` rather than `deferred` on `TECH-1` deliberately: `TECH-1` names the MECHANISM this corpus wants, not this item's capability, and anchoring 39 absent items to one generic row would turn this column into the backlog that decision 0095 and spec section 2 both forbid."
-  },
-  {
-   "id": "inv-improved-steam-engine",
-   "title": "Improved steam engine — rotary power drives general machinery",
-   "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/improved-steam-engine/` (1781, James Watt, England); arc 'steam-diffusion'",
-   "introduces": "rotary-power-drives-general-machinery",
-   "presupposes": [
-    "inv-steam-engine"
-   ],
-   "statistic": "fraction-of-peoples-holding",
-   "criterion": {
-    "kind": "fraction-in-band",
-    "lo": 0.05,
-    "hi": 0.95
-   },
-   "verdict": "absent",
-   "anchor": "",
-   "note": "Downstream of `inv-steam-engine`, and the last item in the catalogue's chronological order here. Its demand is generality -- one capability that powers arbitrary others -- which is the furthest any item in this corpus stands from a four-rung clock, and the corpus ends on it because the catalogue does."
-  }
- ]
+  "corpus": "asimov-1989",
+  "unit": "capability",
+  "ordered": true,
+  "provenance": "Isaac Asimov, *Asimov's Chronology of Science and Discovery* (Harper & Row, 1989), as presented by invention.cards, whose own subtitle states the attribution verbatim: \"A visual chronology of Asimov's ~1500 scientific inventions and discoveries.\" Asimov is the catalogue; invention.cards is where it was encountered, and the date and counts of both fetches are recorded below.\n\nTWO INDEPENDENT FETCHES, AND WHAT EACH ONE HAD TO FIND OUT. The site root is a d3 canvas application: `curl -sL https://invention.cards/` returns 200 and 10,866 bytes of shell with no item list in it, and `https://invention.cards/universe.js` is a 404, so a naive fetch of the catalogue enumerates nothing and reports success. The enumeration is `https://invention.cards/browse/`, which is server-rendered and links every invention as `href=\"/<slug>/\"`. FETCH 1 (the campaign controller, 2026-09-11, before this task was dispatched): 150,326 bytes, 1,484 distinct invention slugs -- the \"~1,500\" the spec cites -- and exactly three named story arcs linked from the shell, `/story/knights/`, `/story/republic-of-letters/` and `/story/steam-diffusion/`, with 16, 10 and 15 linked inventions and a union of 41. FETCH 2 (this task, 2026-09-11T17:33:34Z, independently issued and independently parsed): 150,326 bytes, 1,484 distinct slugs after discarding the page's self-link, the same three arcs at 16, 10 and 15, the same union of 41 -- `diff` against fetch 1's saved slug list and arc union is empty in both cases. NO DISCREPANCY. There is no `/stories/` index; that URL 404s, and the three arcs were enumerated from the shell's own `href` set both times. Each of the 41 item pages was then fetched once (2026-09-11T17:34:02Z-17:34:09Z) for its title, attested date, attributed person and place, and -- the part that matters structurally -- its own \"Built on\" and \"Led to\" links, which are the catalogue's dependency chains in machine-readable form.\n\nTHE SELECTION RULE, STATED BEFORE ANYTHING WAS SELECTED, AND APPLICABLE WITHOUT READING A LINE OF HORNVALE. (1) Enumerate the catalogue's own named story arcs -- the curated sequences the site itself publishes under `/story/<name>/`, not a grouping anyone here invented. (2) Take every invention linked from every arc, whole, and take their union. (3) If the union is fewer than 40 items, widen by taking whole additional arcs; if more than 80, drop whole arcs. Never add or remove an individual item. The arcs taken are ALL THREE THAT EXIST: `knights` (16), `republic-of-letters` (10), `steam-diffusion` (15), union 41 distinct items. No arc was dropped, because none had to be. A rule keyed to Hornvale's own code would make the selection the measurement; hand-picking a single item would do the same thing one item at a time, which is why step 3 operates on arcs only.\n\nTHE RULE IS AT ITS FLOOR, NOT COMFORTABLY INSIDE IT, AND THE WIDEN BRANCH HAS NO ESCAPE HERE. 41 is one item above the spec's 40-item minimum. The widen branch did not fire, and it COULD NOT HAVE: three arcs is all the catalogue publishes, so \"take whole additional arcs\" has nothing to take. Recorded rather than repaired, because the repair would have been to invent a fourth grouping or to pick items by hand, and both are the thing the rule exists to forbid. A later reader should know that a single arc going missing upstream, or a single item being unlinked from one, would put this corpus below its own floor with no mechanical remedy.\n\nONE ALTERNATIVE READING OF THE RULE WAS MEASURED AND REFUSED. The spec says items come from the catalogue's own \"named story arcs AND dependency chains\", which can be read as: take the arcs, then close over the \"Built on\" links. Measured: the 41 arc items name 15 distinct prerequisites outside the arcs (`alchemy`, `artillery`, `biped`, `coke-iron`, `copper`, `crossbow`, `falling-motion`, `fire`, `geometry`, `heat-capacity`, `nation`, `plow`, `steel`, `stone-tool`, `university`), so one step of closure would give 56 items -- also inside the 40-80 band. That is exactly why it was refused: TWO readings both land in the band, and choosing between them after seeing which number is nicer is hand-picking at the level of the rule instead of the item. The arcs-whole reading was taken because it is the one the spec's own decision rule is written in terms of -- widen or narrow by whole ARCS -- and a one-step dependency ring is neither an arc nor an item, so the decision rule has no operation that produces it. The full transitive closure was not measured and is not proposed; it would plainly exceed 80.\n\nDEMANDS ARE DERIVED, NEVER WRITTEN (decision 0386). Each item names the ONE demand it `introduces` and the items it `presupposes`; the demand set is the transitive closure over `presupposes`, computed on read. No demand list appears anywhere in this file, and adding one would reopen 0386 rather than extend it.\n\n`presupposes` NAMES ITEMS IN THIS CORPUS AND NOTHING ELSE, WHICH DROPS REAL PREREQUISITES ON PURPOSE. Every `presupposes` edge is transcribed from the catalogue's own \"Built on\" list for that item, filtered to the 41. The 15 prerequisites listed above sit outside the corpus and are therefore ABSENT FROM `presupposes`, not approximated and not invented: `inv-cart` really is built on copper, `inv-writing` on the stone tool, `inv-printing-press` on steel, `inv-scientific-societies` on the university, and the lattice in this file says none of it. Each affected item's `note` names what was dropped. The consequence is that the derived demand set UNDER-DESCRIBES every such item's real prerequisites -- a known, bounded distortion of taking 41 items out of 1,484, and the price of a corpus whose every edge is checkable against the source.\n\nORDERING. `ordered` is true: items are in the catalogue's own chronological order, by attested date ascending, with the single tie that matters (`inv-arquebus` and `inv-standing-army` are both dated 1450) broken so that a prerequisite precedes its dependent. Every `presupposes` edge therefore points backwards in the file.\n\nDECLARED BIAS -- AN INSTRUMENT WITH KNOWN BIAS, NEVER A STANDARD (decision 0095). This is a mid-20th-century Western progress narrative, ordered by European and Mediterranean attestation, treating discovery as cumulative and one-directional, and under-recording non-material technique. The three arcs concentrate that bias rather than diluting it: `knights` is the European mounted-warfare sequence, `republic-of-letters` the alphabetic-literacy-to-printing sequence, `steam-diffusion` the 17th-18th century pneumatics-to-Watt sequence. Counted rather than asserted: the catalogue attributes a place to 37 of the 41 items, and 26 of those are in Europe, 5 more in Egypt and the Near East (Sumer twice, Assyria, Phoenicia, Egypt), and 6 elsewhere (China three times, India, Central Asia, and one attributed to \"Slavs\" rather than to a place). NOT ONE of the 41 is attested in the Americas, sub-Saharan Africa or Oceania. For a world of goblins, kobolds and drow this is load-bearing: the catalogue demands a horse and a printing press and never once asks whether a people can find its way in the dark, keep a lineage's obligations straight across ten generations, or name a place for the crop that grows there -- all of which Hornvale models. ASIMOV IS NOT OWED A WORLD. Coverage here measures reach against THIS catalogue only, and a 38-item `absent` column is a statement about the intersection of two rosters, not a deficiency score.\n\nTHE REACH QUESTION, STATED EXACTLY, BECAUSE EVERY VERDICT BELOW TURNS ON IT. Can a Hornvale world TODAY carry the capability this item introduces as a committed fact that CAN DIFFER BETWEEN TWO PEOPLES? The second half is the load-bearing half. A label every community carries by construction is not a capability a people acquires, and a label that conflates the demand with a neighbouring one -- so that no world can hold the one without the other -- does not meet the demand either. Such near-misses are scored `absent` WITH THE NEAR-MISS NAMED IN THE `note`, which is what makes this column auditable by someone who disagrees with the ruling: the evidence for the other verdict is printed beside the verdict.\n\nVERDICT TALLY AND THE TWO VALUES THAT DO NOT APPEAR. 38 `absent`, 3 `deferred`, 0 `present`, 0 `refused`, 0 `inapplicable`, 0 measured. `present` is the verdict this instrument is least entitled to and it earns none here. `refused` is unavailable as a matter of fact, not of judgement: a case-insensitive grep of `docs/digest/decisions-in-force.md` for technology, tech tree, economy, craft, metallurgy, gunpowder and invention returns NOTHING, so no in-force decision declines any of these 41 capabilities and none could be cited. `inapplicable` earns none either, and that is worth stating because spec section 4.1 provisions it explicitly for \"things a subterranean people would never want\": the verdict requires the world to DELIBERATELY lack a precondition, and the three arcs taken are surface-world European sequences whose preconditions Hornvale lacks by omission rather than by design. \"A people would not want it\" is in any case a claim about a people's preferences, and Hornvale models no preference over technologies at all -- which is itself a finding, and a cleaner one than six soft `inapplicable` verdicts would have been.\n\nTHE `absent` COLUMN WAS SWEPT AGAINST TWO NAMED IDEA-REGISTRY ROWS, AND THE SWEEP MOVED ONE ITEM. The first draft cited `BIO-animal-domestication` and `TECH-3` and never checked `BIO-8` or `TECH-2`, both of which touch this corpus's subject matter -- a miss made easier by `BIO-animal-domestication` opening with the words \"Sharpens [[BIO-8]]\", so the unchecked row was one link from a row that WAS checked.\n\n`BIO-8` (\"Domestication & agriculture -- the culture layer harnessing biosphere fields; staple crop per biome, the Boserup plough (SOC-2's input), nightsoil, famine as paleoclimate x carrying capacity\", `raw`) names `inv-turnplow`'s demand outright, so THAT ITEM IS NOW `deferred` ON IT. A refusal was available in principle, on the same argument this file uses to refuse `NARR-monument-writes-itself` for `inv-writing` -- that a row naming a capability as an INPUT it assumes does not plan that capability -- and it was tested and does not hold here. The plough appears in `BIO-8` as one of the row's OWN enumerated elements, and the parenthetical \"(SOC-2's input)\" names where the plough's output ROUTES, i.e. a downstream consumer, not a precondition the row presumes. Decisively: another element of the same list, \"staple crop per biome\", HAS SHIPPED (`domains/climate/src/crops.rs`), which proves `BIO-8`'s elements are deliverables rather than assumptions. A row one of whose enumerated elements shipped as a deliverable is a row that plans deliverables.\n\n`TECH-2` (\"The pyrotechnology ladder -- pottery/ceramics gate storage->surplus->the culture rung ladder; kiln temperature gates smelting; metallurgy yields tools, weapons, and coinage\", `raw`) MOVED NOTHING, and the reason is a rule this file now states once so that it can be applied consistently and argued against: A ROW THAT PLANS A PREREQUISITE OF AN ITEM'S DEMAND DOES NOT MAKE THAT ITEM `deferred`; the row must name the capability the item's own `introduces` token names. Demands are derived by closure, so an item whose prerequisite becomes planned still has its own demand unplanned, and its verdict is its weakest demand. `TECH-2` names four things -- pottery, food storage and surplus, smelting, and metallurgy's outputs -- and this corpus contains no pottery, storage or coinage item at all (the catalogue's pottery entry is in none of the three arcs, which is worth noting in a campaign named The Kiln). What it touches is the METAL in `inv-metal-stirrup`, `inv-iron-horseshoes`, `inv-arquebus`, `inv-pike`, `inv-couched-lance` and `inv-printing-press`, and in every one of those the metal is a DROPPED PREREQUISITE (`steel`, `artillery`) rather than the item's own demand: the stirrup's demand is a load-bearing fitting, the horseshoe's a durability term on a working animal, the arquebus's a chemical propellant in a tube, the pike's and the lance's a formation and a tactic, the press's mass reproduction. Each of those six items records the refusal in its own `note`, so the argument travels with the verdict rather than living only here.\n\nTHE RULE IS CHECKED AGAINST THE TWO `deferred` VERDICTS IT COULD HAVE INVALIDATED, not only against the refusals. `BIO-animal-domestication` names \"a working animal\" as \"the missing half of an existing axis\", which is `inv-animal-dom`'s own demand, not a prerequisite of it. `TECH-3` names \"mining/refinement\" as still deferred, and extraction is `inv-coal-mining`'s own demand rather than a prerequisite of it. Both hold. And breadth alone is not a refusal this file applies: `TECH-3` is broader than `inv-coal-mining`'s demand and is accepted, so `BIO-8` being broader than `inv-turnplow`'s could not be grounds for refusing it.\n\nTHE CEILING RULING, WHICH IS THE SINGLE MOST VERDICT-SHAPING CALL IN THIS FILE. `TechHorizon` (`domains/history/src/record.rs:60`) has four variants and its own doc calls Classical \"the ceiling this engine models\". It would be easy to score everything past that ceiling `inapplicable` or `refused`. Both are refused here, because spec finding F1 established that NO decision record covers the four-rung horizon -- its entire rationale is one paragraph, fact #7 of 12, in section 5.3 of a spec about ruins. An unratified code fact is not a deliberate world choice, and scoring it as one would launder the exact thing this campaign exists to put under measurement. Every item past the ceiling is therefore `absent`, with the ceiling named in its `note` as the cause.\n\nAND A TRAP THE CEILING SETS FOR THE NEXT READER, NAMED SO NOBODY WALKS INTO IT. `tech_for(year)` (`windows/worldgen/src/history_bake.rs:2900`) puts its rungs at 400, 900 and 1400 -- and those are WORLD years since genesis, read off a history bake whose `end_year` is 2000.0. The catalogue's dates are real-world attestation dates in BCE/CE. 1454 CE for the printing press and 1400 for the Classical rung are not the same kind of number and MUST NOT BE COMPARED; the near-coincidence of their magnitudes is an artifact of both being four-digit integers. No verdict or band in this file is keyed to a catalogue date.\n\nTHE CRITERION: ONE STATISTIC, ONE BAND, THE SAME BAND EVERYWHERE. Every item carries `statistic: fraction-of-peoples-holding` and `criterion: {fraction-in-band, lo 0.05, hi 0.95}`, inclusive at both bounds. Spec section 5.2a is the reason a criterion exists at all: the pathology this campaign was opened to detect is not that Hornvale fails to acquire technologies but that EVERY surviving community acquires all of them, and a boolean verdict scores \"every people has bronze\" and \"half the peoples have bronze\" identically, so it is blind to precisely the defect. The band is UNIFORM across all 41 items, deliberately and for two reasons. First, the corpus has exactly one hypothesis -- that a technology's holding varies across peoples -- and 0.05 to 0.95 is the minimal statement of it. Second, a per-item band would have been authored by a session that has read the model, which is the one thing section 4.1's selection rule is built to prevent; a uniform band cannot be tuned item by item to pass, because there is nothing item-specific in it to tune.\n\nTHE STATISTIC IS DEFINED HERE, NOT LEFT TO THE SESSION THAT SCORES IT, because a frozen band over an undefined quantity freezes nothing. `fraction-of-peoples-holding` is: (NUMERATOR) the number of peoples holding the capability, over (DENOMINATOR) the number of peoples with at least one community alive at the evaluation instant.\n\nAGGREGATION -- ANY LIVE COMMUNITY. `tech` and `tech_offset` are fields on a COMMUNITY, not on a people (`windows/worldgen/src/history_bake.rs:2388-2390`, beside that struct's own `alive: bool`), and the rung is advanced per community by `tech_for(year + c.tech_offset)` at `:4806`. A people therefore has several communities which may sit on different rungs, and the census reports the quantity per OCCUPATION (`first-day-occ-tech-neolithic` / `-bronze` / `-iron` / `-classical`), never per people. **A people holds the capability if AT LEAST ONE of its communities alive at the evaluation instant holds it.** Three alternatives were available and are refused for stated reasons: ALL is wrong because one newly founded community on a lower rung would make the whole people stop holding something it demonstrably still has, which would report loss where there is only growth; LATEST needs an ordering over a people's communities that the bake does not define; AT-CLOSURE exists only for peoples that have died, so it cannot produce a cross-sectional fraction over the living. ANY is also the rule the `lost` verdict needs: under it a people loses a capability exactly when NO live community holds it any more, which is this family's ratified scope for `lost` -- a people that held the capability no longer holds it.\n\nA WRINKLE IN THAT CODE WORTH RECORDING, SINCE IT IS THE REASON AGGREGATION HAD TO BE RULED ON AT ALL. The `tech_offset` field's own doc comment calls it \"Per-people tech-advance offset (years), drawn at genesis\", and the draw at `:6577` is `pstream.range_u32(0, 300)` INSIDE the loop that opens a people's genesis communities -- so each genesis community of one people draws its OWN offset, and the field is per-community in fact while its doc says per-people. Daughters inherit their parent's (spec finding F3). So a people's communities genuinely can differ, and \"the people's rung\" is not a quantity the engine holds anywhere.\n\nEVALUATION INSTANT -- BAKE END. The fraction is taken once, at `BakeConfig::end_year` (default 2000.0, `history_bake.rs:986`), over peoples with at least one community alive then -- the population the census column `peoples-alive-at-bake-end` counts, NOT `peoples-placed`. The two give different denominators and the choice is not cosmetic: `peoples-placed` includes peoples that have already closed, which hold nothing, so using it would dilute the denominator with extinction and read as an absence of capability where the finding is an absence of a people.\n\nFALSIFYING WORLDS, stated once because they are the same for every item: a world where no people holds the capability gives a fraction of 0.0, and a world where every surviving people holds it gives 1.0. BOTH REDDEN. The band is two-sided and both poles are real shapes this engine produces. THE ARGUMENT FOR THE 1.0 POLE NEEDS ONE STEP THIS FILE USED TO SKIP, and it is the step that converts a community observation into a people-level fraction: spec finding F4's committed gallery tally, 10 `classical` and 1 `bronze-working`, is per COMMUNITY while this statistic's unit is PEOPLES. The step is arithmetic rather than empirical. Offsets are uniform integers on [0, 300] and `end_year` is 2000.0, so every community still alive at bake end is evaluated at `tech_for(2000 + offset)` with the argument in [2000, 2300], every value of which exceeds the Classical threshold of 1400 -- so EVERY live community is Classical, and therefore under ANY of the four aggregation rules above every surviving people is Classical. The people-level fraction is 1.0 for whatever the Classical rung names and 0.0 for everything else. Under this criterion today's world fails every item in this corpus, in one direction or the other, and a bare boolean would have reported some of it as success.\n\nTHE BAND'S STATED MEANING IS N-DEPENDENT, AND N IS NAMED. \"At least one people lacks it and at least one holds it\" is what the band means only while the number of peoples in the denominator is at most 20. The arithmetic: the smallest non-zero fraction is 1/N, which is inside the band only while 1/N >= 0.05, i.e. N <= 20; symmetrically the largest non-one fraction, (N-1)/N, is inside only while N <= 20. MEASURED: `peoples-placed` and `peoples-alive-at-bake-end` both run 9 to 15 across all 1,000 censused worlds, so the claim is true today with headroom. ABOVE N = 20 IT BECOMES FALSE SILENTLY: a divergent world with exactly one holder, or exactly one non-holder, would fall outside the band and redden, so the band would be STRICTER than minimal divergence rather than equal to it. Expressing the criterion as a count (at least 1 and at most N-1) would be N-independent and was considered; the fraction is kept because it stays comparable across worlds of different N, which a count does not, and because a count is satisfied by a single holder in a world of a thousand peoples, which is noise rather than divergence. A successor meeting a red at N > 20 should read this paragraph before concluding the world diverged less than it did.\n\nTHE SINGLE `verdict` FIELD IS A PIPELINE, AND THE PIPELINE IS WHY THIS FILE CARRIES NO TRAJECTORY VALUE AT ALL. Per spec section 5.2 a measured value (`grown`/`flat`/`lost`) is reachable only if reach already succeeded. No item's reach succeeds, so no item is eligible for a measured verdict, and consequently this corpus carries ZERO `grown`, ZERO `flat`, ZERO `lost` AND ZERO `unmeasured`. `unmeasured` is for an item whose reach PASSES and whose trajectory is not yet scored; inventing one here to make the column look complete would assert a reach success that does not exist. The criterion above is therefore preregistered for a successor campaign to evaluate and is evaluated by nothing today -- which is the freeze working, not an omission. Nothing in Hornvale can lose a technology (`tech_for` is documented \"monotone in `year`, so tech only ever rises\"), so `lost` is unreachable on this column by construction as well as by pipeline.\n\nNON-BLINDNESS, AT TWO LEVELS, WITH A DIFFERENT INSTRUMENT FOR EACH. CORPUS LEVEL: these verdicts were authored by a session that had read `tech_for`, `tech_weight`, `TechHorizon` and the spec's seven findings. That is uniform across all 41 items and to the same degree, so it is stated here ONCE at full strength; copying it into 41 identical fields would state one fact 41 times, which is the duplication decision 0261 forbids and the same argument that keeps the derived demand set out of this file. ITEM LEVEL: `disclosure` marks PER-ITEM non-blindness, matching `regularities/sugarscape-1996`'s semantics exactly, and **an `absent` whose verdict turned on having read the model owes one** (campaign ledger #12).\n\nTHAT RULE IS AN INVERSION OF THE ONE THIS FILE FIRST SHIPPED WITH, AND THE REASON IS WORTH CARRYING. The first draft gave `disclosure` only to items whose verdict was NOT `absent`, reasoning that `absent` is the default that cites nothing, so model knowledge could not have manufactured it. That rationale assumed `absent` is the conservative direction. FOR THIS CAMPAIGN IT IS THE FLATTERING ONE: the thesis is that Hornvale's technology model is impoverished, so a high `absent` count is the result that confirms the author's expectation, and an item that is really `deferred` but scored `absent` is exactly the self-serving error. A rule exempting that direction from disclosure exempted the only direction that needed it -- and the exemption produced an instance immediately: `inv-turnplow` was a ROOT scored `absent` while `BIO-8` names the Boserup plough, and because the item carried no disclosure nothing invited anyone to audit the search. It is `deferred` now. Under the rejected rule it would have gone unexamined and read as blind.\n\nWHICH ITEMS CARRY ONE, AND THE RULE IS ENFORCED RATHER THAN ASSERTED. `disclosure` is carried by every item whose verdict was CHOSEN rather than INHERITED -- 17 of 41. Two classes: (a) every ROOT, the 10 items with no `presupposes` edge, whose verdict rests entirely on its own evidence because nothing upstream forces it; and (b) every non-root where a specific candidate anchor or a non-`absent` verdict was CONSIDERED AND REFUSED, which is the other way a verdict becomes a choice. A non-root whose verdict simply follows the weakest-demand rule from an `absent` prerequisite carries none, because no Hornvale fact decided it -- the lattice did. The roots are the class that finding I1 came out of, so the build refuses to write this file unless every root carries a disclosure. What the selection rule protects, and the only thing it could protect, is WHICH 41 items are scored: those came from the catalogue's own arcs before any Hornvale fact was consulted.\n\nEVERY `note` IN THIS FILE IS MODEL-DERIVED, AND THE ABSENCE OF A `disclosure` NEVER CLAIMS OTHERWISE. The near-miss analysis in an inherited item's note was written by the same non-blind session; what its missing `disclosure` says is that no such fact DECIDED the verdict, not that the note was authored blind. The corpus-level statement above is what covers the notes.\n\nWHY THE `absent` MASS IS STRUCTURAL RATHER THAN A SCORE. Hornvale's concept registry grows on demand, and the idea registry says so of itself: `LANG-registry-is-exotic-heavy-and-core-light` records that \"demand-driven growth built an almost entirely sim-specific vocabulary while the conversational core is missing\". The same asymmetry governs this column. Everyday material technique -- a cart, a plough, a harness, a written record -- has had no consumer in this engine, so no predicate was ever minted for it, while the registry carries 441 distinct keys across the 449 rows of `book/src/reference/concept-registry-generated.md`, including `anvil` (\"a heavy iron block a smith hammers metal against\") and `loom` (\"a frame for weaving thread into cloth\") as scene OBJECTS a possessed body can stand next to. A smith's anvil is a noun in a room while no people in any world holds smithing. That gap between the furniture and the capability is the most compact statement of what this corpus measures.",
+  "frozen": "before first measurement, The Kiln (2026-09-11). THE FREEZE IS STRUCTURAL RATHER THAN PROMISED, which is the discipline decision 0936 established for `regularities/` and the reason decision 0016 means anything here. This file is Task 1 of 10 of its campaign, and NO EVALUATION CODE EXISTS IN THE REPOSITORY AS IT IS COMMITTED: there is no `cli/tests/suite/technology_corpus.rs`, no closure computation, no anchor resolver, no report generator and no `docs/audits/technology-coverage-asimov-1989.md`. Every one of them arrives in a later task of the same campaign, and nothing in `domains/*` or `windows/*` reads a corpus file at all (decision 0011: the corpus is data, the resolver is code). A reader can confirm the freeze from the git history rather than taking this sentence's word for it.\n\nTHE ITEM COUNT IS 41 AND IT IS ASSERTED BY THE RESOLVER, so changing this corpus is a deliberate act (decision 0016), exactly as `regularity_corpus.rs` asserts 45.\n\nRE-FREEZING IS NOT SOMETHING A LATER SESSION MAY DO, and for this corpus the disqualification has a specific shape. The criterion being frozen is a distribution across peoples of who holds a capability. The quantity that distribution is computed from is `occ-tech`, and `occ-tech`'s distribution is ALREADY PUBLISHED in several places a session reads for ordinary reasons -- spec finding F4 states it outright (10 `classical`, 1 `bronze-working` in the committed gallery), `book/src/laboratory/generated/the-census/` carries four census metrics over it, and the almanac and `windows/lot` render it as prose. A session that has read any of those may not tighten this band for any item, which is all 41 of them, because the band is uniform. The practical consequence is a scheduling constraint rather than a style note: band quality on this column can only be improved by a session that has not read `occ-tech`'s distribution, and after the successor campaign scores this corpus there will be no such session. Tighten it now or accept it.\n\nWHAT A LATER READER CAN ALWAYS DO WITHOUT DISQUALIFYING THEMSELVES is audit the discriminating power of the band from this file alone, with no data: the falsifying worlds are stated in `provenance` (a fraction of 0.0 and a fraction of 1.0, both reddening), and the argument for uniformity is stated there too so that it can be attacked directly.",
+  "items": [
+    {
+      "id": "inv-animal-dom",
+      "title": "Animals domesticated — domestic animals kept",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/animal-dom/` (12,000 BCE, unattributed, no place recorded); arc 'knights'",
+      "introduces": "domestic-animals-kept",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "deferred",
+      "anchor": "registry:BIO-animal-domestication",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`. `BIO-animal-domestication` was found by searching the idea registry, so the `deferred` is a positive claim that search produced. Its SELECTION was blind: it is in the `knights` arc's own link list.",
+      "note": "THE NEAREST MISS IN THE CORPUS, and it misses on the animal rather than on the institution. `subsistence` is a committed predicate (\"a settlement's subsistence mode\") whose values are Farming, Herding, Fishing and Foraging (`domains/culture/src/subsistence.rs`), it differs between settlements in one world, and Herding is documented \"Pastoral herding\" -- so a people that lives off animals is already a fact Hornvale commits and varies. What is missing is the animal: `BIO-animal-domestication` records that the registry \"already admits domestication for the plant kingdom (barley, wheat, rice, millet, tuber, with a crops model behind them) and refuses it for the animal kingdom -- every one of the ~30 registered `*-kind` fauna is wild\", and the registry bears that out: 39 `*-kind` rows in `book/src/reference/concept-registry-generated.md`, peoples and beasts together, and not one of the beasts domestic. A herding people herds nothing in particular. The row is `raw`, so this is `deferred` rather than `absent`: what it would take is the row's own content, a working animal as \"the missing half of an existing axis\". PREREQUISITE DROPPED: built on `biped` in the catalogue, outside the corpus. Swept against `BIO-8`, which `BIO-animal-domestication` opens by sharpening: `BIO-8` is the broader row and names domestication generally, so the sharper row is the better anchor and is the one cited."
+    },
+    {
+      "id": "inv-writing",
+      "title": "Writing — written record kept",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/writing/` (3,500 BCE, unattributed, Sumer); arc 'republic-of-letters'",
+      "introduces": "written-record-kept",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`. `NARR-monument-writes-itself` was found by searching the idea registry, considered as a `deferred` anchor and refused; a reader who reads that row as planning written records in the world rather than their RENDERING should move this item to `deferred` and the five items downstream of it with it. Its SELECTION was blind: it is in the `republic-of-letters` arc's own link list.",
+      "note": "TWO NEAR-MISSES, AND BOTH ARE INSTRUCTIVE FAILURES OF THE SAME KIND: the vocabulary for writing exists and nothing in any world writes. (1) `write` and `read` are registered concepts -- `write`, \"to set words down in writing\"; `read`, \"to take meaning from written words\" -- and they are INERT. `LANG-in-character-acts-are-unspeakable` records that seven minted concepts including `read` and `write` \"render `Gap | Gap` for every species in every world, because nothing grants them `Steeped` or `KnowsOf`\", verified in the committed `book/src/reference/concept-manifest-generated.md`. No culture can even SAY the act, let alone perform it. (2) `Orthography` (`domains/language/src/typology.rs:90`) looks like a writing system and is not: its own doc says \"How this family's segments are spelled in the romanization. A view over `Segment`, so this field alone moves no stream draw\". It is a reader-facing spelling convention for committed name strings, chosen per language family, with no in-world existence -- a fact about how the artifact prints, not about what a people can do. WHAT WOULD CHANGE THE VERDICT: a committed fact that some peoples keep written records and others do not. `NARR-monument-writes-itself` is the nearest plan (it makes literacy a gate on reading an inscription) and it is `elaborated`, not shipped; it was considered as a `deferred` anchor and refused here, because that row plans the RENDERING of a monument's text and treats literacy as a gate it assumes rather than as a capability a people acquires and loses, which is this corpus's demand. PREREQUISITE DROPPED: built on `stone-tool` in the catalogue, outside the corpus. The row's own closing sentence is the evidence for that refusal rather than a paraphrase of it: \"Rendering, not authoring, is the whole cost.\" A row whose self-assessment is that the content already exists and only needs displaying does not plan a people that keeps written records. Swept against `BIO-8` and `TECH-2`: neither names writing, literacy or a record."
+    },
+    {
+      "id": "inv-cart",
+      "title": "Wheeled carts — wheeled land haulage",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/cart/` (3,500 BCE, unattributed, no place recorded); arc 'knights'",
+      "introduces": "wheeled-land-haulage",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`.  Its SELECTION was blind: it is in the `knights` arc's own link list.",
+      "note": "Nothing in the engine has a wheel. The honest near-miss is elsewhere in the same economic space: `occ-function` commits Trade, \"a waypoint or market on a trade route\" (`domains/history/src/record.rs`), so a world has routes and market seats -- and no conveyance on them. Haulage capacity never enters any computation: a community's strength is population times `tech_weight` and its delving is metres per head per epoch, both of which read population where a cart would read carrying capacity. PREREQUISITE DROPPED: the catalogue builds this on `copper`, which is outside the corpus, so the derived demand set under-describes it. Swept against `BIO-8` and `TECH-2`: neither names haulage, draught or the wheel."
+    },
+    {
+      "id": "inv-papyrus",
+      "title": "Papyrus — plant fibre writing surface",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/papyrus/` (3,000 BCE, unattributed, Egypt); arc 'republic-of-letters'",
+      "introduces": "plant-fibre-writing-surface",
+      "presupposes": [
+        "inv-writing"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-writing`, which is `absent`, so this cannot score higher; recorded with its own near-miss because the near-miss is a genuinely different one. Hornvale models plants as a CLIMATE fact rather than a material a people processes: `Crop` (`domains/climate/src/crops.rs`) carries barley, wheat, rice, millet, tuber and vine, and the module's own doc says \"A crop is a climate fact -- a band of temperature and moisture on arable ground\". There is no fibre, no sedge, and no step between a standing plant and a made thing. PREREQUISITE DROPPED: built on `nation` in the catalogue, outside the corpus."
+    },
+    {
+      "id": "inv-literature",
+      "title": "Literature — composed work transmitted as text",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/literature/` (2,500 BCE, unattributed, Sumer); arc 'republic-of-letters'",
+      "introduces": "composed-work-transmitted-as-text",
+      "presupposes": [
+        "inv-writing"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-writing`. The near-miss is the most substantial in the corpus and it is worth being exact about why it does not count: Hornvale has a large, shipped knowledge-and-transmission layer -- claims propagate between people, degrade with each boundary they cross, and `KNOW-boundary-not-accumulation` records damage accumulating \"as a continuous width, resolved to a rung only at emit\". All of it is ORAL. A composed work whose wording survives its teller is exactly the thing that layer's physics is built to deny, so this item's demand is not a gap in the transmission model but a different mechanism beside it."
+    },
+    {
+      "id": "inv-horse",
+      "title": "Horses — riding animal bred",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/horse/` (2,000 BCE, unattributed, no place recorded); arc 'knights'",
+      "introduces": "riding-animal-bred",
+      "presupposes": [
+        "inv-animal-dom"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: `inapplicable` was considered and refused for this item, which makes the verdict CHOSEN rather than inherited, and the refusal was authored by a session that had read the model. A known limit of the argument, recorded rather than repaired: it reasons about the catalogue's INSTANCE -- no equine among the 39 `*-kind` rows -- where this corpus elsewhere scores the CAPABILITY.",
+      "note": "ITS PREREQUISITE IS `deferred` AND THIS ITEM IS STILL `absent`, which is the weakest-demand discipline doing its job rather than a contradiction. `inv-animal-dom` has a registry row behind it; a riding animal has none, and the gap is two-layered: there is NO EQUINE at all among the 39 `*-kind` rows -- the roster runs to `giant-elk-kind`, `giant-goat-kind`, `rhinoceros-kind` and `woolly-mammoth-kind` alongside `owlbear-kind`, `otyugh-kind` and `xorn-kind` -- so even the wild ancestor the catalogue's chain needs is missing, and `BIO-animal-domestication` names the domestication half without naming that. `inapplicable` was considered and refused: the absence of an equine reads as a roster that grew on demand, not as a world deliberately lacking a precondition. Swept against `BIO-8`: it names domestication and agriculture without naming a mount, and `BIO-animal-domestication`, which sharpens it, is already cited on this item's prerequisite."
+    },
+    {
+      "id": "inv-alphabet",
+      "title": "Phonetic alphabet — phonemic script",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/alphabet/` (1,500 BCE, unattributed, Phoenicia); arc 'republic-of-letters'",
+      "introduces": "phonemic-script",
+      "presupposes": [
+        "inv-writing"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-writing`. The near-miss is sharper here than anywhere else in the arc and it cuts the other way: `domains/language` DOES hold a per-family phoneme inventory, a syllable law, and a typology bundle, so the analysis a phonemic script encodes is already computed -- see `book/src/reference/phonology.md`. What no world has is a people that has NOTICED it. The catalogue's claim is that someone discovered one sign per sound; Hornvale's phonology is the author's model of the language, held outside the world, and `Orthography` spells it for the reader rather than for the speakers. A capability the engine exercises on a people's behalf is not a capability the people holds."
+    },
+    {
+      "id": "inv-bridle",
+      "title": "Bridle — animal guided by rein",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/bridle/` (1,500 BCE, unattributed, no place recorded); arc 'knights'",
+      "introduces": "animal-guided-by-rein",
+      "presupposes": [
+        "inv-horse"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-horse`. No tack, no harness and no control relationship between a person and an animal exists; the only committed person-to-creature relations in the registry are perceptual and social (`care`, `custody`, `dependency`, `association`), all of which hold between people."
+    },
+    {
+      "id": "inv-saddle",
+      "title": "Saddle — seated riding rig",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/saddle/` (700 BCE, unattributed, Central Asia); arc 'knights'",
+      "introduces": "seated-riding-rig",
+      "presupposes": [
+        "inv-bridle"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-bridle`. Nothing a people makes is modelled as a made thing with a use: the registry's manufactured objects (`anvil`, `loom`, `bench`, `brazier`, `bed`, `door`, `altar`) are scene furniture a possessed body stands beside, committed as `thing | object`, never as a capability a community holds or loses."
+    },
+    {
+      "id": "inv-library",
+      "title": "Libraries — collected holdings outliving their keepers",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/library/` (640 BCE, Ashurbanipal, Assyria); arc 'republic-of-letters'",
+      "introduces": "collected-holdings-outliving-their-keepers",
+      "presupposes": [
+        "inv-literature"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-literature`. The near-miss is an institutional one and it is real: `occ-function` commits Cult, \"a shrine or temple seat\", so a world already has a seat whose purpose outlives the individuals in it, and the history bake carries tenure across generations. What it does not carry is HOLDINGS -- a durable store of content, as against a durable store of food (community stores exist and are lost on closure). A library is the second kind of store and the engine models only the first. PREREQUISITE DROPPED: built on `nation` in the catalogue, outside the corpus."
+    },
+    {
+      "id": "inv-parchment",
+      "title": "Parchment — hide writing surface",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/parchment/` (170 BCE, Eumenes II, Pergamum (Greece)); arc 'republic-of-letters'",
+      "introduces": "hide-writing-surface",
+      "presupposes": [
+        "inv-animal-dom"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-animal-dom`, and doubly unreachable: it needs a herd animal (whose registry row is `raw`) and a written record (which is `absent`). No material is committed as coming off a creature at all; `blood` and `bone` are registered as substances in the scene vocabulary, not as yields a people takes and works."
+    },
+    {
+      "id": "inv-wooden-stirrup",
+      "title": "Wooden stirrups — foot support in the saddle",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/wooden-stirrup/` (100 BCE, unattributed, India); arc 'knights'",
+      "introduces": "foot-support-in-the-saddle",
+      "presupposes": [
+        "inv-saddle"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-saddle`. Included whole because the arc links it and the selection rule forbids dropping an item; nothing in the corpus builds on it, so it is a leaf of the catalogue's own chain and contributes one demand that no other item's closure inherits."
+    },
+    {
+      "id": "inv-basic-steam-engine",
+      "title": "Rudimentary steam motion — steam moves a mechanism",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/basic-steam-engine/` (50, Hero, Greece); arc 'steam-diffusion'",
+      "introduces": "steam-moves-a-mechanism",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`. The verdict rests on knowing `tech_weight` to be the engine's only conversion of a physical quantity into an effect on a people. Its SELECTION was blind: it is in the `steam-diffusion` arc's own link list.",
+      "note": "A root of the steam arc in this corpus, so its verdict is chosen rather than inherited. Hornvale has fire (`fire` is a registered substance and `brazier` a scene object) and it has no mechanism, no work, and no energy accounting anywhere: the only place a physical quantity is converted into an effect on a people is `tech_weight`, which multiplies population and is a scalar on a four-rung clock. PREREQUISITE DROPPED: built on `fire` in the catalogue, outside the corpus -- which is the one dropped prerequisite Hornvale would actually have satisfied. Swept against `TECH-2`: its ladder ends at metallurgy and names no mechanism, no work and no engine."
+    },
+    {
+      "id": "inv-paper",
+      "title": "Paper — cheap pulped writing surface",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/paper/` (105, Tsai Lun, China); arc 'republic-of-letters'",
+      "introduces": "cheap-pulped-writing-surface",
+      "presupposes": [
+        "inv-parchment"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-parchment`. The demand that distinguishes it from its prerequisite is CHEAPNESS -- a surface abundant enough to change who writes -- and cost is the axis Hornvale most completely lacks: `ECON-livelihood` is `raw` and its row records that \"no economy domain exists yet\". Nothing in any world has a price."
+    },
+    {
+      "id": "inv-metal-stirrup",
+      "title": "Metal stirrups — load bearing metal stirrup",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/metal-stirrup/` (300, unattributed, China); arc 'knights'",
+      "introduces": "load-bearing-metal-stirrup",
+      "presupposes": [
+        "inv-horse"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: `TECH-2` was considered as a `deferred` anchor for this item and refused on the argument in the note, by a session that had read the model, which makes the verdict CHOSEN rather than inherited. Audit it: if \"metallurgy yields tools\" is read as covering a metal fitting and not merely the metal, this item is `deferred` on `TECH-2`.",
+      "note": "Downstream of `inv-horse`. The metalworking half is the more interesting absence and it is the `anvil` case exactly: the registry carries `anvil`, \"a heavy iron block a smith hammers metal against\", as a scene object, so a possessed body can stand next to a smith's anvil in a world where no people holds smithing. `occ-tech`'s rungs NAME bronze-working and iron-working, which is the closest the engine comes -- and a rung is a date-derived label on a community, not a capability it acquired. PREREQUISITE DROPPED: built on `steel` in the catalogue, outside the corpus. TECH-2 REFUSED: the pyrotechnology row's \"metallurgy yields tools, weapons\" reaches this item only through `steel`, which is a DROPPED PREREQUISITE rather than this item's own demand (a load-bearing fitting), and a row that plans a prerequisite does not discharge the demand -- see `provenance`."
+    },
+    {
+      "id": "inv-turnplow",
+      "title": "Turnplows — traction tillage of heavy soil",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/turnplow/` (600, unattributed, Slavs); arc 'knights'",
+      "introduces": "traction-tillage-of-heavy-soil",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "deferred",
+      "anchor": "registry:BIO-8",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`. THIS IS THE ITEM THE INVERTED DISCLOSURE RULE EXISTS FOR: the first draft scored it `absent`, in the direction that flattered the campaign's thesis, and carried no disclosure inviting anyone to audit the search (campaign ledger #12). Its SELECTION was blind: it is in the `knights` arc's own link list.",
+      "note": "RE-SCORED FROM `absent` BY THE REGISTRY SWEEP, and the original verdict is the instance that motivated the sweep. `BIO-8` (\"Domestication & agriculture -- the culture layer harnessing biosphere fields; staple crop per biome, the Boserup plough (SOC-2's input), nightsoil, famine as paleoclimate x carrying capacity\", `raw`) names THE BOSERUP PLOUGH, which is this item's demand under its own name, and the first draft of this corpus cited the row NOWHERE -- while citing `BIO-animal-domestication`, whose first two words are \"Sharpens [[BIO-8]]\". A root scored `absent` with nothing upstream forcing it is the verdict most in need of a search, and it got the least. WHAT `deferred` MEANS IS UNBUILT, and today's state is a near-miss: `subsistence: Farming` (\"Settled agriculture\") is committed per settlement and varies, `occ-function` commits Agrarian, and the `Crop` model says which staple a place supports -- so a world knows that a people farms and what grows there, and nothing anywhere says HOW the ground is worked. `occ-function`'s Agrarian also CONFLATES farming with herding in one label, so no world holds the one without the other. THE REFUSAL THAT WAS TESTED AND FAILED: `BIO-8` frames the plough as \"SOC-2's input\", which looks like the ground on which this corpus refuses `NARR-monument-writes-itself` for `inv-writing` -- a capability a row ASSUMES rather than delivers. It does not hold here. The plough is one of `BIO-8`'s own enumerated elements and the parenthetical names where its output ROUTES, not a precondition it presumes; and another element of the same list, \"staple crop per biome\", has already SHIPPED as `domains/climate/src/crops.rs`, which settles that `BIO-8` enumerates deliverables. PREREQUISITES DROPPED: built on `plow` and `steel`, both outside the corpus."
+    },
+    {
+      "id": "inv-block-printing",
+      "title": "Block printing — text reproduced from a carved form",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/block-printing/` (700, unattributed, China); arc 'republic-of-letters'",
+      "introduces": "text-reproduced-from-a-carved-form",
+      "presupposes": [
+        "inv-paper"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-paper`. Reproduction-without-re-authoring has no analogue in the engine, and the transmission layer is built on the opposite assumption: every retelling degrades, by design (`KNOW-boundary-not-accumulation`). A carved form that makes the hundredth copy identical to the first is a mechanism that would CONTRADICT shipped physics rather than extend it, which is a more interesting `absent` than a missing predicate."
+    },
+    {
+      "id": "inv-high-backed-saddle",
+      "title": "High-backed saddle — braced saddle transmits shock",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/high-backed-saddle/` (750, unattributed, Europe); arc 'knights'",
+      "introduces": "braced-saddle-transmits-shock",
+      "presupposes": [
+        "inv-saddle",
+        "inv-metal-stirrup"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of two `absent` items. The demand is mechanical -- a rig that transmits an impact into a frame rather than into the rider -- and the engine has no force, no impact and no body mechanics at any scale; combat between peoples resolves as a comparison of population times `tech_weight`."
+    },
+    {
+      "id": "inv-iron-horseshoes",
+      "title": "Iron horseshoes — shod draught animal",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/iron-horseshoes/` (770, unattributed, Europe); arc 'knights'",
+      "introduces": "shod-draught-animal",
+      "presupposes": [
+        "inv-horse"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: `TECH-2` was considered as a `deferred` anchor and refused on the argument in the note, by a session that had read the model.",
+      "note": "Downstream of `inv-horse`. What makes a horseshoe a capability rather than an object is that it extends an animal's WORKING LIFE on hard ground -- a durability term on a productive asset. Hornvale has no productive assets and no wear on anything a people owns; the only durability modelled is a community's stores, which decay at a flat per-epoch rate and are destroyed on closure. PREREQUISITE DROPPED: built on `steel`, outside the corpus. TECH-2 REFUSED: the pyrotechnology row's \"metallurgy yields tools, weapons\" reaches this item only through `steel`, which is a DROPPED PREREQUISITE rather than this item's own demand (a durability term on a working animal), and a row that plans a prerequisite does not discharge the demand -- see `provenance`."
+    },
+    {
+      "id": "inv-couched-lance",
+      "title": "Couched lance — mounted shock charge",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/couched-lance/` (780, unattributed, Europe); arc 'knights'",
+      "introduces": "mounted-shock-charge",
+      "presupposes": [
+        "inv-metal-stirrup",
+        "inv-high-backed-saddle"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: `TECH-2` was considered as a `deferred` anchor and refused -- it names weapons as metallurgy's OUTPUT, and this item's demand is a tactic rather than an object -- by a session that had read the model.",
+      "note": "Downstream of two `absent` items. Worth a note anyway because it names the thing `tech_weight` is standing in for: a tactic, held by some peoples and not others, that changes the outcome of a meeting between them. Hornvale's answer is a single scalar multiplier on population, 1.0/1.5/2.25/3.0 by rung -- which spec finding F5 identifies as \"the progress scalar ... a civilisation with a *level*\" that `book/src/frontier/frontier.md` rejects by name. TECH-2 REFUSED: the pyrotechnology row's \"metallurgy yields tools, weapons\" reaches this item only through the lance-head's metal, which is a DROPPED PREREQUISITE rather than this item's own demand (a mounted shock charge, which is a tactic), and a row that plans a prerequisite does not discharge the demand -- see `provenance`."
+    },
+    {
+      "id": "inv-horse-collar",
+      "title": "Horse collars — harness transmits animal draught",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/horse-collar/` (900, unattributed, Europe); arc 'knights'",
+      "introduces": "harness-transmits-animal-draught",
+      "presupposes": [
+        "inv-turnplow",
+        "inv-iron-horseshoes"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of two `absent` items. The catalogue's own chain is the interesting part: it builds the collar on the PLOUGH and the HORSESHOE rather than on the horse, i.e. on a use and a durability, which is a capability-shaped dependency rather than an artifact-shaped one. Nothing in Hornvale composes capabilities that way; `tech_for` is monotone in a year and has no inputs."
+    },
+    {
+      "id": "inv-coal-mining",
+      "title": "Coal mining — mineral fuel extracted",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/coal-mining/` (1228, unattributed, England); arc 'steam-diffusion'",
+      "introduces": "mineral-fuel-extracted",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "deferred",
+      "anchor": "registry:TECH-3",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`. `TECH-3` was found by searching the idea registry, by a session that had already read `occ-delve-depth` and knew the shipped half existed. Its SELECTION was blind: it is in the `steam-diffusion` arc's own link list.",
+      "note": "A root, and the only item in the steam arc that is not `absent`. Hornvale genuinely mines: `occ-function` commits Mine, \"Extraction -- ore, stone, salt\", `occ-delve-depth` commits \"how far below its seat the occupation drove a working, in metres\", both vary between occupations in one world, and ore deposits themselves shipped with The Lode (2026-07-22). `TECH-3` records precisely what is left: \"Ore deposits shipped (The Lode, 2026-07-22); mining/refinement/tech-gating still deferred (the event-features + economy rungs)\" -- the row is `raw`. What this item's demand adds beyond the shipped half is that the mineral is a FUEL: something extracted to be burnt, which is what makes coal a prerequisite of an engine rather than a commodity. Hornvale's mines yield no named mineral at all, only a depth. PREREQUISITE DROPPED: built on `steel`, outside the corpus. Swept against `TECH-2`, whose \"kiln temperature gates smelting\" is downstream of extraction rather than naming it; `TECH-3` names mining itself and is the anchor."
+    },
+    {
+      "id": "inv-longbow",
+      "title": "Longbows — massed missile volley",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/longbow/` (1298, unattributed, Wales); arc 'knights'",
+      "introduces": "massed-missile-volley",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`.  Its SELECTION was blind: it is in the `knights` arc's own link list.",
+      "note": "A root, so the verdict is chosen. The demand is a capability whose value depends on being held COLLECTIVELY -- a volley, not an archer -- and the engine has no formation, no tactic and no per-individual contribution to a collective outcome. PREREQUISITE DROPPED: built on `crossbow`, outside the corpus. TECH-2 REFUSED: its \"metallurgy yields ... weapons\" names neither a bow -- which is wood and sinew, not metal -- nor this item's actual demand, which is explicitly COLLECTIVE (a volley, not an archer). Swept against `BIO-8`: nothing."
+    },
+    {
+      "id": "inv-pike",
+      "title": "Pike — massed polearm formation",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/pike/` (1300, unattributed, Europe); arc 'knights'",
+      "introduces": "massed-polearm-formation",
+      "presupposes": [
+        "inv-couched-lance"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: `TECH-2` was considered as a `deferred` anchor and refused on the same ground as `inv-couched-lance`, by a session that had read the model.",
+      "note": "Downstream of `inv-couched-lance`. The catalogue puts the pike after the lance because it is an ANSWER to it -- a counter a people adopts because a neighbour has something. That is the shape spec finding F3 found missing: section 5.3 of the Living Community spec justified committing the tech horizon on the grounds that \"a people's trajectory is globally dependent (contact, displacement)\", and `tech_offset` is drawn once at genesis, inherited down the lineage, and never mutated. No people in any world has ever changed what it can do because of a neighbour. TECH-2 REFUSED: the pyrotechnology row's \"metallurgy yields tools, weapons\" reaches this item only through the pike-head's metal, which is a DROPPED PREREQUISITE rather than this item's own demand (a massed formation), and a row that plans a prerequisite does not discharge the demand -- see `provenance`."
+    },
+    {
+      "id": "inv-arquebus",
+      "title": "Arquebus — handheld firearm",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/arquebus/` (1450, unattributed, Spain); arc 'knights'",
+      "introduces": "handheld-firearm",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`. Both the ceiling ruling and the `TECH-2` refusal were authored here rather than inherited. Its SELECTION was blind: it is in the `knights` arc's own link list.",
+      "note": "A root, so the verdict is chosen, and this is the clearest case for the ceiling ruling stated in `provenance`. `TechHorizon`'s own doc calls Classical \"the ceiling this engine models\", so a firearm is past the end of the enum. It is scored `absent` rather than `inapplicable` or `refused` because spec finding F1 established that NO decision record covers the four-rung horizon -- its whole rationale is one paragraph, fact #7 of 12, in a spec about ruins -- and an unratified code fact is not a deliberate world choice. PREREQUISITES DROPPED: built on `artillery` and `crossbow`, both outside the corpus. TECH-2 REFUSED, and for a root this is the refusal most worth auditing: the row's \"metallurgy yields tools, weapons\" supplies a barrel's MATERIAL, and this item's own demand is a chemical propellant in a tube. `TECH-2`'s ladder runs pottery -> kiln -> smelting -> metallurgy and contains no combustion-as-propellant at any rung; no row in the idea registry mentions gunpowder at all."
+    },
+    {
+      "id": "inv-standing-army",
+      "title": "Standing army — permanent force apart from population",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/standing-army/` (1450, unattributed, Europe); arc 'knights'",
+      "introduces": "permanent-force-apart-from-population",
+      "presupposes": [
+        "inv-arquebus",
+        "inv-pike"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of two `absent` items, and the item whose demand Hornvale contradicts most exactly. The near-miss is `occ-function: Fort`, \"a garrisoned defensive point\", committed and varying. But the demand is a force MAINTAINED APART FROM the population that feeds it, and `Bake::strength` and `roller_strength` both compute strength AS population times `tech_weight` -- so a people's fighting power is its headcount by construction, and an army cannot be distinguished from the people it is drawn from even in principle. This is the one item where `absent` understates the finding: the demand is not unmet, it is unrepresentable without changing a formula that raiding, delving depth and residue structures all read."
+    },
+    {
+      "id": "inv-printing-press",
+      "title": "Printing press — movable type mass reproduction",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/printing-press/` (1454, Johannes Gutenberg, Germany); arc 'republic-of-letters'",
+      "introduces": "movable-type-mass-reproduction",
+      "presupposes": [
+        "inv-paper",
+        "inv-alphabet"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: `TECH-2` was considered as a `deferred` anchor and refused on the argument in the note, by a session that had read the model.",
+      "note": "Downstream of two `absent` items, and past the modelled ceiling. PREREQUISITE DROPPED: built on `steel`, outside the corpus. Recorded without further near-miss analysis because it inherits `inv-block-printing`'s contradiction with the transmission layer and `inv-paper`'s missing cost axis, and restating them here would duplicate two notes rather than add one. TECH-2 REFUSED: the row's metallurgy would supply cast type's MATERIAL -- the dropped `steel` -- and this item's own demand is mass reproduction."
+    },
+    {
+      "id": "inv-scientific-societies",
+      "title": "Scientific societies — corresponding body of inquirers",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/scientific-societies/` (1560, Giambattista Della Porta, Italy); arc 'republic-of-letters'",
+      "introduces": "corresponding-body-of-inquirers",
+      "presupposes": [
+        "inv-printing-press"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-printing-press`. Its demand is the most explicitly social-epistemic in the corpus -- a durable body whose members correspond -- and Hornvale's knowledge layer is the part of the engine with the most shipped machinery, which makes the miss specific rather than broad: transmission is modelled between INDIVIDUALS who meet, and `SOC-information-economy` (`raw`) proposes the strategic layer above it. An institution that outlives its members and transmits deliberately at a distance is neither. PREREQUISITE DROPPED: built on `university`, outside the corpus."
+    },
+    {
+      "id": "inv-hydrostatics",
+      "title": "Hydrostatics — quantitative law of fluids known",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/hydrostatics/` (1583, Simon Stevin, Netherlands); arc 'steam-diffusion'",
+      "introduces": "quantitative-law-of-fluids-known",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`. This is the verdict the corpus leans on hardest -- five other items cite it for the general argument -- and it rests on a reading of the whole `KNOW-*` program, so a reader who finds a row proposing general-claim knowledge moves six items at once. Its SELECTION was blind: it is in the `steam-diffusion` arc's own link list.",
+      "note": "A root, so the verdict is chosen, and it is the representative case for all six discovery items in the steam arc. Hornvale's knowledge model holds PARTICULAR FACTS -- where a thing is, who did what, what was seen -- and carries them with provenance, degradation and belief. A law of nature is a different object: a general claim, true of cases never observed, whose value is that it predicts. `KNOW-study` (`raw`) is the nearest row and it proposes measuring how much of a world's knowable TRUTH a walker covers, which is the particular kind again. No world can hold a general claim, correct or mistaken, so no people can hold or lose one. PREREQUISITE DROPPED: built on `geometry`, outside the corpus. Swept against `BIO-8` and `TECH-2`: neither names natural philosophy, and the `KNOW-*` program is about particular facts and their transmission."
+    },
+    {
+      "id": "inv-gas",
+      "title": "Gas state — matter recognised in a third state",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/gas/` (1624, Jan Baptista von Helmont, Flanders); arc 'steam-diffusion'",
+      "introduces": "matter-recognised-in-a-third-state",
+      "presupposes": [
+        "inv-hydrostatics"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-hydrostatics`; a discovery item, see that item's note for the general argument. The engine's substances (`fire`, `earth`, `blood`, `bone`, `water`) are scene vocabulary for what a body can perceive and name, with no state, phase or quantity behind them. PREREQUISITE DROPPED: built on `alchemy`, outside the corpus."
+    },
+    {
+      "id": "inv-barometer",
+      "title": "Barometers — atmospheric pressure measured",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/barometer/` (1643, Evangelista Torricelli, Italy); arc 'steam-diffusion'",
+      "introduces": "atmospheric-pressure-measured",
+      "presupposes": [
+        "inv-gas"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-gas`. Distinct from the discovery items in one respect worth recording: its demand is an INSTRUMENT, a made thing that yields a number a people then reasons with. Hornvale has climate fields with real values at every point and no way for anyone inside the world to read one. PREREQUISITE DROPPED: built on `falling-motion`, outside the corpus."
+    },
+    {
+      "id": "inv-air-pump",
+      "title": "Air pumps — air evacuated from a vessel",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/air-pump/` (1645, Otto von Guericke, Germany); arc 'steam-diffusion'",
+      "introduces": "air-evacuated-from-a-vessel",
+      "presupposes": [
+        "inv-barometer"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-barometer`. An apparatus item: its demand is the ability to produce a condition that does not occur naturally, which is the step from observing the world to experimenting on it. Nothing in the engine lets a people construct a situation."
+    },
+    {
+      "id": "inv-air-pressure",
+      "title": "Early pneumatics — pressure as a motive force",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/air-pressure/` (1654, Otto von Guericke, Germany); arc 'steam-diffusion'",
+      "introduces": "pressure-as-a-motive-force",
+      "presupposes": [
+        "inv-air-pump"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-air-pump`; a discovery item, see `inv-hydrostatics`. The catalogue's own chain makes this the hinge of the whole arc -- everything from Boyle to Watt is built on it -- which is why the corpus keeps it as its own item rather than folding it into its neighbours."
+    },
+    {
+      "id": "inv-boyles-law",
+      "title": "Boyle's law — pressure volume relation known",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/boyles-law/` (1662, Robert Boyle, England); arc 'steam-diffusion'",
+      "introduces": "pressure-volume-relation-known",
+      "presupposes": [
+        "inv-air-pressure"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-air-pressure`; a discovery item, see `inv-hydrostatics`. Its specific demand -- a RELATION between two measured quantities, held as knowledge -- is the sharpest form of that item's argument: Hornvale's belief layer can carry a false claim about a place, and has no representation for a claim about how two quantities covary."
+    },
+    {
+      "id": "inv-pressure-cooker",
+      "title": "Pressure cookers — pressure vessel held above ambient",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/pressure-cooker/` (1679, Denis Papin, France); arc 'steam-diffusion'",
+      "introduces": "pressure-vessel-held-above-ambient",
+      "presupposes": [
+        "inv-basic-steam-engine",
+        "inv-boyles-law"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of two `absent` items. Its demand is containment -- a vessel that holds a condition against the world -- and the nearest thing the engine has is a community's stores, which are a scalar that decays."
+    },
+    {
+      "id": "inv-miners-friend",
+      "title": "Miner's friend — engine raises water from a working",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/miners-friend/` (1698, Thomas Savery, England); arc 'steam-diffusion'",
+      "introduces": "engine-raises-water-from-a-working",
+      "presupposes": [
+        "inv-air-pump",
+        "inv-coal-mining"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-air-pump` (`absent`) and `inv-coal-mining` (`deferred`), so `absent` by weakest demand. The catalogue's chain is doing something Hornvale's model cannot: the engine exists BECAUSE the mine flooded, so a constraint on one capability calls a second into being. `occ-delve-depth` accrues metres per head per epoch with no obstacle term at all, so a Hornvale working has no depth at which it needs anything."
+    },
+    {
+      "id": "inv-gas-volume-temperature",
+      "title": "Gas volume temperature — thermal expansion of gas known",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/gas-volume-temperature/` (1699, Guillaume Amontons, France); arc 'steam-diffusion'",
+      "introduces": "thermal-expansion-of-gas-known",
+      "presupposes": [
+        "inv-air-pressure"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-air-pressure`; a discovery item, see `inv-hydrostatics`. Recorded separately because the catalogue does, and because its demand names temperature, which Hornvale models richly as a field (`hornvale_kernel::Temperature` crosses domain boundaries as a typed quantity) and not at all as something anyone in the world knows a fact about."
+    },
+    {
+      "id": "inv-newcomen-steam-engine",
+      "title": "Newcomen steam engine — engine does sustained useful work",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/newcomen-steam-engine/` (1712, Thomas Newcomen, England); arc 'steam-diffusion'",
+      "introduces": "engine-does-sustained-useful-work",
+      "presupposes": [
+        "inv-miners-friend",
+        "inv-pressure-cooker"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of two `absent` items. PREREQUISITE DROPPED: built on `coke-iron`, outside the corpus. Its demand -- sustained useful work -- is the first item in the arc whose value is a RATE rather than a possibility, and the engine has exactly one rate of this shape, `DELVE_M_PER_PERSON_EPOCH`, whose own doc records that it was \"CHOSEN FOR DYNAMIC RANGE, AND THAT IS AN INSTRUMENT DECISION RATHER THAN A RESULT ONE\". A rate chosen to make a distribution legible is not a rate a people improves."
+    },
+    {
+      "id": "inv-latent-heat",
+      "title": "Latent heat — latent heat known",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/latent-heat/` (1762, Joseph Black, Scotland); arc 'steam-diffusion'",
+      "introduces": "latent-heat-known",
+      "presupposes": [],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: a ROOT -- no `presupposes` -- so nothing upstream forced this verdict and it rests entirely on a search of the repository run by a session that had already read `tech_for`, `tech_weight` and `TechHorizon`.  Its SELECTION was blind: it is in the `steam-diffusion` arc's own link list.",
+      "note": "A root, so the verdict is chosen; a discovery item, see `inv-hydrostatics` for the general argument. PREREQUISITE DROPPED: built on `heat-capacity`, outside the corpus. Scored `absent` independently of its arc rather than inherited, which matters for the ratchet: it is one of ten ROOTS in this corpus -- the items whose verdict rests on its own evidence rather than on a prerequisite's. Swept against `BIO-8` and `TECH-2`: nothing."
+    },
+    {
+      "id": "inv-steam-engine",
+      "title": "Steam engine — engine efficient enough to spread",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/steam-engine/` (1764, James Watt, Scotland); arc 'steam-diffusion'",
+      "introduces": "engine-efficient-enough-to-spread",
+      "presupposes": [
+        "inv-latent-heat",
+        "inv-newcomen-steam-engine"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "disclosure": "NOT BLIND: `TECH-1` was considered as a `deferred` anchor for this item and refused, which makes the verdict CHOSEN rather than inherited, and the refusal was authored by a session that had read the model. It is the refusal with the widest blast radius in the file: accepting `TECH-1` here would invite it on most of the other 37 `absent` items.",
+      "note": "Downstream of two `absent` items, and the item whose demand is closest to what this corpus is FOR. Its content is not that an engine works but that it works well enough to SPREAD -- a capability crossing a threshold and then diffusing across peoples, which is the shape `TECH-1` proposes (\"a capability is crossed when biome resources x subsistence x surplus clear a bar\") and `tech_for` does not implement. It is `absent` rather than `deferred` on `TECH-1` deliberately: `TECH-1` names the MECHANISM this corpus wants, not this item's capability, and anchoring 38 absent items to one generic row would turn this column into the backlog that decision 0095 and spec section 2 both forbid."
+    },
+    {
+      "id": "inv-improved-steam-engine",
+      "title": "Improved steam engine — rotary power drives general machinery",
+      "source": "Asimov, *Chronology of Science and Discovery*; invention.cards `/improved-steam-engine/` (1781, James Watt, England); arc 'steam-diffusion'",
+      "introduces": "rotary-power-drives-general-machinery",
+      "presupposes": [
+        "inv-steam-engine"
+      ],
+      "statistic": "fraction-of-peoples-holding",
+      "criterion": {
+        "kind": "fraction-in-band",
+        "lo": 0.05,
+        "hi": 0.95
+      },
+      "verdict": "absent",
+      "anchor": "",
+      "note": "Downstream of `inv-steam-engine`, and the last item in the catalogue's chronological order here. Its demand is generality -- one capability that powers arbitrary others -- which is the furthest any item in this corpus stands from a four-rung clock, and the corpus ends on it because the catalogue does."
+    }
+  ]
 }
