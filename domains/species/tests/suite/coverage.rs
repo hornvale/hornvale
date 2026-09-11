@@ -805,7 +805,20 @@ fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
         vec!["drow", "rust-monster", "xorn"],
         "ascending by KindId"
     );
-    assert_eq!(reg.len(), 3, "the store is sparse: absence means Surface");
+    // THE TIDEMARK, Task 1: the store gained two explicit `Surface` rows
+    // (sea-elf, giant-crocodile) alongside the three `Subterranean` ones
+    // above — absence still means `Surface` for everyone else, but these
+    // two are stated rather than left to the default now that a third
+    // realm exists for a reader to mistake them into (spec §3.6). The
+    // count moves from 3 to 5 for that reason, not because the store
+    // stopped being sparse.
+    assert_eq!(
+        reg.len(),
+        5,
+        "3 subterranean rows (drow, rust-monster, xorn) plus 2 explicit \
+         Surface rows (sea-elf, giant-crocodile) — the store is still \
+         sparse: every OTHER kind is absent and still means Surface"
+    );
 }
 
 #[test]

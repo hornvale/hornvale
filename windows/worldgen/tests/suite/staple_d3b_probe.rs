@@ -690,6 +690,15 @@ fn source_observations(
             let seating = match species_realm[index] {
                 HabitatRealm::Surface => Seating::all_surface(geo),
                 HabitatRealm::Subterranean => seating_for(geo, &terrain, niches.get(&people)),
+                // The Tidemark, Task 1: mirrors `lib.rs`'s production
+                // `seatings` build exactly (decision 0092's test-fixture
+                // posture) — no kind is `Marine` yet, so `Surface` rung at
+                // multiplier `0.0` is inert on its own terms until Task 2
+                // authors the real pelagic seating.
+                HabitatRealm::Marine => Seating {
+                    rung: VertexMap::from_fn(geo, |_| hornvale_kernel::Band::Surface),
+                    multiplier: VertexMap::from_fn(geo, |_| 0.0),
+                },
             };
             let field = VertexMap::from_fn(geo, |vertex| {
                 capacity.at(vertex) * seating.multiplier.get(vertex)

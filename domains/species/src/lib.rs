@@ -2744,6 +2744,12 @@ pub enum HabitatRealm {
     /// Scored against the subterranean substrate, and gated by whether the
     /// vertex holds a cave at all. A void that does not exist is not habitat.
     Subterranean,
+    /// Scored against the marine substrate, and gated by whether the vertex
+    /// holds a water column at all. The Tidemark, Task 1: mirrors
+    /// `Subterranean`'s gate exactly — `1.0` where the vertex is wet, `0.0`
+    /// otherwise — because the pelagic ladder is the delve ladder at a
+    /// different realm (`hornvale_climate::facets::Stratum`'s own doc).
+    Marine,
 }
 
 impl HabitatRealm {
@@ -2793,6 +2799,28 @@ pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
         // the surface, and the gate does that measurably. Drow's `elevation`
         // response is wood-elf's byte for byte, for exactly that reason.
         (KindId("drow"), HabitatRealm::Subterranean),
+        // THE TIDEMARK, Task 1: the registry is sparse and absence already
+        // means `Surface`, so these two rows are not needed for correctness
+        // — they are needed because a reader meeting `HabitatRealm::Marine`
+        // for the first time will reasonably assume a sea elf belongs to it
+        // (spec §3.6). Both are explicit and tested rather than left to the
+        // default, in the shape `environment_niche_registry` already uses
+        // for its own absence: "absence is load-bearing, and it is the
+        // campaign's positive control".
+        //
+        // sea-elf: settled and marine-dominant on its resource axis, and
+        // still `Surface` — its own shipped row (`sleep_grade_registry`,
+        // above) already states why: "a settled coastal people does not
+        // live entirely in the water", so it sleeps ashore, on what it
+        // built. Not `ALREADY_BUOYED`. Its terrestrial residue is the shore
+        // it builds on; §3.8 handles reach into the water separately from
+        // this residence question.
+        (KindId("sea-elf"), HabitatRealm::Surface),
+        // giant-crocodile: the roster's stated amphibious case — land-
+        // dominant at 0.6 `ANIMAL_PREY` (see `sleep_grade_registry`'s own
+        // comment on this row: "graded by its mass, not as a marine kind").
+        // A tonne of ectotherm that comes ashore is not a water-column kind.
+        (KindId("giant-crocodile"), HabitatRealm::Surface),
     ]
     .into_iter()
     .collect()
@@ -4737,6 +4765,21 @@ pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
 /// peaks just short of bare rock. The reversal is between those two optima;
 /// the widths say how sharply each kind feels it, and the devotions how much
 /// of the kind's rest the substrate can account for at all.
+///
+/// A **marine** kind (The Tidemark, Task 1) follows the subterranean
+/// rationale one step further rather than starting a third story: its peak
+/// and its band are the specialist's, for the same reason a cave kind's are
+/// — a water-column kind that touches a seabed at all meets one substrate,
+/// not the whole scale a surface generalist does. What moves is devotion
+/// alone. `Subterranean`'s own doc says the habitat is the void and not the
+/// floor, which is already why its devotion (0.8) falls short of a surface
+/// kind's whole (1.0); a marine kind's habitat is the water column, and the
+/// seabed beneath it is less accountable for its rest still than a cave
+/// floor is for a cave kind's — the body is already held by the medium
+/// itself, the way no surface or subterranean body is. So devotion falls
+/// again, by the same increment: `SURFACE_DEVOTION` to
+/// `SUBTERRANEAN_DEVOTION` is `-0.2`, and `SUBTERRANEAN_DEVOTION` to
+/// `MARINE_DEVOTION` is `-0.2` again, landing at `0.6`.
 pub fn substrate_response(realm: HabitatRealm) -> ConditionResponse {
     /// The hardness a kind that lives above ground rests best on: the
     /// yielding end of the scale, on the endpoint rather than inside the
@@ -4765,6 +4808,26 @@ pub fn substrate_response(realm: HabitatRealm) -> ConditionResponse {
     /// most, but never all.
     /// plumb: per-species(a kind's own habitat realm sets how much of its rest the substrate accounts for -- HabitatRealm::Subterranean's own doc says the habitat is the void and not the floor, so the surface underneath can never account for the whole of a cave kind's rest the way open ground accounts for a surface kind's)
     const SUBTERRANEAN_DEVOTION: f64 = 0.8;
+    /// The hardness a kind that lives in the water column rests best on:
+    /// the same just-short-of-hard-end peak a subterranean kind's is, and
+    /// for the same reason. A marine kind that touches a seabed at all
+    /// meets one substrate — sediment over rock, not bare stone, just as
+    /// a cave floor is — so its optimum is the specialist's, unchanged
+    /// from `SUBTERRANEAN_OPTIMUM` rather than a third value invented for
+    /// its own sake.
+    /// plumb: per-species(a kind's own habitat realm sets which substrate it rests best on -- a marine kind's seabed, when it touches one at all, is sediment over rock rather than bare stone, the same physical shape a cave floor has, so its peak sits at the same just-short-of-hard-end point a subterranean kind's does)
+    const MARINE_OPTIMUM: f64 = SUBTERRANEAN_OPTIMUM;
+    /// How wide a band of substrates a marine kind can still rest on: the
+    /// same narrow specialist band a subterranean kind's is — its world is
+    /// one substrate, exactly as a cave kind's is, so nothing about being
+    /// wet instead of underground widens the band.
+    /// plumb: per-species(a kind's own habitat realm sets how wide a band of substrates it can rest on -- a marine kind meets one seabed the way a subterranean kind meets one cave floor, so it is a specialist by the same argument and its band is the same width)
+    const MARINE_WIDTH: f64 = SUBTERRANEAN_WIDTH;
+    /// How much of a marine kind's rest the substrate accounts for: less
+    /// than a subterranean kind's, and by the same step that separated
+    /// subterranean devotion from surface devotion in the first place.
+    /// plumb: per-species(a kind's own habitat realm sets how much of its rest the substrate accounts for -- HabitatRealm::Subterranean's own doc argues the habitat is the void and not the floor, and a marine kind's habitat is the water column rather than the seabed beneath it, held up by the medium itself in a way no surface or subterranean body is, so the seabed is less accountable for its rest still and devotion falls again by the same 0.2 step that separated subterranean from surface)
+    const MARINE_DEVOTION: f64 = 0.6;
     match realm {
         HabitatRealm::Surface => ConditionResponse {
             optimum: SURFACE_OPTIMUM,
@@ -4775,6 +4838,11 @@ pub fn substrate_response(realm: HabitatRealm) -> ConditionResponse {
             optimum: SUBTERRANEAN_OPTIMUM,
             width: SUBTERRANEAN_WIDTH,
             devotion: SUBTERRANEAN_DEVOTION,
+        },
+        HabitatRealm::Marine => ConditionResponse {
+            optimum: MARINE_OPTIMUM,
+            width: MARINE_WIDTH,
+            devotion: MARINE_DEVOTION,
         },
     }
 }

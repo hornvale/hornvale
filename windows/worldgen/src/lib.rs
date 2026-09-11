@@ -2038,6 +2038,23 @@ pub fn per_species_suitability_masked(
                             None => (score_at(subterranean.get(vertex), 0.0), 0.0),
                         }
                     }
+                    hornvale_species::HabitatRealm::Marine => {
+                        // The Tidemark, Task 1 (pre-flight ruling P1):
+                        // `availability = 0.0` here is TRUE, not a
+                        // placeholder — no kind is `Marine` yet (that is
+                        // Task 3's job), so a marine kind has no vertex to
+                        // be available at until Task 2 authors the real
+                        // mask (the wet/dry gate `Subterranean`'s mirrors,
+                        // spec §3.2). The score itself is read off the
+                        // ordinary surface substrate rather than invented
+                        // wholesale, purely so `best` is finite; it is
+                        // multiplied away by `availability` below and is
+                        // unobservable until Task 2 lands.
+                        (
+                            score_at(substrate.get(vertex), *marine_chemosynthate.get(vertex)),
+                            0.0,
+                        )
+                    }
                 };
                 // LIEBIG, not a product (The Tilth, stage 5). The base field
                 // takes `min(temperature, precipitation)` — the law of the
@@ -2441,6 +2458,21 @@ fn per_species_capacity_at_with_invariant(
                             Some(best) => (best, 1.0),
                             None => (score_at(subterranean.get(vertex), 0.0), 0.0),
                         }
+                    }
+                    hornvale_species::HabitatRealm::Marine => {
+                        // The Tidemark, Task 1 (pre-flight ruling P1),
+                        // mirroring the sibling loop's matching arm: no kind
+                        // is `Marine` yet, so `availability = 0.0` here is
+                        // TRUE rather than a placeholder — see that arm's
+                        // comment for the full argument. Task 2 authors the
+                        // real marine availability mask.
+                        (
+                            score_at(
+                                substrate.get(vertex),
+                                *hoisted.marine_chemosynthate.get(vertex),
+                            ),
+                            0.0,
+                        )
                     }
                 };
                 // `availability` stays OUTSIDE the tolerance product, exactly as
@@ -8205,6 +8237,27 @@ fn bake_history_from(
             }
             hornvale_species::HabitatRealm::Subterranean => {
                 crate::delve_seating::seating_for(geo, terrain, niches.get(k))
+            }
+            hornvale_species::HabitatRealm::Marine => {
+                // The Tidemark, Task 1: no kind is `Marine` yet, so there is
+                // no pelagic ladder to seat against — the marine seating
+                // (spec §3.3, "the pelagic ladder is the delve ladder",
+                // scoring `Realm::WATERWORLD.strata()`'s five bands) is
+                // Task 2's job, not this one's. `Surface` rung at
+                // multiplier `0.0` is deliberately NOT
+                // `Seating::all_surface`'s `1.0` — it is self-contained
+                // rather than leaning on `per_species_capacity_at`'s
+                // sibling `availability = 0.0` elsewhere to stay inert:
+                // `scale_capacity` multiplies whatever capacity this kind
+                // has by this multiplier, so `0.0` keeps the seating inert
+                // on its own terms, and the rung is unobservable either way
+                // since no community can ever found at zero capacity.
+                crate::delve_seating::Seating {
+                    rung: hornvale_kernel::VertexMap::from_fn(geo, |_| {
+                        hornvale_kernel::Band::Surface
+                    }),
+                    multiplier: hornvale_kernel::VertexMap::from_fn(geo, |_| 0.0),
+                }
             }
         })
         .collect();

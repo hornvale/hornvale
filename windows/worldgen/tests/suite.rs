@@ -135,6 +135,10 @@ mod kinship_facts;
 mod lantern_probe;
 #[path = "suite/lot_probe.rs"]
 mod lot_probe;
+#[path = "suite/marine_realm_agreement.rs"]
+mod marine_realm_agreement;
+#[path = "suite/marine_realm_zero_movement.rs"]
+mod marine_realm_zero_movement;
 #[path = "suite/mines_exist.rs"]
 mod mines_exist;
 #[path = "suite/murrain_population.rs"]

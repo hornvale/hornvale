@@ -7211,3 +7211,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T03:09:33Z | sluice:clients | 209.135 | 3227.205 | 342.234 | 17.07 | 0 | 1eb0522b4 |  | lefford | 40 |
 | 2026-09-11T03:17:12Z | sluice:heavy | 458.265 | 12936.512 | 279.283 | 28.84 | 0 | 1c9471ef9 |  | lefford | 40 |
 | 2026-09-11T12:27:01Z | prewarm | 206.089 | 1584.397 | 53.270 | 7.95 | 0 | f22860af3 | campaign/the-shoal | MacBookPro | 10 |
+| 2026-09-11T14:49:42Z | census-tail-chorus | 50.535 | 221.854 | 13.106 | 4.65 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:49:43Z | census-tail-domesday | 0.370 | 0.322 | 0.032 | 0.96 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:49:43Z | census-tail-anomalies | 0.323 | 0.270 | 0.032 | 0.93 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:49:56Z | rebaseline | 214.766 | 522.052 | 27.086 | 2.56 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:51:24Z | gate-commit | 43.736 | 82.454 | 19.607 | 2.33 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:52:53Z | gate-commit | 44.976 | 83.177 | 20.348 | 2.30 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |

@@ -373,6 +373,15 @@ fn world_and_fields(seed: u64) -> Built {
             let seating = match species_realm[i] {
                 HabitatRealm::Surface => Seating::all_surface(&geo),
                 HabitatRealm::Subterranean => seating_for(&geo, &terrain, niches.get(&people)),
+                // The Tidemark, Task 1: mirrors `lib.rs`'s production
+                // `seatings` build exactly (decision 0092's test-fixture
+                // posture) — no kind is `Marine` yet, so `Surface` rung at
+                // multiplier `0.0` is inert on its own terms until Task 2
+                // authors the real pelagic seating.
+                HabitatRealm::Marine => Seating {
+                    rung: VertexMap::from_fn(&geo, |_| hornvale_kernel::Band::Surface),
+                    multiplier: VertexMap::from_fn(&geo, |_| 0.0),
+                },
             };
             let k = VertexMap::from_fn(&geo, |v| map.at(v) * seating.multiplier.get(v));
             let flow = flow(&geo, &k);
@@ -437,6 +446,12 @@ fn the_probes_field_is_the_bakes_growth_field_at_an_alive_site() {
                     assert!(m <= 1.0, "a seating multiplier never exceeds 1.0: {m}");
                     sub_checked += 1;
                 }
+                HabitatRealm::Marine => unreachable!(
+                    "The Tidemark, Task 1: no kind is `Marine` in \
+                     `habitat_realm_registry` yet (that is Task 3's job), so no ALIVE \
+                     occupation's people can carry this realm — an occurrence here means \
+                     a marine kind was registered without this probe being updated"
+                ),
             }
         }
     }
