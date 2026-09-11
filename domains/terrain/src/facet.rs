@@ -666,14 +666,40 @@ fn clip_curve(source: &RealizedCurve, address: &FacetAddress, output: &mut Vec<R
             }
             continue;
         }
-        let make_end = |t, edge, side| {
+        let make_end = |t, edge: Option<u8>, side| {
             let position = interpolate(segment[0], segment[1], t);
             let mut end =
                 source.endpoints[if side == EndpointSide::Upstream { 0 } else { 1 }].clone();
-            let position = if let Some(edge) = edge {
-                let boundary = boundary_at(address, edge, position);
-                let position = canonical_edge_sample(address, edge, boundary.t);
-                end.terminal = TerminalKind::Continuation;
+            // Only the ends of the complete feature inherit its terminals.
+            // An interior vertex exactly on the boundary may be followed by
+            // a rejected segment, or preceded by one, without a strict edge
+            // crossing setting enter_edge/exit_edge.
+            let is_feature_end = match side {
+                EndpointSide::Upstream => index == 0 && t == 0.0,
+                EndpointSide::Downstream => index + 2 == source.points.len() && t == 1.0,
+            };
+            if is_feature_end {
+                return (position, end);
+            }
+            end.terminal = TerminalKind::Continuation;
+            end.boundary = None;
+            let boundary_edge = edge.or_else(|| {
+                normals
+                    .iter()
+                    .position(|&normal| {
+                        dot(normal, position).abs() <= f64::EPSILON * dot(normal, normal).sqrt()
+                    })
+                    .map(|edge| edge as u8)
+            });
+            let position = if let Some(boundary_edge) = boundary_edge {
+                let boundary = boundary_at(address, boundary_edge, position);
+                // Keep an authored vertex unchanged; only a newly clipped
+                // intersection needs to be placed from its canonical token.
+                let position = if edge.is_some() {
+                    canonical_edge_sample(address, boundary_edge, boundary.t)
+                } else {
+                    position
+                };
                 end.boundary = Some(boundary);
                 position
             } else {
@@ -868,4 +894,149 @@ fn nearest_segment(points: &[[f64; 3]], position: [f64; 3]) -> Option<NearestSeg
         }
     }
     best
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Cross a facet edge whose great-circle plane evaluates to exactly zero
+    /// at the authored middle vertex, rather than a near-boundary crossing.
+    fn exact_boundary_fixture() -> (FacetAddress, u8, [[f64; 3]; 3]) {
+        let address = FacetAddress::new(
+            Facet {
+                face: 0,
+                path: vec![0; crate::GLOBE_LEVEL as usize],
+            },
+            vec![],
+        )
+        .unwrap();
+        let corners = address.resolved().corners();
+        let edge = (0..4)
+            .find(|&edge| {
+                let boundary = canonical_edge_sample(&address, edge, 0.5);
+                dot(
+                    cross(corners[edge as usize], corners[(edge as usize + 1) % 4]),
+                    boundary,
+                ) == 0.0
+            })
+            .expect("fixture needs an exact-zero boundary vertex");
+        let inside = address.resolved().centroid();
+        let boundary = canonical_edge_sample(&address, edge, 0.5);
+        let outside = normalize(std::array::from_fn(|i| 2.0 * boundary[i] - inside[i]));
+        let normal = cross(corners[edge as usize], corners[(edge as usize + 1) % 4]);
+        assert!(dot(normal, inside) * dot(normal, outside) < 0.0);
+        (address, edge, [inside, boundary, outside])
+    }
+
+    fn source_curve(
+        points: Vec<[f64; 3]>,
+        upstream: TerminalKind,
+        downstream: TerminalKind,
+    ) -> RealizedCurve {
+        let feature = FeatureId::new(FeatureKind::ChannelReach, Vertex(42), 0);
+        RealizedCurve {
+            feature,
+            width: vec![0.001; points.len()],
+            points,
+            endpoints: [
+                endpoint(feature, EndpointSide::Upstream, upstream),
+                endpoint(feature, EndpointSide::Downstream, downstream),
+            ],
+        }
+    }
+
+    fn assert_boundary(end: &FeatureEndpoint, address: &FacetAddress, edge: u8, point: [f64; 3]) {
+        assert_eq!(end.terminal, TerminalKind::Continuation);
+        let boundary = end
+            .boundary
+            .as_ref()
+            .expect("continuation needs a canonical token");
+        assert_eq!(boundary.address, *address);
+        assert_eq!(boundary.edge, edge);
+        assert!((boundary.t - 0.5).abs() < 1.0e-12);
+        let reconstructed = canonical_edge_sample(address, edge, boundary.t);
+        assert!(
+            reconstructed
+                .iter()
+                .zip(point)
+                .all(|(a, b)| (a - b).abs() < 1.0e-12)
+        );
+    }
+
+    #[test]
+    fn exact_boundary_exit_is_a_continuation_before_the_real_terminal() {
+        let (address, edge, points) = exact_boundary_fixture();
+        for terminal in [
+            TerminalKind::Lake,
+            TerminalKind::Ocean,
+            TerminalKind::Confluence,
+        ] {
+            let source = source_curve(points.to_vec(), TerminalKind::Headwater, terminal);
+            let mut pieces = Vec::new();
+            clip_curve(&source, &address, &mut pieces);
+            assert_eq!(pieces.len(), 1);
+            let piece = &pieces[0];
+            assert_eq!(piece.points.len(), 2);
+            assert_eq!(piece.endpoints[0], source.endpoints[0]);
+            assert_boundary(
+                &piece.endpoints[1],
+                &address,
+                edge,
+                *piece.points.last().unwrap(),
+            );
+        }
+    }
+
+    #[test]
+    fn exact_boundary_entry_is_a_continuation_after_the_real_source() {
+        let (address, edge, [inside, boundary, outside]) = exact_boundary_fixture();
+        for upstream in [TerminalKind::Headwater, TerminalKind::Confluence] {
+            let source = source_curve(
+                vec![outside, boundary, inside],
+                upstream,
+                TerminalKind::Lake,
+            );
+            let mut pieces = Vec::new();
+            clip_curve(&source, &address, &mut pieces);
+            assert_eq!(pieces.len(), 1);
+            let piece = &pieces[0];
+            assert_eq!(piece.points.len(), 2);
+            assert_boundary(&piece.endpoints[0], &address, edge, piece.points[0]);
+            assert_eq!(piece.endpoints[1], source.endpoints[1]);
+        }
+    }
+
+    #[test]
+    fn exact_boundary_genuine_terminals_and_sources_keep_their_meaning() {
+        let (address, _, [inside, boundary, _]) = exact_boundary_fixture();
+        for terminal in [
+            TerminalKind::Lake,
+            TerminalKind::Ocean,
+            TerminalKind::Confluence,
+        ] {
+            for points in [vec![inside, boundary], vec![boundary, inside]] {
+                let source = source_curve(points, TerminalKind::Headwater, terminal);
+                let mut pieces = Vec::new();
+                clip_curve(&source, &address, &mut pieces);
+                assert_eq!(pieces.len(), 1);
+                assert_eq!(pieces[0], source);
+            }
+        }
+    }
+
+    #[test]
+    fn exact_boundary_touch_inside_a_feature_does_not_split_it() {
+        let (address, _, [inside, boundary, _]) = exact_boundary_fixture();
+        let source = source_curve(
+            vec![inside, boundary, inside],
+            TerminalKind::Headwater,
+            TerminalKind::Ocean,
+        );
+        let mut pieces = Vec::new();
+        clip_curve(&source, &address, &mut pieces);
+        assert_eq!(pieces.len(), 1);
+        assert_eq!(pieces[0].endpoints, source.endpoints);
+        assert_eq!(pieces[0].points.len(), 3);
+    }
 }
