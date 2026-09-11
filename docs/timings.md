@@ -7202,6 +7202,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T22:38:48Z | gate-commit | 69.587 | 77.702 | 23.815 | 1.46 | 0 | 0956d6641 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-11T00:34:54Z | gate-commit | 45.537 | 74.801 | 22.878 | 2.15 | 0 | 874d08187 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-11T00:57:26Z | gate-commit | 41.846 | 72.128 | 20.267 | 2.21 | 0 | dd3ba0218 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-11T12:04:01Z | gate-commit | 99.240 | 79.856 | 22.158 | 1.03 | 0 | bd995d217 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-11T02:48:56Z | census-tail-chorus | 60.007 | 758.946 | 23.389 | 13.04 | 0 | f313fcc20 |  | lefford | 40 |
 | 2026-09-11T02:48:59Z | census-tail-domesday | 1.239 | 1.068 | 0.120 | 0.96 | 0 | f313fcc20 |  | lefford | 40 |
 | 2026-09-11T02:48:59Z | census-tail-anomalies | 0.951 | 0.826 | 0.125 | 1.00 | 0 | f313fcc20 |  | lefford | 40 |
@@ -7210,3 +7211,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T03:06:04Z | sluice:gate | 853.676 | 25716.965 | 887.091 | 31.16 | 0 | 64e79b2fe |  | lefford | 40 |
 | 2026-09-11T03:09:33Z | sluice:clients | 209.135 | 3227.205 | 342.234 | 17.07 | 0 | 1eb0522b4 |  | lefford | 40 |
 | 2026-09-11T03:17:12Z | sluice:heavy | 458.265 | 12936.512 | 279.283 | 28.84 | 0 | 1c9471ef9 |  | lefford | 40 |
+| 2026-09-11T12:08:15Z | census-tail-chorus | 55.441 | 172.835 | 6.917 | 3.24 | 0 | 644f043a1 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-11T12:08:16Z | census-tail-domesday | 0.355 | 0.310 | 0.028 | 0.95 | 0 | 644f043a1 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-11T12:08:16Z | census-tail-anomalies | 0.306 | 0.251 | 0.028 | 0.91 | 0 | 644f043a1 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-11T12:08:28Z | rebaseline | 230.532 | 471.955 | 21.665 | 2.14 | 0 | 644f043a1 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
