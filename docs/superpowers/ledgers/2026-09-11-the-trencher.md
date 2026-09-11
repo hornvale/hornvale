@@ -1428,3 +1428,111 @@ talking rather than one campaign being thorough.
 
 **Ideonomy passes / overturns:** none; a peer finding that overturned this
 campaign's own framing of its headline.
+
+---
+
+## #19 [Q] — Two ordinary-tier tests have heavy-tier semantics, and nothing labels them
+
+**Source:** The Tidemark (`campaign/the-tidemark`), unprompted, 2026-09-11.
+Verified by them rather than assumed; not yet re-verified in this tree, and
+that distinction is recorded deliberately — see #17, where asserting about a
+peer's tree from my own cost me a correction.
+
+Their six new peoples moved the census. Two tests now RED on the Mac and
+**cannot be made green here**, because they compare against committed census
+goldens that only lefford may author:
+
+- `windows/lab/tests/suite/census_sentinel.rs`
+- `windows/lab/tests/suite/tripwire.rs`
+
+**The generalizable part.** CLAUDE.md's stated reason for keeping the heavy
+tier OFF the stage-gate list is that a census-backed assertion "would red
+predictably for the whole middle of any world-touching campaign." That
+reasoning applies word for word to these two — and they are **not** heavy-tier
+and carry **no `#[ignore]`**. So the property that earns a test its
+heavy-tier placement is held by two tests that nothing marks, and the only
+signal a reader gets is a red that looks exactly like a regression.
+
+**What it costs this campaign.** Stage 4 authors 8-20+ organisms. That is a
+larger census perturbation than six peoples, so these two will red here too,
+harder, and earlier than I would have looked for a cause. Budgeting two known
+reds through Stage 4 rather than discovering them at a gate.
+
+**Ruling:** adopt their treatment — the reds stand until pre-merge close and
+are **not** chased with a mid-campaign census refresh. A census refreshed in
+the middle of Stage 4 is invalidated by the next organism authored hours
+later, which is the same argument that keeps heavy off the stage list. The
+refresh belongs at close, once, when the roster has stopped moving.
+
+**The risk of that ruling, stated so it is not discovered later:** two
+standing reds are two places a GENUINE regression can hide. Mitigation is to
+record the expected red set by name now, before Stage 4 makes any, so a
+**third** red is visibly novel rather than absorbed into "the census ones."
+
+They are filing it as a `PROC-*` candidate at their close — either these
+belong in `heavy:`, or the stage set needs a declared census-blocked
+exemption. Not duplicating that row here, on the same reasoning as the
+`TOOL-*` row in #18: the finder files it, I cite it.
+
+**Ideonomy passes / overturns:** none; an adopted peer ruling with its risk
+named.
+
+---
+
+## #20 [Ruling] — Task 3's brief is silent on the three things that make it land
+
+Verification-before-dispatch (the `dispatching-hornvale-subagents` step 1),
+run against `kernel/src/ecology.rs` before Task 3 went out. Budget ~3 minutes;
+found four defects, three of which fail **silently**.
+
+**A. `v1_basis()` is not optional, and the brief never names it.** The brief
+says "add the axes" and its test checks only the consts' ids. A `pub const`
+that is never appended to `v1_basis()` (`ecology.rs:146`) is invisible to
+every consumer that iterates the basis — `dominant_axis`
+(`domains/demography/src/niche.rs:77`), the herbivory fraction
+(`coexist.rs:298`), `total_non_detritus` (`niche.rs:216`). The axes would
+exist, compile, and be orphaned. **The brief's own test passes either way**:
+it is blind to the omission it most needs to catch. This is the missing-JOIN
+shape from #18, arriving one stage after I named it.
+
+**B. `the_basis_ids_are_append_only` (`ecology.rs:686`) hard-pins
+`vec![0, 1, 2, 3, 4, 5, 6]`.** Appending to the basis REDs it. That is the
+guard working: it converts A's silent omission into a loud, deliberate edit.
+But the brief mentions neither the test nor the literal, so the implementer
+meets it as a surprise mid-task and may "fix" it by reverting the append —
+which is precisely the wrong repair, and leaves the tree green and wrong.
+
+**C. The brief's test sketch does not compile where it belongs.** It uses
+`use hornvale_kernel::*;`, an external-crate path. `kernel/tests/suite/` would
+accept that but needs a `#[path]` registration in `kernel/tests/suite.rs` the
+brief does not mention. The right home is the **inline `mod tests`**
+(`ecology.rs:602`) — beside the guard B says must be extended — which needs
+`super::*` instead and costs no registration.
+
+**D. The sketch's `>= 7` and dedup assertions are subsumed** by extending B's
+dense-ascending literal, which is strictly stronger (it catches reorder and
+insert, which a dedup cannot). The `CHEMOSYNTHATE.id == 6` assertion is
+**not** subsumed and is kept: it is the peer-campaign guard from ledger #1.
+
+**Ruling:** Task 3 extends `v1_basis()` and `the_basis_ids_are_append_only`'s
+literal as part of the task, not as follow-up; the test lives inline with
+`super::*`; the sketch's redundant assertions are dropped in favour of the
+extended sequence pin plus the `CHEMOSYNTHATE` guard. Folded into the
+dispatch as the controller's resolution of ambiguity.
+
+**Cost if wrong:** low and visible — a mis-specified test home is a compile
+error, and the sequence pin reds loudly. The expensive branch was A, and it
+is the one nothing would have reported.
+
+**One consequence the implementer must know, because appending is not inert.**
+`coexist.rs:298` sums weights **over the basis** as a denominator. Widening
+the basis changes that denominator for any niche carrying metabolite weight.
+Harmless today (no niche carries one yet) and load-bearing from Task 4 on.
+
+**Also noted, not fixed:** `windows/worldgen/src/lib.rs:1147` calls
+`MARINE_FORAGE` "a sixth `v1_basis()` member". It is the sixth by position
+(index 5) and the basis has held seven since `CHEMOSYNTHATE`. Ambiguous
+rather than false, and about to be more so. Task 4 touches this file; fix the
+wording there.
+
+**Ideonomy passes / overturns:** none; a verification step with four findings.
