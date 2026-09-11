@@ -542,6 +542,24 @@ pub fn audit(c: &Corpus, root: &Path) -> Vec<Finding> {
     findings
 }
 
+/// Both halves together: [`audit`]'s per-item anchor resolution and NOVELTY
+/// ratchet, concatenated with [`cross_corpus_ruling_gaps`]'s family-law
+/// check. `audit` and `cross_corpus_ruling_gaps` stay separate functions
+/// (see the latter's doc comment for why folding them would break every
+/// isolated fixture in this crate's own tests), but a caller auditing a
+/// REAL corpus almost always wants both — a future report generator (Task
+/// 7's) that called only `audit` would silently never enforce the
+/// cross-corpus rule at all, which is exactly the shape of gap this family
+/// exists to catch in everyone else's instruments. This function is that
+/// one entry point, so skipping family law would have to be a deliberate
+/// choice to call `audit` alone, not an accident of not knowing the second
+/// function exists.
+pub fn audit_family(c: &Corpus, root: &Path) -> Vec<Finding> {
+    let mut findings = audit(c, root);
+    findings.extend(cross_corpus_ruling_gaps(c, root));
+    findings
+}
+
 /// Audit a single item. `None` means clean.
 fn audit_item(
     item: &Item,
@@ -624,6 +642,49 @@ fn audit_item(
     resolve_anchor(item, &anchor, facts, generated)
 }
 
+/// The repair a `StaleDeferred` finding should suggest, keyed by the
+/// registry row's actual (normalized) status — the repairs genuinely
+/// differ, so the message must name the status rather than assuming
+/// `shipped`. A `refuted` row in particular has nothing built to promote:
+/// its central claim was TESTED and found false, so "re-verdict to
+/// `present`" would be nonsense advice for it, unlike for `shipped` or
+/// `ratified`.
+///
+/// A local copy of `systems::deferral_repair_advice`'s per-status
+/// judgement, not a reuse of it: that function is private, and the four
+/// statuses it distinguishes are a small, closed, shared vocabulary
+/// (`systems::DEFERRAL_FALSIFYING_STATUSES`, which this module already
+/// imports directly) — widening a fourth private item across this module
+/// boundary for one `match` is a worse trade than restating four short
+/// phrases in this family's own verdict vocabulary (`present`/`absent`/
+/// `refused`, not `systems`'s `present`/`refused` pair).
+fn deferral_repair_advice(status: &str) -> &'static str {
+    match status {
+        "shipped" => {
+            "promote this item to `present` (citing the shipping mechanism) or to \
+             `absent`/`refused` if what shipped does not actually discharge this \
+             item's demand"
+        }
+        "ratified" => {
+            "promote this item to `present` (citing the decision, or the mechanism it \
+             enforces, if Hornvale now has the capability) or to `refused` (citing \
+             `decision:NNNN`) if the ratified decision settled the question by \
+             forbidding it"
+        }
+        "rejected" => {
+            "re-verdict this item to `absent` (the idea was considered and set aside, \
+             with no plan behind it now) or to `refused` if a specific decision now \
+             forbids it"
+        }
+        "refuted" => {
+            "re-verdict this item to `absent` — a `refuted` row's central claim was \
+             tested and found false, with no artifact shipped from it, so there is \
+             nothing built to promote"
+        }
+        _ => "re-verdict this item to whatever the registry's current status actually settled",
+    }
+}
+
 /// Verify `anchor` still resolves against live repository state. `None`
 /// means clean.
 fn resolve_anchor(
@@ -674,13 +735,9 @@ fn resolve_anchor(
                         "{} defers to registry:{r}, which now reads `{status}` in \
                          book/src/frontier/idea-registry.md — a status flip that settled \
                          the row's question. A `deferred` verdict claims \"planned, not \
-                         built\"; that stopped being true. Two legitimate repairs: \
-                         re-verdict this item to `present` (if Hornvale now has the \
-                         capability, citing the shipping mechanism) or to `absent`/\
-                         `refused` (if the settled row does not actually discharge this \
-                         item's demand), or treat the status change itself as the thing \
-                         to undo if it was a mistake.",
-                        item.id
+                         built\"; that claim stopped being true — {}.",
+                        item.id,
+                        deferral_repair_advice(status)
                     ),
                 })
             }
@@ -743,16 +800,44 @@ fn resolve_anchor(
         }
         Anchor::Reason(_) => None,
         Anchor::Doc(path) => {
+            // `has_generator` resolves by LONGEST DECLARED DIRECTORY
+            // PREFIX (`GeneratedPaths::declaration`), so a nonexistent file
+            // under a real generated directory — `doc:book/src/domesday/
+            // utterly-made-up.md` inheriting `book/src/domesday/ ->
+            // artifacts` — reads as generated without ever having been
+            // written. `regularities::doc_states_the_claim` closed exactly
+            // this for its own family (its comment records the experiment:
+            // "campaign's final review proved it vacuous by repointing an
+            // item's anchor at `book/src/domesday/climate.md` … and
+            // watching the whole suite stay green"). `page_text` is the
+            // one call that answers "does this page actually exist", and
+            // is checked here for the SAME reason, independent of whether a
+            // claim-marker line is ever checked inside it (ledger #28).
             if generated.has_generator(path) {
-                return None;
+                return match generated.page_text(path) {
+                    Ok(_) => None,
+                    Err(why) => Some(Finding::Dangling {
+                        id: item.id.clone(),
+                        anchor: item.anchor.clone(),
+                        why: format!(
+                            "{} cites doc:{path}, which docs/generated-paths.txt \
+                             declares generated but which cannot be read ({why}). \
+                             Either the page moved (fix the anchor and the \
+                             declaration together) or the regeneration that \
+                             authors it has not been run in this checkout.",
+                            item.id
+                        ),
+                    }),
+                };
             }
             // The two ways `has_generator` says no want opposite repairs —
             // mirroring `regularities::resolve_anchor`'s `Anchor::Doc` arm,
             // which this reuses rather than re-deriving. Unlike that
             // sibling, this family has no claim-marker page to check a
             // second half against yet (the Domesday renders no
-            // technology-trajectory claim today); that half is later
-            // tasks' work, not a gap silently dropped here.
+            // technology-trajectory claim today) — that half, and only
+            // that half, is later tasks' work; the existence check above is
+            // not.
             let detail = if generated.is_declared(path) {
                 "which docs/generated-paths.txt declares `none(<reason>)` — hand-written \
                  prose no roster set regenerates. Anchoring a measured verdict there \

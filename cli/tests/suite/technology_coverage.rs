@@ -9,7 +9,9 @@
 //! green. The real corpora are checked too, at the bottom of this file, but
 //! that check alone would prove nothing about whether the resolver works.
 
-use hornvale::technologies::{Anchor, Corpus, Finding, audit, cross_corpus_ruling_gaps, load};
+use hornvale::technologies::{
+    Anchor, Corpus, Finding, audit, audit_family, cross_corpus_ruling_gaps, load,
+};
 use std::path::PathBuf;
 
 fn workspace_root() -> PathBuf {
@@ -43,13 +45,31 @@ fn corpus_with(verdict: &str, anchor: &str) -> Corpus {
 // --- UNJUSTIFIED -----------------------------------------------------------
 
 /// UNJUSTIFIED: a non-`absent` verdict with no anchor.
+///
+/// Asserts on `why`, not just the variant: `Anchor::parse("")` returns
+/// `None` (`"".split_once(':')` fails) exactly the way an unrecognized
+/// prefix does, so deleting the dedicated no-anchor branch and falling
+/// through to the unknown-prefix branch keeps this test green while the
+/// message silently degrades from "no anchor; a `decision:` anchor is
+/// required" to "unrecognized anchor prefix" — a real diagnosability
+/// regression 0136 makes part of the decision, not a cosmetic one.
 #[test]
 fn a_refused_verdict_without_an_anchor_is_unjustified() {
     let f = audit(&corpus_with("refused", ""), &workspace_root());
-    assert!(
-        matches!(f.as_slice(), [Finding::Unjustified { .. }]),
-        "expected UNJUSTIFIED, got {f:?}"
-    );
+    match f.as_slice() {
+        [Finding::Unjustified { why, .. }] => {
+            assert!(
+                why.contains("no anchor"),
+                "expected the no-anchor branch's message, got: {why}"
+            );
+            assert!(
+                !why.contains("unrecognized anchor prefix"),
+                "fell through to the unknown-prefix branch instead of the \
+                 dedicated no-anchor one: {why}"
+            );
+        }
+        _ => panic!("expected UNJUSTIFIED, got {f:?}"),
+    }
 }
 
 /// UNJUSTIFIED also covers the wrong KIND of anchor: `refused` means a
@@ -225,19 +245,67 @@ fn a_present_verdict_with_an_unresolving_test_anchor_is_dangling() {
     );
 }
 
+/// **V2 regression.** `crate::systems::TestResolution::Ignored` is a real
+/// variant `RepoFacts::test_resolution` can return, and the sibling's own
+/// `boundary_tests` module covers `test_resolution` returning it — but
+/// nothing exercised THIS module's `Ignored` arm before this test. Deleting
+/// that arm (`=> None` instead of a `Dangling`) is the unanchored-K hazard
+/// ledger #18 exists to prevent: an `#[ignore]`d test, which the gate never
+/// runs, would silently back a `present`/`unmeasured` verdict.
+/// `a_possessed_turn_stays_within_its_ceilings`
+/// (`cli/tests/suite/session_cost.rs`) is a real test defined inside the
+/// `cli` crate that is currently `#[ignore]`d under the heavy-tier's
+/// canonical reason (not spelled out here as a literal attribute line —
+/// `heavy_tier.rs`'s own `ignore_reasons` scanner is a naive text scan over
+/// every `.rs` file with no awareness of doc comments, and a first draft of
+/// this sentence that DID spell it out literally was picked up by that
+/// scanner as a second, non-canonical ignore reason and failed
+/// `heavy_tier_reason_strings_are_canonical`), so
+/// `test:hornvale::a_possessed_turn_stays_within_its_ceilings` resolves to
+/// `Ignored`, not `Missing`.
+#[test]
+fn a_present_verdict_with_an_ignored_test_anchor_is_dangling() {
+    let f = audit(
+        &corpus_with(
+            "present",
+            "test:hornvale::a_possessed_turn_stays_within_its_ceilings",
+        ),
+        &workspace_root(),
+    );
+    assert!(
+        matches!(f.as_slice(), [Finding::Dangling { .. }]),
+        "expected DANGLING for an #[ignore]d test anchor, got {f:?}"
+    );
+}
+
 // --- `unmeasured` carries a mechanism anchor (ledger #18, Step 4b.1) ----
 
 /// `unmeasured` is NOT `regularities::Verdict::Unmeasured` — it requires a
 /// mechanism anchor exactly like `present` does, because its reach half
 /// already passed. No anchor at all is UNJUSTIFIED, the same as a
 /// `present` with no anchor.
+///
+/// Asserts on `why` for the same reason
+/// `a_refused_verdict_without_an_anchor_is_unjustified` does: an empty
+/// anchor and an unrecognized prefix both parse to `None`, so the two
+/// branches must be told apart by their message, not just their variant.
 #[test]
 fn an_unmeasured_verdict_without_an_anchor_is_unjustified() {
     let f = audit(&corpus_with("unmeasured", ""), &workspace_root());
-    assert!(
-        matches!(f.as_slice(), [Finding::Unjustified { .. }]),
-        "expected UNJUSTIFIED, got {f:?}"
-    );
+    match f.as_slice() {
+        [Finding::Unjustified { why, .. }] => {
+            assert!(
+                why.contains("no anchor"),
+                "expected the no-anchor branch's message, got: {why}"
+            );
+            assert!(
+                !why.contains("unrecognized anchor prefix"),
+                "fell through to the unknown-prefix branch instead of the \
+                 dedicated no-anchor one: {why}"
+            );
+        }
+        _ => panic!("expected UNJUSTIFIED, got {f:?}"),
+    }
 }
 
 /// The positive control: `unmeasured` with a resolving `path:` anchor is
@@ -287,6 +355,32 @@ fn a_grown_verdict_anchored_into_generated_prose_is_clean() {
         &workspace_root(),
     );
     assert!(f.is_empty(), "expected no findings, got {f:?}");
+}
+
+/// **V1 regression (ledger #28).** `GeneratedPaths::has_generator` resolves
+/// by LONGEST DECLARED DIRECTORY PREFIX, so a nonexistent file under a real
+/// generated directory inherits that directory's `artifacts` author and
+/// reads as generated without ever having been written —
+/// `book/src/domesday/` is declared `artifacts`
+/// (`docs/generated-paths.txt:238`) and this exact file has never existed
+/// (confirmed: `ls book/src/domesday/utterly-made-up.md` fails). Before the
+/// V1 fix this resolved CLEAN, reproducing the vacuity
+/// `regularities::doc_states_the_claim` had already closed for its own
+/// family and documented at `cli/src/regularities.rs:956` — the "repointing
+/// an item's anchor at `book/src/domesday/climate.md` … and watching the
+/// whole suite stay green" experiment. Must be DANGLING, not clean and not
+/// UNJUSTIFIED (the anchor's KIND and its declaration are both fine; only
+/// its target is not).
+#[test]
+fn a_grown_verdict_anchored_to_a_nonexistent_page_under_a_declared_directory_is_dangling() {
+    let f = audit(
+        &corpus_with("grown", "doc:book/src/domesday/utterly-made-up.md"),
+        &workspace_root(),
+    );
+    assert!(
+        matches!(f.as_slice(), [Finding::Dangling { .. }]),
+        "expected DANGLING for a nonexistent page under a declared directory, got {f:?}"
+    );
 }
 
 /// The load-bearing direction: `doc:` into HAND-WRITTEN prose is refused,
@@ -508,12 +602,20 @@ fn novelty_passes_when_absent_falls_below_the_henrich_baseline() {
 /// family rather than the real one. Returns the scratch root; the caller
 /// removes it.
 ///
-/// `label` must be unique per CALL SITE, not just per corpus shape: nextest
-/// runs test functions in parallel within one process, so two tests both
-/// naming their scratch dir from `(pid, corpora.len())` alone collide on
-/// the identical path and race each other's writes — caught by this file's
-/// own first draft, where two tests sharing `corpora.len() == 2` read each
-/// other's fixtures and failed nondeterministically.
+/// `label` must be unique per CALL SITE, not just per corpus shape. Root
+/// `CLAUDE.md` documents nextest as **process-per-test**, which would make
+/// this race impossible under that harness — but this file's own tests run
+/// under `cargo test -p hornvale --test suite`, i.e. **libtest's own
+/// threaded harness, many test functions inside one process**, and that is
+/// the harness in which the race actually occurred: caught by this file's
+/// first draft, where two tests both naming their scratch dir from `(pid,
+/// corpora.len())` alone shared the identical path — two tests with
+/// `corpora.len() == 2` read each other's fixtures and failed
+/// nondeterministically. The label stays required regardless of which
+/// harness eventually runs this suite (nextest included, if this crate ever
+/// moves to it): a future reader who checks `CLAUDE.md` and concludes
+/// "nextest is process-per-test, so this label is redundant" would be
+/// reasoning from the wrong harness for THIS file today.
 fn scratch_family(label: &str, corpora: &[(&str, &str)]) -> PathBuf {
     let root = std::env::temp_dir().join(format!(
         "hv-technology-family-{}-{label}",
@@ -627,6 +729,30 @@ fn a_mention_of_a_longer_row_id_does_not_satisfy_a_shorter_one() {
     assert!(
         matches!(gaps.as_slice(), [Finding::Unjustified { id, .. }] if id == "ROW-x"),
         "a longer row id's mention must not satisfy the shorter row's rule, got {gaps:?}"
+    );
+}
+
+// --- `audit_family`: the one entry point for both halves (V8) ----------
+
+/// `audit_family` must include cross-corpus gaps, not just per-item
+/// findings — a future edit that returned only `audit`'s output would
+/// silently stop enforcing family law, and nothing else here would catch
+/// it. A trivial single-item fixture mentions none of the REAL corpora's
+/// registry rows, so against the real workspace root, `audit` alone must
+/// stay clean while `audit_family` must not.
+#[test]
+fn audit_family_includes_cross_corpus_gaps() {
+    let c = corpus_with("absent", "");
+    let per_item = audit(&c, &workspace_root());
+    assert!(
+        per_item.is_empty(),
+        "sanity: a trivial absent item has no anchor findings, got {per_item:?}"
+    );
+    let family = audit_family(&c, &workspace_root());
+    assert!(
+        !family.is_empty(),
+        "a fixture mentioning none of the real corpora's registry rows must \
+         still surface cross-corpus gaps through audit_family"
     );
 }
 

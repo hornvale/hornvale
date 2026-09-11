@@ -175,11 +175,24 @@ fn presupposes_naming_an_unknown_item_is_a_parse_error() {
 }
 
 /// A diamond-shaped lattice (`d -> {b, c} -> a`) is NOT a cycle, and its
-/// shared ancestor's token appears exactly once in the closure — the
-/// `presupposes` lattice's normal "lattice, not tree" shape (family law),
-/// which had no committed test before this one (Task 4's review).
+/// closure is EXACT — neither short (missing the shared ancestor `tok-a`,
+/// which a naive "already visited, stop" traversal could drop from one of
+/// the two converging paths) nor over-reaching (containing anything beyond
+/// the four rungs actually in the lattice). This is the `presupposes`
+/// lattice's normal "lattice, not tree" shape (family law), which had no
+/// committed test before this one (Task 4's review).
+///
+/// **What this test does NOT establish, despite an earlier draft's claim:**
+/// "`tok-a` appears exactly once" is not a possible failure for
+/// [`hornvale::technologies::derived_demands`] to have — it returns a
+/// `BTreeSet<String>`, which cannot hold a duplicate by construction. The
+/// reviewer traced both DFS orderings by hand and confirmed the real
+/// discriminating power is here: a `Mark::Done`-less traversal that treats
+/// "already on the stack" the same as "already fully explored" is the
+/// concrete bug this fixture would catch, via the exact-set equality below,
+/// not via any claim about duplication.
 #[test]
-fn a_diamond_lattice_parses_and_its_shared_ancestor_is_not_duplicated() {
+fn a_diamond_lattice_parses_and_its_closure_is_exact() {
     let result = std::panic::catch_unwind(|| hornvale::technologies::parse(DIAMOND_FIXTURE));
     assert!(
         result.is_ok(),
@@ -196,7 +209,8 @@ fn a_diamond_lattice_parses_and_its_shared_ancestor_is_not_duplicated() {
             "tok-c".to_string(),
             "tok-d".to_string(),
         ]),
-        "the shared ancestor tok-a must appear exactly once in the closure, \
-         alongside every other rung"
+        "the closure must be exactly these four rungs — no shorter (the \
+         shared ancestor tok-a dropped by one of the two converging paths) \
+         and no longer"
     );
 }

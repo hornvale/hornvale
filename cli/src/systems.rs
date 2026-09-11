@@ -254,12 +254,21 @@ impl RepoFacts {
         directory_defines_symbol(&self.root.join(dir), symbol)
     }
 
-    /// Whether `path:p`'s content still exists on disk, given `p` already
-    /// passed [`path_anchor_is_well_formed`]. `pub(crate)` for the same
-    /// reason [`RepoFacts::test_resolution`] is: `crate::technologies`
-    /// reuses this rather than re-deriving a root-relative existence check.
+    /// Whether `path:p`'s content still exists on disk.
+    ///
+    /// Both callers ([`resolve_anchor`] here and
+    /// `crate::technologies::resolve_anchor`) already check
+    /// [`path_anchor_is_well_formed`] first, so in practice `p` is always
+    /// well-formed by the time this runs — but that is not a precondition
+    /// this function TRUSTS: it re-checks, and returns `false` (not-found,
+    /// never a panic or a surprising match) for a malformed `p` rather than
+    /// stating an unenforced assumption in prose. Safe by construction at
+    /// no real cost, since the check is one cheap function call.
+    /// `pub(crate)` for the same reason [`RepoFacts::test_resolution`] is:
+    /// `crate::technologies` reuses this rather than re-deriving a
+    /// root-relative existence check.
     pub(crate) fn path_exists(&self, p: &str) -> bool {
-        self.root.join(p).exists()
+        path_anchor_is_well_formed(p) && self.root.join(p).exists()
     }
 }
 
@@ -463,6 +472,7 @@ fn is_identifier_boundary(c: char) -> bool {
 /// <symbol>` cannot see that the match is `#[ignore]`d, so an anchor citing
 /// a heavy or otherwise-skipped battery read as resolved exactly like one
 /// the gate actually exercises.
+///
 /// `pub(crate)`: `crate::technologies::resolve_anchor` matches on this
 /// directly rather than re-deriving it (see [`RepoFacts::test_resolution`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1027,7 +1037,7 @@ fn resolve_anchor(
                         item.id
                     ),
                 })
-            } else if facts.root.join(p).exists() {
+            } else if facts.path_exists(p) {
                 None
             } else {
                 Some(Finding::Dangling {
