@@ -7140,3 +7140,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T22:38:49Z | sluice:clients | 195.556 | 3208.254 | 317.368 | 18.03 | 0 | b5ae83812 |  | lefford | 40 |
 | 2026-09-10T22:46:27Z | sluice:heavy | 457.308 | 12947.179 | 294.833 | 28.96 | 0 | f5649d02e |  | lefford | 40 |
 | 2026-09-10T23:54:31Z | gate-commit | 43.565 | 74.834 | 21.856 | 2.22 | 0 | a483c5d9f | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-11T01:36:44Z | census-tail-chorus | 60.346 | 811.712 | 26.351 | 13.89 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:48:40Z | census-study-the-census | 715.525 | 26783.065 | 158.304 | 37.65 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:54:19Z | census-study-the-meeting | 339.430 | 12233.722 | 134.850 | 36.44 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:54:21Z | census-tail-domesday | 1.285 | 1.107 | 0.130 | 0.96 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:54:21Z | census-tail-anomalies | 0.983 | 0.844 | 0.140 | 1.00 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:54:47Z | census | 1366.487 | 41737.936 | 406.624 | 30.84 | 0 | fa1223fd7 |  | lefford | 40 |
