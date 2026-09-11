@@ -318,7 +318,16 @@ fn max_of_seven_separates_worlds_the_mean_does_not() {
 /// `drainage`.
 ///
 /// A rung with no eligible chamber at this seed returns all-zero (never
-/// `NaN`); [`argmax_index`] still resolves that to index `0`.
+/// `NaN`). **This is not a safe input to [`argmax_index`].** An all-zero
+/// seven-entry array is a seven-way tie, and `argmax_index` resolves a tie
+/// to the LATER index — `EnergySource::ALL[6]`, `DetritalImport` — so
+/// feeding it an all-zero histogram would silently cast a vote for
+/// `DetritalImport` dominance with no data behind it at all. Every entry is
+/// non-negative and, when `total > 0`, sums to exactly `1.0`; a caller must
+/// treat `total == 0` (every entry `0.0`) as "no vote" and exclude that
+/// `(seed, rung)` pair from any argmax-based computation rather than mapping
+/// it to any index — `composition_separates_worlds_at_some_rung` does this
+/// and counts exclusions per rung.
 fn normalized_dominant_histogram(wc: &WorldComponents, seed_value: u64, rung: Band) -> [f64; 7] {
     let (terrain, surface) = world_at(seed_value, wc);
     let geo: &Geosphere = terrain.geosphere();
@@ -422,20 +431,74 @@ fn total_variation(p: &[f64], q: &[f64]) -> f64 {
 /// **named dominant source**; the successor inherits a rich allocation
 /// axis, and 0966 stands as written.
 ///
-/// claim: readout(off-gate, prints all sixty histograms and the per-rung
-/// pairwise TV distances before any verdict)
+/// **Fix round 1 (Task 3 review), re-measured 2026-09-11.** Two corrections,
+/// neither changing `M1`: (1) a zero-total `(seed, rung)` pair — no
+/// cave-bearing chamber matched that rung — is now EXCLUDED from the
+/// argmax/distinct-count and TV/margin computations, rather than silently
+/// feeding an all-zero histogram to `argmax_index`, which would have
+/// resolved the seven-way tie to index `6` (`DetritalImport`) and cast a
+/// vote with no data behind it. **It did not fire: excluded pairs = 0 at
+/// every one of the five rungs**, so `M1 = 3` stands unchanged. (2) each
+/// `(seed, rung)`'s top1-vs-top2 margin and each rung's minimum margin
+/// across the twelve seeds are now printed — diagnostic only, asserted on
+/// nothing. **Measured minimum margins: Undercroft 0.0315, Shallows 0.0341,
+/// Deeps 0.0216, Underdeep 0.0009, Nadir 0.0036.** Undercroft and Shallows
+/// are comfortably separated; Deeps is modest; **Underdeep and Nadir are
+/// near-zero** — both minima land on seed 1 (Underdeep: Methanogenesis
+/// 0.29659 vs IronReduction 0.29570; Nadir: IronReduction 0.30018 vs
+/// Methanogenesis 0.29659), essentially a coin-flip at that one seed. This
+/// does not change either rung's `M1(r)` — Underdeep's distinct set is
+/// `{1, 3, 4}` and Nadir's is `{1, 3}` from the other eleven seeds regardless
+/// — but it means `M1(r) = 3` at Underdeep is one noise-sensitive seed away
+/// from `M1(r) = 2` there, worth carrying into Stage 2's own scrutiny of the
+/// surprising row.
+///
+/// claim: readout(off-gate, prints all sixty histograms, each seed's top1/
+/// top2/margin, the per-rung pairwise TV distances, the per-rung minimum
+/// margin, and per-rung excluded-pair counts, all before any verdict)
 #[test]
 #[ignore = "probe: M1, per-rung composition separation; run by hand (The Ceiling, Stage 1)"]
 fn composition_separates_worlds_at_some_rung() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let mut per_rung_distinct = Vec::new();
+    let mut total_excluded = 0usize;
 
     for (ri, &rung) in UNDERGROUND_RUNGS.iter().enumerate() {
         let mut argmaxes = Vec::new();
         let mut hists = Vec::new();
+        let mut margins = Vec::new();
+        let mut excluded = 0usize;
         for &seed in &Q6_SEEDS {
             let h = normalized_dominant_histogram(&wc, seed, rung);
             println!("{rung:?} seed {seed}: h = {h:?}");
+
+            // "No chamber means no vote" (Task 3 fix round 1, Finding 1): an
+            // all-zero histogram is a seven-way tie that argmax_index would
+            // silently resolve to index 6 (DetritalImport, the later-index
+            // tie-break) with no data behind it. Excluded entirely from the
+            // argmax/distinct-count and TV/margin computations below, rather
+            // than mapped to any index.
+            if h.iter().all(|&x| x == 0.0) {
+                excluded += 1;
+                println!(
+                    "{rung:?} seed {seed}: EXCLUDED -- zero cave-bearing chambers matched this rung, no vote cast"
+                );
+                continue;
+            }
+
+            // Top1-vs-top2 margin (Task 3 fix round 1, Finding 2): diagnostic
+            // only, asserted on nothing. Makes a coin-flip argmax visible at
+            // the per-(seed, rung) level, which the median TV distance alone
+            // cannot.
+            let mut sorted = h;
+            sorted.sort_by(|a, b| b.total_cmp(a));
+            let (top1, top2) = (sorted[0], sorted[1]);
+            let margin = top1 - top2;
+            println!(
+                "{rung:?} seed {seed}: top1 = {top1:.4}, top2 = {top2:.4}, margin = {margin:.4}"
+            );
+            margins.push(margin);
+
             argmaxes.push(argmax_index(&h));
             hists.push(h);
         }
@@ -452,13 +515,35 @@ fn composition_separates_worlds_at_some_rung() {
             }
         }
         tvs.sort_by(f64::total_cmp);
+        let min_margin = margins
+            .iter()
+            .copied()
+            .min_by(f64::total_cmp)
+            .unwrap_or(f64::NAN);
         println!(
-            "{rung:?}: M1(r) = {} distinct argmaxes {:?}, median pairwise TV = {:.4}",
+            "{rung:?}: M1(r) = {} distinct argmaxes {:?}, median pairwise TV = {:.4}, \
+             minimum top1-top2 margin = {:.4}, excluded pairs = {excluded}",
             distinct.len(),
             distinct,
-            median(&mut tvs.clone())
+            median(&mut tvs.clone()),
+            min_margin
         );
+        if excluded > 0 {
+            println!(
+                "{rung:?}: {excluded} of {} (seed, rung) pairs EXCLUDED (zero cave-bearing \
+                 chambers) -- this is itself a finding, not merely a diagnostic",
+                Q6_SEEDS.len()
+            );
+        }
+        total_excluded += excluded;
         per_rung_distinct.push((ri, distinct.len()));
+    }
+
+    if total_excluded > 0 {
+        println!(
+            "TOTAL EXCLUDED (seed, rung) PAIRS ACROSS ALL RUNGS = {total_excluded} \
+             (expected 0; see per-rung EXCLUDED lines above)"
+        );
     }
 
     let m1 = per_rung_distinct.iter().map(|(_, n)| *n).max().unwrap_or(0);
