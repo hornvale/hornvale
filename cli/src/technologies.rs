@@ -9,19 +9,24 @@
 //! closure over `presupposes` (decision 0386) rather than declared, and by
 //! the one new verdict `lost`.
 //!
-//! **This is the loader only** (Task 3 of The Kiln). It parses a corpus and
-//! fails loudly on malformed input — an unrecognized `verdict` or
-//! `criterion.kind` is a parse error naming the offending value, never a
-//! silent default. The freeze assertions (item count, disclosure
-//! discipline), the derived-demand closure, anchor resolution and criterion
-//! evaluation are later tasks' work and deliberately do not live here yet:
-//! [`Criterion`] is a minimal round-tripping type today, not something this
-//! module evaluates.
+//! **The loader, the freeze, and the prerequisite lattice** (Tasks 3-4 of
+//! The Kiln). It parses a corpus and fails loudly on malformed input — an
+//! unrecognized `verdict` or `criterion.kind` is a parse error naming the
+//! offending value, never a silent default, and [`parse`] additionally
+//! rejects a `presupposes` edge naming an unknown item or forming a cycle,
+//! for the same reason. [`derived_demands`] computes the transitive closure
+//! over `presupposes` on read (decision 0386) — never materialised into the
+//! file. The item-count freeze itself lives in the test suite
+//! (`cli/tests/suite/technology_corpus.rs`), matching the sibling
+//! families. Anchor resolution and criterion evaluation are later tasks'
+//! work and deliberately do not live here yet: [`Criterion`] is a minimal
+//! round-tripping type today, not something this module evaluates.
 //!
 //! The corpus is DATA (`technologies/*.technology.json`) and this module is
 //! its RESOLVER (decision 0011). Nothing in `domains/*` or `windows/*` reads
 //! a corpus file.
 use serde::Deserialize;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 /// How one imported technology-capability item stands against Hornvale.
@@ -161,12 +166,112 @@ pub struct Corpus {
 /// JSON, and an unrecognized `verdict` or `criterion.kind` must name the
 /// offending value rather than default silently — which `serde_json`'s own
 /// tagged-enum error already does, so the panic message is not hand-rolled.
+/// The same standard applies to the `presupposes` lattice: a `presupposes`
+/// naming an unknown item, or a cycle among items, is checked here and
+/// panics naming the offending id, rather than reaching [`derived_demands`]
+/// as a hang or a silently incomplete closure.
 /// type-audit: bare-ok(artifact: text)
 pub fn parse(text: &str) -> Corpus {
-    match serde_json::from_str(text) {
-        Ok(corpus) => corpus,
+    match serde_json::from_str::<Corpus>(text) {
+        Ok(corpus) => {
+            validate_lattice(&corpus);
+            corpus
+        }
         Err(e) => panic!("technology corpus parse: {e}"),
     }
+}
+
+/// Check the `presupposes` lattice for the two ways it can be malformed:
+/// an edge naming an item not in this corpus (decision 0386: "names an item
+/// in this corpus and nothing else"), and a cycle, which would make
+/// [`derived_demands`]'s closure loop forever. Panics naming the offending
+/// id on either failure; does nothing on a clean lattice.
+///
+/// Cycle detection is iterative (an explicit stack, not recursion), so a
+/// pathological corpus fails with a panic naming the offending id rather
+/// than a stack overflow.
+fn validate_lattice(corpus: &Corpus) {
+    let by_id: BTreeMap<&str, &Item> = corpus.items.iter().map(|i| (i.id.as_str(), i)).collect();
+
+    for item in &corpus.items {
+        for p in &item.presupposes {
+            if !by_id.contains_key(p.as_str()) {
+                panic!(
+                    "technology corpus: item {:?} presupposes unknown item {:?}",
+                    item.id, p
+                );
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, PartialEq)]
+    enum Mark {
+        /// On the current DFS path — a back-edge to this id is a cycle.
+        Visiting,
+        /// Fully explored; safe to skip.
+        Done,
+    }
+    let mut marks: BTreeMap<&str, Mark> = BTreeMap::new();
+
+    for &start in by_id.keys() {
+        if marks.contains_key(start) {
+            continue;
+        }
+        // Iterative DFS: each stack frame is (id, index of its next
+        // `presupposes` edge to visit), standing in for a recursive call's
+        // local state.
+        let mut stack: Vec<(&str, usize)> = vec![(start, 0)];
+        marks.insert(start, Mark::Visiting);
+        while let Some((id, edge_idx)) = stack.pop() {
+            let item = by_id[id];
+            if edge_idx < item.presupposes.len() {
+                let next = item.presupposes[edge_idx].as_str();
+                stack.push((id, edge_idx + 1));
+                match marks.get(next) {
+                    Some(Mark::Visiting) => {
+                        panic!("technology corpus: cycle in presupposes lattice at {next:?}");
+                    }
+                    Some(Mark::Done) => {}
+                    None => {
+                        marks.insert(next, Mark::Visiting);
+                        stack.push((next, 0));
+                    }
+                }
+            } else {
+                marks.insert(id, Mark::Done);
+            }
+        }
+    }
+}
+
+/// The demand set for item `id`: the transitive closure of `presupposes`,
+/// collecting each reached item's `introduces` — including `id`'s own, which
+/// is why a root's demand set is never empty (decision 0386).
+///
+/// Computed on read and never written into the corpus (decision 0261: it
+/// would state one fact twice). Assumes the corpus already passed
+/// [`parse`]'s lattice validation — an unknown id in `presupposes` or a
+/// cycle cannot reach this function from a corpus loaded through [`parse`]
+/// or [`load`], so no further cycle or dangling-reference handling is done
+/// here.
+/// type-audit: bare-ok(identifier-text: id), bare-ok(identifier-text: return)
+pub fn derived_demands(c: &Corpus, id: &str) -> BTreeSet<String> {
+    let by_id: BTreeMap<&str, &Item> = c.items.iter().map(|i| (i.id.as_str(), i)).collect();
+    let mut demands = BTreeSet::new();
+    let mut seen: BTreeSet<&str> = BTreeSet::new();
+    let mut stack: Vec<&str> = vec![id];
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        if let Some(item) = by_id.get(current) {
+            demands.insert(item.introduces.clone());
+            for p in &item.presupposes {
+                stack.push(p.as_str());
+            }
+        }
+    }
+    demands
 }
 
 /// Read a corpus file from `path` and delegate to [`parse`].
