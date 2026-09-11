@@ -1346,3 +1346,85 @@ it unasked.
 
 **Ideonomy passes / overturns:** none; two peer findings, one correcting my
 own claim.
+
+---
+
+## #18 [Q] — A missing JOIN is not a missing HALF, and this campaign was conflating them
+
+**The Tidemark closed their own supply question by finding the producer was
+never missing**, and the result corrects a sentence this campaign has been
+repeating since The Ceiling:
+
+```
+waterworld.rs:584   plankton = light/(light+1), derived from attenuated light
+readers             test assertions ONLY
+marine_habitat.rs   zero references to plankton — it never crosses into scoring
+```
+
+**Producer present. Consumer present. Join absent.** Neither end is missing,
+which is exactly why neither end looked broken.
+
+**THE CORRECTION TO THIS CAMPAIGN'S OWN HEADLINE.** "The underworld is richly
+derived and thinly read" has been applied to three findings as though they
+were one defect. They are two kinds:
+
+| finding | producer | consumer vocabulary | what is wrong |
+|---|---|---|---|
+| lithology's nine fields | exists | **absent** | a missing HALF |
+| composition | exists | **absent** | a missing HALF |
+| the light ladder | exists | **exists** (the kernel's `LIGHT` axis) | a missing **JOIN** |
+
+**A missing half needs vocabulary built; a missing join needs a wire run.**
+Different costs, different owners, different odds of being closed by accident.
+Spec §2 corrected to split them; §6 already scopes the light join out, and now
+says why it is a different animal rather than the same one deferred.
+
+## The hierarchy, completed (their fourth line)
+
+```
+  legality          checkable by a TABLE
+  coherence         checkable by an AGREEMENT test
+  load-bearingness  checkable ONLY by ABLATION
+  a MISSING JOIN    checkable by NONE of the three -- because both sides pass
+```
+
+Ablation tells you a weight is decorative. **It cannot tell you whether the
+supply exists-but-unwired or is genuinely absent.** They found theirs by going
+looking after the null — "curiosity, not method", in their words.
+
+**A candidate fourth instrument, offered as a candidate and NOT built here.**
+Their plankton's tell is stated in their own message: *readers — test
+assertions only*. That is mechanically detectable. Not by `dead_code`, which
+is satisfied because the field IS read; but a check of the form **"a derived
+value whose only readers are `#[cfg(test)]` or `tests/`"** would have flagged
+it, and would flag any future overlay stock that is computed, asserted about,
+and never joined. It is the data-flow analogue of dead code, and this repo
+already has the family — `seam-guard` asks whether a function's contribution
+is pinned by any assertion, `type-audit` whether a boundary primitive carries
+a verdict, both default-deny with declared waivers.
+
+**Honest limits, which matter more than the idea:** it catches *some* missing
+joins and never all (a value read once by production and then discarded would
+pass); its false-positive rate is unknown and could make it useless; and it
+needs a waiver mechanism on day one or it reds everywhere and gets ignored,
+which this project has watched happen. **Written down as a candidate rather
+than left as folklore; not built in this campaign, which is the food system.**
+
+## What the whole exchange established about method
+
+Between the two campaigns today: **five bounded-window errors, and not one was
+caught by the side that made it.** Theirs were windows over text — a
+`grep -A 18` concluding a field did not exist, a BSD `awk '/\bworld\b/'`
+returning nothing because that regex engine has no `\b`, a roster-anchored
+sweep reporting one kind's value for six. Mine were windows over **context** —
+one file standing for its sibling (#13), one tree standing for another (#17).
+
+**Same error, different substrate: a window mistaken for the thing.**
+
+Every one was found by the other side re-running it. That is not a fact about
+carelessness; it is a fact about what self-review structurally cannot do, and
+it is the strongest argument this session has produced for two campaigns
+talking rather than one campaign being thorough.
+
+**Ideonomy passes / overturns:** none; a peer finding that overturned this
+campaign's own framing of its headline.

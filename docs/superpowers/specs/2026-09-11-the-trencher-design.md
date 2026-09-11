@@ -69,6 +69,22 @@ depth-attenuated light ladder is populated and read by nothing
 (`BIO-underground-light-is-unfed`). **The underworld is richly derived and
 thinly read.**
 
+**Those three are NOT one defect, and an earlier draft of this paragraph
+treated them as one** (corrected after The Tidemark's plankton finding, ledger
+#18). They divide:
+
+| finding | producer | consumer vocabulary | what is wrong |
+|---|---|---|---|
+| lithology's nine fields | exists | **absent** — no tolerance axis | a missing HALF |
+| composition | exists | **absent** — no niche axis names a source | a missing HALF |
+| the light ladder | exists | **exists** — the kernel's registered `LIGHT` axis | a missing **JOIN** |
+
+**A missing half needs vocabulary built; a missing join needs a wire run.**
+Different costs, different owners, and different odds of being closed by
+accident. This campaign builds vocabulary (§4.2) and therefore addresses the
+first two; the light join is named in §6 as out of scope rather than folded in
+under a heading that made it look identical.
+
 ## 3. What makes the fix cheap, verified
 
 **The diet vocabulary is OPEN.** `kernel/src/ecology.rs:32` — "A registered
