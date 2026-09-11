@@ -735,7 +735,7 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// `RAID_DISPOSITION_MIN` re-seats its genesis flagship on at least
 /// `RAIDER_MIN` of the seed panel's worlds.
 #[test]
-#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow's measured series is 14/60 -> 12/60 -> 10/60 -> 9/60 -> 7/60 -> 9/60 -> 18/60 across the named campaign closes, denominator held at 60; the latest increase followed four new Underworld peoples entering the roster, but its downstream attribution is not yet established, so the post-epoch witness remains below the 0.30 floor and is not lowered)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow's measured series is 14/60 -> 12/60 -> 10/60 -> 9/60 -> 7/60 -> 9/60 -> 18/60 across the named campaign closes, denominator held at 60; the latest increase followed four new Underworld peoples entering the roster, but its downstream attribution is not yet established, so the post-epoch witness is now at the 0.30 floor and is not lowered)"]
 fn every_raider_clears_the_floor_preregistered_not_met() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     let (raiders, _) = raiders_and_abstainers(&wc);
@@ -921,7 +921,7 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// 7/60 = 0.117 until that successor measurement exists.
 ///
 /// **RE-READ AT THE UNDERWORLD PEOPLES' CLOSE (2026-09-11): 9/60 → 18/60.**
-/// The denominator still holds at 60, and the new reading remains below the
+/// The denominator still holds at 60, and the new reading is now at the
 /// 0.30 floor. This is a measured post-roster-expansion re-read after
 /// mountain dwarves, duergar, kuo-toa and svirfneblin entered the Underworld;
 /// it does not establish which downstream epoch or placement cascade accounts
