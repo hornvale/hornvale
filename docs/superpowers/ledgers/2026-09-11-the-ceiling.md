@@ -1,0 +1,172 @@
+# The Ceiling — decision ledger
+
+**Campaign:** The Ceiling (rung 3 of the Underworld Larder metaplan).
+**Branch:** `campaign/the-ceiling`. **Base:** `26003913d`.
+**Started:** 2026-09-11.
+
+Autopilot is engaged. Entries are written as rulings occur, per
+`campaign-autopilot` and decision 0486 (The Cartulary).
+
+---
+
+## #1 [Q] — What is this campaign, given The Tidemark holds the marine half?
+
+**Backfilled.** Recorded after the fact; the ruling was made before this
+ledger existed.
+
+**Question.** Nathan asked to pick up "The Tenant" — the campaign the
+`BIO-chemotrophy` registry row names as owning rung 4 ("no `Surface`-realm
+kind weights it yet, so a vent's own supply reaches no consumer — THE
+TENANT's job, rung 4"). Investigation found that description is no longer
+available:
+
+- A campaign named **The Tenant did run**, merging `7b0438986` on
+  2026-08-30. Its entire content is decision 0516 (a reachable lock implies
+  a reachable key is left empirical), a ten-line doc comment in
+  `windows/vessel/src/interior/pattern.rs`, and a timings row. Chamber locks
+  and keys, following The Chattel. **Unrelated to the larder.** It left no
+  spec, plan, ledger, chronicle, retrospective, or row in
+  `docs/audits/campaign-reconciliation.tsv`.
+- **`campaign/the-tidemark` is live** (worktree `.claude/worktrees/the-shoal`,
+  spec stage, last commit 2026-09-11) and has **already absorbed the marine
+  half of rung 4**, deliberately and with a documented boundary. Its spec §7:
+  "The underworld's trophic half stays THE TENANT's. This campaign takes the
+  *marine* half of the larder metaplan's rung 4 only: the vent commensal
+  weights `CHEMOSYNTHATE` and consumes `marine_chemosynthate_supply_field`."
+  Its ledger #5 records the same forensics on The Tenant, reached
+  independently.
+
+So the registry sentence Nathan was pointing at describes work now in
+flight in another campaign.
+
+**Decision (Nathan's, surfaced as a hard stop).** This campaign is **rung 3,
+THE CEILING** — the derived underworld carrying capacity. Rung 4 remains
+open for a successor, minus the marine half.
+
+**Why this rather than rung 4.** Rung 4's own metaplan entry says "Needs
+1-3." Rungs 1-2 shipped (The Gossan, The Sources). **Rung 3 has never run** —
+no spec, no branch, no chronicle. Building the tenant on an underived ceiling
+would invert the program's own dependency order.
+
+**Why it was surfaced rather than auto-resolved.** No precedent existed in
+any link of the autopilot chain — the metaplan records rung 3's design
+question as literally "Nathan has not ruled" — and the candidate answers
+diverge materially in what gets built. Both conditions for escalation held.
+
+**Alternatives discarded.**
+- *Rung 4 now, collapsing rung 3 into it* — larger, and it needs naming,
+  which The Winze explicitly refuses (§4.6/§7: `thaumic` stays 0.0, nothing
+  named).
+- *Re-cut the metaplan first as its own short campaign* — real work (see
+  Follow-ups), but ceremony ahead of the measurement that would inform it.
+- *Hold until The Tidemark lands* — its `HabitatRealm::Marine` forces open
+  all three realm-match sites and its M1 may reclassify the vent
+  representations, but neither reaches rung 3's derivation. Not a blocker.
+
+**Ideonomy passes / overturns:** none run for this entry. It is a scope
+question settled by the metaplan's own dependency order plus a ruling from
+Nathan, not a design space. The design passes belong to #3 onward.
+
+**Capture actions:** board `notice` `2797ec8f8eab` (the boundary, the C.3
+ruling, and the name collision); wire message to the live Tidemark session
+accepting its boundary as written; Follow-ups below.
+
+---
+
+## #2 [Q] — C.3: should the underworld's budget be symmetric?
+
+**Backfilled.** Same sitting as #1.
+
+**Question.** The Winze's amendment C.3 argues the bound on a spreading
+horror should be **symmetric** with the bound on a spreading ecology — "both
+eat the same rock. One budget with two kinds of consumer is a mechanism; a
+special-case cap on monsters is a knob wearing a mechanism's clothes." The
+metaplan carries this into rung 3 as its open design question and records
+"**Nathan has not ruled**." It is a fidelity/world-type tradeoff, which
+`campaign-autopilot` makes an unconditional hard stop.
+
+**Decision (Nathan's).** **Symmetric budget, asymmetric allocation.** One
+budget with two kinds of consumer — C.3's mechanism claim stands — but
+**composition decides the split, not magnitude**.
+
+**Why, and why this is a third option C.3 did not offer.** C.3 states its own
+cost as: "barren and deadly" and "lush and safe" both become unreachable
+world-types, because rich rock feeds both a rich ecology and a far-ranging
+horror. That amendment is dated 2026-08-24. **The Sources then measured
+something that undercuts the premise** — and the metaplan itself carries the
+finding, in rung 3's own inherited-diagnosis paragraph:
+
+> do not design this rung against lithology carrying the variety budget. Rock
+> chemistry underground was measured as roughly **three near-constant
+> categorical states** … variety survives in *composition* — which mechanism
+> dominates, not how much arrives — and per-world **presence** of an axis at
+> all.
+
+If variety lives in composition rather than magnitude, then a symmetric
+*budget* whose *allocation* is composition-dependent can still reach both
+extreme world-types: low total with a composition favouring the horror is
+"barren and deadly"; high total with a composition favouring ecology is "lush
+and safe". C.3's stated cost would dissolve without weakening its mechanism
+claim.
+
+**This is a hypothesis, not a result, and the distinction is load-bearing.**
+Nothing has measured whether composition carries enough independent signal to
+separate those world-types. Establishing it is this campaign's central
+preregistered measurement, and a null is a publishable finding that sends the
+ruling back to C.3's binary (decision 0016; the null-as-headline precedent is
+well established here).
+
+**Alternatives discarded.**
+- *Symmetric, accepting C.3's stated cost* — the amendment as written. Loses
+  two world-types Nathan has named as wanted ("Carpenter's Apocalypse
+  Trilogy … three world-ending scenarios that differ from each other").
+- *Asymmetric* — keeps the world-types, and earns C.3's own objection: the
+  cap's value is identical in every world by construction, which is authoring
+  rather than simulating.
+- *Not ruling yet* — would have forced the scope answer in #1 toward
+  re-cutting the metaplan or holding.
+
+**Ideonomy passes / overturns:** one pass, informal, run at question-framing
+time — implication-mining C.3's stated cost against the finding that
+postdates it. It produced the third option, which Nathan adopted, so this
+entry records **one overturn of the amendment's own binary framing**. A
+formal multi-operation pass on the *derivation* — what quantity the budget
+is, how allocation reads composition — has **not** been run and is #3's job,
+before any approach is proposed.
+
+**Capture actions:** board `notice` `2797ec8f8eab`; wire message to the
+Tidemark session, whose ledger flagged this as "not this campaign's call to
+make unilaterally"; the hypothesis is carried forward as this campaign's
+preregistration and must be frozen in the spec before the code that would
+move it.
+
+---
+
+## Follow-ups
+
+- **The metaplan's rung 4 needs re-cutting, and nobody owns it.** Rung 4 is
+  now split: The Tidemark takes the marine half, a successor takes the
+  underworld half. The metaplan (`docs/superpowers/specs/2026-08-24-the-underworld-larder-metaplan.md`)
+  still describes it as one rung owned by "THE TENANT". The Tidemark's own
+  ledger flagged this and declined to act — "worth separating when THE TENANT
+  is scheduled; not this campaign's call to make unilaterally." Scheduling
+  this campaign is that moment, but the edit belongs with the rung-4
+  successor's spec, not here; recorded so it is not lost a third time.
+- **The name "The Tenant" is now ambiguous and should be retired or
+  qualified.** It denotes (a) the 2026-08-30 lock-and-key landing that minted
+  0516, (b) the metaplan's rung 4, and (c) The Winze C.2's ALIVE position ("a
+  tenant that eats, spreads, and can be killed, fled, or bargained with"),
+  which is where the rung took its name. Two sessions have now independently
+  burned effort disambiguating it. The rung-4 successor should take a fresh
+  name.
+- **A decision-only campaign leaves no reconciliation row.** The Tenant is
+  invisible to the coverage test in `docs/audits/campaign-reconciliation.tsv`
+  because that test keys on spec-and-plan campaigns. Not this campaign's to
+  fix; it is the mechanical reason "did The Tenant close?" could not be
+  answered by looking where one would look. (Independently observed by The
+  Tidemark's ledger — two campaigns reaching the same finding is itself
+  evidence it is worth fixing.)
+- **`marine_chemosynthate_supply_field`'s doc reserves rung 4 in the present
+  tense** and names THE TENANT. It becomes stale the moment The Tidemark
+  lands. Theirs to update, flagged to them on the wire; noted here in case it
+  survives their sweep.
