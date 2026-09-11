@@ -494,6 +494,7 @@
 - [Skyworld Seams](./chronicle/skyworld-seams.md)
 - [The Observation Series](./chronicle/the-observation-series.md)
 - [The Vent](./chronicle/the-vent.md)
+- [The Living Vent](./chronicle/the-living-vent.md)
 
 # Appendix: The Frontier
 

@@ -5,6 +5,9 @@
 **Goal:** Extend the merged static Waterworld overlay with a deterministic,
 bounded, query-pure vent succession snapshot over exact world time.
 
+**Status:** Complete through implementation, review, stage gate, and close
+preparation. The unrelated root `IMPLEMENTATION_PLAN.md` remains untouched.
+
 **Architecture:** Keep the composition-root implementation in
 `windows/worldgen`. `WaterWorld` owns stable substrate and seeded vent source
 parameters; `WaterWorldSnapshot` is derived by a pure time query and owns
