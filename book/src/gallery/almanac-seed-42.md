@@ -279,7 +279,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Nadash'dawaddadash** — temperate-forest
 - **Panam (26.0°N, 18.6°W)** — temperate-forest
 - **Kamabsabag** — temperate-forest
-- **Dawad** — temperate-forest
+- **Dawad (site 201)** — temperate-forest
 - **Googšroo (10.5°N, 123.3°E)** — temperate-forest
 - **Xo (27.2°N, 112.1°E)** — temperate-forest
 - **Xaxaro (25.6°N, 116.2°E)** — taiga
@@ -300,11 +300,11 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Zroṅṅoṅsroṅzroṅ** — taiga
 - **Qashak (21.0°N, 129.5°E)** — taiga
 - **Bago (23.6°N, 111.3°E)** — temperate-forest
-- **Bsa** — temperate-forest
+- **Bsa (site 222)** — temperate-forest
 - **Bobeqabobana** — temperate-forest
 - **Bodoqaqado** — tropical-rainforest
 - **Qzhomso** — shrubland
-- **Dzhoobsoo** — temperate-forest
+- **Dzhoobsoo (site 226)** — temperate-forest
 - **Bobeqa** — temperate-forest
 - **Kotobobeqa** — temperate-forest
 - **Pogsrorogdoo** — temperate-forest
@@ -319,7 +319,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Zhaqsambza** — temperate-forest
 - **Samzozha** — temperate-forest
 - **Saamzo** — temperate-forest
-- **Dzhoobsoo** — temperate-forest
+- **Dzhoobsoo (site 241)** — temperate-forest
 - **Qada** — tropical-seasonal-forest
 - **Bobeqa** — upwelling
 - **Na (22.7°N, 110.6°E)** — temperate-forest
@@ -364,7 +364,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Samzoqzhomso (31.7°N, 17.7°W)** — shrubland
 - **Xaxaro (27.4°N, 115.4°E)** — taiga
 - **Raxa (26.5°N, 115.8°E)** — taiga
-- **Qzhomso** — shrubland
+- **Qzhomso (site 286)** — shrubland
 - **Sao (33.5°N, 18.4°W)** — shrubland
 - **Zhnaapqsoxpshapzhazno** — temperate-forest
 - **Nenoo** — shrubland
@@ -382,7 +382,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Xo (22.6°N, 112.8°E)** — taiga
 - **Xo (24.5°N, 112.1°E)** — temperate-forest
 - **Roaroro** — temperate-forest
-- **Dawad** — temperate-forest
+- **Dawad (site 304)** — temperate-forest
 - **Zawad** — temperate-forest
 - **Zawaw** — taiga
 - **Qebabago** — temperate-grassland
