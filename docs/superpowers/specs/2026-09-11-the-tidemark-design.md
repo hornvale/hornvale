@@ -51,6 +51,14 @@ windows/worldgen/src/waterworld.rs:405             <- the definition
 `WaterWorldConfig` are the same: test-only. No `BuildDepth` rung constructs the
 overlay, no CLI command reaches it, no window renders it.
 
+**A marine people is already shipped, at the shelf.** `sea-elf` is a settling
+people with `SWIM` locomotion, a marine-dominant resource axis and an authored
+`(depth, SST)` biome affinity, and it is `Surface` by absence from
+`habitat_realm_registry`. Its own rows state the reason: "a settled coastal
+people does not live entirely in the water", so "it sleeps ashore, on what it
+built. Not `ALREADY_BUOYED`." So `WAT-sea-peoples`' "elves" is partly shipped,
+and what is missing is the **obligate** kind, not a marine people as such.
+
 **The Delvers' blocker does not bind here.** `habitat_realm_registry`'s own
 comment records that two subterranean peoples were added and withdrawn because
 "a kind whose identity is DEPTH cannot be expressed by an axis measured in
@@ -103,7 +111,10 @@ the same construct at different realms, rather than two parallel ones").
 ### 3.4 The peopled kind
 
 One kind, following drow's precedent exactly: a single authored separation from
-its surface relatives — the realm gate — and no others. The trap `HabitatRealm`
+its surface relatives — the realm gate — and no others. It is the **obligate**
+marine kind, defined by contrast with the `sea-elf` the roster already ships
+(§3.6): the sea elf holds the shelf and sleeps ashore, this kind holds the
+column and cannot. The trap `HabitatRealm`
 names is "distinguishing two kinds by DEPTH, which nothing in the model can
 say", so this campaign authors **one** marine people and not a merfolk/triton
 pair. It carries an `EnvironmentNiche` row scored against the marine names
@@ -116,6 +127,36 @@ New, and the part with no precedent: a test at the composition root pinning
 Both directions, because a one-directional check is structurally blind to
 over-admission and still reads as total. This is what stops the forced
 duplicate from drifting, and it is what makes the aerial realm cheap later.
+
+### 3.6 `sea-elf` stays `Surface`, stated rather than defaulted
+
+`HabitatRealm`'s registry is sparse and absence means `Surface`. That default is
+correct for every kind today, and it becomes load-bearing the moment a third
+variant exists — because the roster **already ships a marine people**.
+
+`sea-elf` is a settling people, carries `SWIM`, is marine-dominant on its
+resource axis, and has an authored `(depth, SST)` biome affinity on the shelf.
+It is `Surface` today only by absence from the registry, and its own rows say
+why that is right rather than accidental: "a settled coastal people does not
+live entirely in the water", so "it sleeps ashore, on what it built. Not
+`ALREADY_BUOYED`." Its terrestrial residue is the shore it builds on.
+`giant-crocodile` is the same question in fauna form — "the roster's stated
+amphibious case — land-dominant at 0.6 `ANIMAL_PREY`".
+
+A reader meeting a new `Marine` variant will reasonably assume a sea elf belongs
+to it. Acting on that assumption strips the kind of its land habitat outright,
+because the availability mask is `{0.0, 1.0}` and has no middle value for a life
+lived across two media — which the project solved for these kinds with **niche
+weights, not with a realm**, and this campaign does not disturb that.
+
+So both classifications become **explicit and tested**, in the shape
+`environment_niche_registry` already uses for its own absence ("absence is
+load-bearing, and it is the campaign's positive control").
+
+**This also settles what the new kind is for.** It is not "a marine people" —
+there is one. It is the **obligate** kind: the one that cannot come ashore, at
+the far end of the scale from sea-elf's shelf. The realm gate is precisely the
+separation between them, and unlike depth it is something the model can say.
 
 ## 4. The expiring habitat
 
@@ -230,6 +271,17 @@ later one. The prediction is a non-zero count; a zero count means vent phase
 reaches seating in name only, and would falsify §4 — the campaign's headline —
 rather than merely underperforming.
 
+**M4 — Do the two straddling kinds keep their land habitat?** Count the
+vertices at which `sea-elf` and `giant-crocodile` each have non-zero
+availability, before and after `HabitatRealm::Marine` exists, at seed 42.
+
+- *Prediction:* each kind's two counts are **equal** — `Surface` by absence
+  before, `Surface` by explicit statement after, so nothing moves.
+- *If either pair differs at all*, the new variant has silently reclassified a
+  shipped kind, which is the defect §3.6 exists to prevent, and the difference
+  names its size. For `sea-elf` this would be visible as a settling people
+  losing the shore it builds on.
+
 **Negative control for M3:** the same sweep with vent phase held constant must
 produce a count of zero. Without it, M3's non-zero count could come from any
 time-varying term in the stack.
@@ -240,10 +292,12 @@ time-varying term in the stack.
    call and leads this list for that reason.
 2. **Which vent representation is authoritative** (§8, M1) — the campaign
    proposes `WaterVent` and measures before committing.
-3. **Is one marine people right**, or does the campaign owe a second kind to
-   prove the realm generalises? Drow's precedent says one; the counter-argument
-   is that a single occupant cannot distinguish "the realm works" from "this kind
-   works".
+3. **Is one marine people right?** The campaign now says yes with more
+   confidence than at first drafting: the contrast pair already exists. `sea-elf`
+   holds the shelf as a `Surface` people and the new kind holds the column as an
+   obligate `Marine` one, so the realm gate is doing visible discriminating work
+   from day one — which is what a second authored kind would otherwise have been
+   for. Drow's precedent (one occupant) agrees.
 4. **The name.** "The Tidemark" is provisional; the branch is `campaign/the-tidemark`.
 5. **The reading of the row** (ledger #2): residents of the water column, not
    Bronze Age Collapse raiders.

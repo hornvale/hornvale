@@ -99,9 +99,44 @@ carries how it ended but never *why* anyone did it — but it needs no realm axi
 and no Waterworld overlay at all, so it is a different campaign wearing this
 row's name.
 
-**Ideonomy passes / overturns:** Surfaced by pass 2's dictionary organon (the
-term-overlap cross-check), which is what separated the two readings; no
-separate pass run for the resolution, and no overturn.
+**Ideonomy passes / overturns:** Two. The question was raised by G1's pass 2
+(dictionary organon, term-overlap cross-check), which is what separated the two
+readings. A dedicated pass was then run at Nathan's request
+(organon-construction, abstraction-lift; scale; animacy/hierarchicalness/scope)
+and did **not** overturn the decision, but strengthened and extended it:
+
+- *Abstraction-lift* stripped the proper nouns from both readings and left one
+  structural distinction — **a medium is either a habitat or a corridor**. The
+  two readings are not rivals about one row; they are two relations to the same
+  sea. The shape recurs across domains (mountains as home vs. pass, rivers as
+  dwelling vs. trade route), which is the lift's own sanity check.
+- *Scale* ordered the readings by how much of a people's life the sea accounts
+  for: 0% inland, ~10% coastal fishers, ~30% maritime traders and raiders
+  (the Bronze Age reading), ~50% amphibious, ~90% water-column people who can
+  surface, 100% obligate marine (the adopted reading). This gives the decision a
+  **mechanical** basis rather than only a precedential one: `HabitatRealm` is a
+  categorical gate whose availability mask is `{0.0, 1.0}`, so it can express
+  only the endpoints. The 30% position needs no realm variant at all, which is a
+  firmer reason to call it a separate campaign than "MAP-11 is the parent row".
+- **The material finding is that the middle of the scale is already occupied —
+  by a PEOPLE, not just by fauna.** Checking the roster rather than reasoning
+  about it turned up `sea-elf`: a settling people with `SWIM`, a marine-dominant
+  resource axis and an authored `(depth, SST)` shelf affinity, which is
+  `Surface` today only by ABSENCE from a sparse registry. Its own rows say why
+  that is right — "a settled coastal people does not live entirely in the
+  water", so "it sleeps ashore, on what it built. Not `ALREADY_BUOYED`."
+  `giant-crocodile` is the same question in fauna form (the roster's stated
+  amphibious case, land-dominant at 0.6 `ANIMAL_PREY`). Introducing
+  `HabitatRealm::Marine` creates a classification question for both that nothing
+  currently answers, and a reader will assume a sea elf belongs to the new
+  variant; acting on that assumption strips a settling people of the shore it
+  builds on. Spec §3.6 and measurement M4 were added for this.
+- **Consequence for scope:** part of `WAT-sea-peoples`' own enumeration
+  ("elves") is therefore already shipped. What is missing is the **obligate**
+  marine kind — the far end of the scale from sea-elf's shelf — and the realm
+  gate is exactly the separation between the two. That also answers G3 question
+  3 (whether one authored kind is enough): the contrast pair already exists, so
+  the gate does visible discriminating work from day one.
 
 **Capture actions:** Flagged to Nathan in-session rather than resolved silently,
 since the two readings diverge materially; proceeding on the MAP-11 reading
