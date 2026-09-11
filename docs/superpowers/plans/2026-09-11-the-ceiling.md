@@ -40,6 +40,18 @@ rulings there **as they occur**, never to `.superpowers/sdd/`.
 - **This campaign authors no marine kind, touches no `TrophicMode` variant
   list, and gives no `Surface`-realm kind a `CHEMOSYNTHATE` weight** — The
   Tidemark's boundary (its spec §7, confirmed on the wire both ways).
+- **EVERY FILE THAT BUILDS A WORLD NEEDS A ROSTER ROW** in
+  `cli/tests/fixtures/world-build-sites.tsv` (decision 0606), or
+  `world_build_sites::no_unrostered_world_build_appears` REDs. The row is
+  `<path>\t<count>\t<kind>` and the count is a **per-file ratchet on the
+  number of world-build CALL SITES** — not invocations. Task 1 discovered
+  this and added `windows/worldgen/tests/suite/ceiling_composition_probe.rs
+  \t1\tidentity:1`. **Consequences for later tasks:** reuse the single
+  `world_at` helper rather than adding a second call site, and if you do add
+  one, bump that file's count in the SAME commit. A new probe file needs a
+  new row. This is not in any task's `git add` list by default — it was
+  missing from the plan's first draft and is called out here because the
+  failure is invisible until the gate runs.
 
 ---
 
@@ -279,6 +291,9 @@ git commit -m "test(the-ceiling): M2 -- rock or mean, measured"
 
 **Files:**
 - Modify: `windows/worldgen/tests/suite/ceiling_composition_probe.rs`
+- Possibly modify: `cli/tests/fixtures/world-build-sites.tsv` — **only if** you
+  add a second world-build call site to this file. Reusing Task 1's existing
+  `world_at` helper adds none and needs no change; see Global Constraints.
 
 **Interfaces:**
 - Consumes: Task 1's world-construction idiom.
@@ -509,6 +524,9 @@ git commit -m "feat(the-ceiling): a settled subterranean chemotroph"
 **Files:**
 - Create: `windows/worldgen/tests/suite/ceiling_tenant_probe.rs`
 - Modify: `windows/worldgen/tests/suite.rs`
+- Modify: `cli/tests/fixtures/world-build-sites.tsv` — **required**, a new
+  probe file that builds worlds has no roster row and the gate REDs without
+  one. See Global Constraints for the row format.
 
 **Interfaces:**
 - Consumes: `THE_KIND` from Task 5 (read it from the ledger, do not invent it).
@@ -589,7 +607,7 @@ surface at depth rather than living on chemical energy.
 
 ```bash
 cargo fmt && make gate-commit
-git add windows/worldgen/tests/suite/ceiling_tenant_probe.rs windows/worldgen/tests/suite.rs docs/superpowers/ledgers/2026-09-11-the-ceiling.md
+git add windows/worldgen/tests/suite/ceiling_tenant_probe.rs windows/worldgen/tests/suite.rs cli/tests/fixtures/world-build-sites.tsv docs/superpowers/ledgers/2026-09-11-the-ceiling.md
 git commit -m "test(the-ceiling): M4 -- the chemotroph ablation, with per-source arms"
 ```
 
