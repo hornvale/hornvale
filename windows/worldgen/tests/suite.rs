@@ -83,6 +83,8 @@ mod era_substrate;
 mod explanations;
 #[path = "suite/exposure.rs"]
 mod exposure;
+#[path = "suite/facet_context.rs"]
+mod facet_context;
 #[path = "suite/fallow_feasibility.rs"]
 mod fallow_feasibility;
 #[path = "suite/fathom_column_probe.rs"]
