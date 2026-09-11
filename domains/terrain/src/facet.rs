@@ -2,7 +2,7 @@
 
 use std::cmp::Ordering;
 
-use hornvale_kernel::{Facet, FacetError, SphericalPolyline, Vertex, math};
+use hornvale_kernel::{Facet, FacetError, Vertex, math};
 
 /// A terrain patch below one canonical macro-grid facet.
 ///
@@ -26,6 +26,9 @@ impl FacetAddress {
     /// type-audit: bare-ok(index: child_path)
     pub fn new(macro_face: Facet, child_path: Vec<u8>) -> Result<Self, FacetError> {
         macro_face.pack()?;
+        if macro_face.depth() != crate::GLOBE_LEVEL {
+            return Err(FacetError::Invalid);
+        }
         let mut facet = macro_face.clone();
         for &digit in &child_path {
             facet = facet.child(digit)?;
@@ -38,6 +41,11 @@ impl FacetAddress {
 
     /// Resolve the two-part terrain address to the kernel's full facet address.
     fn resolved(&self) -> Facet {
+        assert_eq!(
+            self.macro_face.depth(),
+            crate::GLOBE_LEVEL,
+            "FacetAddress macro_face must be a Level-6 facet"
+        );
         let mut facet = self.macro_face.clone();
         for &digit in &self.child_path {
             facet = facet
@@ -76,6 +84,18 @@ pub struct FeatureId {
     pub macro_anchor: Vertex,
     /// Stable ordinal among features of this kind at the anchor.
     pub ordinal: u32,
+}
+
+impl FeatureId {
+    /// Construct a refinement-independent feature identity.
+    /// type-audit: bare-ok(index: ordinal)
+    pub fn new(kind: FeatureKind, macro_anchor: Vertex, ordinal: u32) -> Self {
+        Self {
+            kind,
+            macro_anchor,
+            ordinal,
+        }
+    }
 }
 
 /// Which directed end of a feature an endpoint describes.
@@ -135,7 +155,7 @@ pub struct RealizedCurve {
     pub feature: FeatureId,
     /// Unit-sphere points in feature travel order.
     pub points: Vec<[f64; 3]>,
-    /// Width at each corresponding point, in metres.
+    /// Angular width at each corresponding point, in radians on the unit sphere.
     pub width: Vec<f64>,
     /// Upstream and downstream topology for this realization.
     pub endpoints: [FeatureEndpoint; 2],
@@ -218,10 +238,10 @@ pub fn canonical_corner_sample(address: &FacetAddress, corner: u8) -> [f64; 3] {
 
 /// Sample signed spherical distance and interpolated width from a curve.
 ///
-/// Distance is in radians and left-positive relative to the curve's travel
-/// direction, matching the kernel's spherical-polyline convention. Width is
-/// interpolated at the nearest point of the winning segment. An empty curve
-/// returns `(infinity, 0)`.
+/// Both returned values are angular: `(signed_distance_rad, width_rad)`.
+/// Distance is left-positive relative to the curve's travel direction,
+/// matching the kernel's spherical-polyline convention. Multiply either value
+/// by the planetary radius for a length. An empty curve returns `(infinity, 0)`.
 /// type-audit: pending(wave-1: position), pending(wave-1: return)
 pub fn feature_sample(curve: &RealizedCurve, position: [f64; 3]) -> (f64, f64) {
     assert_eq!(
@@ -229,12 +249,13 @@ pub fn feature_sample(curve: &RealizedCurve, position: [f64; 3]) -> (f64, f64) {
         curve.width.len(),
         "a realized curve must carry one width per point"
     );
-    let distance = SphericalPolyline {
-        points: curve.points.clone(),
-    }
-    .signed_distance(position);
-    let width = nearest_width(&curve.points, &curve.width, position);
-    (distance, width)
+    let Some(projection) = nearest_segment(&curve.points, position) else {
+        return (f64::INFINITY, 0.0);
+    };
+    let index = projection.segment;
+    let width = curve.width[index]
+        + projection.interpolation * (curve.width[index + 1] - curve.width[index]);
+    (projection.distance, width)
 }
 
 fn point_cmp(a: &[f64; 3], b: &[f64; 3]) -> Ordering {
@@ -268,15 +289,27 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
     math::acos(dot(a, b).clamp(-1.0, 1.0))
 }
 
-fn nearest_width(points: &[[f64; 3]], widths: &[f64], position: [f64; 3]) -> f64 {
+struct NearestSegment {
+    distance: f64,
+    segment: usize,
+    interpolation: f64,
+}
+
+fn nearest_segment(points: &[[f64; 3]], position: [f64; 3]) -> Option<NearestSegment> {
     match points.len() {
-        0 => return 0.0,
-        1 => return widths[0],
+        0 => return None,
+        1 => {
+            return Some(NearestSegment {
+                distance: angle(position, points[0]),
+                segment: 0,
+                interpolation: 0.0,
+            });
+        }
         _ => {}
     }
 
     let mut best_distance = f64::INFINITY;
-    let mut best_width = widths[0];
+    let mut best = None;
     for (index, segment) in points.windows(2).enumerate() {
         let (a, b) = (segment[0], segment[1]);
         let normal = cross(a, b);
@@ -316,8 +349,12 @@ fn nearest_width(points: &[[f64; 3]], widths: &[f64], position: [f64; 3]) -> f64
         };
         if distance < best_distance {
             best_distance = distance;
-            best_width = widths[index] + t * (widths[index + 1] - widths[index]);
+            best = Some(NearestSegment {
+                distance,
+                segment: index,
+                interpolation: t,
+            });
         }
     }
-    best_width
+    best
 }
