@@ -131,3 +131,93 @@ prerequisite and a vacuous control.
 correction stated rather than the text quietly replaced — the spec is
 pre-merge and this campaign's own, which is the only condition under which a
 record is repaired rather than superseded.
+
+---
+
+## #4 [G1] — Where `Absent` lands: split the token
+
+**Tuple** (`ideonomy-plain`): operators *cross-domain re-instantiation* +
+*dimension-identification*; organon *list*; dimension-prompts *direction*,
+*autonomy*, *materiality*. Run at Nathan's direction on the one question the
+plan deliberately left open.
+
+**The facts it operated on, measured first:** `TrophicMode::Absent` has
+**zero** carriers. `ThermalStrategy::Absent` has **one** (`xorn`) and its doc
+says "No metabolism at all (construct/undead analogue)" — while `xorn` is
+`TrophicMode::Chemotrophic` with an authored `CHEMOSYNTHATE` weight of 0.35.
+`ThermalStrategy::Unmodelled`, written *after* The Gossan's split, is careful
+where `Absent` is not: "Has a metabolism; its thermal behaviour is not
+modelled."
+
+**Dimension-identification found three absences wearing one word**, and the
+discriminator is *temporal direction*:
+
+| kind of absence | what it claims | direction over time |
+|---|---|---|
+| ontological | the organism has none | steady — permanent |
+| inapplicable | the axis does not apply | steady — structural |
+| epistemic | nobody has decided yet | **decaying** — it is a debt |
+
+The autonomy prompt sharpens it: an ontological absence is a fact about the
+**world**; an epistemic one is a fact about **us**. A value whose carrier
+count ought to shrink to zero and one that ought not are not the same value.
+
+**Cross-domain re-instantiation found the form is among the most litigated
+design errors there is**, and every domain fixed it the same way:
+
+- **SQL's `NULL`** — Codd argued for two markers (missing-but-applicable,
+  missing-and-inapplicable); SQL shipped one, and forty years of consensus
+  calls that the error.
+- **HL7/FHIR** — distinct `unknown` / `not-asked` / `not-applicable` /
+  `not-performed` codes, because conflating "not tested" with "tested
+  negative" is a safety issue.
+- **Survey methodology** — "no answer", "N/A" and "refused" are separate
+  missing-data codes; merging them biases every downstream statistic.
+- **Accounting** — a zero balance is not the absence of an account.
+
+**None of them resolved it by choosing which meaning wins. All of them split
+the token.**
+
+**RULING, adopted into plan Task 1 as a requirement rather than advice:**
+
+1. `Absent` does **not** become a value on each of the three new axes —
+   copying it triples the ambiguity.
+2. **Ontological absence sits OUTSIDE the triple.** A construct has no energy
+   source, no electron donor and no carbon source: one claim about the
+   organism, not three coincidences. `TrophicMode::Absent`'s zero carriers
+   mean nothing is displaced by moving it out.
+3. **`Unmodelled` already is the epistemic case** and is careful about it. Do
+   not reinvent it on the new axes; its population is *supposed* to shrink,
+   which is a different lifecycle from the other two.
+
+*Cost if wrong: a construct becomes slightly more awkward to author than a
+per-axis `Absent` would have made it — against an ambiguity every comparable
+system has had to unwind later.*
+
+**A LIVE DEFECT THE PASS TURNED UP, now plan Task 0, ahead of Stage 1.**
+`ThermalStrategy::Absent` has behavioural teeth, not merely a stale doc:
+`allometry.rs:71` returns basal rate `0.0` for it and `:125` returns `None`
+for lifespan. So **`xorn` has zero basal metabolic rate and no lifespan while
+drawing chemosynthate capacity.**
+
+It is authored deliberately — `coverage.rs:143` registers `xorn` as the
+*tested witness* (`Rung::Witnessed`) for `ThermalStrategy::Absent` — so this
+is not an oversight to correct unilaterally. Task 0 therefore **fixes only the
+doc's gloss**, which is unambiguously imprecise on a thermal axis post-split,
+and **refers the behavioural question to Nathan**: whether a kind with zero
+basal rate and no lifespan should be drawing chemosynthate capacity is a
+fidelity question about what a xorn *is*. Changing an authored, tested witness
+to tidy a vocabulary is precisely what the decision log exists to prevent.
+
+**Why Task 0 runs before Stage 1:** the split would otherwise propagate an
+ambiguous token into three places, and fixing meaning once is cheaper than
+fixing it three times.
+
+**Ideonomy passes / overturns:** one pass, **one overturn** — I had been about
+to answer "which axis does `Absent` belong to", and the pass established the
+question was malformed: it belongs to none of them, and the shape of the
+answer is a split rather than a placement.
+
+**Capture actions:** plan Task 1 Step 1 carries the rule and the table as a
+requirement; plan gains Stage 0 / Task 0; the `xorn` behavioural question is
+recorded here for Nathan rather than resolved.

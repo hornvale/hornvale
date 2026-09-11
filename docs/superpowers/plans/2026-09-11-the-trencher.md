@@ -43,6 +43,63 @@
 
 ---
 
+## Stage 0 — A defect on `main`, ahead of the refactor
+
+### Task 0: `Absent` means three things, and one kind proves it
+
+**Files:**
+- Modify: `domains/species/src/lib.rs` (`ThermalStrategy::Absent`'s doc)
+- Modify: `docs/superpowers/ledgers/2026-09-11-the-trencher.md`
+
+**Why this runs BEFORE Stage 1.** The split would otherwise propagate an
+ambiguous token into three places. Fixing the vocabulary's meaning first is
+cheaper than fixing it three times after.
+
+- [ ] **Step 1: Read the three absences and confirm the finding for yourself**
+
+```bash
+sed -n '/pub enum ThermalStrategy/,/^}/p' domains/species/src/lib.rs
+grep -rn 'ThermalStrategy::Absent' --include='*.rs' domains/ windows/
+```
+
+Measured before this plan: `TrophicMode::Absent` has **zero** carriers;
+`ThermalStrategy::Absent` has **one** (`xorn`); `allometry.rs:71` returns
+basal rate `0.0` for it and `:125` returns `None` for lifespan. `xorn` is
+simultaneously `TrophicMode::Chemotrophic` with an authored `CHEMOSYNTHATE`
+weight of 0.35.
+
+- [ ] **Step 2: Correct the doc's gloss, and ONLY the gloss**
+
+`ThermalStrategy::Absent` reads "No metabolism at all (construct/undead
+analogue): no life-history." That sentence was written when the enum was
+`MetabolicClass` — it still references the deleted `MetabolicClass::Autotroph`
+— and on a purely **thermal** axis, post-Gossan, it claims more than the axis
+can say. Its own sibling `Unmodelled` shows the careful form: "Has a
+metabolism; its thermal behaviour is not modelled."
+
+Rewrite it to describe what the value means **on the thermal axis** and what
+it **does** (zero basal rate, no lifespan), without asserting anything about
+trophic mode.
+
+- [ ] **Step 3: Do NOT change `xorn`'s values, and do NOT resolve the tension**
+
+`xorn` is the authored, tested witness for `ThermalStrategy::Absent`
+(`coverage.rs:143`, `Rung::Witnessed`). Whether a kind with zero basal rate
+and no lifespan should be drawing chemosynthate capacity is a **fidelity
+question about what a xorn is**, and it is Nathan's. **Record it in the
+ledger with both numbers and stop.** Changing an authored witness to tidy a
+vocabulary is exactly the move this project's decision log exists to prevent.
+
+- [ ] **Step 4: `cargo fmt`, gate, commit**
+
+```bash
+cargo fmt && make gate-commit
+git add domains/species/src/lib.rs docs/superpowers/ledgers/2026-09-11-the-trencher.md
+git commit -m "docs(the-trencher): ThermalStrategy::Absent describes a thermal axis, not a metabolism"
+```
+
+---
+
 ## Stage 1 — The trichotomy
 
 ### Task 1: The three axes and their sanctioned combinations
@@ -58,7 +115,35 @@
 
 Read `BIO-trophic-trichotomy` in `book/src/frontier/idea-registry.md` — it is the design authority for this task and it is Nathan's own. Then read `TrophicMode`'s definition and every one of its variants' doc comments in `domains/species/src/lib.rs`, and `metabolic_pairs.rs`'s `SANCTIONED` table in full.
 
-The factorisation is **energy source × electron donor × carbon source**. Today's four flattened values each map to a point in that space. **Deriving which point is a reading of the existing variants' docs, not a decision this plan makes for you** — `Absent` in particular needs care, because it is currently doing duty on more than one axis.
+The factorisation is **energy source × electron donor × carbon source**. Today's four flattened values each map to a point in that space. **Deriving which point is a reading of the existing variants' docs, not a decision this plan makes for you.**
+
+**`Absent` is decided, and the rule is SPLIT THE TOKEN.** An ideonomy pass
+(ledger #4) found that `Absent` currently carries three different claims, and
+that every other domain which made this mistake fixed it the same way — SQL's
+single `NULL` against Codd's two markers, HL7/FHIR's separate
+`unknown`/`not-asked`/`not-applicable` codes, survey methodology's distinct
+missing-data codes. **None of them fixed it by choosing which meaning wins.**
+
+```
+  kind of absence   what it claims              direction over time
+  ---------------   -------------------------   -------------------
+  ontological       the organism has none       steady - permanent
+  inapplicable      the axis does not apply     steady - structural
+  epistemic         nobody has decided yet      DECAYING - it is a debt
+```
+
+Three consequences, and they are requirements:
+
+1. **`Absent` does NOT become a value on each of the three axes.** Copying it
+   three times triples the ambiguity instead of resolving it.
+2. **Ontological absence sits OUTSIDE the triple, not inside it.** A construct
+   has no energy source, no electron donor and no carbon source — that is one
+   claim about the organism, not three coincidences. `TrophicMode::Absent` has
+   **zero carriers** today, so nothing is displaced by moving it out.
+3. **`Unmodelled` already IS the epistemic case and is careful about it** —
+   "Has a metabolism; its thermal behaviour is not modelled", written after
+   The Gossan's split. Do not reinvent it on the new axes; its population is
+   supposed to shrink, which is a different lifecycle from the other two.
 
 - [ ] **Step 2: Write the failing test — every shipped kind occupies a sanctioned combination**
 
