@@ -644,10 +644,34 @@ grep for prose describing its OLD guarantee, not just its call sites.
 
 **Finding 2, traced, not fixed — the answer is (a).** Coordinator asked why
 `rust-monster`'s arousal at tick 2 moved (`0.34978789` → `0.34965155`, label/
-valence/object unchanged) — ONE tick before its own first label divergence
-(tick 4) — given arousal is a pure function of physical state with no
-dependence on `active[]`/hysteresis, implying the two runs' physical
+valence/object unchanged) given arousal is a pure function of physical state
+with no dependence on `active[]`/hysteresis, implying the two runs' physical
 trajectories had already diverged by tick 1 or 2.
+
+**CORRECTED 2026-09-11 by the fix round's re-review, which diffed the fixture
+rather than trusting this paragraph.** An earlier draft of this entry said the
+arousal shift was "ONE tick before its own first label divergence (tick 4)".
+**Both numbers were wrong.** Diffing `befa0df45^..befa0df45` over the
+`rust-monster` block:
+
+```
+tick 2  arousal 0.34978789 -> 0.34965155   label/valence/object unchanged
+tick 3  arousal 0.43227372 -> 0.45         label/valence/object unchanged
+tick 4  arousal 0.45       -> 0.5          label/valence/object unchanged
+tick 5  Frustrated -> Eager, -1.0 -> 1.0   <- FIRST LABEL DIVERGENCE
+```
+
+The first label divergence is **tick 5**, not tick 4; and tick 2 precedes tick
+4 by *two*, not one. **The conclusion is unaffected** — arousal moves at tick
+2, three ticks ahead of any label change, which is exactly the evidence for
+(a). Only the arithmetic narrating it was wrong.
+
+**Worth recording as its own lesson**, because it is the day's most-repeated
+shape in miniature: a count stated in prose about an artifact, not reconciled
+against the artifact's own rows. The day↔tick mapping the same entry uses for
+the *position* claim was checked and is correct (`day N` post-increment is
+fixture `tick N-1`, so day 3 = tick 2) — so one index claim in this entry was
+verified and the neighbouring one was not.
 
 **Traced directly, not inferred.** Added temporary debug instrumentation
 (never committed): (1) inside `arbitrate`'s `active` computation, an
@@ -699,3 +723,43 @@ regenerating. Full `cargo nextest run -p hornvale-vessel` (1234 tests): green.
 
 **Capture actions:** this entry; fix-round report appended to
 `.superpowers/sdd/2026-09-11-the-trencher/task-0b-report.md`.
+
+---
+
+## #11 [G5] — Task 0b complete
+
+**Fix round 1 closed, both findings resolved**, commit `baa78cf4e`.
+
+- **Finding 1 ADDRESSED.** `Fatigue::act()`'s doc rewritten to describe the
+  predicate as it now stands, naming the old text and the unstated assumption
+  that made it sound rather than erasing the history. The re-review checked
+  specifically for a **third** instance of the invariant-citing pattern and
+  found none.
+- **Finding 2 ADDRESSED as an explanation**, and its narrating arithmetic
+  corrected above by the re-review.
+- **Instrumentation removal CONFIRMED CLEAN**, four independent ways: `git
+  status`, `git diff HEAD` over `windows/vessel/src` and `windows/lab/src`, a
+  grep for debug prints and flags, and the predicate line read back
+  byte-identical to the shipped fix.
+
+**That last check is why the round had a re-review at all.** The change was a
+doc comment — the textbook "too small to review" case — but the investigation
+behind it ran a **revert-and-compare**, temporarily restoring the buggy
+predicate. A revert left in place would have been catastrophic and completely
+silent: every test would pass, against goldens regenerated under the old
+behaviour. "I removed my instrumentation" is a claim, and this is the round
+that checks it.
+
+**Task 0b: complete** (commits `0bdfbef3a..baa78cf4e`, review clean after one
+fix round).
+
+**What Task 0b actually found, for the chronicle.** The defect was never
+`xorn`-specific. A synthetic fully-rested creature reproduced it with no
+`xorn` involved; `rust-monster` — an ordinary `0.3`-rise-rate kind — moved in
+the committed affect golden and was measured hitting `u == 0` while asleep
+**repeatedly through the run**; and all **58** creatures in the committed
+client session fixture moved from `Lost` to `Content`. Every sleeping creature
+in the world was rendering to a player as *lost*, and had been.
+
+It was found because Nathan ruled that a rock-eater ought to have a
+metabolism.
