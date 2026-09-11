@@ -1435,3 +1435,24 @@ The reviewer found no other lost substantive ruling, parked finding or idea;
 archive receipt and exact routing updates follow scoped documentation review.
 The final stage and census remain queued. Their actual outcomes, any subsequent
 main/source changes and Nathan's final visual/merge acceptance remain necessary.
+
+
+## Reviewed scratch — durable archive verified
+
+Scoped final documentation review at `12849d497` approved M1–M3 as addressed,
+with no new findings. The normal documentation hooks passed 76 tests at both
+`4ccc5f998` (4.361 s) and `12849d497` (4.215 s). Root then copied all 100 own
+campaign scratch files into Downloads/Hornvale Planetarium/campaign-review-12849d497
+and verified every archived hash against the corresponding source. MANIFEST.json
+SHA-256 is `3b94a51f2da0042b538c5ddcff9d3b5496788806aa24069c5ff03dd91120e581`.
+The complete reports/reviews and mutation/controller evidence survive worktree
+recycling; primary GPU evidence stays beside them in its existing directories.
+This is an implementation-review snapshot, not a claim to contain future
+canonical results. The retrospective and close audit record its receipt.
+
+The queue advanced main to `2e86093986a69c9ee032e8872a064c3a432ed9df` through
+the tools follow-up. Root fetched/read the real delta: command-placement/tool
+prerequisite prose, sweep harness changes and operational timing/roster artifacts;
+no kernel/domain/window/CLI/visual-source path changed. The queued census remains
+behind the active earlier census-delivery merge. No final stage/census pass is
+inferred from that queue movement.

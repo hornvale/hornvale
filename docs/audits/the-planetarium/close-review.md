@@ -122,3 +122,22 @@ The explicit scratch/ledger survival audit found no other unpromoted substantive
 ruling, parked finding or idea. Archive both its report and the subsequent scoped
 documentation review after that review finishes, then record the actual manifest.
 These findings do not grant G6 or turn queued canonical requests into completed checks.
+
+
+## Reviewed scratch archive receipt
+
+After the scoped documentation re-review approved M1–M3 with no new findings,
+the archive command copied this campaign's scratch to
+`/Users/nathan/Downloads/Hornvale Planetarium/campaign-review-12849d497`.
+It contains 100 files plus `MANIFEST.json`; every copied file hash was checked
+against its original. Manifest SHA-256:
+`3b94a51f2da0042b538c5ddcff9d3b5496788806aa24069c5ff03dd91120e581`.
+The receipt is `task9-controller-review-02/archive-receipt.json` beside the
+preserved GPU evidence. The archive includes all task/fix reports and reviews,
+whole-branch and scoped documentation reviews, capped/full review packages,
+controller notes, routing records and the archive script. Primary GPU packages
+and raw measurement logs remain in their original durable Downloads directories.
+
+This is the completed implementation-review archive at `12849d497`, before
+canonical close. Subsequent canonical reports or integration changes require their
+own durable receipt; this snapshot does not claim to contain future results.

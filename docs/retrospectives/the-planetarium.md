@@ -80,7 +80,8 @@ hook as the commit gate instead of paying for the same verification twice.
   They do not imply a universal renderer or a scheduled film series.
 
 Scratch reports and reviews were read before drafting this page, and the Task 9
-delta was read again after qualification. The close audit records exact routing
-locations and the durable archive; final review must name any item still lost. The Confidence Gradient has a relevant scene-interface
+delta was read again after qualification. The [close audit](../audits/the-planetarium/close-review.md) records routing and
+the 100-file implementation-review archive. Final review found the Task 1
+regeneration lesson missing; it is promoted above and passed scoped re-review. The Confidence Gradient has a relevant scene-interface
 bet: a real rendered consumer strengthens it within this bounded astronomical
 scope; it does not establish gameplay or general world visualization.
