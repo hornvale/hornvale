@@ -135,11 +135,9 @@ fn refinement_changes_samples_but_not_feature_id() {
     let macro_face = macro_facet(0, 1);
     let coarse = FacetAddress::new(macro_face.clone(), Vec::new()).expect("valid address");
     let refined = FacetAddress::new(macro_face, vec![3]).expect("valid address");
-    fn derive_feature_id(_address: &FacetAddress) -> FeatureId {
-        FeatureId::new(FeatureKind::Ridge, Vertex(42), 7)
-    }
-    let feature = derive_feature_id(&coarse);
-    let same_feature_after_refinement = derive_feature_id(&refined);
+    let feature = FeatureId::from_address(&coarse, FeatureKind::Ridge, Vertex(42), 7);
+    let same_feature_after_refinement =
+        FeatureId::from_address(&refined, FeatureKind::Ridge, Vertex(42), 7);
 
     assert_ne!(
         canonical_corner_sample(&coarse, 0),

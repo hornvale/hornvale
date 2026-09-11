@@ -96,6 +96,20 @@ impl FeatureId {
             ordinal,
         }
     }
+
+    /// Construct identity from stable semantics in an addressed patch.
+    ///
+    /// The address is realization context only: refinement must never enter
+    /// the identity, which is determined by the semantic feature inputs.
+    /// type-audit: bare-ok(index: ordinal)
+    pub fn from_address(
+        _address: &FacetAddress,
+        kind: FeatureKind,
+        macro_anchor: Vertex,
+        ordinal: u32,
+    ) -> Self {
+        Self::new(kind, macro_anchor, ordinal)
+    }
 }
 
 /// Which directed end of a feature an endpoint describes.
