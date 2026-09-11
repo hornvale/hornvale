@@ -57,7 +57,9 @@ people with `SWIM` locomotion, a marine-dominant resource axis and an authored
 `habitat_realm_registry`. Its own rows state the reason: "a settled coastal
 people does not live entirely in the water", so "it sleeps ashore, on what it
 built. Not `ALREADY_BUOYED`." So `WAT-sea-peoples`' "elves" is partly shipped,
-and what is missing is the **obligate** kind, not a marine people as such.
+and what is missing is the **obligate** kinds, not a marine people as such.
+Note that these rows constrain sea-elf's *residence*; §3.8 separates that from
+its reach, which this campaign extends into the column.
 
 **The Delvers' blocker does not bind here.** `habitat_realm_registry`'s own
 comment records that two subterranean peoples were added and withdrawn because
@@ -376,7 +378,7 @@ succession phase). Report `|A|`, `|B|` and `|A ∩ B|` as **counts** at seeds 42
   That is a larger finding than this campaign, and it is reported as the
   headline rather than absorbed.
 
-**M2 — Do the marine peoples place, and does the nomad refuse to?** Count
+**M2 — Do the marine peoples place, and do merfolk refuse to?** Count
 settlements **per marine kind** at seed 42 at `BuildDepth::Full`.
 
 - *Prediction, two-sided:* each of the five `Settled` kinds places at least one
