@@ -170,3 +170,66 @@ move it.
   tense** and names THE TENANT. It becomes stale the moment The Tidemark
   lands. Theirs to update, flagged to them on the wire; noted here in case it
   survives their sweep.
+
+---
+
+## #3 [G1] — Ideonomy pass on the rung-3 derivation
+
+**Tuple** (`ideonomy-plain`, one pass): operators *cross-domain
+re-instantiation* + *organon-construction*; organon *list*; dimension-prompts
+*side-effect*, *materiality*, *modularity*.
+
+**What it produced.** Four results, two of them load-bearing.
+
+1. **The side-effect is the main effect.** A single budget with two consumer
+   classes does not merely bound them, it makes them **compete**. Promoting
+   that to the main effect yields four world-types on two axes (budget
+   magnitude × allocation winner), including both C.3 thought it was giving
+   up. C.3 concluded they were lost because it assumed allocation tracks
+   magnitude; #2's ruling severs that, and **the severing is what buys the
+   quadrants back**. This is a sharper statement of the ruling's mechanism
+   than #2 records, and it supersedes #2's looser phrasing without changing
+   the ruling.
+
+2. **Materiality: the budget is INTENSIVE and rung 4 needs an EXTENSIVE
+   one.** `subterranean_energy` is a mean of seven `[0,1]` terms — verified
+   at `energy.rs:449`, and its doc records the mean was chosen empirically
+   because a clamped sum pinned every rung's median to exactly 1.0. A
+   per-vertex ratio cannot be eaten, depleted, or spread through, and rung
+   4's brief is literally "something that eats the budget and spreads."
+   **Nothing in the current quantity supports "eats."** This is the
+   campaign's central design fork and it was not visible before the pass.
+
+3. **Cross-domain: fire ecology is the same structure, solved.** Fuel load is
+   the budget, fuel composition decides regime, and the domain's artifact —
+   the fire regime, classified on frequency × intensity and derived rather
+   than authored — is what this rung is trying to build. Its substantive
+   import: a rich system can be *safer* than a poor one, because frequent
+   small draws prevent accumulation. Immunology's colonization resistance
+   supplies a second: the incumbent may exclude by **diversity** rather than
+   by weight. Both are candidate mechanisms, neither is adopted here.
+
+4. **Modularity: the seam wants to be one 7-vector read twice.**
+   `subterranean_energy` is monolithic (mean of 7); `dominant_source` is the
+   first crack in it. Fully-modular is budget = f(vector) and allocation =
+   g(vector), with neither collapsing the vector prematurely.
+
+**A measurement risk to #2's ruling, surfaced by the pass and recorded
+because it is the kind of thing a campaign talks itself out of.** A mean of
+seven gated terms is itself a compression machine. The Sources attributed
+magnitude-compression to the rock (~three near-constant categorical states).
+**Those are two different causes of one observation and nothing has separated
+them.** If compression is largely the combination rule, composition is more
+available than The Sources implied; if it is the rock, composition may be too
+coarse to separate world-types and #2's null is live. Separating them is a
+prerequisite measurement, not an optional one, and it belongs in the
+preregistration.
+
+**Overturns:** one — the pass overturned this session's own framing of #2's
+mechanism (composition-as-variety → competition-under-one-budget). #2's
+ruling stands; its stated reason is now more precise.
+
+**Capture actions:** approaches to Nathan before any spec text; the
+intensive/extensive fork and the two-causes-of-compression risk both lead the
+approach comparison; fire-regime and colonization-resistance recorded above
+as candidate mechanisms rather than adopted ones.
