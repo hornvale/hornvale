@@ -7163,3 +7163,42 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T02:32:23Z | sluice:gate | 857.842 | 26022.190 | 873.563 | 31.35 | 0 | 92a252634 |  | lefford | 40 |
 | 2026-09-11T02:35:51Z | sluice:clients | 207.880 | 3235.730 | 331.065 | 17.16 | 0 | 700d4eb33 |  | lefford | 40 |
 | 2026-09-11T02:43:23Z | sluice:heavy | 452.064 | 12821.994 | 270.504 | 28.96 | 0 | 446caa8fb |  | lefford | 40 |
+| 2026-09-10T17:25:37Z | gate-commit | 212.980 | 1059.986 | 61.086 | 5.26 | 0 | 46f5f9ab9 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T17:27:34Z | gate-commit | 47.348 | 74.292 | 20.986 | 2.01 | 0 | 46f5f9ab9 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T17:48:05Z | gate-commit | 57.008 | 121.673 | 45.068 | 2.92 | 0 | b7cab74e6 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:09:05Z | quick | 21.515 | 30.377 | 2.719 | 1.54 | 0 | ce424db11 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:10:29Z | quick | 2.573 | 2.367 | 0.149 | 0.98 | 0 | ce424db11 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:11:09Z | quick | 30.368 | 34.676 | 2.618 | 1.23 | 0 | ce424db11 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:14:13Z | gate-commit | 59.690 | 114.807 | 33.840 | 2.49 | 0 | ce424db11 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:15:18Z | gate-commit | 41.497 | 73.906 | 21.270 | 2.29 | 0 | ce424db11 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:28:13Z | gate-commit | 50.516 | 91.822 | 31.141 | 2.43 | 0 | 10812319d | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:30:19Z | gate-commit | 39.774 | 73.428 | 21.246 | 2.38 | 0 | 10812319d | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:42:30Z | world-check | 59.553 | 80.164 | 3.831 | 1.41 | 0 | a5536ef28 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:46:46Z | world-check | 44.930 | 47.951 | 1.862 | 1.11 | 0 | a5536ef28 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:51:29Z | world-check | 35.319 | 38.647 | 1.544 | 1.14 | 0 | a5536ef28 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:52:24Z | gate-commit | 39.888 | 72.712 | 20.416 | 2.33 | 0 | a5536ef28 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T18:53:23Z | gate-commit | 38.047 | 70.946 | 20.198 | 2.40 | 0 | a5536ef28 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:01:19Z | gate-commit | 45.649 | 79.973 | 22.444 | 2.24 | 0 | 4ddb11c6e | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:03:04Z | gate-commit | 49.659 | 75.620 | 21.692 | 1.96 | 0 | 4ddb11c6e | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:21:55Z | gate-commit | 42.563 | 52.214 | 5.903 | 1.37 | 0 | f5e6faf94 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:25:26Z | gate-commit | 119.338 | 219.464 | 39.573 | 2.17 | 0 | f5e6faf94 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:28:32Z | gate-commit | 58.303 | 113.819 | 46.418 | 2.75 | 0 | f5e6faf94 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:29:48Z | gate-commit | 43.477 | 73.468 | 21.739 | 2.19 | 0 | f5e6faf94 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:40:10Z | gate-commit | 78.321 | 81.370 | 24.188 | 1.35 | 0 | da0f23763 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:50:32Z | census-tail-chorus | 95.603 | 177.483 | 13.806 | 2.00 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:50:32Z | rebaseline | 280.714 | 447.666 | 27.619 | 1.69 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T21:25:14Z | quick | 29.777 | 26.868 | 0.746 | 0.93 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T21:26:27Z | world-check | 65.444 | 63.496 | 2.291 | 1.01 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T21:27:31Z | gate-commit | 59.210 | 74.426 | 22.164 | 1.63 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:05:00Z | census-tail-chorus | 105.813 | 182.865 | 11.259 | 1.83 | 0 | d143b15f2 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:05:01Z | census-tail-anomalies | 0.806 | 0.311 | 0.045 | 0.44 | 0 | d143b15f2 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:05:02Z | census-tail-domesday | 1.215 | 0.491 | 0.061 | 0.45 | 0 | d143b15f2 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:05:06Z | rebaseline | 365.861 | 499.215 | 35.280 | 1.46 | 0 | d143b15f2 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:08:29Z | quick | 40.719 | 48.646 | 7.271 | 1.37 | 0 | d143b15f2 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:09:44Z | world-check | 70.751 | 65.925 | 2.929 | 0.97 | 0 | d143b15f2 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:13:49Z | gate-commit | 147.722 | 429.606 | 48.071 | 3.23 | 0 | d143b15f2 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:17:02Z | gate-commit | 121.152 | 82.483 | 23.742 | 0.88 | 0 | d143b15f2 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:28:39Z | gate-commit | 59.964 | 76.764 | 23.554 | 1.67 | 0 | 49901a33a | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T22:38:48Z | gate-commit | 69.587 | 77.702 | 23.815 | 1.46 | 0 | 0956d6641 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-11T00:34:54Z | gate-commit | 45.537 | 74.801 | 22.878 | 2.15 | 0 | 874d08187 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-11T00:57:26Z | gate-commit | 41.846 | 72.128 | 20.267 | 2.21 | 0 | dd3ba0218 | campaign/eclipse-rhythm-view | MacBookPro | 10 |

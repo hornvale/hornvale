@@ -77,7 +77,7 @@ They paid tribute to Doodo, a bugbear community. [30] [17]
 They lived in 2 huts. [31]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and coral-reef country. [5] [32] [9]
-The sun was wholly taken 1 time over this life, the first at age 9. [33]
+The sun was never wholly taken in this life. [33]
 The ground under them gave nothing — the ground held for the whole of this life. [34]
 They ate other living things — prey, detritus, or their remains. [35]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -169,7 +169,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in 3 huts. [30]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and temperate-forest country. [5] [31] [9]
-The sun was wholly taken 4 times over this life, the first at age 27. [32]
+The sun was wholly taken 1 time over this life, the first at age 27. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -351,7 +351,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in one hut. [25]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and coral-reef country. [5] [26] [9]
-The sun was wholly taken 15 times over this life, the first at age 11. [27]
+The sun was wholly taken 3 times over this life, the first at age 60. [27]
 The ground under them gave nothing — the ground held for the whole of this life. [28]
 They ate other living things — prey, detritus, or their remains. [29]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -437,7 +437,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in 3 huts. [30]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and tropical-rainforest country. [5] [31] [9]
-The sun was wholly taken 1 time over this life, the first at age 7. [32]
+The sun was never wholly taken in this life. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -528,7 +528,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in 2 huts. [35]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and temperate-forest country. [6] [36] [10]
-The sun was wholly taken 6 times over this life, the first at age 2. [37]
+The sun was never wholly taken in this life. [37]
 The ground under them gave nothing — the ground held for the whole of this life. [38]
 They ate other living things — prey, detritus, or their remains. [39]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -716,7 +716,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in 3 huts. [30]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and temperate-forest country. [5] [31] [9]
-The sun was wholly taken 4 times over this life, the first at age 25. [32]
+The sun was wholly taken 2 times over this life, the first at age 28. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -899,7 +899,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in one hut. [27]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in temperate latitudes, and taiga country. [6] [28] [10]
-The sun was wholly taken 3 times over this life, the first at age 27. [29]
+The sun was wholly taken 1 time over this life, the first at age 73. [29]
 The ground under them gave nothing — the ground held for the whole of this life. [30]
 They ate other living things — prey, detritus, or their remains. [31]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.

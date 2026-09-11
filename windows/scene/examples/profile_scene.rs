@@ -180,6 +180,7 @@ fn small_docs(world: &World) -> (f64, usize) {
             world,
             hornvale_astronomy::StdInstant::new(0.0).unwrap(),
             hornvale_astronomy::StdInstant::new(365.0).unwrap(),
+            None,
         )
         .expect("eclipses scene"),
     )
