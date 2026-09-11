@@ -28,7 +28,7 @@ Detailed tasks: [implementation plan](docs/superpowers/plans/2026-09-10-the-plan
 Approved scope: [design](docs/superpowers/specs/2026-09-10-the-planetarium-design.md).
 
 The physical anchor-radius prerequisite is approved and included in Task 1.
-Execution is authorized; Stages 1 and 2 are complete with green canonical reports. Tasks 6–8 are complete after review; Stage 3 canonical verification is queued while Task 9 final refinement begins. This section tracks The Planetarium only; the
+Execution is authorized; Stages 1–3 have green canonical reports. Tasks 1–8 are independently reviewed; Task 9 has a qualified final package and measurements under independent review. Final canonical integration and G6 remain pending. This section tracks The Planetarium only; the
 inherited tracker above remains unchanged.
 
 ## Stage 1: A source-backed moving visual witness
@@ -47,7 +47,7 @@ inherited tracker above remains unchanged.
 **Goal**: Export the full study with complete source and frame provenance.
 **Success Criteria**: 300 3840×2160 PNGs, 30fps MP4, verified hashes/records, correct incomplete-run behavior; canonical stage result.
 **Tests**: Plan Tasks 6–7: capture state/failures, GPU smoke, corrupted/incomplete packages and real ffmpeg/ffprobe verification.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 4: Durable integration, refinement and handoff
 **Goal**: Integrate client checks, document the libraries, measure and refine the final film, close through G6.

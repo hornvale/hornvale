@@ -1295,3 +1295,66 @@ the first regular crater grid, but the later rims still read as stamped rings.
 The worker is reassessing the continuous crater profile before full clean capture;
 this is appearance refinement within the approved scope, not physical moon
 terrain. No final visual result is accepted here.
+
+
+## Stage 3 — complete, canonical report inspected
+
+Request `req-2dd219cef400-20260910T233741Z` completed all stage phases with
+rc=0 in 1464 seconds. The actual log is
+`sluice-2dd219cef400-20260911T000121Z`: artifacts 273.261 s, outboard 106.059 s,
+gate 860.312 s, clients 207.016 s. The merge product was
+`859b7914f5abe738c92ee36f5584737888c0cc16`; final artifact-bearing tree
+`7f8323377e8c910871d13ab34d0a753945a7b89e`. Main remained
+`cb033119272dac268f9b5fc78674dfaf9504ce74`. The complete log is preserved in
+Downloads/Hornvale Planetarium/task9-controller-review-01/canonical-stage3.log.
+This completes Stage 3, without claiming the later Task 8 visual client was
+compiled on Linux: that integration belongs to the final stage request.
+
+## Task 9 — qualified final candidate and independent controller review
+
+Implementation and qualification are committed through `4eeb58dea`. Independent
+Task 9 spec/quality review is running; no verdict is pre-awarded. Cosmetic moon
+refinement retained draft 04 after comparing the actual originals. The continuous
+bowl, broad irregular rim and corrected Mikk tangent Y sign improve the appearance
+without changing vertices, radius, orbit or native payloads. Earlier drafts and
+rejection reasons remain in the final visual audit. Task 7's clean-provenance
+coverage suggestion is resolved with individually rehashed semantic regressions.
+
+The first final timer began after CLI/film parsing. Root caught the boundary,
+and the worker moved it to main's first statement. The new clean capture SHA is
+`81ba2bfa6d1654c1e99d28b18ab8dc03d602c7ae`; earlier packages and their timing
+origin remain intact. A fresh 60-second 1080p script retained 4,435 intervals,
+p50/p95/p99 13.365084/20.389792/43.588209 ms, maximum 154.991 ms, and 868 query
+samples with p95 129 microseconds. Readiness from main entry took 3.027038167 s.
+The p95 meets the approved 33.33 ms target under recorded desktop contention.
+Other campaign compilers/tests were present; no isolated causal speedup is claimed.
+
+The final package `task9-clean-300-02` contains 300 unique 4K PNGs and the ten-second
+30 fps movie. Capture/encode/internal verification took 189.18 s; standalone
+verification returned VERIFIED in 30.88 s. Manifest SHA-256 is
+`f5a000d46c59826f6242fcb1ea04cb4e00c5dc5ea60a3179dc7a72caa9e3abef`; movie SHA-256
+`4d0da56b5d6cb0d7a7186009176f9e05992576fc4f642b1e8564fe522c31e3b1`.
+Two fresh production renderers produced identical pixels, camera and observation
+hashes for all sixteen corresponding representative/sequence requests.
+
+Root independently decoded all 300 final PNGs and rechecked identity, exact time,
+clean build/runtime provenance, hashes, COMPLETE and video profile. Native payloads
+and cameras match the earlier qualification. Every PNG and the movie bytes match
+the first final package, which root actually played in QuickTime through the
+10-second endpoint. The explicit byte join is in
+`task9-controller-review-02/visual-review-join.json`; the original full/phone review
+and screenshots stay in `task9-controller-review-01`. Exactly 62 PNGs match the
+older Task 7 appearance (90–115 and 174–209), not the entire middle shot.
+
+The third tool mouse-drag attempt still left the pointer at its start; manual
+orbit/pan delivery remains unproven. Real wheel, reset and frame-step actions have
+separate records. Root also bundled the exact final executable, film and world as
+Downloads/Hornvale Planetarium/Planetarium Review.app, actually opened its sourced
+1080p frame 0 without a visible error, and closed the owned window. This launch
+smoke does not replace the missing manual-drag witness.
+
+These are implementation corrections and measured evidence within the approved
+scope; no new design ruling or fidelity cut was adopted. The retrospective names
+each deferred item's outcome. Final whole-branch review, canonical integration,
+census accounting and G6 still remain; technical qualification grants no merge or
+publication approval.

@@ -86,12 +86,18 @@ not permission to publish or an automatic judgment of visual quality.
 Run `make visual-check` for the CPU gate. GPU qualification separately requires
 an actual inspect/capture/verify run on a capable named host, moving review,
 full-resolution and phone-size stills, and recorded timing/provenance. The qualified
-Task 7 package was captured at `dd37a8e1899e6ac4ad0277f55a0eacb85a3ebefa` on Apple
+final package was captured at `81ba2bfa6d1654c1e99d28b18ab8dc03d602c7ae` on Apple
 M1 Max/Metal with Rust 1.96.1, Bevy 0.19.1 and ffmpeg 8.1.1. Its 300-frame capture
-took 85.079 s, and capture through encode/verification took 126.17 s. These are
-capture measurements, not an interactive frame-rate claim. Later source revisions
-must not borrow that clean-build identity. Cross-host GPU pixels are not promised
-byte-identical.
+reached the last frame at 137.779 s; capture through encode/verification took
+189.18 s. The separate 60-second 1080p interaction script measured p50/p95/p99
+frame intervals of 13.365/20.390/43.588 ms under recorded desktop contention.
+First readiness from main entry took 3.027 s. These are distinct workloads.
+The [performance record](https://github.com/hornvale/hornvale/blob/main/docs/audits/the-planetarium/performance.md)
+retains raw counts, memory, query timings and setup. Later source revisions must
+not borrow this clean-build identity. Same-host repeated frames matched exactly;
+cross-host GPU pixels are not promised byte-identical. Manual OS mouse-drag
+delivery remains unproven through the review tool, despite tested handlers and
+scripted orbit/pan; the recorded keyboard, wheel and playback checks are separate.
 
 The caption font is Libre Baskerville under the bundled SIL Open Font License.
 `clients/visual/planetarium/assets/provenance.json` records upstream revision,

@@ -49,15 +49,23 @@ source revision, build state, assets, frames and encoded movie. The verifier che
 semantic replay, image hashes and dimensions, the video profile and coarse decoded
 video correspondence. Only successful verification writes COMPLETE.
 
-The Task 7 clean qualification produced all 300 frames in 85.079 seconds on Apple
-M1 Max/Metal; capture through encoding and internal verification took 126.17
-seconds. An independent pass checked every PNG and observation and played the
-actual ten-second movie. Those are offline capture measurements. Final refinement,
-interactive timing and visual acceptance have their own evidence and are not
-inferred from a valid package.
+The final clean qualification produced all 300 frames in 137.779 seconds on Apple
+M1 Max/Metal; capture through encoding and internal verification took 189.18
+seconds. A separate verifier and independent full-frame inspection passed. The
+actual ten-second movie was played and reviewed at full and phone size. The final
+moon refinement adds subtle, stable cosmetic shading while retaining native
+positions, physical scale and the authored cameras.
+
+The 60-second 1080p interactive script measured a 20.390 ms p95 frame interval,
+meeting the 33.33 ms target. Its 43.588 ms p99 and 154.991 ms maximum remain
+recorded: other campaign builds were active on the desktop. First readiness from
+program entry took 3.027 seconds. Two fresh renderers produced identical pixels
+for the sixteen repeated frame requests; this is a measured result on this Mac,
+not a guarantee for every GPU. Manual mouse-drag delivery through the review tool
+remains unproven. Nathan's visual acceptance and merge remain pending.
 
 The [client guide](../clients/planetarium.md) documents operation and limitations.
 The [campaign ledger](https://github.com/hornvale/hornvale/blob/main/docs/superpowers/ledgers/2026-09-10-the-planetarium.md)
-and [package audit](https://github.com/hornvale/hornvale/blob/main/docs/audits/the-planetarium/package.md)
+and [final visual audit](https://github.com/hornvale/hornvale/blob/main/docs/audits/the-planetarium/final-review.md)
 keep the measured provenance. Technical completion does not grant publication or
 settle whether this is the visual quality the project wants.

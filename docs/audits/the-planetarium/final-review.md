@@ -122,7 +122,7 @@ checked against original PNGs rather than attributed to the film. Evidence is
 `playback-*.txt,decoded-*.png}`. This is controller moving review, not Nathan's G6.
 
 The UI attempt used the first clean executable at `4d1e07354`, before the
-startup-clock-only correction. It was not repeated as a new UI witness on
+startup-clock-only correction. The manual-drag trial was not repeated on
 `81ba2bfa6`. Its 140 acknowledged
 control records showed a single unchanged request/time/camera and no errors
 during a requested Sky drag; the pointer remained at its start. Manual OS drag
@@ -131,8 +131,15 @@ and entered free-camera mode; R reset and Right reached frame 1/tick 12. The
 controller closed its owned app, and the process exited 0. The exact evidence is
 `task9-controller-ui-01/{controller-check.json,app.log,bundle-provenance.json,`
 `drag-start.png,drag-end.png,wheel.png,reset-step.png,controls/}`. Scripted controls
-have not been substituted for the missing manual-drag witness. Canonical final
-stage/census accounting and the final G6 digest remain controller close work.
+have not been substituted for the missing manual-drag witness.
+
+The final `Planetarium Review.app` bundles the exact `81ba2bfa6` executable,
+external film and source world. Root actually launched it through Sky, observed
+the sourced frame 0 at physical 1920×1080 without a visible error, then closed
+its owned window. `task9-controller-review-02/review-app.json`,
+`review-app-smoke.jpg` and `review-app-smoke.txt` preserve hashes and the smoke
+witness. This is a launch check, not a replacement manual-drag trial. Canonical
+final stage/census accounting and the final G6 digest remain controller close work.
 
 The established model/presentation limitations remain: the approved Earth-like
 mass-radius assumption, source sea-level datum with physical positive relief,

@@ -1,7 +1,7 @@
 # The Planetarium — retrospective
 
-**Close state:** implementation and close preparation in progress; final visual,
-canonical and merge evidence still pending. Product scope is in the
+**Close state:** local implementation and moving review qualified; final independent
+review, canonical close results and Nathan's visual/merge decision remain pending. Product scope is in the
 [chronicle](../../book/src/chronicle/the-planetarium.md); rulings and task outcomes
 are in the [ledger](../superpowers/ledgers/2026-09-10-the-planetarium.md).
 
@@ -18,7 +18,13 @@ Build cost and rendering cost were different problems. The first full Bevy build
 took 21m05s; a later 300-frame 4K capture took 85.079s. A lingering preview from
 our own earlier inspection contended with the first clean capture. Closing that
 owned window helped establish the next measurement; unrelated processes were
-left alone. Fresh process start is not a cold filesystem or shader cache.
+left alone. Fresh process start is not a cold filesystem or shader cache. The final run met
+its p95 target under another campaign's compile/test load; its worse p99 and
+154.991 ms maximum stayed in the report. Startup instrumentation initially began
+inside live::run, after parsing. Moving it to the first statement of main required
+a new clean build and qualification, not relabeling the earlier 9.562 s result.
+The corrected-clock movie and all 300 PNGs matched the already-played film exactly;
+independent provenance checks and a recorded byte join preserved the review.
 
 Clean provenance required the actual compiled revision, not a caller's label.
 An external film copy bound to a clean build avoided the self-referential problem
@@ -45,13 +51,20 @@ not left for the final merge.
 - Task 4's pending-scene reset was fixed and independently re-reviewed.
 - Task 5's compressed control/CLI code was expanded while Task 6 extended it.
 - Task 6's caller-relative source inventory was fixed and tested in Task 7.
-- Task 7's clean-provenance negative-test suggestion, moon-detail comparison and
-  manual mouse-drag witness remain assigned to Task 9; final outcomes are owed here.
+- Task 7's clean-provenance suggestion is fixed in Task 9: a clean positive and
+  three individually rehashed contradictions reach the semantic guard.
+- Task 9's fourth moon draft retains a continuous crater bowl and corrected
+  tangent-normal sign; a directional regression failed before the correction.
+  Three earlier appearances remain preserved with their rejection reasons in
+  [final-review.md](../audits/the-planetarium/final-review.md).
+- Manual mouse-drag delivery remains unproven after three tool attempts. The
+  pointer did not move; no renderer failure or successful manual orbit was inferred.
+  The final audit names the actual UI records and separates scripted controls.
 - Near-surface precision and future film stories remain frontier follow-ups.
   They do not imply a universal renderer or a scheduled film series.
 
-Scratch reports and reviews were read before drafting this page. Their final
-Task 9 delta, durable artifact archive and exact routing locations remain part
-of close preparation. The Confidence Gradient has a relevant scene-interface
+Scratch reports and reviews were read before drafting this page, and the Task 9
+delta was read again after qualification. The close audit records exact routing
+locations and the durable archive; final review must name any item still lost. The Confidence Gradient has a relevant scene-interface
 bet: a real rendered consumer strengthens it within this bounded astronomical
 scope; it does not establish gameplay or general world visualization.
