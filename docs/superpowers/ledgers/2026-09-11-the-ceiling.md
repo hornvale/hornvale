@@ -1168,3 +1168,96 @@ wrong: none; it costs latency only.*
 **The transferable form:** the hazard is not the command, it is the shared
 index. Explicit paths protect other people's files from your commit; they do
 not protect your staged files from other people's commits.
+
+---
+
+## #19 [G5] — Task 3 fix round 1: both ADDRESSED, and the fragility claim corrected
+
+**Both findings addressed** (commit `eaee3c48b`), verified by a scoped
+re-review that re-ran the probe itself rather than trusting the report.
+
+- **Zero-total pairs now excluded genuinely** — the guard sits before
+  `margins.push`, `argmaxes.push` and `hists.push`, so an excluded pair drops
+  out of the distinct-argmax set, the TV computation and the margin
+  computation together. Measured: **0 exclusions at all five rungs**; the bug
+  never fired. Doc comment corrected to state the real hazard (a seven-way tie
+  resolves to the LATER index, `DetritalImport`) rather than the false
+  "resolves to index 0".
+- **Margins now retained** — per-(seed, rung) top1/top2/margin plus each
+  rung's minimum, diagnostic, asserted on nothing.
+
+**THE FRAGILITY CLAIM IN THE FIX REPORT IS WRONG, AND THE RECORD IS CORRECTED
+HERE.** The report said Deeps' `M1(r)=3` "does not hinge on a fragile seed",
+citing its rung minimum margin of 0.0216. **That statistic answers a different
+question.** Recomputed from the raw histograms:
+
+| Deeps, which seeds contribute which argmax | |
+|---|---|
+| `IronReduction` | 7 seeds (1, 7, 42, 123, 512, 1234, 9001) |
+| `SulphideOxidation` | 4 seeds (99, 256, 1024, 4096) |
+| `Radiolysis` | **seed 777 alone**, margin **0.0252** |
+
+The cited 0.0216 belongs to seed 9001, whose argmax is already backed by six
+other seeds — irrelevant to whether Deeps reaches three. **The seed that
+decides it is 777, and the report never identified it.** So **both** rungs
+carrying the "≥ 3" headline rest on a single-seed discovery: Deeps via 777
+(0.0252) and Underdeep via seed 1 (0.0009).
+
+**The honest statement of M1, which the successor campaign must carry instead
+of "rich":**
+
+> **Composition separates worlds robustly into TWO groups** — at Undercroft
+> and Shallows every distinct source has ≥3 independent contributing seeds,
+> no singleton dependency at all. **A third group exists but rests on one seed
+> per rung.** `M1 = 3` is not a coin flip (two independent thin margins would
+> have to flip together to drop it to 2), but "rich" overstates it.
+
+**Why a rung-wide minimum margin was the wrong instrument**, recorded because
+it is the reusable part: the question was "does this rung's third source
+survive?", and the answer depends on the margin of the seed that UNIQUELY
+contributes that source — not on the smallest margin anywhere in the rung. A
+summary statistic that ranges over the whole population cannot answer a
+question about one member of it. The reviewer found this by recomputing from
+the raw histograms, which existed only because finding 2 had just made them
+exist.
+
+**Ideonomy passes / overturns:** none; a verification that overturned a
+reported conclusion.
+
+---
+
+## #20 [G6-substitute] — The Ceiling closes UNMERGED, folded into its successor
+
+**Nathan's ruling:** close the campaign, do not merge it, fold it into the
+food-system campaign that its own findings motivated. So there is no `sluice`,
+no census, and no G6 package — the branch's commits become the successor's
+evidence base in place.
+
+**What this campaign actually delivered**, against what it set out to do. It
+opened as "derive the underworld's carrying capacity" and it never built one.
+What it produced instead:
+
+1. **Decision 0966** — C.3 ruled after eighteen days blocked, unblocking rung 3
+   and rung 4 for whoever builds them.
+2. **Three measurements**, instrument-verified: the control reproduces
+   `0.145249` exactly; `separation(max) = 0.040745` (prediction missed, and
+   backwards); `M1 = 3` with the fragility above.
+3. **The root cause**, which is the real output: supply is modelled at high
+   resolution and diets at low resolution, bridged by a mean that its own doc
+   says was chosen empirically to dodge a clamp.
+4. **Five registry rows** naming what is derived and unread.
+5. **A verified structural fact that makes the fix tractable** — the
+   `ResourceAxis` basis is documented OPEN, sparse and append-only, and The
+   Sources exercised it weeks ago by adding `CHEMOSYNTHATE` (id 6). The gap is
+   rich-versus-coarse, not a wall.
+
+**0966's status at close: blocked on mechanism, not superseded.** Composition
+genuinely varies; nothing can allocate on it. The successor is where that
+unblocks.
+
+**Stage 2 was never built** — no kind authored, no `TrophicMode` touched, no
+marine anything. The Tidemark's boundary was never crossed, and that stays
+true at close.
+
+**Reconciliation row** updated to record the absorption rather than a
+shipment.
