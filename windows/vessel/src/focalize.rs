@@ -236,8 +236,27 @@ impl Focalizer for TemplateFocalizer {
             v.sky
         );
         let mut nouns = vec![
+            // **THE DISPLAY IS `named`, NOT `biome`, AND THAT WAS A LATENT
+            // DEFECT UNTIL THE TIDEMARK.** The prose one block up renames a
+            // surface reading of a marine biome to "open water" — the sea's
+            // own name for the place an observer floating above a depth zone
+            // actually is — and this noun went on carrying the raw class
+            // ("bathypelagic"), so `look` printed a place the prose never
+            // mentioned and `examine bathypelagic` was the only handle for a
+            // word no player had been shown.
+            //
+            // It was unreachable for the life of that code: nothing put an
+            // observer on a marine vertex until The Tidemark authored six
+            // obligate marine peoples, at which point seed 42's FIRST
+            // settlement became an abyssal-elf one and
+            // `every_noun_appears_in_the_prose` went red on a real world.
+            // An inert branch is inert only until someone reads it.
+            //
+            // `nameable` stays the raw class, so the class name is still a
+            // typeable alias — the renaming narrows what is SHOWN, never
+            // what can be reached.
             Noun::new(
-                &biome,
+                &named,
                 &biome,
                 &format!(
                     "{:.1} °C the year round, moisture {:.2}, {}.",
@@ -413,7 +432,18 @@ mod tests {
                 .unwrap_or_else(|| panic!("no noun named {display:?}"))
                 .kind
         };
-        assert_eq!(kind_of(&v.locale.biome), NounKind::Place);
+        // The biome noun is looked up by HANDLE, not by display: a surface
+        // reading of a marine biome displays as "open water" while keeping
+        // the class name as an alias (see `render`'s comment on that noun).
+        // Looking it up by display would have made this test pass only on a
+        // land vertex, which is how the defect that comment records stayed
+        // invisible.
+        let biome_noun = f
+            .nouns
+            .iter()
+            .find(|n| n.matches(&v.locale.biome))
+            .unwrap_or_else(|| panic!("no noun reachable as {:?}", v.locale.biome));
+        assert_eq!(biome_noun.kind, NounKind::Place);
         assert_eq!(kind_of(&v.locale.regime.descriptor), NounKind::Place);
         assert_eq!(kind_of(&v.village.name), NounKind::Place);
         assert_eq!(kind_of("sky"), NounKind::Thing);
@@ -446,11 +476,13 @@ mod tests {
     fn the_biome_datum_reports_height_above_sea_level() {
         let v = vantage_at(0.0);
         let f = TemplateFocalizer.render(&v);
+        // By HANDLE rather than by display — see
+        // `rendered_noun_kinds_match_each_entrys_role` for why.
         let n = f
             .nouns
             .iter()
-            .find(|n| n.display == v.locale.biome)
-            .expect("the biome is a noun");
+            .find(|n| n.matches(&v.locale.biome))
+            .expect("the biome is reachable as a noun");
         let datum = &n.datum;
         // Seed 42's sea level is -2936.17 m. Before The Benchmark this line read
         // "-2936 m elevation" for a tropical forest at the shoreline.

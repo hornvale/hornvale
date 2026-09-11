@@ -36,6 +36,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | Concept | Gloss | Proto | IPA |
 |---|---|---|---|
 | `abyssal` | a biome class | *Gaokoe | /gaokoe/ |
+| `abyssal-elf-kind` | an abyssal elf | *Goate | /goate/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Nodo | /nodo/ |
 | `affords-passage` | a seam between two rooms a body may pass through | *Nenea | /nenea/ |
 | `alcove` | a recessed space set into a wall | *Da | /da/ |
@@ -138,6 +139,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `island` | land the water surrounds | *Gope | /gope/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Pano | /pano/ |
 | `kelp-forest` | a biome class | *Naa | /naa/ |
+| `kelp-tender-kind` | a kelp tender | *Neeno | /neeno/ |
 | `key` | a small tool shaped to work one particular lock | *Noopo | /noopo/ |
 | `kill` | to cause to cease living | *Dapo | /dapo/ |
 | `killer-whale-kind` | a killer whale | *Gaqo | /gaqo/ |
@@ -159,6 +161,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `marine-snow` | Organic debris drifting endlessly down. | *Qeapao | /qeapao/ |
 | `marsh` | soft wet ground | *Kotoa | /kotoa/ |
 | `melt-pond` | A pool of meltwater on sea ice. | *Neonoe | /neonoe/ |
+| `merfolk-kind` | a merfolk | *Keo | /keo/ |
 | `mesopelagic` | a biome class | *Qona | /qona/ |
 | `millet` | a staple crop | *Noapea | /noapea/ |
 | `moon` | a moon | *Koo | /koo/ |
@@ -195,6 +198,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `read` | to take meaning from written words — `consult` | *Neeta | /neeta/ |
 | `red` | the color term for red | *Qage | /qage/ |
 | `red-dragon-kind` | a red dragon | *Keadaa | /keadaa/ |
+| `reef-mason-kind` | a reef mason | *Teonaa | /teonaa/ |
 | `reef-rubble` | Broken coral debris behind a reef. | *Qo | /qo/ |
 | `reef-shark-kind` | a reef shark | *Go | /go/ |
 | `reg` | A desert floor of wind-swept gravel. | *Neaneo | /neaneo/ |
@@ -254,6 +258,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `tree` | a woody plant | *Nena | /nena/ |
 | `trench-floor` | The deepest floor of an ocean trench. | *Teanea | /teanea/ |
 | `trench-wall` | The steep side of an ocean trench. | *Pee | /pee/ |
+| `triton-kind` | a triton | *Poonoe | /poonoe/ |
 | `tropical-rainforest` | a biome class | *Qanee | /qanee/ |
 | `tropical-seasonal-forest` | a biome class | *Noe | /noe/ |
 | `tuber` | a staple crop | *Naoqoo | /naoqoo/ |
@@ -266,6 +271,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `upwelling` | a biome class | *Toepa | /toepa/ |
 | `urchin-barren` | Seabed grazed bare of kelp. | *Noqea | /noqea/ |
 | `valley` | low ground between heights | *Ganee | /ganee/ |
+| `vent-commensal-kind` | a vent commensal | *Gana | /gana/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Naga | /naga/ |
 | `vessel` | a container shaped to hold liquid or goods | *Keato | /keato/ |
 | `vine` | a staple crop | *Nenoo | /nenoo/ |

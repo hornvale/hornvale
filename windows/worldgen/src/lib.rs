@@ -1401,11 +1401,42 @@ pub fn marine_forage_supply_field(
 /// its chemotrophic supply from `chemosynthate_per_rung` instead, the
 /// per-rung field built alongside it. No `Surface`-realm kind weights
 /// `CHEMOSYNTHATE`, so a vent now carries a correctly-typed, non-zero
-/// chemotrophic supply that nothing in the roster consumes on this arm —
-/// authoring a marine chemotroph, or giving an existing marine kind a
-/// `CHEMOSYNTHATE` weight just to make the supply look used, is THE
-/// TENANT's job (rung 4: "something that eats the budget and spreads"),
-/// not this one's.
+/// chemotrophic supply that nothing in the roster consumes on this arm.**
+///
+/// # THE SENTENCE ABOVE IS STILL TRUE AND THE CONCLUSION A READER DREW FROM IT IS NOT
+///
+/// It used to end "— authoring a marine chemotroph, or giving an existing
+/// marine kind a `CHEMOSYNTHATE` weight just to make the supply look used,
+/// is THE TENANT's job (rung 4: 'something that eats the budget and
+/// spreads'), not this one's." **THE TIDEMARK (Task 3) authored that marine
+/// chemotroph**: `vent-commensal` weights `CHEMOSYNTHATE` at 0.75 and is
+/// `HabitatRealm::Marine`. So the marine half of the Underworld Larder's
+/// rung 4 is CLOSED, while every word of the paragraph above stays literally
+/// true — which is exactly the hazard, and why this correction is loud
+/// rather than a quiet edit. A reader checking "is rung 4 still open?" would
+/// have found a true sentence and reached a false answer.
+///
+/// **And the consumer does not read THIS field, which is the part most
+/// likely to be got wrong next.** The `Marine` arm of
+/// [`per_species_capacity_at`] feeds `CHEMOSYNTHATE` from
+/// [`crate::marine_habitat::MarineHabitat::chemosynthate`] — the per-band
+/// marine analogue of the `Subterranean` arm's `chemosynthate_per_rung`,
+/// carrying the vertex's ambient `has_edifice` flag plus a live vent's
+/// chemistry folded in at the seabed band by
+/// [`crate::waterworld::WaterWorld::at`]. This field is read on the
+/// `Surface` arm, and on the `Marine` arm's dry-vertex fallback alone, which
+/// `availability = 0.0` then multiplies away. So it is STILL true that this
+/// field reaches no live consumer; it is no longer true that the marine
+/// chemotrophic supply reaches none.
+///
+/// **What remains open, and whose it is.** The UNDERWORLD half of rung 4 —
+/// a consumer for the subterranean chemotrophic budget beyond `xorn`, the
+/// "something that eats the budget and spreads" the metaplan names — is
+/// untouched by The Tidemark and belongs to **THE TENANT**, as does The
+/// Winze's unruled symmetric-budget question. Spec
+/// `docs/superpowers/specs/2026-09-11-the-tidemark-design.md` §7 states the
+/// split. Do not delete this paragraph: a successor looking for rung 4 needs
+/// to find which half is closed and which is not.
 /// type-audit: bare-ok(count: return)
 pub fn marine_chemosynthate_supply_field(
     geo: &Geosphere,
@@ -6222,9 +6253,13 @@ mod gazetteer_wiring_tests {
     }
 
     #[test]
-    fn gazetteer_peoples_is_the_settled_roster_at_fifteen() {
-        // Seed-independent: the registry, not any generated world.
-        assert_eq!(gazetteer_peoples().len(), 15);
+    fn gazetteer_peoples_is_the_settled_roster() {
+        // Seed-independent: the registry, not any generated world. The name
+        // no longer carries the count — THE TIDEMARK took it from 15 to 20
+        // (five settling marine peoples; merfolk is `Gregarious` and
+        // settles nothing), and a count in a test name is how the next
+        // campaign inherits a wrong one.
+        assert_eq!(gazetteer_peoples().len(), 20);
     }
 
     /// The entries this returns must actually carry names — the campaign's
@@ -12376,6 +12411,15 @@ mod tests {
             "sea-elf",
             "snow-elf",
             "wood-elf",
+            // THE TIDEMARK: five of six marine peoples. `merfolk` is the
+            // sixth and is `Gregarious`, so it belongs to the wild set
+            // below rather than here — the first MINDED member that set
+            // has ever had.
+            "abyssal-elf",
+            "kelp-tender",
+            "reef-mason",
+            "triton",
+            "vent-commensal",
         ]
         .into_iter()
         .collect();
@@ -12415,6 +12459,14 @@ mod tests {
             "giant-scorpion",
             "giant-squid",
             "killer-whale",
+            // THE TIDEMARK: `merfolk`, and it is the ONLY member of this set
+            // that is a PEOPLE. The set is `{Solitary, Gregarious}` — "not
+            // settled" — and it has been extensionally "the beasts" only
+            // because no minded kind was ever `Gregarious` (decision 0068's
+            // vertex, shipped empty until now). A settlement-free people is
+            // wild-agentified exactly as a herd is; what it is not is
+            // mindless, and nothing in this set ever claimed that.
+            "merfolk",
             "otyugh",
             "owlbear",
             "red-dragon",
@@ -12429,7 +12481,7 @@ mod tests {
         .collect();
         assert_eq!(
             mobile_beasts, expected_wild,
-            "the {{Solitary, Gregarious}} set is the twenty-one mobile non-settled kinds"
+            "the {{Solitary, Gregarious}} set is the twenty-two mobile non-settled kinds"
         );
         assert!(
             settled.is_disjoint(&mobile_beasts),
@@ -13398,8 +13450,17 @@ mod tests {
         // Do not read a movement here as a defect, and do not read a return to
         // a previous value as a fix — 66 has now been visited twice by
         // unrelated causes. Post-unblinding re-measure, declared per 0016.
+        //
+        // THE TIDEMARK re-pin: 68 -> 21, the largest single move this pin has
+        // made. The FLAGSHIP ITSELF CHANGED KIND — `village_info` is the
+        // first settlement in ledger order, and with six marine peoples in
+        // the roster the first one committed at seed 42 is an abyssal-elf
+        // settlement rather than a land one. A deep-water people on 0.02
+        // marine-forage productivity supports a fifth of the population a
+        // temperate-forest people does, so this is the pin reporting a
+        // different settlement, not the same one shrinking.
         assert_eq!(
-            village.population, 68,
+            village.population, 21,
             "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.
@@ -15903,13 +15964,26 @@ mod tests {
         // `per_axis` entry contributes an exact zero to the dot product. A new
         // marine kind belongs on this list; a kind that arrives here by
         // accident is the regression it exists to catch.
+        //
+        // THE TIDEMARK (Task 3) adds six more, and they are the first
+        // OBLIGATE occupants: every one is `HabitatRealm::Marine`, so the
+        // axis is not a share of their diet, it is very nearly all of it
+        // (four sit at 1.0). `merfolk` is on the list while NOT being a
+        // settling people, which is the point of the list being a witness of
+        // authoring rather than of settlement.
         let marine_or_amphibious: std::collections::BTreeSet<&str> = [
+            "abyssal-elf",
             "giant-crocodile",
             "giant-octopus",
             "giant-squid",
+            "kelp-tender",
             "killer-whale",
+            "merfolk",
+            "reef-mason",
             "reef-shark",
             "sea-elf",
+            "triton",
+            "vent-commensal",
         ]
         .into_iter()
         .collect();
@@ -17303,12 +17377,14 @@ mod tests {
             .map(|(k, _)| *k)
             .collect();
         // The Delvers (C2c) re-pin: 6 -> 9, the three dwarves. The Radiation
-        // (C2d) re-pin: 9 -> 15, the six elves. Each carries its own authored
-        // `Dispersion` row, so the spread this test proves is handed through
-        // rather than defaulted covers all fifteen.
+        // (C2d) re-pin: 9 -> 15, the six elves. The Tidemark re-pin: 15 ->
+        // 20, five of six marine peoples (merfolk is `Gregarious` and never
+        // enters this list). Each carries its own authored `Dispersion` row,
+        // so the spread this test proves is handed through rather than
+        // defaulted covers all twenty.
         assert_eq!(
             peoples.len(),
-            15,
+            20,
             "the settling roster moved; re-read this test before re-pinning it"
         );
 

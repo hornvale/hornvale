@@ -636,6 +636,27 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "the-pest",
         "the-pox",
     ],
+    // Epoch 23 — The Tidemark, Task 3: the six obligate marine peoples.
+    // ONE cohort, not six, for the reason epochs 9 and 10 give for the dwarf
+    // and elf families: the campaign is one arrival event and one epoch, and
+    // six cohorts would assert six successive language epochs — a stronger
+    // claim about the world's history than this campaign makes.
+    //
+    // **NOT folded into epoch 10 even though one of the six is an elf.**
+    // `abyssal-elf-kind` belongs to the elf family in `family_of` and shares
+    // proto-Elvish, and it still appends HERE, because this module's
+    // absolute rule is about ARRIVAL, not about descent: re-sorting the
+    // epoch-10 cohort would move the six existing elf-kind concepts' already
+    // assigned proto-roots, which are part of every saved world. A family is
+    // a shared ancestor, not a shared moment.
+    &[
+        "abyssal-elf-kind",
+        "kelp-tender-kind",
+        "merfolk-kind",
+        "reef-mason-kind",
+        "triton-kind",
+        "vent-commensal-kind",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

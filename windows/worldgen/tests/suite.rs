@@ -137,6 +137,8 @@ mod lantern_probe;
 mod lot_probe;
 #[path = "suite/marine_ladder_vents.rs"]
 mod marine_ladder_vents;
+#[path = "suite/marine_peoples_placement.rs"]
+mod marine_peoples_placement;
 #[path = "suite/marine_realm_agreement.rs"]
 mod marine_realm_agreement;
 #[path = "suite/marine_realm_zero_movement.rs"]

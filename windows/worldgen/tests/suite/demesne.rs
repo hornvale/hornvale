@@ -137,10 +137,35 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     // `MARINE_FORAGE`, so every terrestrial supply axis contributes an exact
     // zero to their dot product regardless of that axis's land value — they
     // must be wholly submerged (dry == 0), the mirror of the land mask.
-    let marine_only: std::collections::BTreeSet<&str> =
-        ["giant-octopus", "giant-squid", "killer-whale", "reef-shark"]
-            .into_iter()
-            .collect();
+    //
+    // THE TIDEMARK (Task 3) adds four PEOPLES to this arm — the first
+    // members that are not fauna. Each weights `MARINE_FORAGE` at exactly
+    // 1.0, which is not laziness: `axis_supply_with` is a SUM and every
+    // terrestrial supply field is land-masked, so for an obligate marine
+    // kind a weight on a land axis is a discount rather than a
+    // diversification.
+    // ALL SIX marine peoples are here, including the two whose niche is
+    // MIXED (`kelp-tender` weights `PHOTOSYNTHATE` 0.40, `vent-commensal`
+    // weights `CHEMOSYNTHATE` 0.75) — and the reason is NOT their niches.
+    // They are `HabitatRealm::Marine`, so the realm gate's availability mask
+    // is exactly `0.0` at every land vertex, which zeroes their K there
+    // whatever the supply axes say. That is a stronger guarantee than the
+    // four fauna rows above have, and it is worth saying plainly so the next
+    // reader does not read this arm as a claim about their diets.
+    let marine_only: std::collections::BTreeSet<&str> = [
+        "abyssal-elf",
+        "giant-octopus",
+        "giant-squid",
+        "kelp-tender",
+        "killer-whale",
+        "merfolk",
+        "reef-mason",
+        "reef-shark",
+        "triton",
+        "vent-commensal",
+    ]
+    .into_iter()
+    .collect();
     // The amphibious proof cases (spec §3.4): a kind weighting BOTH a
     // terrestrial axis and `MARINE_FORAGE`, so its K must be nonzero in BOTH
     // media — the observable signature of the sparse-uptake, no-special-case

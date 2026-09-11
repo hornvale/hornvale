@@ -38,6 +38,42 @@ vent succession reaching seating, so a failing vent ends an occupation.
   scope; no `Surface`-realm kind gains a `CHEMOSYNTHATE` weight and no underworld
   kind changes.
 
+### Stage-boundary cadence — a standing obligation, not a per-task step
+
+CLAUDE.md requires a campaign branch to absorb main at **every plan-stage
+boundary**, via `make sluice-stage BRANCH=campaign/the-tidemark REF=<full-sha>`,
+which merges main into the branch **in the chamber** and gates that real merge
+product without pushing it. An earlier draft of this plan put a stage gate only
+at the end of Task 3; that was a defect against the standing rule and is
+corrected here.
+
+**Tasks 1 and 2 shipped without one.** Recorded rather than quietly absorbed —
+this is the same miss The Vent Succession's retrospective recorded on
+2026-09-08. The drift reached 34 commits before it was noticed. The Task 3
+boundary submission covers all three tasks' worth of drift; Tasks 4 and 5 carry
+their own steps below.
+
+A conflict is refused at the mouth in milliseconds, before the box is ever
+taken — that refusal is the signal to absorb main locally and resubmit, not an
+error.
+
+### Local cost discipline
+
+The Mac is shared with other campaign sessions and its load is observable to a
+human sitting at it. The commit gate is the only thing that belongs here by
+policy (decisions 0132/0133): seconds-scale, priced by the edit's blast radius.
+
+- **Scope every test run to what changed** — `cargo nextest run -p <crate>
+  --test suite -- <filter>`. A full-crate suite measured **641 s** during Task 2;
+  breadth is the stage gate's job, on lefford, not this box's.
+- **Do not re-run a suite to read a second line of its output.** Run once, tee,
+  grep the file.
+- **Do not re-run what a report already carries.** A reviewer re-running
+  `make gate-commit` after the implementer recorded `rc=0` buys nothing and costs
+  a minute of ten cores.
+- `make rebaseline` is legitimate locally but costs minutes — run it once, at the
+  point the task actually needs it.
+
 ## File map
 
 - `domains/species/src/lib.rs` — `HabitatRealm` (the enum, ~2741; the registry,
@@ -269,6 +305,10 @@ stratum; M2 is two-sided green; M7 shows no map domination.
   will refuse an unauthored row. Fix the registries, never the ratchets.
 - [ ] Run `make gate-commit`; record exit code and duration.
 - [ ] Commit: `feat(the-tidemark): author the marine subsistence roster`.
+- [ ] **Stage boundary:** absorb main, then submit
+  `make sluice-stage BRANCH=campaign/the-tidemark REF=<full-sha>` and record the
+  verdict in the ledger. Never absorb mid-measurement — if a preregistered sweep
+  is between its baseline and its readout, finish the readout first.
 
 ---
 
@@ -333,6 +373,9 @@ reach extended without its residence moving; book, ledger and artifacts current.
 - [ ] Update `WAT-sea-peoples` in the idea registry to `shipped`, pointing at the
   chronicle and spec. Leave `WAT-reef-fragmentation`, `WAT-signal-distortion` and
   the sea-peoples raider reading `raw`.
+- [ ] **Stage boundary:** absorb main and submit a stage gate before the close
+  sequence, so the G6 package reports a branch already gated against current main
+  rather than one about to meet it for the first time.
 - [ ] Present the G6 package (post-G3 ledger digest, save-format entries first)
   and stop for Nathan.
 - [ ] On approval: `make sluice BRANCH=campaign/the-tidemark REF=<full-sha>`.

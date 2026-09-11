@@ -26,7 +26,11 @@ use hornvale_worldgen::seed_42_world;
 /// `seed_42_world()`'s own fact count, measured directly (not `build_world`,
 /// which `fixture.rs`'s own `the_fixture_equals_a_live_build` already keeps
 /// honest against the fixture) — the number this test pins.
-const SEED_42_FACT_COUNT: usize = 20_109;
+/// THE TIDEMARK (Task 3): 20_109 -> 22_835. Six marine peoples enter the
+/// roster and five of them settle, so the committed world carries more
+/// settlements, more occupations, more people and more species rows. A
+/// deliberate, reviewed move of the byte golden itself, not a weft change.
+const SEED_42_FACT_COUNT: usize = 22_835;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

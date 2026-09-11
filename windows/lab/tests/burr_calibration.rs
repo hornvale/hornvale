@@ -133,11 +133,27 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// phase changes deterministic history, so the corpus this classifier reads
 /// is re-drawn. A readout, not a target: nothing in this campaign touches the
 /// classifier or the typological stages the baseline is about.
-const BASELINE: f64 = 0.8012779552715655;
+///
+/// **THE TIDEMARK: 0.8012779552715655 -> 0.7894979272224781, and the
+/// DENOMINATOR moved with it.** Six marine peoples were authored, so the
+/// roster this classifier assigns over went from 18 tongues to 24 — and a
+/// harder assignment problem is exactly what a lower accuracy means here.
+/// Read the two numbers together: chance fell from 1/18 (0.0556) to 1/24
+/// (0.0417) while accuracy fell from 0.8013 to 0.7895, so the classifier's
+/// margin OVER chance rose. A readout, not a target: nothing in that
+/// campaign touches the classifier or the typological stages.
+const BASELINE: f64 = 0.7894979272224781;
 
-/// The chance floor for an 18-way assignment. Reported alongside the baseline
+/// The chance floor for the assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.
-const CHANCE_FLOOR: f64 = 1.0 / 18.0;
+/// Derived from [`BASELINE_TONGUES`] rather than restated, so the two cannot
+/// disagree about how many tongues the accuracy is over — which is exactly
+/// what would have happened when The Tidemark moved the roster.
+const CHANCE_FLOOR: f64 = 1.0 / BASELINE_TONGUES as f64;
+
+/// The roster size the baseline and the chance floor are both taken over.
+/// 18 until THE TIDEMARK's six marine peoples took it to 24.
+const BASELINE_TONGUES: usize = 24;
 
 fn load() -> Vec<(String, Vec<String>)> {
     let md = std::fs::read_to_string(DICTIONARY).expect("read the committed dictionary");
@@ -188,12 +204,15 @@ fn the_baseline_sits_between_chance_and_certainty() {
 /// The roster the baseline was taken over, pinned so a later reading cannot
 /// silently compare against a different set of tongues.
 #[test]
-fn the_baseline_roster_is_eighteen_tongues() {
+fn the_baseline_roster_is_the_pinned_tongue_count() {
     let lists = load();
     assert_eq!(
         lists.len(),
-        18,
-        "expected 18 tongues, got {}: {:?}",
+        BASELINE_TONGUES,
+        "expected {BASELINE_TONGUES} tongues, got {}: {:?}. The count is a \
+         constant rather than a literal here because CHANCE_FLOOR is derived \
+         from it — moving the roster without moving both is how an accuracy \
+         figure loses its denominator.",
         lists.len(),
         lists.iter().map(|(n, _)| n).collect::<Vec<_>>()
     );

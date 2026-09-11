@@ -17,6 +17,8 @@ mod coverage;
 mod instance_lens;
 #[path = "suite/life_history_golden.rs"]
 mod life_history_golden;
+#[path = "suite/marine_distinctness.rs"]
+mod marine_distinctness;
 #[path = "suite/metabolic_pairs.rs"]
 mod metabolic_pairs;
 #[path = "suite/pathogens.rs"]

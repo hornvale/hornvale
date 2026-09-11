@@ -105,12 +105,18 @@ fn metabolic_class_coverage_matches_the_table() {
                 "hobgoblin",
                 "human",
                 "killer-whale",
+                // THE TIDEMARK: two of the six marine peoples. The other
+                // four are elsewhere on this table, which is the point —
+                // the slate differentiates on metabolism as well as on
+                // depth (spec §3.4).
+                "merfolk",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
                 "rhinoceros",
                 "sea-elf",
                 "snow-elf",
+                "triton",
                 "white-dragon",
                 "wood-elf",
                 "woolly-mammoth",
@@ -120,14 +126,21 @@ fn metabolic_class_coverage_matches_the_table() {
             ThermalStrategy::Ectothermic,
             Rung::Witnessed,
             &[
+                // THE TIDEMARK: the abyssal elf is the elf family's ONLY
+                // ectotherm and the first people in the roster to leave
+                // endothermy — a body that never leaves 4 C water does not
+                // pay to hold 37 C in it (spec §3.4's slate).
+                "abyssal-elf",
                 "giant-constrictor-snake",
                 "giant-crocodile",
                 "giant-octopus",
                 "giant-scorpion",
                 "giant-squid",
                 "kobold",
+                "reef-mason",
                 "reef-shark",
                 "rust-monster",
+                "vent-commensal",
             ],
         ),
         // WITNESSED but NOT exercised: allometry computes the old `Autotroph`
@@ -137,7 +150,14 @@ fn metabolic_class_coverage_matches_the_table() {
         (
             ThermalStrategy::Unmodelled,
             Rung::Witnessed,
-            &["shrieker", "treant", "twig-blight"],
+            // THE TIDEMARK: `kelp-tender` is this vertex's fourth witness
+            // and its first PEOPLE. The same surface-limited argument the
+            // three plants carry — a phototroph's basal rate is not
+            // Kleiber's — reached by a minded, settling kind, which is what
+            // makes the vertex's divergence pinned below (autotroph BMR ==
+            // endotherm BMR) newly load-bearing for a settlement's
+            // demography rather than only for a stand of trees.
+            &["kelp-tender", "shrieker", "treant", "twig-blight"],
         ),
         // The sole carrier of the `None` life-history branch.
         (ThermalStrategy::Absent, Rung::Witnessed, &["xorn"]),
@@ -161,7 +181,20 @@ fn status_basis_coverage_matches_the_table() {
             StatusBasis::Rank,
             Rung::Witnessed,
             // C2d: drow is the family's only `Rank` reading.
-            &["bugbear", "drow", "goblin", "hobgoblin"],
+            //
+            // THE TIDEMARK adds two, and adds them from the same direction
+            // drow reached it by rather than from the goblinoids': a realm
+            // that rations runs on ranked authority. The abyssal elf is the
+            // sea's drow — an isolated hold four kilometres down — and the
+            // triton is the slate's one martial hierarchy.
+            &[
+                "abyssal-elf",
+                "bugbear",
+                "drow",
+                "goblin",
+                "hobgoblin",
+                "triton",
+            ],
         ),
         // The Generalist (C2-0) gives Knowledge its SECOND witness. Human
         // standing rests on craft and lore rather than dominance, which is
@@ -180,7 +213,21 @@ fn status_basis_coverage_matches_the_table() {
         (
             StatusBasis::Knowledge,
             Rung::Witnessed,
-            &["desert-dwarf", "desert-elf", "high-elf", "human", "kobold"],
+            //
+            // THE TIDEMARK adds two more, again unrelated to each other and
+            // to the five above: merfolk standing rests on knowing where the
+            // fish are this season (the one thing a people that holds
+            // nothing can still have), reef-mason standing on knowing where
+            // the next course goes.
+            &[
+                "desert-dwarf",
+                "desert-elf",
+                "high-elf",
+                "human",
+                "kobold",
+                "merfolk",
+                "reef-mason",
+            ],
         ),
         // WITNESSED as of The Vacancy T9: the gnoll, the campaign's headline
         // promotion. Justified from the ecology (a scarce, high-variance
@@ -201,12 +248,19 @@ fn status_basis_coverage_matches_the_table() {
         (
             StatusBasis::Generosity,
             Rung::Witnessed,
+            //
+            // THE TIDEMARK adds two, from two further unrelated ecologies: a
+            // kelp tender leaves more canopy than it took because a stand
+            // outlives whoever planted it, and a vent commensal shares a
+            // windfall that has an end date.
             &[
                 "gnoll",
                 "gully-dwarf",
                 "hill-dwarf",
+                "kelp-tender",
                 "sea-elf",
                 "snow-elf",
+                "vent-commensal",
                 "wood-elf",
             ],
         ),
@@ -232,14 +286,22 @@ fn activity_cycle_coverage_matches_the_table() {
             // C2c (The Delvers): hill-dwarf, a surface farmer keeping the
             // sun's hours. The family does NOT share a cycle — see
             // Crepuscular below.
+            //
+            // THE TIDEMARK adds three of the six marine peoples — the three
+            // that live where there is still a day to keep: the kelp tender
+            // (whose stand keeps the sun's hours because it must), the reef
+            // mason and the triton.
             &[
                 "goblin",
                 "high-elf",
                 "hill-dwarf",
                 "hobgoblin",
                 "human",
+                "kelp-tender",
                 "red-dragon",
+                "reef-mason",
                 "sea-elf",
+                "triton",
             ],
         ),
         (
@@ -247,7 +309,19 @@ fn activity_cycle_coverage_matches_the_table() {
             Rung::Witnessed,
             // C2d (The Radiation): drow, the roster's least ambiguous
             // nocturnal kind — there is no sun underground to keep hours by.
-            &["black-dragon", "bugbear", "drow", "kobold"],
+            //
+            // THE TIDEMARK adds two, both reaching drow's own argument
+            // through water rather than rock: there is no sun at 4,000 m and
+            // none at a vent field, so the abyssal elf and the vent
+            // commensal keep no hours by one either.
+            &[
+                "abyssal-elf",
+                "black-dragon",
+                "bugbear",
+                "drow",
+                "kobold",
+                "vent-commensal",
+            ],
         ),
         // Witnessed by a dragon since The Vigil; a mundane beast still cannot
         // carry an `ActivityCycle` at all (`perception_registry` is keyed to
@@ -265,11 +339,17 @@ fn activity_cycle_coverage_matches_the_table() {
         (
             ActivityCycle::Crepuscular,
             Rung::Witnessed,
+            //
+            // THE TIDEMARK adds the vertex's first MARINE witness, and it
+            // arrives from the ecology rather than from the calendar: the
+            // forage fish merfolk follow rise at dusk and sink at dawn, so a
+            // band that eats them works the margins of the day.
             &[
                 "desert-dwarf",
                 "desert-elf",
                 "gnoll",
                 "gully-dwarf",
+                "merfolk",
                 "snow-elf",
                 "white-dragon",
                 "wood-elf",
@@ -320,12 +400,18 @@ fn social_form_coverage_matches_the_table() {
         (
             SocialForm::Gregarious,
             Rung::Witnessed,
+            // THE TIDEMARK adds `merfolk` — the roster's first MINDED
+            // `Gregarious` kind, which is the vertex
+            // `the_dark_trait_combinations_are_named` below tracked as
+            // deliberately dark from The Vacancy until now. See that test
+            // for what changed and why it is no longer dark.
             &[
                 "dire-wolf",
                 "giant-elk",
                 "giant-goat",
                 "giant-hyena",
                 "killer-whale",
+                "merfolk",
                 "woolly-mammoth",
             ],
         ),
@@ -336,7 +422,12 @@ fn social_form_coverage_matches_the_table() {
         (
             SocialForm::Settled,
             Rung::Witnessed,
+            // THE TIDEMARK takes it to TWENTY: five of its six marine
+            // peoples settle. `merfolk` does NOT — it is the `Gregarious`
+            // row above, and its absence from this list is M2's two-sided
+            // prediction stated as data.
             &[
+                "abyssal-elf",
                 "bugbear",
                 "desert-dwarf",
                 "desert-elf",
@@ -348,9 +439,13 @@ fn social_form_coverage_matches_the_table() {
                 "hill-dwarf",
                 "hobgoblin",
                 "human",
+                "kelp-tender",
                 "kobold",
+                "reef-mason",
                 "sea-elf",
                 "snow-elf",
+                "triton",
+                "vent-commensal",
                 "wood-elf",
             ],
         ),
@@ -414,6 +509,10 @@ fn life_schedule_coverage_matches_the_table() {
         (
             "Allometric",
             Rung::Witnessed,
+            // THE TIDEMARK adds five of its six marine peoples here and
+            // exactly one to `Paced` below, which is the family rule holding
+            // rather than a coincidence — see
+            // `only_the_dwarf_and_elf_families_depart_from_pure_allometry`.
             &[
                 "black-dragon",
                 "bugbear",
@@ -431,17 +530,22 @@ fn life_schedule_coverage_matches_the_table() {
                 "goblin",
                 "hobgoblin",
                 "human",
+                "kelp-tender",
                 "killer-whale",
                 "kobold",
+                "merfolk",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
+                "reef-mason",
                 "reef-shark",
                 "rhinoceros",
                 "rust-monster",
                 "shrieker",
                 "treant",
+                "triton",
                 "twig-blight",
+                "vent-commensal",
                 "white-dragon",
                 "woolly-mammoth",
                 "xorn",
@@ -450,7 +554,11 @@ fn life_schedule_coverage_matches_the_table() {
         (
             "Paced",
             Rung::Witnessed,
+            // THE TIDEMARK adds a SEVENTH ELF and no sixth dwarf: the
+            // abyssal elf takes the family's 5.0 because it is an elf, not
+            // because a deep-water people ought to be long-lived.
             &[
+                "abyssal-elf",
                 "desert-dwarf",
                 "desert-elf",
                 "drow",
@@ -501,8 +609,12 @@ fn the_dark_trait_combinations_are_named() {
         .collect();
     assert_eq!(
         gregarious_predators,
-        vec!["dire-wolf", "giant-hyena", "killer-whale"],
-        "Gregarious x ANIMAL_PREY: WITNESSED by The Vacancy T7; killer-whale adds a marine witness (T8)"
+        vec!["dire-wolf", "giant-hyena", "killer-whale", "merfolk"],
+        "Gregarious x ANIMAL_PREY: WITNESSED by The Vacancy T7; killer-whale \
+         adds a marine witness (T8); THE TIDEMARK adds merfolk, which is the \
+         first MINDED member of this combination — every previous witness is \
+         a beast, and a pack-hunting people that follows a shoal is the same \
+         ecological reading carried by a kind that can talk about it"
     );
 
     // `Sessile x DETRITUS`: WITNESSED as of The Vacancy T7 — the shrieker, a
@@ -519,10 +631,24 @@ fn the_dark_trait_combinations_are_named() {
         "Sessile x DETRITUS: WITNESSED by The Vacancy T7"
     );
 
-    // A minded `Gregarious` kind — decision 0068's whole reason for existing,
-    // shipped with zero instances. DELIBERATELY left dark by this campaign
-    // (spec S6): the blocker is that settlement-free peoples are unaudited
-    // downstream, which is its own campaign.
+    // A minded `Gregarious` kind — decision 0068's whole reason for
+    // existing, shipped with zero instances from The Vacancy (which left it
+    // "DELIBERATELY left dark ... the blocker is that settlement-free
+    // peoples are unaudited downstream, which is its own campaign") until
+    // THE TIDEMARK.
+    //
+    // **THE BLOCKER IS NOT WAVED, IT IS MEASURED.** The Vacancy's reason for
+    // leaving this dark was that nobody knew what a settlement-free people
+    // does downstream. `merfolk` is the occupant, and the campaign's M2 is
+    // that question turned into a two-sided prediction rather than an
+    // assumption: five `Settled` marine kinds must each place at least one
+    // settlement, and this one must place EXACTLY ZERO. A non-zero here
+    // would mean `SocialForm` is not reaching placement — a defect a
+    // one-sided floor could not see — and the ledger records the counts.
+    //
+    // The vertex stays a set equality rather than a non-emptiness check, in
+    // both directions: a SECOND minded `Gregarious` kind appearing is as
+    // much a deliberate act as the first was.
     let psy = psyche_registry();
     let minded_gregarious: Vec<&str> = bio
         .iter()
@@ -531,8 +657,10 @@ fn the_dark_trait_combinations_are_named() {
         .collect();
     assert_eq!(
         minded_gregarious,
-        Vec::<&str>::new(),
-        "minded Gregarious stays DECLARED - deferred, not forgotten"
+        vec!["merfolk"],
+        "minded Gregarious is WITNESSED by merfolk alone (The Tidemark): \
+         decision 0068's vertex has exactly one occupant, and a second is a \
+         deliberate edit here"
     );
 }
 
@@ -740,6 +868,12 @@ fn only_the_dwarf_and_elf_families_depart_from_pure_allometry() {
     assert_eq!(
         departures,
         vec![
+            // THE TIDEMARK: the seventh elf, at the family's 5.0. It is the
+            // ONLY one of six marine peoples here, which is this test's own
+            // rule surviving contact with a new habitat: a paced non-elf
+            // among the other five would have made long life a MARINE trait
+            // and contradicted the sentence below.
+            ("abyssal-elf", LifeSchedule::Paced { factor: 5.0 }),
             ("desert-dwarf", LifeSchedule::Paced { factor: 4.0 }),
             ("desert-elf", LifeSchedule::Paced { factor: 5.0 }),
             ("drow", LifeSchedule::Paced { factor: 5.0 }),
@@ -756,8 +890,11 @@ fn only_the_dwarf_and_elf_families_depart_from_pure_allometry() {
     );
     assert_eq!(
         reg.len(),
-        39,
-        "30 before C2c, plus the dwarf family's three and the elf family's six"
+        45,
+        "30 before C2c, plus the dwarf family's three and the elf family's \
+         six, plus The Tidemark's six marine peoples — of which exactly ONE \
+         (the abyssal elf) is an elf and therefore paced, which is the whole \
+         of what this test asserts about that cohort"
     );
 }
 
@@ -805,6 +942,29 @@ fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
         vec!["drow", "rust-monster", "xorn"],
         "ascending by KindId"
     );
+    // THE TIDEMARK, Task 3: the third realm gains its whole roster at once,
+    // and it is a ROSTER rather than a first occupant — six kinds, because
+    // the marine realm already had biomes, strata and an access mode on
+    // arrival, which is exactly the condition the withdrawn cave dwarves
+    // were waiting on. Pinned in both directions for the same reason the
+    // subterranean list is: adding or removing one moves every world.
+    let marine: Vec<&str> = reg
+        .iter()
+        .filter(|(_, r)| **r == HabitatRealm::Marine)
+        .map(|(k, _)| k.0)
+        .collect();
+    assert_eq!(
+        marine,
+        vec![
+            "abyssal-elf",
+            "kelp-tender",
+            "merfolk",
+            "reef-mason",
+            "triton",
+            "vent-commensal"
+        ],
+        "ascending by KindId"
+    );
     // THE TIDEMARK, Task 1: the store gained two explicit `Surface` rows
     // (sea-elf, giant-crocodile) alongside the three `Subterranean` ones
     // above — absence still means `Surface` for everyone else, but these
@@ -814,10 +974,11 @@ fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
     // stopped being sparse.
     assert_eq!(
         reg.len(),
-        5,
-        "3 subterranean rows (drow, rust-monster, xorn) plus 2 explicit \
-         Surface rows (sea-elf, giant-crocodile) — the store is still \
-         sparse: every OTHER kind is absent and still means Surface"
+        11,
+        "3 subterranean rows (drow, rust-monster, xorn), 2 explicit Surface \
+         rows (sea-elf, giant-crocodile) and — The Tidemark, Task 3 — 6 \
+         Marine ones; the store is still sparse: every OTHER kind is absent \
+         and still means Surface"
     );
 }
 

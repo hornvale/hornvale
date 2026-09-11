@@ -13,6 +13,7 @@ Computed once, at `Seed(42)` — see this function's own module doc for why a fu
 
 | people | cult-form | improvised-name | prior-openness | patience |
 |---|---|---|---|---|
+| abyssal-elf | folk | Spirit | Wary | 4 |
 | bugbear | organized | God | Guarded | 2 |
 | desert-dwarf | folk | Spirit | Wary | 4 |
 | desert-elf | folk | Spirit | Wary | 4 |
@@ -24,7 +25,12 @@ Computed once, at `Seed(42)` — see this function's own module doc for why a fu
 | hill-dwarf | organized | God | Guarded | 2 |
 | hobgoblin | organized | God | Guarded | 2 |
 | human | organized | God | Guarded | 2 |
-| kobold | organized | God | Guarded | 2 |
+| kelp-tender | folk | Spirit | Wary | 4 |
+| kobold | folk | Spirit | Wary | 4 |
+| merfolk | — | Wordless (gap (experiential): merfolk has no exposure to 'god') | Open | 8 |
+| reef-mason | folk | Spirit | Wary | 4 |
 | sea-elf | folk | Spirit | Wary | 4 |
 | snow-elf | folk | Spirit | Wary | 4 |
+| triton | folk | Spirit | Wary | 4 |
+| vent-commensal | folk | Spirit | Wary | 4 |
 | wood-elf | organized | God | Guarded | 2 |

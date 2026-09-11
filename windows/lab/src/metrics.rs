@@ -11380,7 +11380,11 @@ const DWARF_DAUGHTERS: [&str; 3] = ["desert-dwarf", "gully-dwarf", "hill-dwarf"]
 /// [`hornvale_worldgen::family_daughter_kinds`], because a derived list changes
 /// value on the Lab's synthetic rosters and moving a null control's value is a
 /// deliberate act rather than a refactor.
-const ELF_DAUGHTERS: [&str; 6] = [
+const ELF_DAUGHTERS: [&str; 7] = [
+    // THE TIDEMARK: the abyssal elf, the family's seventh daughter and its
+    // first outside the overworld's sibling realms. `family_of` is the
+    // authority and this list is drift-checked against it.
+    "abyssal-elf",
     "desert-elf",
     "drow",
     "high-elf",
@@ -12702,7 +12706,12 @@ mod tests {
             .into_iter()
             .next()
             .expect("locked world has beliefs");
-        assert_eq!(first.source_kind, "tide");
+        // THE TIDEMARK re-pin: "tide" -> "heat". Six marine peoples enter
+        // the settling roster, so which species commits the world's FIRST
+        // pantheon moves again — exactly the drift the paragraph above
+        // records for The Living Community. Goblin's OWN head, the property
+        // this test actually checks, is unchanged below.
+        assert_eq!(first.source_kind, "heat");
         let built = BuiltView::Full(view);
         let value = extract_from(&built, "belief-kind-goblin");
         assert_eq!(value, MetricValue::Text("eternal".to_string()));
@@ -14116,9 +14125,13 @@ mod tests {
         // 2.4242424242424243. Stellar topology and anchor generation change
         // the seed-42 settlement/naming substrate; this is a fresh live
         // measurement on the merged tree, not a change to the 2-3 target.
+        // THE TIDEMARK re-pin (2026-09-11): 2.4242424242424243 ->
+        // 2.5714285714285716. Six marine peoples re-place seed 42's
+        // settlements, so goblin's own site pool and the names drawn for it
+        // move; still inside the 2-3 target, which is the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.4242424242424243)
+            MetricValue::Number(2.5714285714285716)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14356,9 +14369,14 @@ mod tests {
         // THE WANDERERS re-pin (2026-09-09): 2.8 -> 2.8157894736842106.
         // Stellar topology and anchor generation change the merged tree's
         // seed-42 named-site sample; it remains inside the stated 2-3 target.
+        // THE TIDEMARK re-pin (2026-09-11): 2.8157894736842106 ->
+        // 2.580246913580247. Six marine peoples re-place seed 42's
+        // settlements, so kobold's named-site sample moves with goblin's
+        // (above); both remain inside the stated 2-3 target. Nothing in
+        // that campaign touches phonology, wear or the namer.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.8157894736842106)
+            MetricValue::Number(2.580246913580247)
         );
     }
 
@@ -14603,7 +14621,14 @@ mod tests {
         // THE MURRAIN re-pin (2026-09-07): 0.6102564102564103 ->
         // 0.6905537459283387, from the same deterministic settlement
         // substrate change that moved the syllable pin above.
-        assert_eq!(share, 0.6905537459283387, "seed 42 transparency drifted");
+        // THE TIDEMARK re-pin (2026-09-11): 0.6905537459283387 ->
+        // 0.5974025974025974. Six marine peoples re-place seed 42's
+        // settlements, changing which names read as transparent — the same
+        // cause as the syllable pin above, and the row's claim (a
+        // distribution, not a constant) is untouched. NOT corroborated
+        // against a census: that campaign's refresh happens once, at
+        // pre-merge close, and had not been run when this was re-pinned.
+        assert_eq!(share, 0.5974025974025974, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -15256,7 +15281,16 @@ mod tests {
             // independent exposure reading. The precondition remains
             // nonempty and the mutation still exercises the river and
             // karst/wetland gates.
-            vec!["river", "ford", "valley", "marsh", "spring"],
+            // THE TIDEMARK re-pin (Task 3, 2026-09-11): SIX — "island"
+            // returns, the TWELFTH oscillation. Six marine peoples enter
+            // the settling roster, so seed 7's competition for coastal and
+            // shelf-adjacent ground changes and goblin's reach widens
+            // again. Re-pin the set, do not swap the seed, per the
+            // precedent this comment has now followed through all twelve.
+            // Coverage is at its widest: river, elevation and
+            // karst/wetland gate classes all exercised, and "island" adds
+            // the coastal one.
+            vec!["river", "ford", "valley", "marsh", "spring", "island"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {

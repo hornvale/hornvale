@@ -20,8 +20,10 @@ fn axis_spread_probe() {
     let ids: Vec<PeopleId> = cat.keys().copied().collect();
     assert_eq!(
         ids.len(),
-        15,
-        "the catalog must hold exactly the fifteen settling peoples"
+        21,
+        "the catalog must hold exactly the minded, social peoples — \
+         `society_registry` is `minded ∧ social` (decision 0068), which was \
+         extensionally `Settled` until The Tidemark's Gregarious merfolk"
     );
 
     println!(

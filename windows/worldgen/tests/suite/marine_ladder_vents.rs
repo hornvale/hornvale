@@ -533,6 +533,38 @@ fn the_marine_habitat_read_consumes_no_draw() {
 /// Both needles are asserted present before anything is concluded from
 /// their absence, so a rename that made this scan vacuous fails loudly
 /// instead of going quiet.
+///
+/// # THE MEASUREMENT ABOVE EXPIRED WITH THE TIDEMARK'S TASK 3, AND THE SCAN IS NO LONGER ALONE
+///
+/// The reason an outcome test was impossible was stated precisely — "no real
+/// marine kind existed" — and Task 3 authored six. One of them,
+/// `vent-commensal`, weights `CHEMOSYNTHATE` at 0.75 and settles at seed 42,
+/// so the question was re-opened and MEASURED rather than left closed by the
+/// older reading. The result:
+///
+/// **All three of the vent commensal's seed-42 sites sit on vent-improved
+/// ground** — capacity 5.75-5.88 headcount ambient against 36.6-38.1 with
+/// the vent layer, a 6.3x lift — while the vent layer improves only 337 of
+/// 40,962 vertices (0.82%). Reverting `build_at` to `build` moves all three
+/// sites off the vent field entirely (verified by mutation, target text
+/// checked present with `grep -c -F` first): 3 of 3 becomes 0 of 3, and the
+/// three vertices themselves change.
+///
+/// So the semantic guard exists now and lives at
+/// `marine_peoples_placement::i4_are_the_vent_commensals_sites_vent_lit`. It
+/// is the one that would catch the defect this scan cannot see — a reversion
+/// that kept the literal `EraInvariantSupply::build_at(` in a comment or a
+/// dead branch while calling `build(`.
+///
+/// **This scan is KEPT anyway, narrowed to what the outcome test does not
+/// hold.** Two of its three needles have no behavioural witness: nothing
+/// about a placed settlement distinguishes the overlay being constructed at
+/// all (the `waterworld_from` needle) from it being constructed and ignored,
+/// and nothing distinguishes reading the succession at `GENESIS` from
+/// reading it at some other instant — a vent lit at a different tick may
+/// well light the same vertices. It is also seconds-cheap where the outcome
+/// test builds a world to `Full`. Read the two together: the scan says the
+/// call is written, the outcome test says the call has an effect.
 #[test]
 fn the_bake_hoists_the_vent_bearing_marine_habitat() {
     const LIB: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/lib.rs");

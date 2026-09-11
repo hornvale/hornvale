@@ -688,6 +688,204 @@ regenerated; the M1 probe's seed loop needed a `/// claim: readout(...)` line
 live `GeneratedTerrain`/`GeneratedClimate`, which the committed seed-42
 fixture does not carry).
 
+## Task 3 — execution record
+
+The six obligate marine peoples: `triton`, `merfolk`, `abyssal-elf`,
+`vent-commensal`, `kelp-tender`, `reef-mason`. Spec §3.4's slate, authored
+against the arriving-axis table rather than against the shape of an existing
+kind.
+
+### M5 — pairwise distinctness (the campaign's headline guard)
+
+A permanent test, not a measurement:
+`domains/species/tests/suite/marine_distinctness.rs::no_pair_of_marine_kinds_differs_only_by_stratum`.
+
+**Minimum over all 15 pairs: 5, at (`reef-mason`, `triton`).** Full table
+printed on every run. Per-pair counts: 11, 9, 6, 6, 9, 10, 9, 9, 9, 7, 7, 10,
+5, 9, 10.
+
+Four axes are EXCLUDED, one more than the spec asks for, and the extra one is
+a finding:
+
+- `elevation` — this *is* stratum;
+- `moisture`, `insolation` — spec §3.4's table marks both as not arriving;
+- **`temperature` — the table marks it ARRIVING, which is true of the plumbing
+  and false of the effect.** `tolerance_liebig` returns early on
+  `elevation <= floor_buf`, and elevation is the only UNFLOORED axis, so its
+  value cannot exceed its own `devotion`. Every people the roster ships is
+  authored PREPARED (`devotion_elev` 0.30 against sovereignty floors of
+  0.42–0.45), so the fast path fires at every vertex and temperature, moisture
+  and insolation are computed and discarded. `sea_elf_condition_niche` has said
+  "PREPARED: never binds" since The Radiation; what was not stated is the
+  consequence for M5.
+
+So the axis that actually differentiates six marine peoples per-vertex is
+`biome_affinity` — a graded factor resolved by biome NAME, multiplied outside
+the Liebig minimum. All six carry rows; the store goes 8 → 14.
+
+### M2 — placement, two-sided, seed 42, `BuildDepth::Full`
+
+`windows/worldgen/tests/suite/marine_peoples_placement.rs::m2_the_settled_marine_peoples_place_and_the_gregarious_one_does_not`.
+
+| kind | settlements |
+|---|---:|
+| abyssal-elf | 3 |
+| kelp-tender | 4 |
+| reef-mason | 4 |
+| triton | 3 |
+| vent-commensal | 3 |
+| **merfolk** | **0** |
+
+Surface + subterranean total: **368**. Marine total: **17** (4.4%). Both poles
+green: every `Settled` marine kind places ≥ 1 and far under the surface total,
+and `merfolk` places exactly 0 — `SocialForm` reaches placement.
+
+And each lands in the biome its affinity names, which is the design working
+rather than a coincidence (`book/src/gallery/settlement-seed-42.md`): abyssal
+elf on `bathypelagic`, kelp tender on `upwelling`, reef mason on `coral-reef`,
+triton on `upwelling`, vent commensal on **`hydrothermal-vent`**.
+
+### M7 — the abyssal elf's held vertices
+
+Same file, `m7_the_abyssal_elf_does_not_dominate_the_map`. "Held" = the strict
+argmax of `per_species_capacity` over the settling roster, and the instrument
+is stated because the spec's ~800/~1,425 figures were taken with a different
+one — a NON-comparative count cannot answer M7 at all, because a marine kind
+reads non-zero at every vertex holding a water column (~29,700 of 40,962)
+whatever its elevation optimum. So the family's own anchors are re-measured in
+the same run.
+
+| seed | abyssal-elf | sea-elf | wood-elf | drow |
+|---|---:|---:|---:|---:|
+| 42 | 336 | 182 | 0 | 18 |
+| 7 | 368 | 443 | 0 | 295 |
+| 1234 | 522 | 19 | 0 | 264 |
+| **mean** | **408.7** | **214.7** | **0** | — |
+
+**No domination: the abyssal elf is 1.9x its marine sibling's mean and the same
+order as the family**, against a 10x ceiling. Band confinement was applied
+BEFORE the measurement rather than as a remedy after it
+(`the_abyssal_elf_is_confined_to_the_deep_bands` pins the mirror of
+`the_sea_elf_is_confined_to_the_shelf_band`, and asserts the two rows
+PARTITION the ocean).
+
+`wood-elf` holds zero under this instrument at all three seeds — it is never
+the strict argmax anywhere. A fact about the instrument, not about wood-elf,
+and the reason M7's anchor is `max(wood, sea)` rather than `min`.
+
+### W5 — the kelp tender's `PHOTOSYNTHATE` weight: the NULL
+
+`w5_the_kelp_tenders_photosynthate_weight_is_measured_not_assumed`, ablating
+the weight against the same marine weight so only the photosynthate term
+changes: **the weight moves capacity at 0 of 29,679 scoring vertices, largest
+absolute move 0.** `PHOTOSYNTHATE` is fed by `base_carrying`, the terrestrial
+NPP field, which is exactly `0.0` at every submerged vertex.
+
+Kept, not deleted: the weight is the honest statement of what the kind eats on
+the axis the kernel reserves for it, and what is missing is a marine primary-
+production supply. The phototrophy itself is NOT inert — `TrophicMode` reaches
+`prey_pressure_from`, which excludes a phototroph from the prey base.
+
+### I4 — the wiring guard is now BEHAVIOURAL, and the scan is narrowed
+
+The brief asked whether an outcome test is possible now that real marine kinds
+exist. It is, and it fires:
+
+**All 3 of the vent commensal's seed-42 sites sit on vent-improved ground** —
+capacity 5.75–5.88 ambient against 36.6–38.1 with the vent layer, a 6.3x lift
+— while the vent layer improves only 337 of 40,962 vertices (0.82%), so three
+sites landing there by chance is ~6e-6.
+
+Verified by mutation (target text `grep -c -F`-checked present first):
+reverting `EraInvariantSupply::build_at` → `build` inside `bake_history_from`
+takes it from 3 of 3 to **0 of 3** and relocates all three vertices
+(4229/7053/7954 → 29907/29909/36658). Restored and re-checked.
+
+`the_bake_hoists_the_vent_bearing_marine_habitat` is KEPT, narrowed to the two
+needles no outcome test holds: that the overlay is constructed at all, and that
+the instant is named `GENESIS` (a vent lit at another tick may light the same
+vertices). Both docs cross-reference each other.
+
+### The C2 obligation, and a correction to how it was framed
+
+Both prose sites are rewritten in the same commit as the vent commensal. But
+the brief's framing — "the vent commensal reads **the same**
+`marine_chemosynthate_supply_field` the `Surface` arm reads" — is not what the
+plumbing does, and writing it that way would have made the correction false:
+
+- the `Marine` arm feeds `CHEMOSYNTHATE` from **`MarineHabitat::chemosynthate`**
+  (Task 2's per-band field, the marine sibling of `chemosynthate_per_rung`);
+- `marine_chemosynthate_supply_field` is read on the `Surface` arm and on the
+  `Marine` arm's dry-vertex fallback, which `availability = 0.0` multiplies
+  away.
+
+So the substantive instruction is honoured — **no marine twin supply field was
+authored** — and both sites now say exactly that: the marine half of rung 4 is
+CLOSED, this field still has no live consumer, and the underworld half is open
+and belongs to THE TENANT. The old sentence is kept, not deleted, because a
+successor needs to find it.
+
+### What else the six required
+
+`coverage.rs`'s exhaustive tables were the enumeration, as ruled. Beyond them:
+`biosphere`/`habitat_realm`/`locomotion`/`fatigue_rise`/`sleep_grade`/`psyche`/
+`dispersion`/`society`/`perception`/`family_of`/`KIND_CONCEPTS`/
+`biome_affinity`/`pathogen_hosts`; `articulation_registry` and
+`lexicon_registry` in `domains/language`; accession **epoch 23** (one cohort,
+not six — and NOT folded into epoch 10 despite one member being an elf,
+because the rule is about arrival, not descent).
+
+Registry counts moved: biosphere 39 → 45, realm store 5 → 11, `Settled` 15 →
+20, `society_registry` 15 → **21** (merfolk), psyche/perception 18 → 24,
+pathogen hosts 15 → 20, biome affinity 8 → 14.
+
+### Three vertices this cohort promoted, each a deliberate edit
+
+- **`SocialForm::Gregarious` × minded** — decision 0068's own reason for
+  existing, shipped with zero instances and left "deliberately dark" by The
+  Vacancy because settlement-free peoples were unaudited downstream. `merfolk`
+  is the occupant, and M2 is that blocker turned into a two-sided measurement
+  rather than waved.
+- **`TrophicMode::Chemotrophic`** — a second carrier (`vent-commensal`), which
+  `chemotrophic_is_declared_and_unwitnessed` explicitly predicted and asked to
+  be justified rather than silently widened. `SANCTIONED` gains
+  `(Ectothermic, Chemotrophic)`.
+- **`ThermalStrategy::Unmodelled`** — a fourth witness (`kelp-tender`) and its
+  first PEOPLE, which makes `autotroph_is_computed_as_an_endotherm_today`'s
+  known divergence newly load-bearing for a settlement's demography.
+
+### Two authoring constraints discovered by being violated
+
+- **`in_group_radius` is a BANDED axis, not a free scalar.**
+  `windows/vessel::housemark` partitions it into three inclusive bands with
+  deliberate gaps (0.36–0.49 and 0.61–0.64 REFUSE), and an authored 0.45
+  panicked the housemark roster. Reef mason 0.45 → 0.35, triton 0.4 → 0.5,
+  vent commensal 0.5 → 0.55.
+- **`night_vision` is QUANTIZED by the eye model.** `beholding_probe`
+  requires two kinds with different values to render different swatches, and
+  an authored 0.45 against goblin's 0.5 produced one identical eye. All six now
+  snap to values the roster already distinguishes — which is the campaign's own
+  M5 discipline arriving on a second axis: a difference finer than the model
+  can render is a distinction the engine cannot see.
+
+### A latent defect this cohort made reachable
+
+`windows/vessel::focalize::render` renames a surface reading of a marine biome
+to "open water" in the PROSE and went on naming the noun by the raw class, so
+`look` printed a place the prose never mentioned. Unreachable for the life of
+that code — nothing put an observer on a marine vertex until now. Fixed
+(display is the renamed place; the class stays a typeable alias), and both
+tests that looked the noun up by display now look it up by handle.
+
+### Determinism and drift
+
+Authoring kinds moves worlds, as the brief expected. `make rebaseline` +
+`make rebaseline-goldens` run; the seed-42 committed fact count moves
+20,109 → 22,835; 24 new phonology audio clips authored with `hornvale voice`;
+the history showcase repointed 10626 → 9884 (10626 renders an EMPTY column
+now, which `docs_consistency` caught). **No new stream label, no new external
+dependency, no epoch.**
+
 ## Follow-ups
 
 - **The aerial realm is the empty fourth sibling.** `MAP-11`'s medium axis is

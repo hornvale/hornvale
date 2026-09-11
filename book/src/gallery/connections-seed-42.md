@@ -19,7 +19,7 @@ The connections of vertex 13980
 
 vertex 13980 opens onto no sea-lane and no natural overland route of its own: whatever reaches it must cross open country, adjacency by adjacency.
 
-vertex 13980's region holds only 1 vertex -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (5549 vertices). 25 real regions divide the known world in all.
+vertex 13980's region holds only 1 vertex -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (5548 vertices). 25 real regions divide the known world in all.
 ```
 
 ## A hub on a different shore
@@ -35,7 +35,7 @@ The connections of vertex 28435
 
 vertex 28435 opens onto no sea-lane and no natural overland route of its own: whatever reaches it must cross open country, adjacency by adjacency.
 
-vertex 28435's region holds only 1 vertex -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (5549 vertices). 25 real regions divide the known world in all.
+vertex 28435's region holds only 1 vertex -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (5548 vertices). 25 real regions divide the known world in all.
 ```
 
 ## The world, in sum
@@ -47,5 +47,5 @@ travel divides this world into, the largest, and the rest.
 The reach of the map
 ---------------------
 
-Natural travel divides the known world into 24 real regions (below 2 vertices, a "region" is just an island vertex no sea-lane reaches -- not counted here). The largest spans 5549 vertices; the rest, smaller and cut off from it, run 1876, 1654, 914, 638, and 417 vertices -- plus 18 smaller still.
+Natural travel divides the known world into 24 real regions (below 2 vertices, a "region" is just an island vertex no sea-lane reaches -- not counted here). The largest spans 5548 vertices; the rest, smaller and cut off from it, run 1876, 1654, 915, 638, and 417 vertices -- plus 18 smaller still.
 ```

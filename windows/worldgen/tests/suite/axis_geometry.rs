@@ -39,7 +39,36 @@ use hornvale_species::biome_affinity_registry;
 /// under the legacy enum's spelling; `epipelagic` is not a community at all but
 /// a **stratum wearing a formation's coat** (`facets.rs` says so in as many
 /// words), and it projects to open water at the surface rung.
-const RECONCILE: &[(&str, &str)] = &[("coral-reef", "reef"), ("epipelagic", "open-water")];
+///
+/// **THE TIDEMARK (Task 3) adds five more, and every one is the same shape as
+/// `epipelagic`: a STRATUM the registry names where the assignment names a
+/// COMMUNITY.** Six marine peoples now carry affinity rows, and a marine
+/// affinity has to key by the biome name placement resolves against
+/// (`Biome::name()`), which below the shelf is a depth band. Each maps to the
+/// open-water community the assignment gives that band:
+///
+/// - `mesopelagic` -> `twilight-water` — the band where light fails but has
+///   not gone;
+/// - `bathypelagic` -> `lightless-water` — the band below that, where it has;
+/// - `abyssal` -> `abyssal-plain` — the seabed community of the abyssal band;
+/// - `hadal-trench` -> `trench-floor` — the same for the hadal one;
+/// - `hydrothermal-vent` -> `vent` — the one NON-stratum addition, and a
+///   straight spelling difference: climate derives the biome from
+///   `SeafloorFeature::Ridge` and the assignment names the same thing `vent`.
+///
+/// Mapping rather than dropping matters here for the reason the header
+/// states: a dropped name silently truncates the population the concordance
+/// above is computed over, and five of the fifteen would have been a third
+/// of it.
+const RECONCILE: &[(&str, &str)] = &[
+    ("coral-reef", "reef"),
+    ("epipelagic", "open-water"),
+    ("mesopelagic", "twilight-water"),
+    ("bathypelagic", "lightless-water"),
+    ("abyssal", "abyssal-plain"),
+    ("hadal-trench", "trench-floor"),
+    ("hydrothermal-vent", "vent"),
+];
 
 fn assignment_name(registry_name: &str) -> &str {
     RECONCILE

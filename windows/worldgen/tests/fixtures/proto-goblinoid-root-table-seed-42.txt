@@ -1,4 +1,5 @@
 abyssal: Gaokoe /gaokoe/
+abyssal-elf-kind: Goate /goate/
 abyssal-plain: Nodo /nodo/
 affords-passage: Nenea /nenea/
 alcove: Da /da/
@@ -101,6 +102,7 @@ ice-lead: Keeqe /keeqe/
 island: Gope /gope/
 kelp-canopy: Pano /pano/
 kelp-forest: Naa /naa/
+kelp-tender-kind: Neeno /neeno/
 key: Noopo /noopo/
 kill: Dapo /dapo/
 killer-whale-kind: Gaqo /gaqo/
@@ -122,6 +124,7 @@ many: Naona /naona/
 marine-snow: Qeapao /qeapao/
 marsh: Kotoa /kotoa/
 melt-pond: Neonoe /neonoe/
+merfolk-kind: Keo /keo/
 mesopelagic: Qona /qona/
 millet: Noapea /noapea/
 moon: Koo /koo/
@@ -158,6 +161,7 @@ rain: Nope /nope/
 read: Neeta /neeta/
 red: Qage /qage/
 red-dragon-kind: Keadaa /keadaa/
+reef-mason-kind: Teonaa /teonaa/
 reef-rubble: Qo /qo/
 reef-shark-kind: Go /go/
 reg: Neaneo /neaneo/
@@ -217,6 +221,7 @@ treant-kind: Nana /nana/
 tree: Nena /nena/
 trench-floor: Teanea /teanea/
 trench-wall: Pee /pee/
+triton-kind: Poonoe /poonoe/
 tropical-rainforest: Qanee /qanee/
 tropical-seasonal-forest: Noe /noe/
 tuber: Naoqoo /naoqoo/
@@ -229,6 +234,7 @@ under: Qapea /qapea/
 upwelling: Toepa /toepa/
 urchin-barren: Noqea /noqea/
 valley: Ganee /ganee/
+vent-commensal-kind: Gana /gana/
 vent-plume: Naga /naga/
 vessel: Keato /keato/
 vine: Nenoo /nenoo/

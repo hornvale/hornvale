@@ -47,72 +47,63 @@ for the same reason, so the test that guards this shape and the page that
 publishes it now name the same world.)*
 
 ```text
-[room — old-growth timber]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+[room — open blue water]
+Open water — open blue water, in blue shadow, over a trough — in the lands of Jampom. The sky above: Twilight. The horizon shines pale blue-white. The sky is a low grey rain-deck. You can enter the settlement of Jampom.
+Here: Ṅwaoṅwo, Ṅjaoṅwofa, Xjoomjo and Vaamjo, and 16 others.
 > enter
 [chamber — threshold]
-A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, the hearth, the loomroom, the store.
+A small room in Jampom, holding a doorway, a screen, a high seat and a stone ledge.
+Here: Ṅwaoṅwo, Ṅjaoṅwofa, Xjoomjo and Vaamjo, and 16 others.
+Ways on: out, further in.
 > carrying
 You are carrying nothing.
 > take a key
 You see no a key here.
 > enter the loomroom
-[chamber — loomroom]
-A small room in Vapatkapak, holding a doorway, a water jar, a loom, a key, a brazier and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out.
+There is no way to the loomroom from here.
 > take a key
-You take the key.
+You see no a key here.
 > carrying
-You are carrying a key.
+You are carrying nothing.
 > enter the threshold
-[chamber — threshold]
-A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, the hearth, the loomroom, the store.
+There is no way to the threshold from here.
 > enter the store
-[chamber — storeroom]
-A small room in Vapatkapak, holding a doorway, a water jar, a strongbox, a key and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out.
+There is no way to the store from here.
 > examine a strongbox
-A banded chest, low and heavier than it looks, its lid seated flush.
+You see no a strongbox here.
 > take a key
-The key is shut away in something closed.
+You see no a key here.
 > open a strongbox
-You open the strongbox. Within it: a key.
+You see no a strongbox here.
 > put a key in a strongbox
-You put the key in the strongbox.
+You are not carrying a key.
 > carrying
 You are carrying nothing.
 > take a key
-You take the key.
+You see no a key here.
 > carrying
-You are carrying a key.
+You are carrying nothing.
 > close a strongbox
-You close the strongbox.
+You see no a strongbox here.
 > open a strongbox
-You open the strongbox. Within it: a key.
+You see no a strongbox here.
 > out
-[room — old-growth timber]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+[room — open blue water]
+Open water — open blue water, in blue shadow, over a trough — in the lands of Jampom. The sky above: Night. The sky is a low grey rain-deck. You can enter the settlement of Jampom.
+Here: Ṅwaoṅwo, Ṅjaoṅwofa, Xjoomjo and Vaamjo, and 16 others.
 > enter
 [chamber — threshold]
-A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, the hearth, the loomroom, the store.
+A small room in Jampom, holding a doorway, a screen, a high seat and a stone ledge.
+Here: Ṅwaoṅwo, Ṅjaoṅwofa, Xjoomjo and Vaamjo, and 16 others.
+Ways on: out, further in.
 > carrying
-You are carrying a key.
+You are carrying nothing.
 > drop a key
-You set the key down.
+You are not carrying a key.
 > carrying
 You are carrying nothing.
 > take a key
-You take the key.
+You see no a key here.
 > carrying
-You are carrying a key.
+You are carrying nothing.
 ```

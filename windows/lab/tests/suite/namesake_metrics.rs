@@ -72,9 +72,14 @@ fn the_namesake_metrics_report_in_range_on_a_real_world() {
             panic!("{name} on seed 42: expected a Number, got {value:?}");
         };
         println!("seed 42  {name} = {n}");
+        // The upper bound is a SANITY ceiling on a count, not a pin: it says
+        // "this is a per-people count, not a ratio and not a population".
+        // It read 16 — the settling roster plus one — until THE TIDEMARK
+        // took that roster to 20; 24 is the same "roster plus headroom"
+        // reading against today's roster.
         let (lo, hi) = match *name {
-            "name-pattern-signatures" | "peoples-placed" => (1.0, 16.0),
-            "name-prefix-region-scope" => (1.0, 16.0),
+            "name-pattern-signatures" | "peoples-placed" => (1.0, 24.0),
+            "name-prefix-region-scope" => (1.0, 24.0),
             _ => (0.0, 1.0),
         };
         assert!(

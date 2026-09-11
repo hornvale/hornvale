@@ -139,7 +139,7 @@ that is the difference.
 
 ## Supply
 
-401 served tokens no situation in this corpus requires.
+407 served tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -150,6 +150,7 @@ score beside a rising count of genuinely unconsumed tokens — needs the
 missing half before this list can serve it.
 
 - `concept:abyssal` (climate)
+- `concept:abyssal-elf-kind` (species)
 - `concept:abyssal-plain` (climate)
 - `concept:affords-passage` (language)
 - `concept:alcove` (thing)
@@ -252,6 +253,7 @@ missing half before this list can serve it.
 - `concept:island` (terrain)
 - `concept:kelp-canopy` (climate)
 - `concept:kelp-forest` (climate)
+- `concept:kelp-tender-kind` (species)
 - `concept:key` (thing)
 - `concept:kill` (language)
 - `concept:killer-whale-kind` (species)
@@ -274,6 +276,7 @@ missing half before this list can serve it.
 - `concept:marine-snow` (climate)
 - `concept:marsh` (terrain)
 - `concept:melt-pond` (climate)
+- `concept:merfolk-kind` (species)
 - `concept:mesopelagic` (climate)
 - `concept:millet` (climate)
 - `concept:moon` (astronomy)
@@ -313,6 +316,7 @@ missing half before this list can serve it.
 - `concept:red-dragon-kind` (species)
 - `concept:red-dwarf` (astronomy)
 - `concept:red-giant` (astronomy)
+- `concept:reef-mason-kind` (species)
 - `concept:reef-rubble` (climate)
 - `concept:reef-shark-kind` (species)
 - `concept:reg` (climate)
@@ -373,6 +377,7 @@ missing half before this list can serve it.
 - `concept:tree` (language)
 - `concept:trench-floor` (climate)
 - `concept:trench-wall` (climate)
+- `concept:triton-kind` (species)
 - `concept:tropical-rainforest` (climate)
 - `concept:tropical-seasonal-forest` (climate)
 - `concept:tuber` (climate)
@@ -385,6 +390,7 @@ missing half before this list can serve it.
 - `concept:upwelling` (climate)
 - `concept:urchin-barren` (climate)
 - `concept:valley` (terrain)
+- `concept:vent-commensal-kind` (species)
 - `concept:vent-plume` (climate)
 - `concept:vessel` (thing)
 - `concept:vine` (climate)

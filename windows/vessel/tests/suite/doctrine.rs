@@ -45,7 +45,8 @@ fn the_least_equipped_people_is_the_most_open() {
 fn cult_form_is_uniform_within_every_people() {
     // The spec's section 3.2 takes the FIRST belief as decisive. That is only
     // sound because no people holds two cult-forms. Measured 0 of 15 on seed
-    // 42; this test is what keeps it true.
+    // 42, and 0 of 20 since THE TIDEMARK widened the settling roster; this
+    // test is what keeps it true.
     use hornvale_kernel::Value;
     use hornvale_religion::{CULT_FORM, HELD_BY};
     let (world, _ctx) = seed_42();
@@ -82,7 +83,7 @@ fn cult_form_is_uniform_within_every_people() {
     );
     assert_eq!(
         per_species.len(),
-        15,
-        "seed 42 has 15 species holding beliefs"
+        20,
+        "seed 42 has 20 species holding beliefs"
     );
 }

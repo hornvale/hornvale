@@ -13,448 +13,146 @@ settlement's real, measured outcome. The world still moves only
 inside a possess session; a freshly built world commits none of this.)*
 
 ```text
-[room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: migration. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+[room — open blue water]
+Open water — open blue water, sunlit, in slack water — in the lands of Ṅooṅsroṅ. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Ṅooṅsroṅ.
+Here: Grorjo, Gragro, Rjapra and Grapra, and 16 others.
 > look
-[room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: migration. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+[room — open blue water]
+Open water — open blue water, sunlit, in slack water — in the lands of Ṅooṅsroṅ. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Ṅooṅsroṅ.
+Here: Grorjo, Gragro, Rjapra and Grapra, and 16 others.
 > !npcs
-67 NPC(s) derived this session:
-  [1] Dvoashngashngo
-  [2] Qvoshngavngo
-  [3] Shngovngo
-  [4] Shngoqvo
-  [5] Vngaobvo
-  [6] Vngaavnga
-  [7] Kvoavnga 8
-  [8] Vngootvo
-  [9] Vngaoshngoshngo
-  [10] Vngovngoqvo
-  [11] Vngoaqvashngo
-  [12] Kvashnga
-  [13] Gvoshngoshnga
-  [14] Vngokvavngo
-  [15] Shngaavngo
-  [16] Bvotvoshngo
-  [17] Vngodva
-  [18] Gvoavngashnga
-  [19] Kvovngashnga
-  [20] Shngashngovngo
-  [21] Shngoovngo
-  [22] Tvoadvovnga
-  [23] Shngoshngobva
-  [24] Vngoshnga
-  [25] Bvaavngovngo
-  [26] Gvaqvoshnga
-  [27] Vngotvashnga
-  [28] Shngoashngabva
-  [29] Vngoshngoshngo
-  [30] Shngaqvovnga
-  [31] Shngoovngo 32
-  [32] Vngaoshngoshngo 33
-  [33] Dvooshngovnga
-  [34] Dvoadvavnga
-  [35] Gvavngadvo
-  [36] Vngavngo
-  [37] Vngoatvovngo
-  [38] Vngashngovnga
-  [39] Shngaashnga
-  [40] Vngashngogva
-  [41] Kvoashngadvo
-  [42] Vngaovngovngo
-  [43] Vngovngoshnga
-  [44] Shngaashnga 45
-  [45] Gvokvavnga
-  [46] Qvavngovnga
-  [47] Vngavngavnga
-  [48] Vngobva
-  [49] Shngaovngoshngo
-  [50] Gvoavngoqva
-  [51] Shngoatvo
-  [52] Vngashnga
-  [53] Vngoovngashngo
-  [54] Qvoogvo
-  [55] Vngaavngo
-  [56] Vngavngadvo
-  [57] Dvoashnga
-  [58] Vngakva
-  [59] Qvavngodvo
-  [60] Shngoshngoqvo
-  [61] Dvashngo
-  [62] Shngoobvovngo
-  [63] Shngoavnga
-  [64] Dvoaqvokva
-  [65] Vngoashngovngo
-  [66] Kvoshngovnga
-  [67] Vngavngoshnga
+20 NPC(s) derived this session:
+  [1] Grorjo
+  [2] Gragro
+  [3] Rjapra
+  [4] Grapra
+  [5] Prorjorjo
+  [6] Rjaprorjo
+  [7] Rjorja
+  [8] Prograrja
+  [9] Prarjarjo
+  [10] Qrapro
+  [11] Rjaqro
+  [12] Prakropra
+  [13] Rjorjo
+  [14] Rjorjopro
+  [15] Rjoqrorja
+  [16] Rjokrorja
+  [17] Rjorjo 18
+  [18] Qragrarjo
+  [19] Rjagraqro
+  [20] Rjogra
 > needs
-The Dvoashngashngo seems content.
-The Qvoshngavngo seems content.
-The Shngovngo seems content.
-The Shngoqvo seems content.
-The Vngaobvo seems content.
-The Vngaavnga seems content.
-The Kvoavnga 8 seems content.
-The Vngootvo seems content.
-The Vngaoshngoshngo seems content.
-The Vngovngoqvo seems content.
-The Vngoaqvashngo seems content.
-The Kvashnga seems content.
-The Gvoshngoshnga seems content.
-The Vngokvavngo seems content.
-The Shngaavngo seems content.
-The Bvotvoshngo seems content.
-The Vngodva seems content.
-The Gvoavngashnga seems content.
-The Kvovngashnga seems content.
-The Shngashngovngo seems content.
-The Shngoovngo seems content.
-The Tvoadvovnga seems content.
-The Shngoshngobva seems content.
-The Vngoshnga seems content.
-The Bvaavngovngo seems content.
-The Gvaqvoshnga seems content.
-The Vngotvashnga seems content.
-The Shngoashngabva seems content.
-The Vngoshngoshngo seems content.
-The Shngaqvovnga seems content.
-The Shngoovngo 32 seems content.
-The Vngaoshngoshngo 33 seems content.
-The Dvooshngovnga seems content.
-The Dvoadvavnga seems content.
-The Gvavngadvo seems content.
-The Vngavngo seems content.
-The Vngoatvovngo seems content.
-The Vngashngovnga seems content.
-The Shngaashnga seems content.
-The Vngashngogva seems content.
-The Kvoashngadvo seems content.
-The Vngaovngovngo seems content.
-The Vngovngoshnga seems content.
-The Shngaashnga 45 seems content.
-The Gvokvavnga seems content.
-The Qvavngovnga seems content.
-The Vngavngavnga seems content.
-The Vngobva seems content.
-The Shngaovngoshngo seems content.
-The Gvoavngoqva seems content.
-The Shngoatvo seems content.
-The Vngashnga seems content.
-The Vngoovngashngo seems content.
-The Qvoogvo seems content.
-The Vngaavngo seems content.
-The Vngavngadvo seems content.
-The Dvoashnga seems content.
-The Vngakva seems content.
-The Qvavngodvo seems content.
-The Shngoshngoqvo seems content.
-The Dvashngo seems content.
-The Shngoobvovngo seems content.
-The Shngoavnga seems content.
-The Dvoaqvokva seems content.
-The Vngoashngovngo seems content.
-The Kvoshngovnga seems content.
-The Vngavngoshnga seems content.
+The Grorjo seems content.
+The Gragro seems content.
+The Rjapra seems content.
+The Grapra seems content.
+The Prorjorjo seems content.
+The Rjaprorjo seems content.
+The Rjorja seems content.
+The Prograrja seems content.
+The Prarjarjo seems content.
+The Qrapro seems content.
+The Rjaqro seems content.
+The Prakropra seems content.
+The Rjorjo seems content.
+The Rjorjopro seems content.
+The Rjoqrorja seems content.
+The Rjokrorja seems content.
+The Rjorjo 18 seems content.
+The Qragrarjo seems content.
+The Rjagraqro seems content.
+The Rjogra seems content.
 > wait 5
 Time passes; the world keeps its shape.
 > look
-[room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: migration. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+[room — open blue water]
+Open water — open blue water, sunlit, in slack water — in the lands of Ṅooṅsroṅ. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Ṅooṅsroṅ.
+Here: Grorjo, Gragro, Rjapra and Grapra, and 16 others.
 > needs
-The Dvoashngashngo seems content.
-The Qvoshngavngo seems content.
-The Shngovngo seems content.
-The Shngoqvo seems content.
-The Vngaobvo seems content.
-The Vngaavnga seems content.
-The Kvoavnga 8 seems content.
-The Vngootvo seems content.
-The Vngaoshngoshngo seems content.
-The Vngovngoqvo seems content.
-The Vngoaqvashngo seems content.
-The Kvashnga seems content.
-The Gvoshngoshnga seems content.
-The Vngokvavngo seems content.
-The Shngaavngo seems content.
-The Bvotvoshngo seems content.
-The Vngodva seems content.
-The Gvoavngashnga seems content.
-The Kvovngashnga seems content.
-The Shngashngovngo seems content.
-The Shngoovngo seems content.
-The Tvoadvovnga seems content.
-The Shngoshngobva seems content.
-The Vngoshnga seems content.
-The Bvaavngovngo seems content.
-The Gvaqvoshnga seems content.
-The Vngotvashnga seems content.
-The Shngoashngabva seems content.
-The Vngoshngoshngo seems content.
-The Shngaqvovnga seems content.
-The Shngoovngo 32 seems content.
-The Vngaoshngoshngo 33 seems content.
-The Dvooshngovnga seems content.
-The Dvoadvavnga seems content.
-The Gvavngadvo seems content.
-The Vngavngo seems content.
-The Vngoatvovngo seems content.
-The Vngashngovnga seems content.
-The Shngaashnga seems content.
-The Vngashngogva seems content.
-The Kvoashngadvo seems content.
-The Vngaovngovngo seems content.
-The Vngovngoshnga seems content.
-The Shngaashnga 45 seems content.
-The Gvokvavnga seems content.
-The Qvavngovnga seems content.
-The Vngavngavnga seems content.
-The Vngobva seems content.
-The Shngaovngoshngo seems content.
-The Gvoavngoqva seems content.
-The Shngoatvo seems content.
-The Vngashnga seems content.
-The Vngoovngashngo seems content.
-The Qvoogvo seems content.
-The Vngaavngo seems content.
-The Vngavngadvo seems content.
-The Dvoashnga seems content.
-The Vngakva seems content.
-The Qvavngodvo seems content.
-The Shngoshngoqvo seems content.
-The Dvashngo seems content.
-The Shngoobvovngo seems content.
-The Shngoavnga seems content.
-The Dvoaqvokva seems content.
-The Vngoashngovngo seems content.
-The Kvoshngovnga seems content.
-The Vngavngoshnga seems content.
+The Grorjo seems content.
+The Gragro seems content.
+The Rjapra seems content.
+The Grapra seems content.
+The Prorjorjo seems content.
+The Rjaprorjo seems content.
+The Rjorja seems content.
+The Prograrja seems content.
+The Prarjarjo seems content.
+The Qrapro seems content.
+The Rjaqro seems content.
+The Prakropra seems content.
+The Rjorjo seems content.
+The Rjorjopro seems content.
+The Rjoqrorja seems content.
+The Rjokrorja seems content.
+The Rjorjo 18 seems content.
+The Qragrarjo seems content.
+The Rjagraqro seems content.
+The Rjogra seems content.
 > wait 1
-Time passes. You sense movement nearby (214 stirred).
+Time passes. You sense movement nearby (60 stirred).
 > look
-[room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: migration. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+[room — open blue water]
+Open water — open blue water, sunlit, in slack water — in the lands of Ṅooṅsroṅ. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Ṅooṅsroṅ.
+Here: Grorjo, Gragro, Rjapra and Grapra, and 16 others.
 > needs
-The Dvoashngashngo grows restless.
-The Qvoshngavngo grows restless.
-The Shngovngo grows restless.
-The Shngoqvo grows restless.
-The Vngaobvo grows restless.
-The Vngaavnga grows restless.
-The Kvoavnga 8 grows restless.
-The Vngootvo grows restless.
-The Vngaoshngoshngo grows restless.
-The Vngovngoqvo grows restless.
-The Vngoaqvashngo grows restless.
-The Kvashnga grows restless.
-The Gvoshngoshnga grows restless.
-The Vngokvavngo grows restless.
-The Shngaavngo grows restless.
-The Bvotvoshngo grows restless.
-The Vngodva grows restless.
-The Gvoavngashnga grows restless.
-The Kvovngashnga grows restless.
-The Shngashngovngo grows restless.
-The Shngoovngo grows restless.
-The Tvoadvovnga grows restless.
-The Shngoshngobva grows restless.
-The Vngoshnga grows restless.
-The Bvaavngovngo grows restless.
-The Gvaqvoshnga grows restless.
-The Vngotvashnga grows restless.
-The Shngoashngabva grows restless.
-The Vngoshngoshngo grows restless.
-The Shngaqvovnga grows restless.
-The Shngoovngo 32 grows restless.
-The Vngaoshngoshngo 33 grows restless.
-The Dvooshngovnga grows restless.
-The Dvoadvavnga grows restless.
-The Gvavngadvo grows restless.
-The Vngavngo grows restless.
-The Vngoatvovngo grows restless.
-The Vngashngovnga grows restless.
-The Shngaashnga grows restless.
-The Vngashngogva grows restless.
-The Kvoashngadvo grows restless.
-The Vngaovngovngo grows restless.
-The Vngovngoshnga grows restless.
-The Shngaashnga 45 grows restless.
-The Gvokvavnga grows restless.
-The Qvavngovnga grows restless.
-The Vngavngavnga grows restless.
-The Vngobva grows restless.
-The Shngaovngoshngo grows restless.
-The Gvoavngoqva grows restless.
-The Shngoatvo grows restless.
-The Vngashnga grows restless.
-The Vngoovngashngo grows restless.
-The Qvoogvo grows restless.
-The Vngaavngo grows restless.
-The Vngavngadvo grows restless.
-The Dvoashnga grows restless.
-The Vngakva grows restless.
-The Qvavngodvo grows restless.
-The Shngoshngoqvo grows restless.
-The Dvashngo grows restless.
-The Shngoobvovngo grows restless.
-The Shngoavnga grows restless.
-The Dvoaqvokva grows restless.
-The Vngoashngovngo grows restless.
-The Kvoshngovnga grows restless.
-The Vngavngoshnga grows restless.
+The Grorjo grows restless.
+The Gragro grows restless.
+The Rjapra grows restless.
+The Grapra grows restless.
+The Prorjorjo grows restless.
+The Rjaprorjo grows restless.
+The Rjorja grows restless.
+The Prograrja grows restless.
+The Prarjarjo grows restless.
+The Qrapro grows restless.
+The Rjaqro grows restless.
+The Prakropra grows restless.
+The Rjorjo grows restless.
+The Rjorjopro grows restless.
+The Rjoqrorja grows restless.
+The Rjokrorja grows restless.
+The Rjorjo 18 grows restless.
+The Qragrarjo grows restless.
+The Rjagraqro grows restless.
+The Rjogra grows restless.
 > wait 1
-Time passes. You sense movement nearby (353 stirred).
+Time passes. You sense movement nearby (60 stirred).
 > look
-[room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck. You can enter the settlement of Doaba. Something ended here: migration. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+[room — open blue water]
+Open water — open blue water, sunlit, in slack water — in the lands of Ṅooṅsroṅ. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Ṅooṅsroṅ.
+Here: Grorjo, Gragro, Rjapra and Grapra, and 16 others.
 > needs
-The Dvoashngashngo grows restless.
-The Qvoshngavngo grows restless.
-The Shngovngo grows restless.
-The Shngoqvo grows restless.
-The Vngaobvo grows restless.
-The Vngaavnga grows restless.
-The Kvoavnga 8 grows restless.
-The Vngootvo seems content.
-The Vngaoshngoshngo grows restless.
-The Vngovngoqvo grows restless.
-The Vngoaqvashngo grows restless.
-The Kvashnga grows restless.
-The Gvoshngoshnga grows restless.
-The Vngokvavngo grows restless.
-The Shngaavngo grows restless.
-The Bvotvoshngo grows restless.
-The Vngodva grows restless.
-The Gvoavngashnga grows restless.
-The Kvovngashnga grows restless.
-The Shngashngovngo grows restless.
-The Shngoovngo grows restless.
-The Tvoadvovnga grows restless.
-The Shngoshngobva grows restless.
-The Vngoshnga grows restless.
-The Bvaavngovngo grows restless.
-The Gvaqvoshnga grows restless.
-The Vngotvashnga grows restless.
-The Shngoashngabva grows restless.
-The Vngoshngoshngo grows restless.
-The Shngaqvovnga grows restless.
-The Shngoovngo 32 grows restless.
-The Vngaoshngoshngo 33 grows restless.
-The Dvooshngovnga grows restless.
-The Dvoadvavnga grows restless.
-The Gvavngadvo grows restless.
-The Vngavngo grows restless.
-The Vngoatvovngo grows restless.
-The Vngashngovnga grows restless.
-The Shngaashnga grows restless.
-The Vngashngogva grows restless.
-The Kvoashngadvo grows restless.
-The Vngaovngovngo grows restless.
-The Vngovngoshnga grows restless.
-The Shngaashnga 45 grows restless.
-The Gvokvavnga seems content.
-The Qvavngovnga grows restless.
-The Vngavngavnga grows restless.
-The Vngobva grows restless.
-The Shngaovngoshngo grows restless.
-The Gvoavngoqva grows restless.
-The Shngoatvo grows restless.
-The Vngashnga grows restless.
-The Vngoovngashngo grows restless.
-The Qvoogvo grows restless.
-The Vngaavngo grows restless.
-The Vngavngadvo grows restless.
-The Dvoashnga grows restless.
-The Vngakva grows restless.
-The Qvavngodvo grows restless.
-The Shngoshngoqvo grows restless.
-The Dvashngo grows restless.
-The Shngoobvovngo seems content.
-The Shngoavnga grows restless.
-The Dvoaqvokva grows restless.
-The Vngoashngovngo grows restless.
-The Kvoshngovnga grows restless.
-The Vngavngoshnga grows restless.
+The Grorjo grows restless.
+The Gragro grows restless.
+The Rjapra grows restless.
+The Grapra grows restless.
+The Prorjorjo grows restless.
+The Rjaprorjo grows restless.
+The Rjorja grows restless.
+The Prograrja grows restless.
+The Prarjarjo grows restless.
+The Qrapro grows restless.
+The Rjaqro grows restless.
+The Prakropra grows restless.
+The Rjorjo grows restless.
+The Rjorjopro grows restless.
+The Rjoqrorja grows restless.
+The Rjokrorja grows restless.
+The Rjorjo 18 grows restless.
+The Qragrarjo grows restless.
+The Rjagraqro grows restless.
+The Rjogra grows restless.
 > !why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (4628 stirred).
+Time passes. You watch Grorjo, Gragro, Rjapra, Grapra, Prorjorjo, Rjaprorjo, Rjorja, Prograrja, Prarjarjo, Qrapro, Rjaqro, Prakropra, Rjorjo, Rjorjopro, Rjoqrorja, Rjokrorja, Rjorjo 18, Qragrarjo, Rjagraqro, Rjogra go.
 > look
-[room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: migration. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+[room — open blue water]
+Open water — open blue water, sunlit, in slack water — in the lands of Ṅooṅsroṅ. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Ṅooṅsroṅ.
 > needs
-The Dvoashngashngo grows restless.
-The Qvoshngavngo grows restless.
-The Shngovngo grows restless.
-The Shngoqvo grows restless.
-The Vngaobvo grows restless.
-The Vngaavnga seems content.
-The Kvoavnga 8 grows restless.
-The Vngootvo grows restless.
-The Vngaoshngoshngo grows restless.
-The Vngovngoqvo grows restless.
-The Vngoaqvashngo grows restless.
-The Kvashnga grows restless.
-The Gvoshngoshnga grows restless.
-The Vngokvavngo grows restless.
-The Shngaavngo grows restless.
-The Bvotvoshngo grows restless.
-The Vngodva seems content.
-The Gvoavngashnga grows restless.
-The Kvovngashnga grows restless.
-The Shngashngovngo grows restless.
-The Shngoovngo grows restless.
-The Tvoadvovnga grows restless.
-The Shngoshngobva grows restless.
-The Vngoshnga grows restless.
-The Bvaavngovngo grows restless.
-The Gvaqvoshnga seems content.
-The Vngotvashnga grows restless.
-The Shngoashngabva grows restless.
-The Vngoshngoshngo grows restless.
-The Shngaqvovnga grows restless.
-The Shngoovngo 32 grows restless.
-The Vngaoshngoshngo 33 grows restless.
-The Dvooshngovnga grows restless.
-The Dvoadvavnga grows restless.
-The Gvavngadvo grows restless.
-The Vngavngo grows restless.
-The Vngoatvovngo grows restless.
-The Vngashngovnga grows restless.
-The Shngaashnga grows restless.
-The Vngashngogva grows restless.
-The Kvoashngadvo grows restless.
-The Vngaovngovngo grows restless.
-The Vngovngoshnga grows restless.
-The Shngaashnga 45 grows restless.
-The Gvokvavnga grows restless.
-The Qvavngovnga grows restless.
-The Vngavngavnga grows restless.
-The Vngobva grows restless.
-The Shngaovngoshngo grows restless.
-The Gvoavngoqva grows restless.
-The Shngoatvo grows restless.
-The Vngashnga grows restless.
-The Vngoovngashngo grows restless.
-The Qvoogvo grows restless.
-The Vngaavngo grows restless.
-The Vngavngadvo grows restless.
-The Dvoashnga grows restless.
-The Vngakva grows restless.
-The Qvavngodvo grows restless.
-The Shngoshngoqvo grows restless.
-The Dvashngo grows restless.
-The Shngoobvovngo grows restless.
-The Shngoavnga grows restless.
-The Dvoaqvokva grows restless.
-The Vngoashngovngo grows restless.
-The Kvoshngovnga grows restless.
-The Vngavngoshnga grows restless.
+No one else is here to read.
 > release
 You let go.
 ```
