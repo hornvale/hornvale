@@ -188,7 +188,7 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Qe** — taiga
 - **Noababago (53.3°S, 66.7°E)** — tropical-seasonal-forest
 - **Bodeta** — tropical-seasonal-forest
-- **Babono** — tropical-seasonal-forest
+- **Babono (site 124)** — tropical-seasonal-forest
 - **Gaodao** — tropical-seasonal-forest
 - **To (53.5°N, 82.5°E)** — temperate-forest
 - **Xoroxora** — temperate-forest
@@ -208,7 +208,7 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Ṅeṅpeṅpaṅ (32.8°S, 61.9°W)** — savanna
 - **Noabe (31.9°S, 62.8°W)** — savanna
 - **Noabeno** — tropical-seasonal-forest
-- **Zhokxba** — savanna
+- **Zhokxba (site 144)** — savanna
 - **Zhaakxza (27.3°N, 20.3°W)** — desert
 - **Gaebaebago** — tropical-seasonal-forest
 - **Gaebae (51.4°S, 72.2°E)** — tropical-seasonal-forest
@@ -298,7 +298,7 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Raxaxa** — alpine
 - **Vaatfa (59.3°S, 38.3°E)** — tropical-seasonal-forest
 - **Ropepetva** — savanna
-- **Babonobe** — savanna
+- **Babonobe (site 234)** — savanna
 - **Dedea (34.4°S, 60.1°W)** — savanna
 - **Peatvapero** — savanna
 - **Peatvarope** — savanna
