@@ -233,9 +233,18 @@ fn the_dial_separates_the_poles() {
             // naive `!= Kept` miscount this row exists to forbid would read
             // 4/19.
             if seed == 2 && voice.kind == "kobold" {
+                // THE TIDEMARK re-pin: 19 -> 24 entries, for the same
+                // reason The Radiation's note above gives. Five of its six
+                // marine peoples settle and are placed at seed 2, so
+                // kobold's account gains five more `instance-of`/Kept
+                // entries. The LOST count is still 3, so `loss_fraction`
+                // moves 3/19 -> 3/24 = 0.125, and the naive `!= Kept`
+                // miscount this row forbids would read 4/24 = 0.1667 —
+                // still a different number, which is what keeps the
+                // assertion discriminating.
                 assert_eq!(
                     loss_shipped,
-                    3.0 / 19.0,
+                    3.0 / 24.0,
                     "seed 2 kobold's loss_fraction must read THROUGH its Explained \
                      moon-count entry (underlying: Kept) rather than counting it lost"
                 );

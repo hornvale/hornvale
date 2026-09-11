@@ -19,7 +19,7 @@ fn opts() -> PossessOpts {
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,
         lens: hornvale_vessel::lens::Lens::Off,
-        target: hornvale_vessel::PossessTarget::Flagship,
+        target: hornvale_vessel::PossessTarget::LandSettlement,
         tableau: None,
     }
 }
@@ -443,7 +443,7 @@ fn the_stitch_law_end_to_end() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
-            target: hornvale_vessel::PossessTarget::Flagship,
+            target: hornvale_vessel::PossessTarget::LandSettlement,
             tableau: None,
         },
     )
@@ -503,7 +503,7 @@ fn the_stitch_law_end_to_end() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
-            target: hornvale_vessel::PossessTarget::Flagship,
+            target: hornvale_vessel::PossessTarget::LandSettlement,
             tableau: None,
         },
     )
@@ -590,7 +590,7 @@ fn run_drives_a_script_deterministically() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
-            target: hornvale_vessel::PossessTarget::Flagship,
+            target: hornvale_vessel::PossessTarget::LandSettlement,
             tableau: None,
         },
         std::io::Cursor::new(script),
@@ -605,7 +605,7 @@ fn run_drives_a_script_deterministically() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
-            target: hornvale_vessel::PossessTarget::Flagship,
+            target: hornvale_vessel::PossessTarget::LandSettlement,
             tableau: None,
         },
         std::io::Cursor::new(script),

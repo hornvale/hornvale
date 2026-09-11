@@ -353,8 +353,28 @@ fn a_real_occupation_reaches_the_common_sentence_with_its_people_site_and_both_y
     let people_word = vocab
         .word_for(&format!("{}-kind", occupation.people))
         .to_lowercase();
+    // **A PEOPLE'S WORD CAN BE MORE THAN ONE WORD, and this used to compare
+    // it against a single token** (The Tidemark, Task 3). `word_for` returns
+    // the gloss — "hill dwarf", "abyssal elf", "vent commensal" — while
+    // `tokens` is the realized sentence split on whitespace, so a
+    // two-word people could never match and the assertion was unfalsifiable
+    // in the failing direction: it read as "the fact did not arrive" when
+    // the fact had arrived perfectly. It stayed green only while the
+    // occupation this test happens to pick had a one-word name.
+    //
+    // Every word must be present, and the LAST may be pluralized — which is
+    // where `occ-people`'s plural rule actually lands ("hill dwarfs", not
+    // "hills dwarf").
+    let parts: Vec<&str> = people_word.split_whitespace().collect();
+    let (last, lead) = parts.split_last().expect("a people's word is non-empty");
+    for w in lead {
+        assert!(
+            tokens.iter().any(|t| t == w),
+            "the people ({people_word}) is not a word of {common:?}"
+        );
+    }
     assert!(
-        tokens.contains(&people_word) || tokens.contains(&format!("{people_word}s")),
+        tokens.iter().any(|t| t == last || t == &format!("{last}s")),
         "the people ({people_word}) is not a word of {common:?}"
     );
     // A vertex is an identifier and renders as bare digits; a year is a count

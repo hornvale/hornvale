@@ -1695,12 +1695,31 @@ impl<'w> Session<'w> {
         // anchors that roster's derivation, so it shares `Flagship`'s
         // lookup here.
         let village = match opts.target {
-            PossessTarget::Flagship | PossessTarget::Creature(_) => {
+            PossessTarget::Flagship => {
                 hornvale_settlement::village_info(world).ok_or(VesselError::NoSettlement)?
+            }
+            // The Tidemark, Task 3: the walk fixtures' explicitly chosen
+            // subject. See `PossessTarget::LandSettlement`'s own doc for why
+            // a fixture must choose rather than inherit the flagship.
+            //
+            // **`Creature` anchors HERE, not at the flagship**, and that
+            // moved with this campaign. A caller naming a creature has READ
+            // that entity out of a roster, and that roster is overwhelmingly
+            // a `PossessOpts::default()` session's — so the two must share an
+            // anchor or the entity is not in the roster this call derives.
+            // They did share one while both were the flagship; the moment the
+            // default moved to dry ground, five tests failed with
+            // `NoSuchCreature` on an entity they had just been handed. Taking
+            // one anchor's entity into another anchor's roster is the defect,
+            // and matching the anchor to the default is what removes it.
+            PossessTarget::LandSettlement | PossessTarget::Creature(_) => {
+                hornvale_worldgen::land_settlement(world).ok_or(VesselError::NoSettlement)?
             }
             PossessTarget::MostPopulousSettlement => {
                 most_populous_settlement(world).ok_or(VesselError::NoSettlement)?
-            }
+            } // The Tidemark, Task 3: the walk fixtures' explicitly chosen
+              // subject. See `PossessTarget::LandSettlement`'s own doc for why
+              // a fixture must choose rather than inherit the flagship.
         };
         // `mint_at`'s fail-loud species check, kept byte-for-byte even though
         // nothing mints any more: `liveness::body_at` (below, via
@@ -2071,7 +2090,13 @@ impl<'w> Session<'w> {
                 .iter()
                 .position(|npc| npc.entity == entity)
                 .ok_or(VesselError::NoSuchCreature(entity))?,
-            PossessTarget::Flagship | PossessTarget::MostPopulousSettlement => 0,
+            // Every settlement-naming variant drives the home settlement's
+            // own entry, which `ordered_for_derivation` hoists to index 0.
+            // They differ in WHICH settlement is home, resolved above, never
+            // in which body of it is driven.
+            PossessTarget::Flagship
+            | PossessTarget::MostPopulousSettlement
+            | PossessTarget::LandSettlement => 0,
         };
         // Build the world's calendar once, for the NPC wake cycle's real-sun
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.

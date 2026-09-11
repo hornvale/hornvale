@@ -303,7 +303,10 @@ mod tests {
         let terrain = crate::terrain_of(&world).expect("seed 42 sculpts");
         let out = render_made_population(&world, &terrain);
         for needle in [
-            "the Made population: 5 occupied columns",
+            // The Tidemark re-pin: 5 -> 8, the same world-identity move
+            // `delve_seating`'s own witness records — six marine peoples
+            // widen the roster drow competes against for surface vertices.
+            "the Made population: 8 occupied columns",
             "heart decile <= 5:",
             "(frozen floor 0.6667; FROM Made levels TO the Heart's depth decile)",
             "doors on Made rungs:",

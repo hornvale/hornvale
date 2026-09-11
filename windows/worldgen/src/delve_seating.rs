@@ -996,8 +996,12 @@ mod tests {
             assert_eq!(origins[made[0]].1, expected, "vertex {vertex:?}");
             historical_made_columns += 1;
         }
+        // The Tidemark re-pin: 5 -> 8. Six marine peoples re-place seed 42,
+        // and drow — the only kind this witness counts — competes for surface
+        // vertices against a wider roster, so more of its columns are made.
+        // A world-identity witness, not a claim about the delve seating.
         assert_eq!(
-            historical_made_columns, 5,
+            historical_made_columns, 8,
             "seed 42 historical occupied-underworld-column witness"
         );
     }

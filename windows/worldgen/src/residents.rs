@@ -167,7 +167,7 @@ mod tests {
 
     fn fixture() -> (World, WorldComponents, VillageInfo, String) {
         let w = world();
-        let village = hornvale_settlement::village_info(&w).expect("seed 42 places a flagship");
+        let village = crate::land_settlement(&w).expect("seed 42 places a flagship");
         let species =
             hornvale_species::species_of(&w, village.id).expect("the flagship is peopled");
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");

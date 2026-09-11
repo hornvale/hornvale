@@ -44,12 +44,17 @@ usage:
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
                                             [--tableau <PATH>]
                                             [--lens off|lantern]
-                                            [--target flagship|most-populous-settlement]
+                                            [--target flagship|most-populous-settlement|land-settlement]
                                             [--creature <ID>]
                                             [--snapshot <PATH>]
                                             walk a frozen world as its flagship settler
                                             (--target most-populous-settlement instead drives the
-                                            agent at the world's most-populous settlement; --creature
+                                            agent at the world's most-populous settlement, and
+                                            --target land-settlement the first settlement that is not
+                                            in the water — which is what the committed transcripts
+                                            pass, so the demo walk is a chosen subject rather than
+                                            whichever settlement the ledger committed first;
+                                            --creature
                                             drives a specific already-derived roster member by its
                                             ledger entity id, settled or wild — mutually exclusive
                                             with --target, and an id outside the derived roster fails
@@ -816,10 +821,16 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         (Some("most-populous-settlement"), None) => {
             hornvale_vessel::PossessTarget::MostPopulousSettlement
         }
+        // The Tidemark, Task 3: the first settlement in ledger order that is
+        // not in the water. `scripts/regenerate-artifacts.sh` passes it for
+        // the committed transcripts, so the demo walk is a CHOSEN subject
+        // rather than whichever settlement the ledger happened to commit
+        // first — see `PossessTarget::LandSettlement`'s own doc.
+        (Some("land-settlement"), None) => hornvale_vessel::PossessTarget::LandSettlement,
         (Some(other), None) => {
             return Err(format!(
                 "--target: unknown target '{other}'; known targets: flagship, \
-                 most-populous-settlement"
+                 most-populous-settlement, land-settlement"
             ));
         }
     };

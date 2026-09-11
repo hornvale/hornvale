@@ -135,10 +135,16 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
     // THE MURRAIN re-pin: (8, 7) -> (10, 5). The epidemic phase moves every
     // world's deterministic history, which re-draws the lexicons this arm
     // assignment reads. A readout, not a target.
-    assert_eq!((god, spirit), (10, 5), "frozen arm counts over 15 peoples");
+    //
+    // THE TIDEMARK re-pin: (10, 5) -> (9, 11), over a roster of 20 rather
+    // than 15. Six marine peoples enter the settling roster, so both the
+    // POPULATION and the lexicons re-draw; the denominator below moves with
+    // the arm counts and the two are re-pinned together, because an arm count
+    // without its denominator is not interpretable. A readout, not a target.
+    assert_eq!((god, spirit), (9, 11), "frozen arm counts over 20 peoples");
     assert_eq!(
         god + spirit + wordless,
-        15,
+        20,
         "every people resolves to exactly one arm"
     );
 }

@@ -939,7 +939,7 @@ mod tests {
         let depth = hornvale_locale::walk_depth(&ctx);
         // The flagship settlement's own room — the same place a possession
         // mints its agent, so the gallery scene shows the walked ground.
-        let v = hornvale_settlement::village_info(w).expect("seed 42 has a village");
+        let v = hornvale_worldgen::land_settlement(w).expect("seed 42 has a village");
         let (lat, lon) = place_latlon(w, v.id).expect("the flagship has coordinates");
         Facet::containing(
             hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
@@ -1581,7 +1581,7 @@ mod tests {
     fn every_covers_index_is_in_bounds_and_cover_varies_across_a_real_band() {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
-        let v = hornvale_settlement::village_info(&w).expect("seed 42 has a village");
+        let v = hornvale_worldgen::land_settlement(&w).expect("seed 42 has a village");
         let (lat, lon) = place_latlon(&w, v.id).expect("the flagship has coordinates");
         let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
         let light = daylight_for(&w);
@@ -1674,7 +1674,7 @@ mod tests {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
         let gl = ctx.globe_level();
-        let v = hornvale_settlement::village_info(&w).expect("seed 42 has a village");
+        let v = hornvale_worldgen::land_settlement(&w).expect("seed 42 has a village");
         let (lat, lon) = place_latlon(&w, v.id).expect("the flagship has coordinates");
         let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
 

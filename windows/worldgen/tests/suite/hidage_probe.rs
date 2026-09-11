@@ -405,6 +405,7 @@ fn the_probes_field_is_the_bakes_growth_field_at_an_alive_site() {
     let by_vertex = occupations_by_vertex(&built.world);
     let mut surface_checked = 0usize;
     let mut sub_checked = 0usize;
+    let mut marine_checked = 0usize;
     // Spec §7 asks for a witness "at ONE alive site", not at every one: the
     // surface identity (K == the bare capacity map's value, multiplier 1.0
     // being an IEEE no-op) holds "to the last bit" everywhere by construction
@@ -446,12 +447,25 @@ fn the_probes_field_is_the_bakes_growth_field_at_an_alive_site() {
                     assert!(m <= 1.0, "a seating multiplier never exceeds 1.0: {m}");
                     sub_checked += 1;
                 }
-                HabitatRealm::Marine => unreachable!(
-                    "The Tidemark, Task 1: no kind is `Marine` in \
-                     `habitat_realm_registry` yet (that is Task 3's job), so no ALIVE \
-                     occupation's people can carry this realm — an occurrence here means \
-                     a marine kind was registered without this probe being updated"
-                ),
+                // **REACHED SINCE TASK 3, and the arm it replaced was an
+                // `unreachable!` that named the campaign that would reach
+                // it.** Task 1 wrote: "no kind is `Marine` in
+                // `habitat_realm_registry` yet (that is Task 3's job) ... an
+                // occurrence here means a marine kind was registered without
+                // this probe being updated." Six were; this is the update.
+                //
+                // A marine people takes NO seating multiplier: `Seating`
+                // prices a rock chamber (`Seating::rung` is a
+                // `hornvale_kernel::Band`, in which no pelagic stratum is
+                // expressible), so `delve_seating`'s `Marine` arm hands back
+                // `Seating::all_surface` at a flat 1.0 and the pelagic ladder
+                // is scored inside `per_species_capacity_at` instead. There
+                // is therefore nothing here to check that the surface arm
+                // above does not already check, and counting the site is the
+                // honest thing to do rather than inventing an assertion.
+                HabitatRealm::Marine => {
+                    marine_checked += 1;
+                }
             }
         }
     }
@@ -463,6 +477,14 @@ fn the_probes_field_is_the_bakes_growth_field_at_an_alive_site() {
     assert!(
         sub_checked > 0,
         "seed 42 has an alive subterranean site (drow)"
+    );
+    // The Tidemark, Task 3: seed 42 now has alive MARINE sites too. Asserted
+    // rather than merely counted, so the arm above cannot go quietly dead if
+    // a later campaign withdraws the marine peoples — the same direction the
+    // `unreachable!` it replaced was pointing.
+    assert!(
+        marine_checked > 0,
+        "seed 42 has an alive marine site (the five settling marine peoples)"
     );
 }
 

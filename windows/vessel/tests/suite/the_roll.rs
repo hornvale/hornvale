@@ -1,8 +1,12 @@
 //! The Roll (spec §8): the company probe (M1), the roll's own properties
 //! (M3), dormancy (§3.7), and presence at scale (§4).
 
-use hornvale_settlement::village_info;
+// The Tidemark, Task 3: the DEMO subject, chosen rather than inherited —
+// `village_info` is "the first `is-settlement` fact in ledger order", which
+// was never a claim about where a walk stands. See
+// `hornvale_worldgen::land_settlement`'s own doc.
 use hornvale_vessel::{PossessOpts, Session};
+use hornvale_worldgen::land_settlement as village_info;
 
 use crate::common;
 use crate::session::{open_staged_dragons_session, say};
@@ -12,7 +16,7 @@ use crate::session::{open_staged_dragons_session, say};
 /// settlement's `population >= 2`?
 fn company_at(seed: u64) -> Option<(bool, bool)> {
     let world = common::build(seed)?;
-    let village = village_info(&world)?;
+    let village = hornvale_worldgen::land_settlement(&world)?;
     let (session, _) = Session::start(&world, &PossessOpts::default()).ok()?;
     let snap = session.snapshot().ok()?;
     Some((!snap.sensed.present.is_empty(), village.population >= 2))
@@ -853,11 +857,42 @@ fn a_settlement_coming_within_call_is_derived_once_and_only_appended() {
     let world = common::build(42).expect("seed 42 builds");
     let ctx = hornvale_locale::LocaleContext::build(&world).expect("a context builds");
     let flagship = village_info(&world).expect("seed 42 places a flagship");
-    let neighbour = hornvale_settlement::all_settlements(&world)
-        .into_iter()
-        .filter(|v| v.id != flagship.id)
-        .max_by_key(|v| v.population)
-        .expect("seed 42 places more than one settlement");
+    // **The neighbour is the most populous OTHER settlement whose room brings
+    // exactly ONE settlement within call, found by trying rather than
+    // assumed** (The Tidemark, Task 3). This used to be simply "the most
+    // populous other settlement", which carried a silent premise: that its
+    // room is within call of it ALONE. That held until the marine peoples
+    // re-placed seed 42 and the most populous neighbour's room turned out to
+    // sit within call of a second settlement too — the exact-population
+    // assertion below then failed by 15 bodies while the property it guards
+    // (derived ONCE, only appended) was perfectly intact.
+    //
+    // Selecting by the measurement rather than re-pinning a number keeps that
+    // assertion EXACT, which is what makes the deletion mutation named above
+    // fail: a `>=` would pass under a double-append.
+    let mut candidates = hornvale_settlement::all_settlements(&world);
+    candidates.retain(|v| v.id != flagship.id);
+    candidates.sort_by(|a, b| b.population.cmp(&a.population).then(a.id.cmp(&b.id)));
+    let neighbour = candidates
+        .iter()
+        .take(12)
+        .find(|v| {
+            let mut probe_ledger = world.ledger.clone();
+            let body =
+                hornvale_vessel::liveness::derive_npcs(&world, &ctx, &mut probe_ledger, 1, v.id)[0]
+                    .clone();
+            let mut probe_session = flagship_session(&world);
+            let before = probe_session.bodies().len();
+            probe_session.refresh_roll_at(&body.home);
+            probe_session.bodies().len() - before == v.population as usize
+        })
+        .cloned()
+        .expect(
+            "no settlement in seed 42's twelve most populous brings exactly one settlement \
+             within call of its own room — this test's premise is gone, and the fix is to \
+             widen the search or to understand why every room is now shared, NOT to relax \
+             the exact-population assertion below",
+        );
 
     // That settlement's own room, and the entity `derive_npcs` mints for it —
     // read off a THROWAWAY ledger, so nothing here is what the session under

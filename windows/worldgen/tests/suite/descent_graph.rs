@@ -89,7 +89,11 @@ fn a_genesis_occupation_is_its_own_clan_root_and_has_no_forebear() {
     // computed, for the same reason: 18 new roots over 6 new peoples is three
     // apiece on average, but the bake seeds by proto-community rather than by
     // people and the per-kind counts are not equal.
-    assert_eq!(genesis.len(), 46, "seed 42 has 46 genesis roots");
+    // The Tidemark re-pin (2026-09-11): the six marine peoples join as the
+    // sixteenth through twenty-first genesis-seeded kinds, 46 -> 63. Measured,
+    // not computed, for the reason above: 17 new roots over 6 new peoples is
+    // not three apiece, because the bake seeds by proto-community.
+    assert_eq!(genesis.len(), 63, "seed 42 has 63 genesis roots");
     for o in genesis {
         assert_eq!(clan_root_of(&w, o.id), o.id);
         assert!(forebear_of(&w, o.id).is_none());

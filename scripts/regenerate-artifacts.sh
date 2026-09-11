@@ -239,10 +239,19 @@ reap
 # 0052): the possess dump replaces the whole file, so re-emit the preamble
 # here rather than losing it on every regen — it was clobbered twice by
 # earlier regen runs before this step carried it.
+# EVERY `possess` CALL BELOW PASSES `--target land-settlement`, AND IT IS A
+# CHOICE RATHER THAN A DEFAULT (The Tidemark, Task 3). Without it the subject
+# is `--target flagship` = `village_info` = "the first `is-settlement` fact in
+# ledger order", which was never meant to mean "the demo village": it is an
+# ordering artifact that stayed on land only because every people in the
+# roster lived on land. The Tidemark's six marine peoples moved it into the
+# water at seed 42, and the committed transcripts opened in open blue water
+# with "Ways on: surface." See `PossessTarget::LandSettlement`'s own doc.
 gen_possession_day0() {
     local possess_tmp
     possess_tmp="$(mktemp)"
-    run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt > "$possess_tmp"
+    run -p hornvale -- possess --world "$wsky" --target land-settlement \
+        --script scripts/possession-walk.txt > "$possess_tmp"
     head -n 1 "$possess_tmp"
     printf '\n*(This transcript is frozen. [The live pane](./possession-live.md) derives\nthe same world in your browser — same crates, same bytes.)*\n'
     tail -n +2 "$possess_tmp"
@@ -267,7 +276,8 @@ gen_possession_day0() {
 gen_possession_overtime() {
     local possess_ot_tmp
     possess_ot_tmp="$(mktemp)"
-    run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
+    run -p hornvale -- possess --world "$wsky" --target land-settlement \
+        --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
     # Both transcripts start at day 0, so `possess`'s own H1 is identical for
     # the two pages (The Running Head). Override it here rather than teaching
     # `possess` about the book's page layout: the day-0 page above keeps the
@@ -376,7 +386,8 @@ gen_possession_overtime() {
 gen_possession_carry() {
     local possess_tmp
     possess_tmp="$(mktemp)"
-    run -p hornvale -- possess --seed 14 --script scripts/possession-carry.txt \
+    run -p hornvale -- possess --seed 14 --target land-settlement \
+        --script scripts/possession-carry.txt \
         --snapshot clients/game/core/tests/fixtures/session-seed-14-carrying.json \
         > "$possess_tmp"
     # Retitled at this seam rather than in the command, the same move
@@ -1120,7 +1131,8 @@ gen_glyph_specimen_sheet() {
 spawn gen_glyph_specimen_sheet > docs/audits/glyph-specimen-sheet.txt
 
 mkdir -p clients/game/core/tests/fixtures
-spawn run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt \
+spawn run -p hornvale -- possess --seed 42 --target land-settlement \
+    --script scripts/possession-empty.txt \
     --snapshot clients/game/core/tests/fixtures/session-seed-42-turn-0.json > /dev/null
 
 # The committed CHAMBER-band fixture (The Quire, Task 4 fix round): the
@@ -1134,7 +1146,8 @@ spawn run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt
 # `possession-walk.txt` makes. `--script` is required for the same reason
 # as the turn-0 call above: without it `possess` blocks on `stdin.lock()`.
 # (Same note as above: `--seed 42` is self-contained, no Group A dependency.)
-spawn run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.txt \
+spawn run -p hornvale -- possess --seed 42 --target land-settlement \
+    --script scripts/possession-chamber.txt \
     --snapshot clients/game/core/tests/fixtures/session-seed-42-chamber.json > /dev/null
 
 spawn gen_chart_reference > clients/game/core/tests/fixtures/chart-reference-seed-42.txt

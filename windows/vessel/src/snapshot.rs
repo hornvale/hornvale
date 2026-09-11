@@ -490,7 +490,7 @@ mod tests {
         )
         .expect("seed 42 builds");
         let ctx = LocaleContext::build(&world).expect("the locale context builds");
-        let village = hornvale_settlement::village_info(&world).expect("seed 42 has a settlement");
+        let village = hornvale_worldgen::land_settlement(&world).expect("seed 42 has a settlement");
         let entity = hornvale_kernel::EntityId::new(1).expect("1 is a valid nonzero entity id");
         let npc = crate::liveness::body_at(&world, &ctx, &village, entity);
         ctx.describe(
