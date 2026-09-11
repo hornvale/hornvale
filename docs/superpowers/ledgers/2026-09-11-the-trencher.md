@@ -1536,3 +1536,94 @@ rather than false, and about to be more so. Task 4 touches this file; fix the
 wording there.
 
 **Ideonomy passes / overturns:** none; a verification step with four findings.
+
+---
+
+## #21 [Ruling] — Stage 4's organisms must be an APPENDED accession cohort, and a live campaign already owns the peoples half
+
+Found while submitting the Stage 1 boundary gate: `sluice-request` prints the
+board's `hold-off` notices, and two of them are addressed to
+`campaign/underworld-peoples` rather than to me. Read anyway — CLAUDE.md's
+standing advice is that the half nothing mechanizes is two campaigns changing
+the same idea, and reading a neighbour's chronicle is how that gets caught.
+
+Three things bind Stage 4. None was in my spec.
+
+### A. Adding a species kind re-deals every later name draw unless it is appended
+
+`domains/language/src/accession.rs` holds `EPOCH_COHORTS`. A people's or a
+creature's name is drawn from the lexicon, and **the proto-root walk consumes
+draws in registration order**. Inserting a kind into an existing cohort shifts
+every draw after it — so an addition does not append names, it re-deals the
+hand from the insertion point, renaming existing kinds in every world ever
+generated from this seed space. `the_additivity_law` and
+`folk_sections_are_byte_unchanged` both catch it.
+
+`campaign/underworld-peoples` hit exactly this: their duergars took `Dazha`,
+the gully dwarfs' existing autonym, pushing the gully dwarfs to `Xabxat`.
+Gate rc=2, five failures, one cause.
+
+**This is not hypothetical for Stage 4 — it is the same operation.** Epoch 22
+is `The Murrain, Task 1: the five pathogen species rows`, appended as a new
+cohort for precisely this reason. Species rows go through accession. My 8-20+
+organisms are species rows.
+
+**Ruling:** Stage 4 appends ONE new cohort at the end of `EPOCH_COHORTS`,
+with a comment in the house style of epochs 20-22 stating the campaign, the
+task and why it is a fresh cohort rather than an edit to an earlier one. It
+never edits an existing cohort. The plan's Stage 4 tasks do not currently
+mention `accession.rs` at all; that is a plan defect to fix before Stage 4 is
+dispatched, not during it.
+
+**Epoch 23 is claimed** by `campaign/underworld-peoples` (unmerged, live).
+Mine is 24 or later depending on merge order, which means the cohort index is
+**not** something Stage 4 may hardcode from today's file — append, and let the
+index fall where it falls.
+
+### B. The cohort fix trades a rename for an autonym ambiguity
+
+Injectivity in `assign_proto_roots` is per-CONCEPT within a family. Two
+*species* sharing a root for the *same* concept — each people's own word for
+"person", which is where an autonym comes from — is outside what it spans. So
+an appended cohort can produce two peoples with one autonym in one world, and
+nothing objects.
+
+Smaller than a rename (it breaks a page, not a contract with every committed
+world) and the right trade. But Stage 4 should expect it rather than discover
+it, and `cli/src/repl.rs` already carries the render-time disambiguation
+pattern for settlements.
+
+### C. Census AFTER the last absorb, never before
+
+From the notice to `campaign/the-wanderers`: a census measures the world at
+the ref given, so running one while N commits behind main buys goldens that
+may not describe the absorbed tree, and it is paid twice. `campaign/the-murrain`
+paid that tax this morning.
+
+Folds into #19's ruling and sharpens it: the close-time census refresh goes
+**after** the final absorb of main, at that SHA, once.
+
+### D. The scope collision, which is the part Nathan will want
+
+Nathan's Stage 4 direction was "add settled peoples IMHO. We should already
+have 4-5 underworld sentient species. Use 'em and/or add more," and he flagged
+that dwarves were being readmitted elsewhere and "that might shrink the
+campaign a bit."
+
+Confirmed and more advanced than I assumed. `campaign/underworld-peoples` is
+live and unmerged, and adds **four**: duergars, kuo-toas, mountain dwarfs,
+svirfneblins. It is past its save-format fix and near merge.
+
+**Ruling:** Stage 4 authors **no settled people that duplicates those four**.
+It takes the "use 'em" half of Nathan's direction and spends its whole budget
+on the biota — the fungi, the chemotrophs, the weird flora and fauna that are
+this campaign's actual subject and that nobody else is building. If the
+peoples land first, Stage 4 may give them metabolite-aware diets, which is a
+JOIN between two campaigns' halves and strictly better than a fifth people.
+
+**Cost if wrong:** low. Under-authoring peoples is recoverable by a successor;
+authoring four that collide with a live branch is a merge conflict in a
+save-format-contract file, which is not.
+
+**Ideonomy passes / overturns:** none; three constraints read off a neighbour's
+board notices plus a scope collision confirmed against the branch list.
