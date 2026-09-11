@@ -2,11 +2,36 @@
 
 use hornvale_climate::{BiomeExpr, GeneratedClimate, Realm, Stratum};
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{Vertex, World};
+use hornvale_kernel::{Vertex, World, WorldTime};
 use hornvale_terrain::landscape::FeatureId;
 use hornvale_terrain::{BoundaryKind, GeneratedTerrain, WaterKind};
 
-pub use crate::waterworld_propagation::{WaterPropagation, WaterTrajectorySample};
+pub use crate::waterworld_propagation::{
+    WaterPropagation, WaterTrajectorySample, WaterWorkCounters,
+};
+
+use crate::waterworld_propagation::{build_vent_candidate_ring, select_vent_position};
+
+/// plumb: pending(wave-1)
+const VENT_ABSENT_TICKS: i64 = 20 * WorldTime::TICKS_PER_STD_DAY;
+/// plumb: pending(wave-1)
+const VENT_NASCENT_TICKS: i64 = 15 * WorldTime::TICKS_PER_STD_DAY;
+/// plumb: pending(wave-1)
+const VENT_ACTIVE_TICKS: i64 = 30 * WorldTime::TICKS_PER_STD_DAY;
+/// plumb: pending(wave-1)
+const VENT_WEAKENING_TICKS: i64 = 20 * WorldTime::TICKS_PER_STD_DAY;
+/// plumb: pending(wave-1)
+const VENT_FAILED_TICKS: i64 = 15 * WorldTime::TICKS_PER_STD_DAY;
+/// plumb: pending(wave-1)
+const VENT_CYCLE_TICKS: i64 = VENT_ABSENT_TICKS
+    + VENT_NASCENT_TICKS
+    + VENT_ACTIVE_TICKS
+    + VENT_WEAKENING_TICKS
+    + VENT_FAILED_TICKS;
+/// plumb: pending(wave-1)
+const TRANSPORT_HOP_LIMIT: usize = 3;
+/// plumb: pending(wave-1)
+const TRANSPORT_ATTENUATION: f64 = 0.5;
 
 /// Configuration for the compact Waterworld overlay.
 /// type-audit: bare-ok(flag: enabled)
@@ -115,7 +140,10 @@ impl WaterFields {
 }
 
 /// A sparse localized hydrothermal source, separate from ambient chemistry.
-/// type-audit: bare-ok(index: id), bare-ok(ratio: strength), bare-ok(diagnostic-value: temperature_delta), bare-ok(ratio: chemistry)
+///
+/// Every field here is stable source data. Temporal state belongs to a
+/// [`WaterWorldSnapshot`], never to the admitted source.
+/// type-audit: bare-ok(index: id), bare-ok(ratio: strength), bare-ok(diagnostic-value: temperature_delta), bare-ok(ratio: chemistry), bare-ok(count: phase_offset_ticks)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WaterVent {
     /// Stable vent ordinal in seabed vertex order.
@@ -132,10 +160,28 @@ pub struct WaterVent {
     /// Local chemical availability.
     /// type-audit: bare-ok(ratio: chemistry)
     pub chemistry: f64,
+    /// Stable source-keyed offset into the fixed succession cycle.
+    /// type-audit: bare-ok(count: phase_offset_ticks)
+    pub phase_offset_ticks: i64,
+}
+
+/// Present phase of one stable vent source.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VentState {
+    /// The source has no present hydrothermal contribution.
+    Absent,
+    /// The source is beginning a new active interval.
+    Nascent,
+    /// The source is at full activity.
+    Active,
+    /// The source contribution is declining.
+    Weakening,
+    /// The source remains identifiable after its contribution has failed.
+    Failed,
 }
 
 /// Bounded aggregate environmental stocks; no individual organisms are stored.
-/// type-audit: bare-ok(ratio: plankton), bare-ok(ratio: chemosynthetic_bloom), bare-ok(ratio: nutrients), bare-ok(ratio: kelp_reef)
+/// type-audit: bare-ok(ratio: plankton), bare-ok(ratio: chemosynthetic_bloom), bare-ok(ratio: nutrients), bare-ok(ratio: kelp_reef), bare-ok(ratio: local_source_influence), bare-ok(ratio: transported_influence)
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct WaterStocks {
     /// Photic plankton availability.
@@ -146,6 +192,10 @@ pub struct WaterStocks {
     pub nutrients: f64,
     /// Kelp/reef substrate suitability.
     pub kelp_reef: f64,
+    /// Aggregate influence produced at this exact substrate sample.
+    pub local_source_influence: f64,
+    /// Aggregate influence arriving from bounded current transport.
+    pub transported_influence: f64,
 }
 
 /// Read-only generated Waterworld state.
@@ -159,8 +209,196 @@ pub struct WaterWorld {
     pub stocks: Vec<WaterStocks>,
     /// Sparse derived vent sources in stable seabed order.
     pub vents: Vec<WaterVent>,
+    /// Ordered, bounded marine influence candidates aligned with `vents`.
+    pub vent_candidate_rings: Vec<Vec<Vertex>>,
     /// Bounded current and vertical propagation samples.
     pub propagation: WaterPropagation,
+}
+
+/// Dynamic Waterworld readout at one exact world instant.
+///
+/// Vent states are aligned one-for-one with [`WaterWorld::vents`]. The
+/// stable substrate and source identities remain on [`WaterWorld`].
+/// type-audit: bare-ok(ratio: vent_phase_positions)
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct WaterWorldSnapshot {
+    /// Ambient fields aligned one-for-one with `WaterWorld::substrate`.
+    pub fields: Vec<WaterFields>,
+    /// Aggregate stocks aligned one-for-one with `WaterWorld::substrate`.
+    pub stocks: Vec<WaterStocks>,
+    /// Present states aligned one-for-one with `WaterWorld::vents`.
+    pub vent_states: Vec<VentState>,
+    /// Continuous position within each present state, in `[0, 1)`.
+    pub vent_phase_positions: Vec<f64>,
+    /// At most one present influence vertex for each stable vent source.
+    pub vent_positions: Vec<Option<Vertex>>,
+    /// Present bounded propagation readout.
+    pub propagation: WaterPropagation,
+    /// Work performed by the finite snapshot loops.
+    pub counters: WaterWorkCounters,
+}
+
+impl WaterWorld {
+    /// Read this stable overlay at an exact world instant.
+    ///
+    /// Succession uses exact integer ticks. The five finite intervals are,
+    /// in spec section 3.2 order: 20 days absent, 15 nascent, 30 active,
+    /// 20 weakening, and 15 failed. This call draws no stream, mutates no
+    /// source, and populates no cache.
+    pub fn at(&self, climate: &GeneratedClimate, time: WorldTime) -> WaterWorldSnapshot {
+        if self.substrate.is_empty() {
+            return WaterWorldSnapshot::default();
+        }
+        assert_eq!(
+            self.vents.len(),
+            self.vent_candidate_rings.len(),
+            "Waterworld vents and candidate rings must remain aligned"
+        );
+        let mut counters = WaterWorkCounters::default();
+        let mut fields = Vec::with_capacity(self.substrate.len());
+        for sample in &self.substrate {
+            counters.refresh += 1;
+            fields.push(WaterFields::from_substrate(
+                sample,
+                climate.insolation(),
+                climate.temperature_at(sample.vertex, time).get(),
+                climate.current_at(sample.vertex),
+            ));
+        }
+        let mut vent_states = Vec::with_capacity(self.vents.len());
+        let mut vent_phase_positions = Vec::with_capacity(self.vents.len());
+        let mut vent_positions = Vec::with_capacity(self.vents.len());
+        let mut local_influence = vec![0.0_f64; self.substrate.len()];
+        for (vent, ring) in self.vents.iter().zip(&self.vent_candidate_rings) {
+            counters.candidate_ring += 1;
+            let phase = vent_phase(vent, time);
+            let position = select_vent_position(ring, phase.state, phase.cycle_index);
+            if let Some(vertex) = position {
+                let sample_index = seabed_sample_index(&self.substrate, vertex)
+                    .expect("a vent candidate ring contains only marine seabed vertices");
+                let local_strength = vent.strength * phase.local_strength;
+                fields[sample_index].temperature_c += vent.temperature_delta * local_strength;
+                let chemistry = (vent.chemistry * local_strength).clamp(0.0, 1.0);
+                fields[sample_index].chemistry +=
+                    (1.0 - fields[sample_index].chemistry) * chemistry;
+                local_influence[sample_index] =
+                    (local_influence[sample_index] + local_strength).clamp(0.0, 1.0);
+            }
+            vent_states.push(phase.state);
+            vent_phase_positions.push(phase.position);
+            vent_positions.push(position);
+        }
+        let propagation = WaterPropagation::transport(
+            climate.geosphere(),
+            &self.substrate,
+            &fields,
+            &local_influence,
+            TRANSPORT_HOP_LIMIT,
+            TRANSPORT_ATTENUATION,
+        );
+        let mut stocks = Vec::with_capacity(self.substrate.len());
+        for (((sample, field), local), &transported) in self
+            .substrate
+            .iter()
+            .zip(&fields)
+            .zip(local_influence)
+            .zip(&propagation.transported_influence)
+        {
+            counters.stock += 1;
+            stocks.push(derive_stocks(sample, field, local, transported));
+        }
+        counters.propagation = propagation.counters.propagation;
+        WaterWorldSnapshot {
+            fields,
+            stocks,
+            vent_states,
+            vent_phase_positions,
+            vent_positions,
+            propagation,
+            counters,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct VentPhase {
+    state: VentState,
+    position: f64,
+    local_strength: f64,
+    cycle_index: i64,
+}
+
+fn vent_phase(vent: &WaterVent, time: WorldTime) -> VentPhase {
+    let shifted_ticks = i128::from(time.ticks()) + i128::from(vent.phase_offset_ticks);
+    let cycle_ticks = i128::from(VENT_CYCLE_TICKS);
+    let cycle_index = shifted_ticks.div_euclid(cycle_ticks) as i64;
+    let tick = shifted_ticks.rem_euclid(cycle_ticks) as i64;
+    let absent_end = VENT_ABSENT_TICKS;
+    let nascent_end = absent_end + VENT_NASCENT_TICKS;
+    let active_end = nascent_end + VENT_ACTIVE_TICKS;
+    let weakening_end = active_end + VENT_WEAKENING_TICKS;
+
+    if tick < absent_end {
+        phase(VentState::Absent, tick, VENT_ABSENT_TICKS, 0.0, cycle_index)
+    } else if tick < nascent_end {
+        let local = tick - absent_end;
+        let position = local as f64 / VENT_NASCENT_TICKS as f64;
+        VentPhase {
+            state: VentState::Nascent,
+            position,
+            local_strength: 0.25 + 0.75 * position,
+            cycle_index,
+        }
+    } else if tick < active_end {
+        phase(
+            VentState::Active,
+            tick - nascent_end,
+            VENT_ACTIVE_TICKS,
+            1.0,
+            cycle_index,
+        )
+    } else if tick < weakening_end {
+        let local = tick - active_end;
+        let position = local as f64 / VENT_WEAKENING_TICKS as f64;
+        VentPhase {
+            state: VentState::Weakening,
+            position,
+            local_strength: 1.0 - 0.8 * position,
+            cycle_index,
+        }
+    } else {
+        phase(
+            VentState::Failed,
+            tick - weakening_end,
+            VENT_FAILED_TICKS,
+            0.0,
+            cycle_index,
+        )
+    }
+}
+
+fn phase(
+    state: VentState,
+    local_tick: i64,
+    duration_ticks: i64,
+    local_strength: f64,
+    cycle_index: i64,
+) -> VentPhase {
+    VentPhase {
+        state,
+        position: local_tick as f64 / duration_ticks as f64,
+        local_strength,
+        cycle_index,
+    }
+}
+
+fn seabed_sample_index(substrate: &[WaterSubstrate], vertex: Vertex) -> Option<usize> {
+    let start = substrate.partition_point(|sample| sample.vertex < vertex);
+    substrate[start..]
+        .iter()
+        .take_while(|sample| sample.vertex == vertex)
+        .position(|sample| sample.is_seabed)
+        .map(|offset| start + offset)
 }
 
 /// Composition-root entry point for the Waterworld overlay.
@@ -237,7 +475,13 @@ pub fn waterworld_from(
             )
         })
         .collect::<Vec<_>>();
+    let marine_vertices = substrate
+        .iter()
+        .filter(|sample| sample.is_seabed)
+        .map(|sample| sample.vertex)
+        .collect::<Vec<_>>();
     let mut vents = Vec::new();
+    let mut vent_candidate_rings = Vec::new();
     for sample in substrate.iter().filter(|sample| sample.is_seabed) {
         let source_exists = sample.has_edifice || sample.seafloor_boundary.is_some();
         if !source_exists {
@@ -254,27 +498,26 @@ pub fn waterworld_from(
             continue;
         }
         let strength = 0.25 + stream.next_f64() * 0.75;
+        let temperature_delta = 5.0 + stream.next_f64() * 95.0;
+        let chemistry = stream.next_f64();
         vents.push(WaterVent {
             id: vents.len(),
             vertex: sample.vertex,
             strength,
-            temperature_delta: 5.0 + stream.next_f64() * 95.0,
-            chemistry: stream.next_f64(),
+            temperature_delta,
+            chemistry,
+            phase_offset_ticks: vent_phase_offset_ticks(strength, temperature_delta, chemistry),
         });
+        vent_candidate_rings.push(build_vent_candidate_ring(
+            terrain.geosphere(),
+            &marine_vertices,
+            sample.vertex,
+        ));
     }
     let stocks = substrate
         .iter()
         .zip(&fields)
-        .map(|(sample, field)| WaterStocks {
-            plankton: (field.light / (field.light + 1.0)).clamp(0.0, 1.0),
-            chemosynthetic_bloom: field.chemistry.clamp(0.0, 1.0),
-            nutrients: ((sample.terrain_features.len() as f64) / 4.0).clamp(0.0, 1.0),
-            kelp_reef: if sample.is_seabed && (field.temperature_c > -2.0) {
-                1.0
-            } else {
-                0.0
-            },
-        })
+        .map(|(sample, field)| derive_stocks(sample, field, 0.0, 0.0))
         .collect::<Vec<_>>();
     let propagation = WaterPropagation::from_substrate(&substrate, &fields);
     WaterWorld {
@@ -282,8 +525,48 @@ pub fn waterworld_from(
         fields,
         stocks,
         vents,
+        vent_candidate_rings,
         propagation,
     }
+}
+
+fn derive_stocks(
+    sample: &WaterSubstrate,
+    field: &WaterFields,
+    local_source_influence: f64,
+    transported_influence: f64,
+) -> WaterStocks {
+    let plankton = (field.light / (field.light + 1.0)).clamp(0.0, 1.0);
+    let chemosynthetic_bloom = field.chemistry.clamp(0.0, 1.0);
+    let terrain_nutrients = (sample.terrain_features.len() as f64 / 4.0).clamp(0.0, 1.0);
+    let nutrients =
+        (terrain_nutrients + 0.35 * local_source_influence + 0.2 * transported_influence)
+            .clamp(0.0, 1.0);
+    let thermal_suitability = (1.0 - (field.temperature_c - 15.0).abs() / 40.0).clamp(0.0, 1.0);
+    let chemistry_suitability = (1.0 - (field.chemistry - 0.35).abs() / 0.65).clamp(0.0, 1.0);
+    let kelp_reef = if sample.is_seabed {
+        (0.35 * thermal_suitability + 0.25 * chemistry_suitability + 0.25 * nutrients + 0.15)
+            .clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    WaterStocks {
+        plankton,
+        chemosynthetic_bloom,
+        nutrients,
+        kelp_reef,
+        local_source_influence,
+        transported_influence,
+    }
+}
+
+/// Derive a cycle offset from the three existing seeded vent values without
+/// extending or reordering `WATERWORLD_VENT` consumption.
+fn vent_phase_offset_ticks(strength: f64, temperature_delta: f64, chemistry: f64) -> i64 {
+    let mixed = strength.to_bits()
+        ^ temperature_delta.to_bits().rotate_left(21)
+        ^ chemistry.to_bits().rotate_left(42);
+    (mixed % VENT_CYCLE_TICKS as u64) as i64
 }
 
 /// Shallow edge of each marine band, using the exact thresholds documented by

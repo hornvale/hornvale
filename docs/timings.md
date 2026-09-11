@@ -7095,6 +7095,31 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T17:51:49Z | sluice:artifacts | 255.876 | 2331.137 | 92.727 | 9.47 | 0 | 54a7f9f21 |  | lefford | 40 |
 | 2026-09-10T17:53:28Z | sluice:outboard | 98.201 | 122.946 | 84.646 | 2.11 | 0 | 6bd2332e4 |  | lefford | 40 |
 | 2026-09-10T18:07:30Z | sluice:gate | 841.541 | 25802.832 | 868.484 | 31.69 | 0 | c315a6efc |  | lefford | 40 |
+| 2026-09-10T19:08:12Z | gate-commit | 210.209 | 1043.092 | 68.301 | 5.29 | 0 | 637c8830e | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:09:30Z | gate-commit | 47.996 | 77.013 | 22.499 | 2.07 | 0 | 637c8830e | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:11:08Z | gate-commit | 40.977 | 73.486 | 21.583 | 2.32 | 0 | 637c8830e | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:33:00Z | gate-commit | 17.024 | 31.292 | 4.464 | 2.10 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:33:41Z | gate-commit | 21.304 | 32.238 | 4.145 | 1.71 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:34:22Z | gate-commit | 24.152 | 22.356 | 0.612 | 0.95 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:41:06Z | gate-commit | 49.468 | 74.590 | 22.175 | 1.96 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:41:32Z | gate-commit | 50.310 | 74.234 | 21.755 | 1.91 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:42:14Z | gate-commit | 42.049 | 73.249 | 21.539 | 2.25 | 0 | cc5ad97a9 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T19:42:43Z | gate-commit | 48.043 | 73.071 | 20.786 | 1.95 | 0 | 1911829d1 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T21:22:32Z | gate-commit | 89.312 | 113.104 | 42.064 | 1.74 | 0 | ce0bf5d5b | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T21:42:28Z | gate-commit | 21.111 | 43.577 | 5.726 | 2.34 | 0 | cd4ef90a0 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T21:44:27Z | gate-commit | 58.555 | 36.891 | 5.706 | 0.73 | 0 | cd4ef90a0 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T21:45:13Z | gate-commit | 31.979 | 27.395 | 1.070 | 0.89 | 0 | cd4ef90a0 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T21:47:14Z | gate-commit | 111.142 | 78.043 | 22.816 | 0.91 | 0 | cd4ef90a0 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T21:47:14Z | gate-commit | 126.043 | 340.268 | 50.695 | 3.10 | 0 | 06edfe24a | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:01:37Z | gate-commit | 160.612 | 123.262 | 47.128 | 1.06 | 0 | e84f4d068 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:02:58Z | gate-commit | 53.237 | 78.025 | 24.292 | 1.92 | 0 | 48d2f4cac | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:04:04Z | gate-commit | 83.996 | 78.907 | 24.924 | 1.24 | 0 | 49e904e6d | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:17:44Z | gate-commit | 228.694 | 378.171 | 51.401 | 1.88 | 0 | cd7d6f820 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:19:33Z | census-tail-chorus | 77.494 | 177.051 | 9.615 | 2.41 | 0 | c1354be25 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:19:34Z | census-tail-domesday | 0.438 | 0.350 | 0.036 | 0.88 | 0 | c1354be25 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:19:34Z | census-tail-anomalies | 0.350 | 0.268 | 0.034 | 0.86 | 0 | c1354be25 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:19:56Z | gate-commit | 61.779 | 76.674 | 21.993 | 1.60 | 0 | c1354be25 | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-10T22:25:38Z | gate-commit | 58.028 | 110.892 | 42.327 | 2.64 | 0 | eddbe8305 | campaign/the-vent-succession | MacBookPro | 10 |
 | 2026-09-10T19:09:36Z | census-tail-chorus | 22.473 | 432.880 | 20.350 | 20.17 | 0 | 214c1b67d | tooling/wire-observations-fixture | lefford | 40 |
 | 2026-09-10T19:09:38Z | census-tail-domesday | 1.582 | 1.437 | 0.112 | 0.98 | 0 | 214c1b67d | tooling/wire-observations-fixture | lefford | 40 |
 | 2026-09-10T19:09:38Z | census-tail-anomalies | 0.991 | 0.875 | 0.117 | 1.00 | 0 | 214c1b67d | tooling/wire-observations-fixture | lefford | 40 |
@@ -7125,3 +7150,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T01:00:29Z | sluice:gate | 831.890 | 24976.474 | 861.133 | 31.06 | 0 | 98952d4f8 |  | lefford | 40 |
 | 2026-09-11T01:03:47Z | sluice:clients | 198.336 | 3186.040 | 313.926 | 17.65 | 0 | e081bfe0a |  | lefford | 40 |
 | 2026-09-11T01:11:15Z | sluice:heavy | 447.592 | 12920.288 | 272.889 | 29.48 | 0 | 2d6dc75f0 |  | lefford | 40 |
+| 2026-09-11T00:40:46Z | census-tail-chorus | 105.472 | 181.183 | 8.329 | 1.80 | 0 | ef22f9a0e | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-11T00:40:47Z | census-tail-domesday | 0.480 | 0.393 | 0.036 | 0.89 | 0 | ef22f9a0e | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-11T00:40:47Z | census-tail-anomalies | 0.356 | 0.275 | 0.036 | 0.87 | 0 | ef22f9a0e | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-11T00:41:04Z | rebaseline | 326.774 | 465.083 | 26.650 | 1.50 | 0 | ef22f9a0e | campaign/the-vent-succession | MacBookPro | 10 |
+| 2026-09-11T00:43:04Z | gate-commit | 52.186 | 76.777 | 23.057 | 1.91 | 0 | 01f1d7625 | campaign/the-vent-succession | MacBookPro | 10 |
