@@ -1387,6 +1387,28 @@ staging, inherited by every branch that absorbed main.** Not merely shared —
 usually wrong. A path whose common case is unwitting inheritance of stale
 state is not one anyone can be careful enough with.
 
+**AND IT LEVIED A STANDING TAX ON EVERY CAMPAIGN CLOSE, WHICH IS THE THIRD
+ARGUMENT AND THE ONE THAT COSTS SOMETHING EVERY TIME.** `sluice_is_prose_only`
+(`scripts/sluice-phases.sh`) allowlists `docs/*`, `book/src/chronicle/*`,
+`book/src/frontier/*`, `book/src/open-questions.md`, `book/src/SUMMARY.md` and
+`.claude/skills/*`. `IMPLEMENTATION_PLAN.md` sits at the repo **root** and
+matches none of them — so *deleting it*, the very act this guide prescribes at
+close, disqualified an otherwise pure-prose candidate and bought the full
+phase ladder. Measured against `campaign/eclipse-rhythm-view`'s own close
+(2026-09-11), whose changed set is six files, five of them `docs/*`:
+
+```text
+with    IMPLEMENTATION_PLAN.md -> prose-only: NO   (all five phases)
+without IMPLEMENTATION_PLAN.md -> prose-only: YES  (skips clients + heavy)
+```
+
+The file was the sole disqualifier. At that night's measurements — `clients`
+~207 s, `heavy` ~460 s — that is **~11 minutes of serial canonical-box time per
+campaign close**, paid by whoever happened to be closing, on the one resource
+every other campaign queues behind. Unlike the clobber (a race) and the
+inherited-stale-content measurement (the common case), this one was charged
+every single time.
+
 **The file is now deleted and gitignored, and staging documents are scratch.**
 Put a staging document where exactly one effort will ever touch it — the
 session scratchpad, or `docs/superpowers/plans/<slug>.md` if it is durable
