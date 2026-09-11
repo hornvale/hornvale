@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-planetarium","note":"sluice: campaign/the-planetarium CENSUS DONE — rc=0 in 1387s; main unchanged at 2e8609398. NO GOLDENS MOVED — the census agrees with the ref; the census/* branch carries the run's timings row only, so there is nothing to merge for goldens' sake."}
