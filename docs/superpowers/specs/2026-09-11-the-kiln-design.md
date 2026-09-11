@@ -211,7 +211,7 @@ reachable if reach already succeeded, so one field loses no information
 | `grown` | measured: a people acquires and keeps it | `doc:` |
 | `flat` | measured: never acquired | `doc:` |
 | **`lost`** | **measured: acquired, then given up** | `doc:` |
-| `unmeasured` | frozen, not yet scored | none; a lifecycle state, tallied separately |
+| `unmeasured` | frozen, not yet scored | **mechanism** (`test:`/`path:`) for the reach half (ledger #18); a lifecycle state, tallied separately |
 
 **`lost` names a scope, and must say which.** A technology can be given up by
 one community, by a whole people, or by every people in the world — three
