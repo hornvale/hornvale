@@ -527,3 +527,92 @@ mean "does not apply".
 **Capture actions:** plan Task 0b (TDD, general case before the xorn case);
 this entry; the arousal/object rendering trap recorded because it misled two
 readers today.
+
+---
+
+## #9 [R] — Task 0b executed: the fix, and the general case DID reproduce
+
+**Step 1's hypothesis confirmed: this was never xorn-specific.** The general
+test (`a_fully_rested_creature_asleep_is_not_frustrated_about_fatigue`,
+`windows/vessel/src/liveness.rs`) has no `xorn` in it — a synthetic
+`Fatigue { awake: false }` with `Perceived.fatigue: 0.0` — and it went **RED**
+before the fix, failing for exactly the traced reason
+(`label: Frustrated, object: Some(Fatigue)`). The defect predates `xorn`
+entirely; `xorn`'s zero rise rate only turned a one-tick misread into a
+permanent one. The `xorn` test
+(`xorn_asleep_is_never_frustrated_about_fatigue`) uses a REAL carrier —
+`sleep_traits_of`/`fatigue_at` resolved through `hornvale_species::
+fatigue_rise_registry`'s actual `xorn` row, asserted `== 0.0` inline rather
+than assumed — and also went red for the identical reason before the fix.
+
+**The fix** (`windows/vessel/src/liveness.rs`, the `seek_while_asleep` arm):
+
+```rust
+(!awake && u > 0.0) || normally
+```
+
+`u > 0.0` is the narrowest change that closes the gap: any nonzero debt still
+engages Fatigue for the whole off-phase exactly as before (unchanged
+behaviour for every creature that has not yet fully repaid); only the
+fully-repaid instant (`u == 0.0`) stops claiming there is something left to
+chase. Both tests go green; the whole `hornvale-vessel` suite (1234 tests)
+stays green.
+
+**Step 4's risk, checked and cleared — sleep is NOT sustained by continued
+drive activity.** Traced both routes that put a body under
+(`liveness.rs`'s `advance_one` `Intent::Do(Action::Sleep)` arm, and
+`session.rs::sleep`): both call `act_span` **once**, at the decision instant,
+which computes the WHOLE bout length via `next_awake_day` and then jumps
+`st.day`/`wake_at` forward by that span in one step. Neither re-invokes
+`arbitrate` before the span elapses, so the Fatigue drive going inactive at
+`u == 0.0` **cannot** wake a creature mid-off-phase — there is no re-check
+for it to fail. `renders_unconscious`/`act_span` are the only two call sites
+in the crate that gate unconsciousness, and both are one-shot. No further
+ruling needed; the fix does not trade one defect for another.
+
+**Rebaseline moved more than xorn, and that is Step 1's finding landing in
+production data too, not a new bug:**
+
+- `windows/lab/tests/fixtures/affect-trace-seed-42.txt`: **2 of 10** sampled
+  creatures moved, not one — `xorn` (28/41 lines) **and `rust-monster`**
+  (28/41 lines). `rust-monster` carries the ORDINARY `0.3` rise rate
+  (`fatigue_rise_registry`), so its movement is live confirmation, in the
+  committed golden, that an ordinary creature really did hit `fatigue == 0.0`
+  mid off-phase in this seed's simulation — exactly the general case Step 1
+  predicted, not a synthetic-only concern. The coverage floor
+  (`labels >= 4`, `species >= 6`) still clears. Later-tick object churn within
+  each block (e.g. `Danger`↔`Social`↔`Hunger` swapping identity at ticks past
+  the fix point) is hysteretic fallout, not a second defect: `arbitrate`
+  carries an incumbent `Mode` between ticks, so no longer mis-pursuing a
+  satisfied `Fatigue` at tick 4 changes which drive becomes incumbent there,
+  which then persists forward under hysteresis. The other 8 sampled
+  creatures' blocks are byte-identical.
+- `clients/game/core/tests/fixtures/session-seed-14-carrying.json`: **all 58**
+  `sensed.present[].felt` strings moved, uniformly, from `"looks lost, unsure
+  where to turn"` to `"seems content"` — **`AffectLabel::Lost` → `Content`**,
+  not `Frustrated`. Same root cause, the OTHER label the blocked branch can
+  emit: `label = Frustrated if believed_water.is_some() else Lost`
+  (`liveness.rs`, the blocked-branch arm). A creature with no known water
+  source hits `Lost` instead of `Frustrated` on the identical spurious-active-
+  drive path, so this fix's blast radius is wider than "Frustrated about
+  Fatigue" specifically — it corrects both mislabelings the same blocked
+  branch can produce. Not predicted in the traced root cause as written, and
+  worth carrying forward: a fix framed around one label of a shared branch
+  should check the branch's other exits before declaring scope.
+- No other declared generated path moved (`docs/generated-paths.txt` diff is
+  otherwise empty besides the ordinary `docs/timings.md` ledger rows from the
+  `rebaseline`/`gate-commit` runs themselves).
+
+**Verification run.** `cargo fmt --check`: clean. `make gate-commit`: green
+(rc=0, 141.4s). Full `cargo nextest run` (`-p hornvale-vessel`, 1234 tests;
+`-p hornvale-lab`, 543 tests, including `health_calibration`'s 19-test suite
+and the affect-trace golden's own coverage-floor assertions) and
+`cargo test --manifest-path clients/game/core/Cargo.toml` (fixture-consuming
+tests, including `the_carrying_fixture_names_a_thing_in_hand`): all green
+against the regenerated fixtures.
+
+**Ideonomy passes / overturns:** none; TDD execution of #8's ruling.
+
+**Capture actions:** this entry; task-0b-report.md in scratch per the
+dispatch contract; the Lost/Frustrated dual-exit finding flagged for review
+since it broadens the fix's stated scope.

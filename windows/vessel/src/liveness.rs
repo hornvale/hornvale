@@ -6184,7 +6184,20 @@ pub fn arbitrate(
                 u >= act_eff
             };
             if d.seek_while_asleep() {
-                !awake || normally
+                // THE TRENCHER: `!awake` alone used to be sufficient, and it
+                // never consulted `u`. A drive that carries the creature
+                // INTO sleep is meant to stay engaged through the off-phase
+                // *because there is debt left to repay* — not unconditionally.
+                // At `u == 0.0` nothing can reduce it, so leaving it "active"
+                // fed the blocked branch and read as `Frustrated` about a
+                // need already fully met (measured: 18 of xorn's 40 ticks in
+                // the seed-42 affect trace, and the general case — any
+                // creature that reaches fatigue 0.0 mid off-phase — hits the
+                // identical path). `u > 0.0` is the narrowest fix: any
+                // nonzero debt still engages the drive for the whole
+                // off-phase exactly as before; only the fully-repaid instant
+                // stops claiming there is something to chase.
+                (!awake && u > 0.0) || normally
             } else if awake {
                 normally
             } else {
@@ -19262,6 +19275,175 @@ mod tests {
             survival.affect.object,
             Some(DriveKind::Thirst),
             "dying of thirst wakes it even asleep: {survival:?}"
+        );
+    }
+
+    /// THE TRENCHER, Task 0b, Step 1 — the GENERAL failing test, written
+    /// FIRST and with no `xorn` in it. The traced defect lives in
+    /// `arbitrate`'s `seek_while_asleep` arm: `!awake || normally` never
+    /// consults urgency, so a drive whose urgency has reached exactly `0.0`
+    /// still reads ACTIVE for the whole off-phase. Nothing can reduce a
+    /// drive already at zero, so every candidate scores `0.0` utility, the
+    /// blocked branch fires, and the creature is labelled `Frustrated` with
+    /// a hardcoded `valence: -1.0` — about a need it has fully satisfied.
+    ///
+    /// **The hypothesis this test exists to check: this was never
+    /// xorn-specific.** Any ordinary creature (fatigue rise `0.3`/day, this
+    /// fixture's implicit rate) that finishes repaying its whole sleep debt
+    /// — `fatigue` reads `0.0` — while its off-phase is still running hits
+    /// the identical path. `xorn` (fatigue rise `0.0`) only made the WINDOW
+    /// permanent instead of brief.
+    ///
+    /// If this test is RED, the defect predates `xorn` entirely and `xorn`
+    /// merely turned a one-tick misread into a permanent one — report that
+    /// finding prominently; it is not something to quietly absorb into the
+    /// xorn-specific test below.
+    #[test]
+    fn a_fully_rested_creature_asleep_is_not_frustrated_about_fatigue() {
+        let home = raddr(1.0);
+        let water = home.neighbors()[1].clone();
+        let terrain = PlantedTerrain::fresh_only([water.clone()]);
+        let thirst = Thirst { params: SUSTENANCE };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day: WorldTime::GENESIS,
+            interior: None,
+        };
+        let rest_asleep = Fatigue {
+            home: home.clone(),
+            awake: false,
+        };
+        let drives: [&dyn Drive; 3] = [&thirst, &thermal, &rest_asleep];
+        let view = Perceived {
+            position: home.clone(),
+            // Thirsty enough to register, nowhere near the survival override
+            // (`SURVIVAL_OVERRIDE = 0.9`) — thirst must stay silent here so
+            // the only thing under test is Fatigue's own activation.
+            drive: 0.2,
+            // FULLY RESTED: the stock has nothing left to repay.
+            fatigue: 0.0,
+            believed_water: Some(water),
+            believed_hazard: std::collections::BTreeSet::new(),
+            explore_step: None,
+        };
+        let a = arb(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            false, // asleep — the off-phase is still running
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert!(
+            !(a.affect.label == AffectLabel::Frustrated
+                && a.affect.object == Some(DriveKind::Fatigue)),
+            "a fully-rested creature in its off-phase must not be \
+             Frustrated about Fatigue — nothing is left to reduce: {a:?}"
+        );
+    }
+
+    /// THE TRENCHER, Task 0b, Step 2 — the PERMANENT case, with a REAL
+    /// carrier rather than a synthetic `Perceived::fatigue` literal. Nathan's
+    /// ruling: `xorn` stays genuinely sleepless, so this must not be "fixed"
+    /// by giving `xorn` a nonzero rate — `hornvale_species::
+    /// fatigue_rise_registry`'s `xorn` row (`0.0`) is read through the same
+    /// `sleep_traits_of`/`fatigue_at` path a real walk reads it through, so
+    /// the `0.0` reaching `Perceived::fatigue` below is production's own
+    /// number, not a stand-in for it.
+    ///
+    /// Measured on `windows/lab/tests/fixtures/affect-trace-seed-42.txt`
+    /// before this fix: 18 of `xorn`'s 40 ticks read `Frustrated` with
+    /// `object: Some(DriveKind::Fatigue)` — every off-phase tick, forever,
+    /// because `xorn`'s fatigue never leaves `0.0` to begin with.
+    #[test]
+    fn xorn_asleep_is_never_frustrated_about_fatigue() {
+        let home = raddr(1.0);
+        let water = home.neighbors()[1].clone();
+        let terrain = PlantedTerrain::fresh_only([water.clone()]);
+        let npc = Body {
+            entity: EntityId::new(1).expect("1 is a valid nonzero entity id"),
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home.clone(),
+            resource: water.clone(),
+            species: "xorn".into(),
+            activity: ActivityCycle::Diurnal,
+            temperature_niche: warm_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            thermal_strategy: ThermalStrategy::Endothermic,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass: tempo is `1.0` here, so
+            // this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "x".into(),
+        };
+        // THE REAL CARRIER: xorn's registered rise, resolved through
+        // production's own species lookup, not asserted by hand.
+        let traits = sleep_traits_of(&npc);
+        assert_eq!(
+            traits.rise, 0.0,
+            "xorn's registered fatigue rise must stay 0.0 (Nathan's ruling: \
+             xorn is genuinely sleepless) — this test's premise fails if it \
+             ever moves, and the fix must never be to move it"
+        );
+        let ledger = Ledger::default(); // no rested/slept facts — nothing to fold
+        let fatigue = fatigue_at(
+            &ledger,
+            npc.entity,
+            WorldTime::from_std_days(5.0).expect("a day value is finite"),
+            traits,
+            None,
+            None,
+        );
+        assert_eq!(
+            fatigue, 0.0,
+            "a 0.0 rise means xorn's fatigue never leaves 0.0 at any instant \
+             — the production fold's own answer, read here rather than \
+             assumed"
+        );
+        let thirst = Thirst { params: SUSTENANCE };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day: WorldTime::GENESIS,
+            interior: None,
+        };
+        let rest_asleep = Fatigue {
+            home: home.clone(),
+            awake: false,
+        };
+        let drives: [&dyn Drive; 3] = [&thirst, &thermal, &rest_asleep];
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.2,
+            fatigue,
+            believed_water: Some(water),
+            believed_hazard: std::collections::BTreeSet::new(),
+            explore_step: None,
+        };
+        let a = arb(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert!(
+            !(a.affect.label == AffectLabel::Frustrated
+                && a.affect.object == Some(DriveKind::Fatigue)),
+            "xorn, genuinely sleepless (rise 0.0), must never read \
+             Frustrated about Fatigue while asleep: {a:?}"
         );
     }
 
