@@ -1439,6 +1439,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_al
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
+hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
 hornvale-lab::hornvale_lab$domesday::render::tests::the_index_carries_the_generated_header_and_every_domain_link
 hornvale-lab::hornvale_lab$domesday::stats::tests::a_metric_with_no_present_values_yields_none
