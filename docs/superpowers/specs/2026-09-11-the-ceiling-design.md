@@ -247,6 +247,19 @@ best rung (`windows/worldgen/src/lib.rs:2425`), and seating is
 reporting at every figure**, and reports both where both are available. It
 does not attempt to reconcile them — that is D5B's, per §6.
 
+**And Stage 2 reports how many tolerance axes actually discriminate its
+kind** (ledger #7). A kind's tolerance is `ConditionNiche`'s closed four —
+temperature, moisture, insolation, elevation — and underground **two are
+degenerate**: insolation is documented constant zero, and elevation is metres
+above *sea level*, i.e. the surface above the chamber rather than its depth,
+which is verbatim The Delvers' withdrawal reason. So the authored kind has
+roughly two live axes, one of which (temperature) is gradient-driven and close
+to a proxy for depth. The readout states the count and which axes moved,
+because the successor that unifies `ConditionNiche` and `Substrate` into the
+kernel's open basis (`[[DOM-two-environment-bases]]`, Nathan's ruling
+2026-09-11) should inherit a **measurement** of the poverty rather than an
+argument for it.
+
 **Source diversity is not realized ecological diversity, and the spec must not
 slide between them.** `dominant_source` is **diagnostic** — retained beside the
 sum, never consumed by any world number. That seven sources vary in which one
