@@ -136,25 +136,33 @@ vector. `ActivityCycle::Crepuscular` is an explicitly reserved empty slot —
 "idle this campaign; authored now so a future species is a data change" — so
 filling it is invited.
 
-**The proposed slate.** The implementer authors the values; this table fixes the
+**The slate.** The implementer authors the values; this table fixes the
 *discriminating* assignments, and every kind is `HabitatRealm::Marine`.
 
 | kind | SocialForm | Trophic | Thermal | Cycle | Status | the axis that makes it not-another |
 |---|---|---|---|---|---|---|
-| obligate column-dweller | Settled | Hetero | Endo | Diurnal | Rank | the baseline; realm gate separates it from `sea-elf` |
+| **triton** | Settled | Hetero | Endo | Diurnal | Rank | the baseline: a hierarchic, martial people of the column |
+| **merfolk** | **Gregarious** | Hetero | Endo | **Crepuscular** | Knowledge | settles nothing — follows the shoals |
+| **abyssal elf** | Settled | Hetero | **Ecto** | Nocturnal | Rank | the aquatic drow (below); `LifeSchedule::Paced` slow |
 | vent commensal | Settled | **Chemo** | Ecto | Nocturnal | Generosity | the only chemotroph; its habitat expires (§4) |
-| pelagic nomad | **Gregarious** | Hetero | Endo | **Crepuscular** | Knowledge | settles nothing — a people that forms no fixed place |
-| abyssal recluse | **Solitary** | Hetero | Ecto | Nocturnal | Rank | `LifeSchedule::Paced` slow; non-visual perception |
 | kelp tender | Settled | **Photo** | (unmodelled) | Diurnal | Generosity | a photosynthetic people, on `treant`/`shrieker` precedent |
-| reef mason | Settled | Hetero | Ecto | Diurnal | **Knowledge** | builds substrate; `Dispersion` narrow, high site fidelity |
+| reef mason | Settled | Hetero | Ecto | Diurnal | **Knowledge** | builds substrate; narrow `Dispersion`, high site fidelity |
 
-Two of these are structurally interesting beyond variety-for-its-own-sake. The
-**pelagic nomad** is `Gregarious`, so it is a people that settles nothing — the
-`SocialForm` doc's own distinction between living socially and living
-sedentarily ("a nomadic band is social without being sedentary", decision 0068)
-gets its first marine instance, and placement must handle a minded kind that
-forms no settlement. The **vent commensal** is the campaign's headline made
-flesh: the one people whose habitat can fail out from under it (§4).
+**The abyssal elf is the drow move, repeated.** Drow's *only* authored
+separation from the surface elves is the realm gate — "Drow's `elevation`
+response is wood-elf's byte for byte, for exactly that reason" — because the
+trap is distinguishing two kinds by depth. The abyssal elf is separated from the
+elf family by `HabitatRealm::Marine` and its deep-band niche, and by nothing
+else it inherits. That makes it the slate's best-precedented member rather than
+its most speculative, and it carries the same hazard drow did not: the deep
+bands are the *large* ones, so its held-vertex count needs measuring before it is
+safe (M7).
+
+**Merfolk carry the `Gregarious` slot**, so they are a minded people that forms
+no fixed place — the `SocialForm` doc's own distinction ("a nomadic band is
+social without being sedentary", decision 0068) getting its first marine
+instance. Placement must handle a people that settles nothing, which is M2's
+two-sided prediction.
 
 `sea-elf` remains `Surface` and is the seventh member of the contrast set, not a
 seventh marine kind (§3.6).
@@ -167,7 +175,7 @@ Both directions, because a one-directional check is structurally blind to
 over-admission and still reads as total. This is what stops the forced
 duplicate from drifting, and it is what makes the aerial realm cheap later.
 
-### 3.6 `sea-elf` stays `Surface`, stated rather than defaulted
+### 3.6 `sea-elf` stays `Surface` in residence, stated rather than defaulted
 
 `HabitatRealm`'s registry is sparse and absence means `Surface`. That default is
 correct for every kind today, and it becomes load-bearing the moment a third
@@ -192,9 +200,10 @@ So both classifications become **explicit and tested**, in the shape
 `environment_niche_registry` already uses for its own absence ("absence is
 load-bearing, and it is the campaign's positive control").
 
-**This also settles what the new kind is for.** It is not "a marine people" —
-there is one. It is the **obligate** kind: the one that cannot come ashore, at
-the far end of the scale from sea-elf's shelf. The realm gate is precisely the
+**This also settles what the new kinds are for.** They are not "a marine
+people" — there is one. They are the **obligate** kinds: those that cannot come
+ashore, at the far end of the scale from sea-elf's shelf. Sea elves reach their
+waters (§3.8); they do not hold them. The realm gate is precisely the
 separation between them, and unlike depth it is something the model can say.
 
 ### 3.7 The subsistence roster
@@ -231,6 +240,40 @@ on the map, never agentified (autotrophs)" — and `treant`, `shrieker` and
 
 **The web must close**, and that is M6: every marine people's subsistence must
 resolve to a named kind or an aggregate stock, with no dangling requirement.
+
+### 3.8 Reach is not residence
+
+The availability mask is `{0.0, 1.0}` and has no middle value, so "amphibious"
+cannot be said as a realm. It can be said as a **capability**, and the project
+already has the vocabulary: `Locomotion::SWIM` — "the two requirements a
+plan-side gate can ask a body to satisfy" — and climate's `Access::Dive`,
+defined as "simply being in the overworld, or diving into water".
+
+This campaign therefore separates two things that a single realm field was
+conflating:
+
+- **Residence** — the vertices a kind *holds*, which placement and carrying
+  capacity read, and which the coexistence balance governs.
+- **Reach** — where a body can *go*: dive to, breathe in, and meet others in.
+
+`sea-elf` is the case that forces the distinction. It already carries `SWIM`,
+and it is **deliberately confined to the shelf band** for a measured reason:
+`radiation_affinity::the_sea_elf_is_confined_to_the_shelf_band` pins four shelf
+classes above the default and five deep classes at or below it, because
+"authored to the whole ocean this kind would hold ~27,000 vertices against
+wood's ~800; on the shelf band it holds ~1,425". That is MAP-22's
+competitive-exclusion problem, measured and pinned.
+
+So sea elves are **truly amphibious in reach and shelf-dwelling in residence**:
+they dive the column, breathe water, and meet tritons, merfolk and abyssal elves
+where those peoples live, while continuing to hold the shelf and sleep ashore on
+what they built. The pinning test stays green, untouched, and the ~34x dominance
+it prevents does not return.
+
+**The rule this generalises to**, stated because the aerial realm will need it:
+a kind's realm answers where it *lives*, never where it *can go*. Any future
+question of the form "but it can travel there" is a locomotion and access
+question, not a realm one.
 
 ## 4. The expiring habitat
 
@@ -341,7 +384,7 @@ settlements **per marine kind** at seed 42 at `BuildDepth::Full`.
   places **exactly zero**, because a kind that forms no fixed place must not
   form one.
 - *A zero for a `Settled` kind* means the realm gate admits nothing for it and
-  that kind has shipped unreachable. *A non-zero for the nomad* means
+  that kind has shipped unreachable. *A non-zero for merfolk* means
   `SocialForm` is not reaching placement, which is a defect in the opposite
   direction and would be invisible to a one-sided floor.
 - *Exceeding the surface total* means the marine realm is outcompeting land — a
@@ -382,6 +425,17 @@ field. Count dangling requirements — demands that resolve to neither.
   the campaign either authors them or moves the demand to an aggregate; it does
   not ship a people that eats something the world does not have.
 
+**M7 — Does the abyssal elf dominate the map?** Count the vertices the abyssal
+elf holds at seeds 42, 7 and 1234 — the same three seeds the sea-elf confinement
+was measured over — and compare against the elf family's order (wood-elf ~800,
+shelf-confined sea-elf ~1,425).
+
+- *Prediction:* the same order as the family, hundreds to low thousands.
+- *If it is an order larger*, the deep bands have handed a single kind the map
+  the way the whole ocean would have handed it to sea-elf, and the remedy is the
+  one that worked there — band confinement with its own pinning test — not a
+  tuning of its niche weights after the fact.
+
 **Negative control for M3:** the same sweep with vent phase held constant must
 produce a count of zero. Without it, M3's non-zero count could come from any
 time-varying term in the stack.
@@ -392,13 +446,12 @@ time-varying term in the stack.
    call and leads this list for that reason.
 2. **Which vent representation is authoritative** (§8, M1) — the campaign
    proposes `WaterVent` and measures before committing.
-3. **Is the slate in §3.4 the right six?** The axis assignments are the
-   campaign's proposal, constrained by M5 (no pair separated by depth alone) but
-   not determined by it — several other slates satisfy the same constraint. The
-   two picks worth your eye are the `Gregarious` pelagic nomad (a minded people
-   that settles nothing, which placement has never had to handle in this realm)
-   and the `Phototrophic` kelp tender (a photosynthetic people, precedented by
-   `treant` and `shrieker` but never before a settling kind).
+3. **Is the slate in §3.4 the right six?** Tritons, merfolk and abyssal elves
+   are yours; the vent commensal, kelp tender and reef mason are functional
+   roles that have not earned names yet. The assignments satisfy M5 but are not
+   determined by it. The pick I would defend least confidently is the
+   `Phototrophic` kelp tender — precedented by `treant` and `shrieker`, but
+   never before as a *settling* kind.
 4. **The name.** "The Tidemark" is provisional; the branch is `campaign/the-tidemark`.
 5. **The reading of the row** (ledger #2): residents of the water column, not
    Bronze Age Collapse raiders.
