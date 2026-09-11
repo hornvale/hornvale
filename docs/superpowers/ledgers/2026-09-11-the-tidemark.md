@@ -343,17 +343,30 @@ sea-elf would have.
   (which keys on spec-and-plan campaigns). Not this campaign's to fix, but it is
   why "did The Tenant close?" could not be answered by looking where one would
   look.
-- **`SOC-casus-belli`'s row misdescribes the code.** It states that
-  `OccupationRecord` carries a `cause` field of
-  `Famine`/`Burned`/`Plague`/`Fled`/`Migrated`. Source says otherwise
-  (`domains/history/src/record.rs`): the record carries `founded_from:
-  Founding<EntityId>` and `ended_by: Ended<EntityId>`, and `Ended` has exactly
-  two variants, `Nature` and `By(I)`. The row's actual point — that an occupation
-  records how it ended but never *why anyone did it* — survives intact, so this
-  is a description defect, not a dead row. Caught during the plan's self-review,
-  after the claim had already been repeated twice in this campaign's own
-  documents. Not edited here because the row belongs to another line of work;
-  recorded so whoever picks it up does not inherit the error.
+- **`SOC-casus-belli`'s row is inaccurate by one hop and incomplete by one
+  variant — and this session's first "correction" of it was wrong by a level.**
+  The row says `OccupationRecord` carries `cause`
+  (`Famine`/`Burned`/`Plague`/`Fled`/`Migrated`). The truth: `cause:
+  Option<CauseOfEnd>` is on `Occupation`, so the path is
+  `OccupationRecord.core.cause`; and `CauseOfEnd` has a **sixth** variant,
+  `Breached` (The Winze), restricted by its own doc to `Function::Mine`.
+
+  This session initially recorded that the field did not exist at all, and wrote
+  that into the spec, the plan and a commit message. The cause was mechanical
+  and worth naming: `grep "pub struct Occupation\b" -A 18` truncated a struct
+  that runs to ~160, so `cause` at line 150 was never in view, and a conclusion
+  of absence was drawn from a bounded read. Caught by campaign/the-ceiling, who
+  re-ran it rather than relaying it; verified here directly before acting
+  (`flesh.rs:515` matches all six variants; `flesh.rs` tests set
+  `occ.core.cause`). Corrected in spec §4 and plan Task 5.
+
+  The lesson is the one already in the memory index and re-earned: an
+  enumeration bounded by `-A N` or `| head` is a silent LIMIT, and absence
+  observed through one is not evidence. Three claims about four lines of code —
+  the registry row, this session's correction, and the peer's check — and two
+  were wrong in different directions, because two of the three reached for a
+  prose row instead of the struct.
+
 - **Plan defect caught at dispatch-time verification (Task 1, M4).** The plan
   said to count "vertices at which `sea-elf` and `giant-crocodile` each have
   non-zero **availability**". `availability` is a local term inside

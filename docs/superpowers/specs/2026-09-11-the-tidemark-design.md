@@ -288,19 +288,36 @@ after its contribution has failed". So the marine realm is the **first realm
 whose habitat quality is time-varying**, and a settlement seated on a vent is
 seated on something that can end.
 
-The history domain already has the vocabulary, though not the one the
-`SOC-casus-belli` registry row describes — that row says `OccupationRecord`
-carries a `cause` field of `Famine`/`Burned`/`Plague`/`Fled`/`Migrated`, and the
-code carries no such field. What `OccupationRecord` actually has is
-`ended_by: Ended<EntityId>`, and `Ended` has two variants: `By(I)`, "ended at the
-hand of another entity", and **`Nature`**, documented as "no antagonist entity —
-famine, plague, or an orderly departure."
+The history domain already has the vocabulary, and it is richer than a single
+field. `Occupation` carries `cause: Option<CauseOfEnd>` — reached as
+`OccupationRecord.core.cause`, one hop in from the record — alongside
+`ended_by: Ended<EntityId>`, whose `Nature` variant is "no antagonist entity —
+famine, plague, or an orderly departure". A vent failure is exactly an ending
+with no antagonist, so it is `Ended::Nature` **paired with** a drawn cause, not
+one or the other.
 
-`Ended::Nature` fits a failed vent exactly, and requires no new variant: a
-habitat that stops supporting you is the textbook case of an ending with no
-antagonist. So a vent entering `Failed` under an occupied vertex should produce
-an occupation that ends by `Nature`, not a settlement that silently persists on a
-dead vent.
+`CauseOfEnd` has **six** variants, not the five the `SOC-casus-belli` registry
+row lists: `Famine`, `Burned`, `Plague`, `Fled`, `Migrated`, and `Breached`
+(added by The Winze). Two consequences bind this campaign:
+
+- **The mapping is already expressive.** A vent that fails outright starves its
+  commensals — `Famine`, "the community starved out". A vent that *migrates*
+  along its candidate ring with its people following is `Migrated`, "in an
+  orderly fashion", which `domains/history/src/flesh.rs` already pairs with a
+  `Departure`. The campaign authors no new variant.
+- **`Breached` is not ours and must never be emitted here.** Its doc restricts
+  it: "Only a `Function::Mine` can end this way, because only a working cuts
+  rock." It also fixes its own ending — "The end is `Ended::Nature`, never `By`"
+  — which is the same pairing this campaign uses, arrived at independently.
+
+Any exhaustive `match` on `CauseOfEnd` this campaign writes handles six arms.
+`flesh.rs` already does; a new one that handles five compiles only if it has a
+wildcard, and a wildcard here would silently classify a breached delving as an
+ordinary ending.
+
+A vent entering `Failed` under an occupied vertex should therefore end that
+occupation with `Ended::Nature` and a cause, not leave a settlement silently
+persisting on a dead vent.
 
 **Scope limit.** This campaign makes vent phase an *input to seating and an
 ending*. It does not model dispersal, larval recruitment, or a marine population

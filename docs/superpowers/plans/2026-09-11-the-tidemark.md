@@ -254,14 +254,18 @@ reach extended without its residence moving; book, ledger and artifacts current.
   availability is non-zero at one instant and zero at a later one. A zero count
   falsifies spec §4 — the campaign's headline — rather than merely
   underperforming, and is reported as such.
-- [ ] Wire a failing vent to an ending: a vent entering `VentState::Failed` under
-  an occupied vertex ends that occupation with `Ended::Nature`. Note that
-  `OccupationRecord` has **no** `cause` field — the `SOC-casus-belli` registry row
-  says it does and the row is wrong; what exists is
-  `ended_by: Ended<EntityId>`, whose `Nature` variant is documented as "no
-  antagonist entity — famine, plague, or an orderly departure", which is exactly
-  a habitat that stopped supporting its people. Do **not** widen the enum; if
-  `Nature` turns out not to fit, that is a finding to record.
+- [ ] Wire a failing vent to an ending: a vent entering `VentState::Failed`
+  under an occupied vertex ends that occupation with `Ended::Nature` **and** a
+  drawn cause at `OccupationRecord.core.cause` (note the hop through `core` —
+  the field is on `Occupation`, not on the record). Map outright failure to
+  `CauseOfEnd::Famine` and a people following a migrating vent to
+  `CauseOfEnd::Migrated`; `flesh.rs` already pairs `Migrated` with a
+  `Departure`, so read that before authoring.
+- [ ] Do **not** author a new `CauseOfEnd` variant, and do **not** emit
+  `Breached` — its doc restricts it to `Function::Mine`, "because only a working
+  cuts rock". If you write any `match` on `CauseOfEnd`, it has **six** arms and
+  no wildcard: a wildcard would silently classify a breached delving as an
+  ordinary ending.
 - [ ] Extend `sea-elf`'s **reach** without touching its residence: it already
   carries `SWIM`; express deep reach through locomotion and `Access::Dive`, not
   through vertices held. Then run
