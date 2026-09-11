@@ -249,11 +249,35 @@ does not attempt to reconcile them — that is D5B's, per §6.
 
 **And Stage 2 reports how many tolerance axes actually discriminate its
 kind** (ledger #7). A kind's tolerance is `ConditionNiche`'s closed four —
-temperature, moisture, insolation, elevation — and underground **two are
-starved**: elevation is metres above *sea level*, i.e. the surface above the
-chamber rather than its depth (verbatim The Delvers' withdrawal reason), and
-light is near-zero. So the authored kind has roughly two live axes, one of
-which (temperature) is gradient-driven and close to a proxy for depth.
+temperature, moisture, insolation, elevation — and **underground exactly ONE
+of the four varies with depth.** Verified 2026-09-11 at
+`windows/worldgen/src/lib.rs`, after The Tidemark flagged it and this campaign
+re-ran it rather than inheriting it:
+
+```rust
+fn tolerance_liebig_with_fixed(cn, s: &Substrate, floor_buf, fixed) -> f64 {
+    let elevation = cn.elevation.eval(s.height_asl_m.get(), 0.0);
+    if elevation <= floor_buf { return elevation; }
+    cn.temperature.eval(s.temperature_c, floor_buf).min(fixed).min(elevation)
+}
+```
+
+Only `height_asl_m` and `temperature_c` are read off the per-rung `Substrate`.
+`fixed` comes from `EraInvariantTolerance`, a per-**vertex** `VertexMap` with
+no rung dimension, built from `climate.moisture_at(vertex)` and surface
+insolation. So:
+
+| axis | what a subterranean kind is actually scored on |
+|---|---|
+| temperature | per-rung — **the only depth-varying axis** |
+| moisture | the **surface weather** above the chamber |
+| insolation | surface insolation |
+| elevation | `height_asl_m`, the surface height, constant across rungs |
+
+**`Substrate.moisture` — the real per-rung chamber moisture, saturated below
+the water table — is computed, fed to the ENERGY supply, and never reaches the
+tolerance product at all.** A cave-dweller authored to "like damp" is being
+asked about the weather above it.
 
 **"Starved", not "dead", and the distinction is Nathan's correction of an
 earlier draft of this line.** That draft said light is "documented constant

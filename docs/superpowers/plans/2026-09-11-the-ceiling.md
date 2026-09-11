@@ -495,8 +495,15 @@ Expected: FAIL — the kind is not registered.
 deliberately — that table's own doc explains why adding a pair is a considered
 act, and a count assertion will fire either way.
 
-Author `condition_niche` against the two live axes (temperature, moisture);
-spec §3.5 explains why the other two are starved underground.
+**Author `condition_niche` knowing that only TEMPERATURE varies with depth.**
+Verified at `windows/worldgen/src/lib.rs`: `tolerance_liebig_with_fixed` reads
+only `height_asl_m` and `temperature_c` off the per-rung `Substrate`, and the
+`fixed` half (moisture and insolation) is a per-**vertex** map built from
+`climate.moisture_at(vertex)` — the SURFACE weather. So a moisture curve on a
+subterranean kind is authored against the weather above the chamber, not the
+chamber. Spec §3.5 carries the table. **Do not author a moisture preference
+expecting it to track chamber wetness**; if you want one anyway, say in its
+comment that it reads surface moisture, so the next reader is not misled.
 
 - [ ] **Step 5: Run the test and the pair battery**
 

@@ -858,3 +858,70 @@ correction of my own text, not a design space.
 numbers, saturation as a third cause, and what the branch table's vocabulary
 can no longer claim); `CombinationRule::MaxOfSeven`'s doc comment inherits the
 same false framing and is folded into Task 3's dispatch.
+
+---
+
+## #14 [Q] — Underground, only ONE tolerance axis varies with depth
+
+**Flagged by campaign/the-tidemark** (wire, alongside its M1 result) and
+**re-verified here rather than inherited** — they explicitly said their own
+reviewer was still assessing and to treat it as reported, not confirmed.
+
+**Verified at `windows/worldgen/src/lib.rs`.** `tolerance_liebig_with_fixed`
+reads exactly two things off the per-rung `Substrate` — `height_asl_m` and
+`temperature_c`. The `fixed` half comes from `EraInvariantTolerance::build`,
+which is a per-**vertex** `VertexMap` with **no rung dimension**, built from
+`climate.moisture_at(vertex)` and surface insolation.
+
+| axis | what a subterranean kind is scored on |
+|---|---|
+| temperature | per-rung — **the only depth-varying axis** |
+| moisture | the **surface weather** above the chamber |
+| insolation | surface insolation |
+| elevation | `height_asl_m`, the surface height, constant across rungs |
+
+**`Substrate.moisture` never reaches the tolerance product.** The real
+per-rung chamber moisture — saturated below the water table, the thing
+`chamber_moisture` exists to compute — is fed to the ENERGY supply and
+nowhere else. A cave-dweller authored to "like damp" is being asked about the
+weather above it.
+
+**This corrects THIS campaign's own text for the second time on the same
+subject.** Ledger #7 and spec §3.5 said "roughly two live axes (temperature,
+moisture)". It is one. #7's conclusion — that the underworld is axis-poor —
+was right and understated; the specific count was wrong, and I reached it by
+reading the `Substrate` struct's fields rather than the function that consumes
+them. **A struct's fields are what a place CAN say; the consumer decides what
+is HEARD.**
+
+**Consequences taken now, not deferred.**
+- **Task 5** must not author a moisture preference expecting it to track
+  chamber wetness. Plan corrected; if a moisture curve is authored anyway its
+  comment must say it reads surface moisture.
+- **Task 7's axis-discrimination readout** now has a specific prior: expect 1.
+  It still MEASURES rather than asserting — a readout that assumes its own
+  answer is worthless — but a result of 2+ would be the surprise.
+- **Spec §3.5** carries the verified table and the code excerpt.
+- `BIO-underground-tolerance-is-one-axis` added; it sharpens
+  `DOM-two-environment-bases` considerably, because the unification Nathan
+  ruled on is now known to be repairing a path where three of four authored
+  axes are either surface-sourced or constant underground.
+
+**Two further flags from the same message, RECORDED AND NOT ACTED ON** —
+reported by a peer, unverified here, and neither blocks this campaign:
+- `Seating::rung` is a `Band` and no pelagic stratum is expressible in one, so
+  their marine kinds seat at `Band::Surface` and share the bake's
+  `(vertex, rung)` node slot. If any rung-3 successor assumes that pair
+  uniquely identifies an occupant, that becomes false in the marine case.
+- A shipped kind forced to `Marine` yields capacity exactly 0.0 at all 40,962
+  vertices, because its curves were authored for land. **The transferable
+  shape:** a realm gate can be perfectly correct and still produce an all-zero
+  field because the kind's own curves were authored for somewhere else. Folded
+  into Task 6's expectations — if M4's placement comes back zero everywhere,
+  suspect the authored curves before the realm plumbing.
+
+**Ideonomy passes / overturns:** none; a verification of a peer's flag.
+
+**Capture actions:** spec §3.5 table, plan Task 5, registry row, and the
+Task 6 note above. Reply to The Tidemark confirming the flag with the
+verification they had not yet completed.
