@@ -26,7 +26,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Band, Geosphere, Seed, VertexMap};
 use hornvale_terrain::delve::rung_evaluation_depth_m;
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
-use hornvale_worldgen::energy::EnergySource;
+use hornvale_worldgen::energy::{EnergySource, dominant_source};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, Substrate, WorldComponents, build_world_to_with_artifacts,
     climate_of, substrate_field, subterranean_substrate_field_per_rung,
@@ -111,13 +111,27 @@ fn iqr(sorted: &[f64]) -> f64 {
 
 /// How the seven per-source yields at one chamber are combined into the one
 /// scalar `separation` is computed over. The SHIPPED rule is the mean; `Max`
-/// is M2's DIAGNOSTIC — the rule that discards the least composition, so it
-/// bounds what the mean is costing. **Neither is proposed as a replacement.**
+/// is M2's DIAGNOSTIC — a genuinely non-averaging rule, useful precisely
+/// because if dilution-by-averaging were what flattens the signal, `Max`
+/// should separate worlds at least as well as `Mean` does. **Neither is
+/// proposed as a replacement.**
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CombinationRule {
     /// `subterranean_energy`'s own rule: the mean of all seven yields.
     MeanOfSeven,
-    /// The composition-preserving extreme: the largest single yield.
+    /// The largest single yield.
+    ///
+    /// **Not** "the composition-preserving extreme" — an earlier draft of
+    /// this doc comment called it that, and Task 2's review found it false.
+    /// `mean` gives every one of the seven sources derivative `1/7`: none
+    /// discarded, only diluted. `max` gives the winner derivative `1` and
+    /// the other six **exactly `0`**, so it discards the MOST composition,
+    /// not the least. What it actually is: a genuinely **non-averaging**
+    /// rule, which is what makes it a useful diagnostic — if dilution-by-
+    /// averaging were flattening the signal, `max` should have separated at
+    /// least as well as `mean` did. It did not (see
+    /// [`max_of_seven_separates_worlds_the_mean_does_not`]'s measured
+    /// result).
     ///
     /// Constructed by Task 2's diagnostic,
     /// [`max_of_seven_separates_worlds_the_mean_does_not`] — Task 1's own
@@ -275,16 +289,187 @@ fn max_of_seven_separates_worlds_the_mean_does_not() {
     );
     // PREREGISTERED PREDICTION FALSIFIED 2026-09-11 (spec §4, decision 0016):
     // separation(max-of-seven) did not clear 0.25 — it measured 0.040745,
-    // below even the mean-of-seven control. This assertion now pins the
-    // MEASURED null rather than the originally hoped-for threshold; if it
-    // ever fails, the field has moved again and needs a fresh measurement
-    // recorded in this test's doc comment, never a source retuned to force
-    // either outcome.
+    // below even the mean-of-seven control (see this test's doc comment for
+    // the exact measured value and date). This assertion pins the DIRECTION
+    // of the measured null, not the exact value: the finding is that
+    // max-of-seven still falls short of the bar, not that this particular
+    // number has not moved. An exact pin would red on any unrelated
+    // upstream change and read as "M2 broke" rather than as a fresh
+    // measurement to record.
     assert!(
-        (max - 0.040_745).abs() < 5e-7,
-        "MEASURED VALUE CHANGED from the 2026-09-11 reading recorded in this \
-         test's doc comment: separation(max-of-seven) was {max:.6}, expected \
-         0.040745. Record a fresh measurement with today's date — do NOT \
-         retune any EnergySource to force a particular outcome."
+        max < 0.25,
+        "MEASURED FINDING CHANGED from the 2026-09-11 reading recorded in \
+         this test's doc comment: separation(max-of-seven) was {max:.6} (< \
+         0.25, falsifying the diagnostic's prediction) and has since crossed \
+         0.25. Record a fresh measurement with today's date — do NOT retune \
+         any EnergySource to force a particular outcome."
+    );
+}
+
+/// [`dominant_source`]'s verdict, tallied across every cave-bearing vertex
+/// of `seed_value`'s world at rung `rung`, normalized to sum to `1.0` —
+/// indexed by position in [`EnergySource::ALL`] (Task 3, M1).
+///
+/// **Calls the SHIPPED `dominant_source` directly rather than re-deriving
+/// which source wins** — M1 measures what that function reports, not a
+/// parallel computation of it. Mirrors `pooled_sample`'s own per-vertex
+/// construction: same `rung_evaluation_depth_m` guard, same
+/// `subterranean_substrate_field_per_rung` moisture, same per-vertex
+/// `drainage`.
+///
+/// A rung with no eligible chamber at this seed returns all-zero (never
+/// `NaN`); [`argmax_index`] still resolves that to index `0`.
+fn normalized_dominant_histogram(wc: &WorldComponents, seed_value: u64, rung: Band) -> [f64; 7] {
+    let (terrain, surface) = world_at(seed_value, wc);
+    let geo: &Geosphere = terrain.geosphere();
+    let moisture_field = subterranean_substrate_field_per_rung(geo, &terrain, &surface);
+    let idx = rung as usize;
+
+    let mut counts = [0.0_f64; 7];
+    let mut total = 0.0_f64;
+    for vertex in geo.vertices() {
+        let Some(cave) = terrain.cave_at(vertex) else {
+            continue;
+        };
+        let material = terrain.material_at(vertex);
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        let drainage = terrain.drainage_at(vertex);
+        let Some(depth_m) = rung_evaluation_depth_m(rung, gradient, cave.depth_reach_m) else {
+            continue;
+        };
+        let Some(sub) = moisture_field.get(vertex)[idx] else {
+            continue;
+        };
+        let dominant = dominant_source(&material, gradient, depth_m, sub.moisture, drainage);
+        let pos = EnergySource::ALL
+            .iter()
+            .position(|s| *s == dominant)
+            .expect("dominant_source always returns a member of EnergySource::ALL");
+        counts[pos] += 1.0;
+        total += 1.0;
+    }
+    if total > 0.0 {
+        for c in counts.iter_mut() {
+            *c /= total;
+        }
+    }
+    counts
+}
+
+/// The index of `h`'s maximum entry.
+///
+/// Resolves an exact tie by the LATER index, matching
+/// [`dominant_source`]'s own documented `Iterator::max_by` behaviour ("if
+/// several elements are equally maximum, the last element is returned") —
+/// so a tie surfacing in the histogram is broken the same direction a tie
+/// in the underlying per-vertex yields would be.
+fn argmax_index(h: &[f64]) -> usize {
+    h.iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| a.total_cmp(b))
+        .map(|(i, _)| i)
+        .expect("h is non-empty")
+}
+
+/// Total variation distance between two equal-length normalized histograms:
+/// `0.5 * Σ|p_i − q_i|` (Task 3, M1's within-rung pairwise distances).
+fn total_variation(p: &[f64], q: &[f64]) -> f64 {
+    assert_eq!(
+        p.len(),
+        q.len(),
+        "total_variation requires equal-length histograms"
+    );
+    0.5 * p
+        .iter()
+        .zip(q.iter())
+        .map(|(a, b)| (a - b).abs())
+        .sum::<f64>()
+}
+
+/// THE CEILING, M1: holding the rung fixed, do worlds disagree about which
+/// energy source dominates?
+///
+/// ```text
+/// h(s,r) = normalized dominant-source histogram for seed s at rung r
+/// a(s,r) = argmax(h(s,r))
+/// M1(r)  = |{ a(s,r) : s in S }|        -- distinct modal sources ACROSS WORLDS
+/// M1     = max over r of M1(r)
+/// ```
+///
+/// PREREGISTERED (spec §4): `M1 >= 2`. Two is what decision 0966's quadrants
+/// require — the allocation axis must take more than one value across worlds.
+/// `M1 == 1` is the falsifier and supersedes 0966.
+///
+/// **The statistic is PER-RUNG and that is the whole of its validity.**
+/// Composition is driven hard by depth, which every world shares, so
+/// pooling the rungs would return the falsifier for a methodological
+/// reason rather than a substantive one — see this file's module doc and
+/// the campaign ledger.
+///
+/// **PREREGISTRATION MET — measured 2026-09-11, `Q6_SEEDS` (n=12),
+/// `BuildDepth::Terrain`.** `M1 = 3`, clearing the `>= 2` bar. Per-rung
+/// distinct-argmax counts: Undercroft 2, Shallows 2, Deeps 3, Underdeep 3,
+/// Nadir 2 — every rung clears `>= 2` on its own, not only the maximum over
+/// rungs. Median within-rung pairwise TV distance ranges from 0.1424
+/// (Undercroft) to 0.2436 (Underdeep), well above sampling noise, so the
+/// argmax disagreement is not an artifact of near-tied histograms.
+/// Composition separates worlds at every measured rung: decision 0966's
+/// allocation axis DOES take more than one value across worlds, so its
+/// quadrants are reachable. Per spec §3.3's branch table this is the **≥ 3
+/// at some rung** row — the row the spec itself flags as the surprising
+/// one (row 2, `M1 == 2`, was the expected result; no prior measurement
+/// supported richness). Stage 2 authors a consumer whose niche favours a
+/// **named dominant source**; the successor inherits a rich allocation
+/// axis, and 0966 stands as written.
+///
+/// claim: readout(off-gate, prints all sixty histograms and the per-rung
+/// pairwise TV distances before any verdict)
+#[test]
+#[ignore = "probe: M1, per-rung composition separation; run by hand (The Ceiling, Stage 1)"]
+fn composition_separates_worlds_at_some_rung() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let mut per_rung_distinct = Vec::new();
+
+    for (ri, &rung) in UNDERGROUND_RUNGS.iter().enumerate() {
+        let mut argmaxes = Vec::new();
+        let mut hists = Vec::new();
+        for &seed in &Q6_SEEDS {
+            let h = normalized_dominant_histogram(&wc, seed, rung);
+            println!("{rung:?} seed {seed}: h = {h:?}");
+            argmaxes.push(argmax_index(&h));
+            hists.push(h);
+        }
+        let mut distinct: Vec<usize> = argmaxes.clone();
+        distinct.sort_unstable();
+        distinct.dedup();
+
+        // The TV distances make a noise-driven argmax visible rather than
+        // hidden behind the count.
+        let mut tvs = Vec::new();
+        for i in 0..hists.len() {
+            for j in (i + 1)..hists.len() {
+                tvs.push(total_variation(&hists[i], &hists[j]));
+            }
+        }
+        tvs.sort_by(f64::total_cmp);
+        println!(
+            "{rung:?}: M1(r) = {} distinct argmaxes {:?}, median pairwise TV = {:.4}",
+            distinct.len(),
+            distinct,
+            median(&mut tvs.clone())
+        );
+        per_rung_distinct.push((ri, distinct.len()));
+    }
+
+    let m1 = per_rung_distinct.iter().map(|(_, n)| *n).max().unwrap_or(0);
+    println!("M1 = {m1}");
+    assert!(
+        m1 >= 2,
+        "PREREGISTRATION NOT MET (spec §4): M1 = {m1}. Every world shares one \
+         modal source at every rung, so the allocation axis is constant across \
+         worlds and decision 0966's quadrants are unreachable. This is the \
+         NULL and it is the headline: record it, supersede 0966 with a record \
+         choosing between C.3's original two, and take branch-table row 3 or 4. \
+         DO NOT retune a source to spread the histogram."
     );
 }

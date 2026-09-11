@@ -925,3 +925,146 @@ reported by a peer, unverified here, and neither blocks this campaign:
 **Capture actions:** spec §3.5 table, plan Task 5, registry row, and the
 Task 6 note above. Reply to The Tidemark confirming the flag with the
 verification they had not yet completed.
+
+---
+
+## #15 [M] — Task 3 measured: M1 = 3, composition separates worlds at every rung
+
+**Measured 2026-09-11**, `windows/worldgen/tests/suite/ceiling_composition_probe.rs`
+(`composition_separates_worlds_at_some_rung`), `Q6_SEEDS` (n=12),
+`BuildDepth::Terrain`, per-rung as spec §4 requires — never pooled.
+
+**Result: `M1 = 3` (>= 2 preregistered, spec §4). PREREGISTRATION MET.**
+
+| rung | M1(r) | distinct argmaxes | median within-rung pairwise TV |
+|---|---|---|---|
+| Undercroft | 2 | {1, 2} | 0.1424 |
+| Shallows | 2 | {1, 2} | 0.1924 |
+| Deeps | 3 | {1, 2, 3} | 0.2127 |
+| Underdeep | 3 | {1, 3, 4} | 0.2436 |
+| Nadir | 2 | {1, 3} | 0.2350 |
+
+(Indices into `EnergySource::ALL`: 0 Serpentinization, 1 IronReduction,
+2 Radiolysis, 3 SulphideOxidation, 4 Methanogenesis, 5 Geothermal,
+6 DetritalImport.)
+
+Every rung independently clears the `>= 2` bar, not only the maximum over
+rungs — this is not one rung carrying the whole result. Median within-rung TV
+distances run 0.1424–0.2436, none near zero, so the argmax disagreement is a
+real histogram-shape difference between worlds, not two near-tied entries
+flipping on sampling noise. All sixty `h(s,r)` were printed by the test run
+before any verdict (`cargo nextest run -p hornvale-worldgen --test suite
+--run-ignored all --no-capture -E 'test(composition_separates_worlds)'`,
+73.09s, 1 passed).
+
+**Branch-table row landed (spec §3.3): "≥ 3 at some rung."** Stage 2 authors
+a consumer whose niche favours a **named dominant source**; the successor
+inherits a **rich allocation axis**, and decision 0966 **stands as written**
+— no supersession. Per spec §4's own framing this is the **surprising** row:
+"Row 2 is the one to expect... no prior measurement supports richness." Row 1
+landed instead. Worth flagging for Stage 2's own scrutiny rather than treating
+as merely confirmatory — the spec explicitly asked for that scrutiny if row 1
+or row 4 landed.
+
+**No retuning.** No `EnergySource` was touched to produce this result; the
+histogram is `dominant_source`'s shipped behaviour, unmodified, read off the
+same terrain/moisture/drainage construction Task 1's `pooled_sample` already
+used.
+
+**Two corrections carried from Task 2's review, both applied in this same
+file/commit** (not a separate Minor — same file Task 3 touches):
+1. `CombinationRule::MaxOfSeven`'s doc comment (and the enum-level doc above
+   it, which repeated the same claim) no longer calls `max` "the
+   composition-preserving extreme." `mean` gives every source derivative
+   `1/7` (diluted, not discarded); `max` gives the winner derivative `1` and
+   the other six exactly `0` — it discards the MOST composition, not the
+   least. Reframed as what it actually is: a genuinely non-averaging rule,
+   useful as a diagnostic precisely because dilution-by-averaging predicts it
+   should separate worlds at least as well as `mean` — and measured, it did
+   not.
+2. `max_of_seven_separates_worlds_the_mean_does_not`'s falsified-prediction
+   assertion changed from an exact pin (`(max - 0.040_745).abs() < 5e-7`) to
+   direction-only (`max < 0.25`), matching
+   `subterranean_energy_probe.rs`'s own wording for its two falsified
+   predictions. An exact pin asserts a number hasn't moved and reds on any
+   unrelated upstream drift, reading as "M2 broke"; direction asserts the
+   finding (still short of the bar) and is what actually matters. The exact
+   measured value (`0.040745`, 2026-09-11) stays in the doc comment.
+
+**Ideonomy passes / overturns:** none; a measured result plus a documentation
+correction, not a design-space move.
+
+**Capture actions:** this entry; row 1's branch-table consequence
+("named-dominant-source consumer, rich allocation axis, 0966 stands") is
+Stage 2's brief now, superseding the row-2 expectation spec §3.3 and this
+ledger's earlier entries assumed.
+
+
+---
+
+## #15 [Q] — "One axis" was too strong, and the ladders are not the same
+
+**The Tidemark re-ran #14 rather than inheriting it** — the discipline this
+campaign asked of them this morning, returned. They confirmed the underworld
+finding with line numbers and corrected two things.
+
+**Correction 1: say TOLERANCE, not placement.** `CHEMOSYNTHATE` *does* arrive
+per rung, through the **supply** product — which is exactly what rung 2 built
+and what spec §2a verifies. So **placement sees two per-rung inputs, not
+one**. #14's row and spec paragraph were scoped to tolerance and correct, but
+read as a claim about the whole scoring path, which would make this program's
+own shipped per-rung energy field look unreached. Both corrected. *This is a
+scoping defect, not a factual one, and it is the kind that propagates: a later
+reader citing "one axis" would have understated rung 2's own delivery.*
+
+**Correction 2: the delve ladder is not the pelagic ladder, and I generalized
+across them without checking.** `marine_habitat.rs:195` builds each marine
+band with `height_asl_m: SeaLevelHeight::from_metres(-field.depth_m)`, so
+*there* elevation IS band depth and varies — and it is the hard gate, since
+`if elevation <= floor_buf` short-circuits before temperature. Marine has
+three live per-band inputs; the delve ladder has two. **I asserted my arm's
+count of their arm on the strength of a shared consumer**, which is the same
+error class as reading a struct's fields instead of its consumer — one level
+up. Recorded in the spec as an explicit instruction not to generalize either
+ladder's axis count to the other.
+
+**WHAT THE EXCHANGE PRODUCED THAT NEITHER SIDE HAD.** My over-strong warning
+was wrong in its specific claim and right in substance, and it found a live
+defect in their campaign: `marine_habitat.rs:190` sets `insolation:
+field.light` per band — the depth-attenuated light ladder — **and nothing
+reads it.** Not the tolerance path (per-vertex `fixed`), not the supply path
+(`score_at`'s PHOTOSYNTHATE comes from `base_carrying.at(vertex)`). An
+authored field that is populated, plausible, and inert.
+
+Their M5 counted *any* authored difference, so **a pair of kinds separated
+only by insolation curves would have scored 1 and passed** — a distinctness
+test satisfied by a distinction the engine cannot see. They have changed M5 to
+exclude axes that do not arrive (their `67c1c3bf1`), and the kind it
+endangered is their kelp tender, a phototrophic people of the photic zone
+differentiated by the one axis that does not arrive.
+
+**The transferable rule, and it is worth more than either finding:** a
+distinctness or coverage test must count only the axes its own engine READS.
+Counting authored differences measures the author, not the world.
+
+**Taken for this campaign's own Task 7.** The axis-discrimination readout must
+report which axes *arrive*, not which are *authored* — otherwise it reproduces
+their M5 defect on my side. The plan already says "report whether it varies
+across the kind's occupied vertices", which is an arrival test rather than an
+authoring test, so no change is needed; recorded here because I checked rather
+than assumed, and because the next reader of that step should know why it is
+phrased that way.
+
+**One inheritance for the successor.** `Substrate.moisture` is already
+populated with the real per-rung chamber value, so a future per-rung moisture
+reader needs no threading — the field is waiting. The Tidemark's marine
+equivalent is a constant (`MARINE_MOISTURE`) with a comment conceding marine
+moisture could not matter however finely computed, so that half is genuinely
+dead on their side and merely unread on ours.
+
+**Ideonomy passes / overturns:** none; a peer's verification of my claim,
+which overturned its scope twice.
+
+**Capture actions:** registry row and spec §3.5 rescoped to tolerance with the
+marine contrast stated; Task 7's phrasing checked against their M5 defect and
+found already correct.

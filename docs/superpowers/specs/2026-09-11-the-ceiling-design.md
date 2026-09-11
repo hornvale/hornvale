@@ -279,6 +279,22 @@ the water table — is computed, fed to the ENERGY supply, and never reaches the
 tolerance product at all.** A cave-dweller authored to "like damp" is being
 asked about the weather above it.
 
+**Say "tolerance", not "placement", and the distinction is The Tidemark's
+correction of an earlier draft of this paragraph.** The table above is the
+TOLERANCE product. **Placement sees two per-rung inputs, not one**: the SUPPLY
+product adds `CHEMOSYNTHATE` per rung, which is exactly what rung 2 built and
+what §2a verifies arrives. Stating "one axis" unqualified would make this
+program's own shipped per-rung energy field look unreached, which it is not.
+
+**And the delve ladder is not the pelagic one.** `marine_habitat.rs:195`
+builds each marine band with
+`height_asl_m: SeaLevelHeight::from_metres(-field.depth_m)`, so there
+elevation IS band depth and varies — and it is the hard gate, since
+`if elevation <= floor_buf` short-circuits before temperature is read. Marine
+therefore has three live per-band inputs where the delve ladder has two. Do
+not generalize either ladder's axis count to the other; this campaign did, and
+was corrected.
+
 **"Starved", not "dead", and the distinction is Nathan's correction of an
 earlier draft of this line.** That draft said light is "documented constant
 zero underground", quoting `kernel/src/ecology.rs:391`. **That doc is stale
