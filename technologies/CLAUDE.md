@@ -32,10 +32,13 @@ leaves the next reader unable to tell a decision from an assumption.
 ## The data/code split (decision 0011)
 
 **The corpus is data; the resolver is code.** A corpus is
-`technologies/<name>.technology.json`. The resolver is
-`cli/tests/suite/technology_corpus.rs`, beside its five siblings. **Nothing in
-`domains/*` or `windows/*` reads a corpus file** — the same rule that holds for
-`tropes/`, `systems/`, `sentences/` and `regularities/`.
+`technologies/<name>.technology.json`. The resolver **will be**
+`cli/tests/suite/technology_corpus.rs`, to sit beside its five siblings — Task 4
+writes it, and **it does not exist while a corpus is being authored** (see the
+freeze, below). Every statement about the resolver in this file is therefore a
+**requirement on that task**, never a description of the tree. **Nothing in
+`domains/*` or `windows/*` may read a corpus file** — the same rule that holds
+for `tropes/`, `systems/`, `sentences/` and `regularities/`.
 
 ## Demands are DERIVED, never declared (decision 0386)
 
@@ -57,8 +60,8 @@ write, not an edit to make.
 **`presupposes` names an item in this corpus and nothing else.** A real-world
 prerequisite that is not one of the corpus's own items is dropped from the
 lattice and named in the item's `note`. Do not invent an item to satisfy an
-edge and do not point outside the file — the resolver reds on a dangling
-reference.
+edge and do not point outside the file — **Task 4's resolver must red** on a
+dangling reference.
 
 ## The freeze (decision 0016), made structural
 
@@ -69,8 +72,8 @@ authored the same way: no resolver, no closure computation, no anchor
 resolution and no report existed in the repository when it was committed, and
 the git history is the proof rather than the file's own word.
 
-The item count is **asserted by the resolver**, so changing a corpus is a
-deliberate act.
+**Task 4's resolver must assert the item count**, so that changing a corpus
+becomes a deliberate act. Until it does, nothing holds that invariant.
 
 **Re-freezing is not something a later session may do.** Any session that has
 read the distribution a criterion bands is disqualified from re-banding that
@@ -97,8 +100,8 @@ whichever produced the nicer verdict, invisible to five reviews because every
 anchor resolved.
 
 **`lost` in this family means: a people that held the capability no longer
-holds it.** The resolver's doc comment states that scope in the direction it
-enforces.
+holds it.** **Task 4's resolver must state that scope in its doc comment**, in
+the direction it enforces.
 
 ## The criterion — a bare boolean is blind to divergence
 
@@ -191,18 +194,31 @@ would restore the noise decision 0261 and ledger #12 both refuse.
 
 **Do not key this on roots.** An item with no `presupposes` edge at all is a
 strict *subset* of chosen, and keying the check on it under-covers by exactly the
-items whose prerequisites are all non-`absent`. Ledger #13 was filed because a
-round that re-scored one item to `deferred` thereby made two of its dependents
-chosen, and the root-keyed check missed one of them *inside the commit that
-ratified the rule*. **A re-score moves items into the chosen set**, which is
-precisely when the proxy diverges.
+items whose prerequisites are all non-`absent`.
+
+**Distrust a root-keyed check ALWAYS, from the first authoring — not after some
+event.** An earlier draft of this section said "a re-score moves items into the
+chosen set, which is precisely when the proxy diverges", and that is false. It
+was checked: the chosen set was recomputed from `asimov-1989`'s own freeze
+commit and it is **the identical set**, symmetric difference empty, so the
+re-score that prompted ledger #13 created **zero** chosen items. The two chosen
+non-roots had been chosen since the corpus was first authored, because one
+`deferred` verdict was authored at the freeze and their prerequisite is it. **A
+root-keyed check under-covers the moment the rule is written**, over whatever
+items already have all-non-`absent` prerequisites, and needs no trigger to do
+it.
+
+The distinction is the whole value of this paragraph: a **permanent structural**
+hazard stated as an **event** tells a future author to start checking *after*
+something happens, which is exactly when it is too late, and lets them believe a
+fresh corpus is safe. Nothing makes a root-keyed check safe.
 
 **A refusal that could not have changed the verdict is not a choice.** An item
 with an `absent` prerequisite scores `absent` whether or not a candidate anchor
 is accepted, so recording "considered and refused" in its note is evidence, not
 non-blindness. Put the argument in the `note`; leave the `disclosure` off.
 
-**Task 4's resolver enforces the chosen rule**, two-directionally: every chosen
+**Task 4's resolver must enforce the chosen rule**, two-directionally: every chosen
 item carries a `disclosure`, and no inherited item does.
 
 ## Do not claim an enforcement the tree does not hold
