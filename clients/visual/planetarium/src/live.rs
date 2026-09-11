@@ -111,11 +111,11 @@ pub fn run(
     film: FilmDefinition,
     recording: Option<PathBuf>,
     benchmark: Option<PathBuf>,
+    started: std::time::Instant,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if recording.is_some() && benchmark.is_some() {
         return Err("benchmark requires screenshot recording disabled".into());
     }
-    let started = std::time::Instant::now();
     let benchmark = benchmark
         .map(|p| crate::benchmark::Benchmark::new(p, started))
         .transpose()?;

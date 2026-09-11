@@ -1,12 +1,17 @@
+#![allow(
+    clippy::disallowed_types,
+    reason = "Instant measures startup from main entry, never source time"
+)]
 use planetarium::shots::FilmDefinition;
 use std::{error::Error, path::PathBuf};
 fn main() {
-    if let Err(e) = run() {
+    let started = std::time::Instant::now();
+    if let Err(e) = run(started) {
         eprintln!("planetarium: {e}");
         std::process::exit(1);
     }
 }
-fn run() -> Result<(), Box<dyn Error>> {
+fn run(started: std::time::Instant) -> Result<(), Box<dyn Error>> {
     let mut args: Vec<String> = std::env::args().collect();
     if args.len() == 1 {
         let executable = std::env::current_exe()?;
@@ -38,7 +43,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let revision = arg("--revision")?;
     let film: FilmDefinition = serde_json::from_slice(&std::fs::read(arg("--film")?)?)?;
     match args.get(1).map(String::as_str) {
-        Some("inspect") => planetarium::live::run(world, revision, film, arg("--record").ok().map(PathBuf::from), arg("--benchmark-out").ok().map(PathBuf::from)),
+        Some("inspect") => planetarium::live::run(world, revision, film, arg("--record").ok().map(PathBuf::from), arg("--benchmark-out").ok().map(PathBuf::from), started),
         Some("review") => {
             let stride = arg("--stride").unwrap_or_else(|_| "5".into()).parse()?;
             let width = arg("--width").unwrap_or_else(|_| "1920".into()).parse()?;
