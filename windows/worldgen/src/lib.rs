@@ -2064,6 +2064,20 @@ pub fn per_species_suitability_masked(
                         // the same reason the cave mask does — it is not a
                         // tolerance.
                         //
+                        // WHAT THIS MAX IS ACTUALLY RANKING ON, because "the
+                        // five strata" reads wider than the instrument is
+                        // (spec §3.4, verified in the tree): `temperature_c`
+                        // is one value for the whole column, ambient
+                        // chemosynthate is a per-vertex `has_edifice` flag,
+                        // and `insolation` is populated and read by nothing.
+                        // Four of the five `height_asl_m` values are the
+                        // global constants {0, 200, 1000, 4000, 6000} m. So
+                        // this loop ranks the bands on DEPTH ALONE, except
+                        // the seabed band at a vertex a vent is lighting —
+                        // and on this readout arm there is no vent at all
+                        // (the habitat here is the ambient reading). See
+                        // `marine_habitat`'s module doc.
+                        //
                         // The `None` fallback mirrors the cave-less arm: the
                         // ordinary surface reading, kept finite and then
                         // multiplied away by `availability = 0.0`.
@@ -2248,11 +2262,30 @@ pub struct EraInvariantSupply {
     /// the marine sibling of the `Subterranean` arm's per-rung fields, which
     /// this path derives inline.
     ///
-    /// Era-invariant on a **stated** argument rather than by accident: it is
-    /// read at ONE named instant (see [`EraInvariantSupply::build_at`]), so
-    /// it cannot vary across a series that names no instants of its own. A
-    /// campaign that lets the habitat expire across eras (spec §4) moves it
-    /// off this struct rather than re-reading it here.
+    /// **A DELIBERATE HOIST WITH A STATED COST, not an invariance.** This
+    /// doc used to defend its place here by saying the habitat "cannot vary
+    /// across a series that names no instants of its own", which is circular:
+    /// it is true only because this code chose not to recompute it, not
+    /// because the quantity is invariant. The honest statement, ruled at
+    /// Task 2's review and recorded as a limitation in spec §3.4:
+    ///
+    /// This is the **first realm tolerance substrate** — not merely a supply
+    /// field — to ride this struct. Its two siblings do not: `substrate_field_at`
+    /// and `subterranean_substrate_field_per_rung` are rebuilt inside the era
+    /// loop, each with that era's temperature offset and sea-level re-datum
+    /// (see [`per_species_capacity_at_with_invariant`]). The marine one is
+    /// built once, at genesis, and every era of a multi-millennia bake scores
+    /// a marine kind's tolerances against genesis conditions.
+    ///
+    /// **The cost is bounded and it is not this campaign's headline.** The
+    /// Tidemark's claim is that a habitat *expires*, and the expiry is
+    /// vent-driven — it reaches placement through
+    /// [`crate::waterworld::WaterWorld::at`]'s succession regardless of what
+    /// the era loop does — so M3 is unaffected. What is genuinely deferred is
+    /// climate-driven marine change: a paleoclimate era that warms or drops
+    /// the sea moves the surface and the rock column and leaves the water
+    /// column exactly where genesis left it. A per-era rebuild is a different
+    /// campaign's cost, deliberately not paid here.
     pub marine_habitat: MarineHabitat,
 }
 
@@ -2541,14 +2574,18 @@ fn per_species_capacity_at_with_invariant(
                     hornvale_species::HabitatRealm::Marine => {
                         // The Tidemark, Task 2: the pelagic ladder, scored
                         // exactly as the sibling loop scores it — see that
-                        // arm for the full rationale. The one difference is
-                        // WHICH reading of the habitat this path holds:
+                        // arm for the full rationale, INCLUDING what the max
+                        // is really ranking on (depth alone, except a lit
+                        // vent's seabed band). The one difference is WHICH
+                        // reading of the habitat this path holds:
                         // `bake_history_from` hoists the VENT-BEARING one
                         // (`EraInvariantSupply::build_at`), so a vent's
                         // succession phase reaches placement here, while the
                         // readout path's ambient reading carries no vent at
                         // all. That asymmetry is the point of the two
-                        // constructors, not an oversight.
+                        // constructors, not an oversight — and it is the one
+                        // thing that makes a band differ from its neighbours
+                        // on anything but depth.
                         let substrate_here = hoisted.marine_habitat.substrate.get(vertex);
                         let chemosynthate_here = hoisted.marine_habitat.chemosynthate.get(vertex);
                         let mut band_best: Option<f64> = None;

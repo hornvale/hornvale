@@ -582,23 +582,94 @@ build-twice-byte-identical assertions this change had to survive.
 
 ### Findings carried forward
 
-- **The pelagic light ladder does not reach placement.**
-  `EraInvariantTolerance` precomputes the moisture and insolation halves of
-  the Liebig minimum **at the surface**, and
-  `tolerance_liebig_with_fixed` reads only `temperature_c` and
-  `height_asl_m` off the per-band substrate. So on the capacity path a
-  marine band is distinguished by depth, temperature and chemosynthate, but
-  **not** by light — even though `MarineHabitat` carries it and the readout
-  path (`per_species_suitability_masked`, which calls the full
-  `tolerance_liebig`) does use it. This is not a regression: the
-  `Subterranean` arm has the identical shape for its per-rung moisture, and
-  predates this task. It matters for Task 3 (a kind whose identity is depth
-  cannot express that through light) and for M3.
+- **The five strata are distinguished at placement by DEPTH ALONE**, except
+  the seabed band at a vertex a vent is lighting. This entry's first draft
+  said "by depth, temperature and chemosynthate", which was right about
+  which inputs *reach* the arm and wrong about which of them *vary by band*
+  — two different questions, and conflating them is what spec §3.4's
+  corrected table now separates. Verified in the tree at fix round 1:
+  `WaterFields::from_substrate` is handed one
+  `climate.temperature_at(vertex, time)` for every sample of a vertex, so
+  the column is one temperature; ambient `chemistry` is
+  `has_edifice ? 1.0 : 0.0`, a per-vertex terrain property, and
+  `WaterWorld::at` folds a vent's chemistry in at `seabed_sample_index`
+  alone; non-seabed `height_asl_m` is `-band_entry_depth_m(band)`, the
+  global constants {0, 200, 1000, 4000, 6000} m, identical at every ocean
+  vertex. `insolation` does vary by band and **nothing reads it**.
+  `moisture` is a constant.
+- **Threading light through would add no axis**, and was refused rather than
+  deferred. The light reaching the readout is `climate.insolation()` — a
+  world scalar — attenuated by `exp(-depth/1000)`; it carries no latitude,
+  so it is a deterministic function of depth and duplicates the axis the
+  ladder already has. The gap is not that light is missing; it is that
+  nothing in the pelagic column varies per vertex except the seabed depth.
+- **The marine tolerance substrate is frozen at genesis across every
+  paleoclimate era**, and that is a ruled hoist rather than an invariance.
+  `marine_habitat` rides `EraInvariantSupply`; its two siblings do not —
+  `substrate_field_at` and `subterranean_substrate_field_per_rung` are
+  rebuilt inside the era loop with that era's temperature offset and
+  sea-level re-datum. This is the first realm *tolerance substrate*, not
+  merely a supply field, to be hoisted this way. **Ruling (fix round 1):
+  leave it hoisted.** The campaign's headline is vent-driven expiry, which
+  reaches placement through `WaterWorld::at` regardless of the era loop, so
+  M3 is unaffected; what is deferred is climate-driven marine change, and a
+  per-era rebuild is a different campaign's cost. Recorded as a limitation
+  in spec §3.4 and in the field's own doc, which previously defended the
+  hoist circularly ("cannot vary across a series that names no instants of
+  its own" — true only because this code chose not to recompute it).
 - `per_species_suitability_masked` builds the **ambient** habitat, so a
   `Marine` kind scored through the readout path sees no vents. That
   asymmetry is deliberate — the readout path holds no seed and cannot build
   the overlay without a draw — but any measurement that compares readout
   against placement for a marine kind must account for it.
+
+### Fix round 1 (review: spec pass, quality approved-with-findings, 0 Critical / 4 Important)
+
+M1's counts reproduced exactly under review, the determinism promise was
+independently re-proved, and the departure from the brief's stated insertion
+point (building the overlay inside `bake_history_from` rather than in the
+`Settlements` closure) was verified correct and endorsed. Four findings, all
+addressed:
+
+- **I3 — the band-variation correction above**, applied to every doc comment
+  that stated or implied otherwise: `marine_habitat`'s module doc gains a
+  "what actually varies by band" section, both `MarineHabitat` field docs say
+  it, the `insolation` assignment says outright that it is populated and read
+  by nothing, and both realm arms in `lib.rs` say what their `max` is really
+  ranking on.
+- **I1 — a cited test that did not exist.** Two doc comments named
+  `the_marine_habitat_read_consumes_no_draw` and `grep` found the name only
+  in those two comments: an assumption wearing a verification's clothes. The
+  test is now written. It holds what is actually holdable from inside the
+  process — reading genesis, then another instant, then genesis again returns
+  the same genesis answer bit for bit, and the overlay is unchanged across
+  all three — and its own doc says plainly what it does **not** hold (the
+  absence of a draw, which is carried by `WaterWorld::at`'s signature taking
+  no `Seed`, and by the empty regen drift check).
+- **I4 — the wiring this task exists to create was unguarded.** Reverting
+  `bake_history_from`'s `EraInvariantSupply::build_at` to `build` left the
+  entire suite green. The honest outcome test was **measured and found
+  impossible**: two synthetic marine probes run through the real bake at
+  seed 42 (a CHEMOSYNTHATE-only chemotroph whose habitable set grows 403 →
+  740 under the vent layer, and a thermophile the vent layer improves at 390
+  vertices, peak capacity 61.05 → 104.83) each produced 4 occupations, and in
+  neither case did a single site sit on a vent-improved vertex — the bake
+  seeds an ancient world and marches epochs rather than taking a capacity
+  argmax, so a capacity field that moves at hundreds of vertices need not
+  move one site. So the property is guarded where it lives, in the call:
+  `the_bake_hoists_the_vent_bearing_marine_habitat` scans
+  `bake_history_from`'s own body (bounded to that item, both needles asserted
+  present) for the overlay construction, `build_at`, and the named instant.
+  Verified to redden on exactly the named reversion, with every other test in
+  the file still green.
+- **The promoted minor — an unmeasured mechanism claim** in
+  `marine_realm_zero_movement.rs`'s header, which asserted a
+  reclassification "still moves thousands of vertices" without measuring it.
+  Now measured by a third arm in that test: sea-elf and giant-crocodile each
+  score 29,679 forced `Marine` against 40,799 live, a margin of **11,120
+  vertices**, printed every run and asserted as a relationship rather than
+  pinned to a literal. Neither "the whole globe" (the pre-Task-2 claim) nor
+  "zero everywhere" (the plausible guess that motivated measuring).
 
 ### Gate
 

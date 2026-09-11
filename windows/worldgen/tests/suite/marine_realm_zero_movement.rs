@@ -32,11 +32,17 @@
 //! file's header used to say. Task 2 made the arm a real wet/dry presence
 //! mask, so the misclassification now zeroes the live arm on every DRY
 //! vertex instead and rescores the wet ones against the pelagic ladder.
-//! Both are detected here: sea-elf holds 40,799 of seed 42's 40,962
-//! vertices today, and the dry ones it would lose are the ~11,000 the
-//! water column does not reach (`marine_ladder_vents.rs` measures a Marine
-//! kind reaching 29,679), so a silent reclassification still moves
-//! thousands of vertices — just not the whole globe.
+//!
+//! **How much that actually moves is MEASURED here, not argued.** The
+//! previous draft of this paragraph asserted a size without measuring one,
+//! which is the same failure this file exists to catch. The third arm below
+//! scores sea-elf and giant-crocodile forced to `Marine` and asserts the
+//! count differs from their live `Surface` count — 29,679 against 40,799 at
+//! seed 42, a loss of 11,120 vertices, printed on every run so the number
+//! cannot rot in prose. So the reclassification is caught, it is caught on a
+//! margin of thousands, and it is neither "the whole globe" (the pre-Task-2
+//! claim) nor "zero everywhere" (the plausible guess that motivated
+//! measuring).
 //!
 //! **The positive control (drow).** sea-elf and giant-crocodile are
 //! `Surface` in BOTH arms today, so their equality is arithmetically forced
@@ -182,6 +188,25 @@ fn marine_realm_introduction_moves_sea_elf_and_giant_crocodile_nowhere() {
         );
     }
 
+    // THE THIRD ARM: what a silent `Marine` reclassification would actually
+    // cost these two kinds. The equality arms below prove the variant's
+    // INTRODUCTION moved nothing; this proves the guard would SEE the
+    // misclassification it is written against, and it reports the size
+    // rather than asserting one in prose. It is a third `species_realm`
+    // slice over the same built world — the file's own idiom.
+    let realm_marine_forced: Vec<HabitatRealm> = vec![HabitatRealm::Marine; bio.len()];
+    let k_marine_forced = per_species_suitability(
+        geo,
+        &terrain,
+        &climate,
+        obliquity_deg,
+        insolation_scalar,
+        &regime,
+        &bio,
+        &realm_marine_forced,
+        &none_affinity,
+    );
+
     for label in ["sea-elf", "giant-crocodile"] {
         let tag = names
             .iter()
@@ -205,6 +230,25 @@ fn marine_realm_introduction_moves_sea_elf_and_giant_crocodile_nowhere() {
              registry realm and a realm forced to Surface — a difference means the Marine \
              variant's introduction silently reclassified a shipped kind, which spec §3.6 \
              requires be resolved before this task closes, not merely noted"
+        );
+
+        // What the misclassification would cost, measured rather than
+        // claimed. Not a fixed expected number: a literal here would rot the
+        // moment the world moved, and what is load-bearing is that the guard
+        // above can SEE a `Marine` reclassification at all — so the
+        // assertion is the relationship, and the size is printed.
+        let marine_map = &k_marine_forced.iter().find(|(t, _)| *t == tag).unwrap().1;
+        let marine_count = count_nonzero(geo, marine_map);
+        println!(
+            "{label} if silently reclassified Marine: nonzero={marine_count} \
+             (against {live_count} live) — the guard's margin is {} vertices",
+            live_count.abs_diff(marine_count)
+        );
+        assert_ne!(
+            live_count, marine_count,
+            "{label} forced to Marine must score differently from its live Surface realm, or \
+             the equality assertions above could not detect the reclassification spec §3.6 \
+             names as the hazard — this is the size of the guard's margin, not a tolerance"
         );
 
         // Stronger than the count alone: the two arms must agree AT EVERY

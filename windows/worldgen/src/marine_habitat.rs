@@ -31,6 +31,38 @@
 //! [`crate::waterworld::marine_columns`] owns, so the two cannot disagree
 //! about which strata a column has or what depth a sample sits at.
 //!
+//! # WHAT ACTUALLY VARIES BY BAND — read this before authoring a marine kind
+//!
+//! "Scored at every band and takes the best" is true, and it is a narrower
+//! instrument than it sounds. Verified in the tree, not inferred, and
+//! recorded in spec §3.4:
+//!
+//! - **`temperature_c` does not vary by band.**
+//!   [`crate::waterworld::WaterFields::from_substrate`] is handed one
+//!   `climate.temperature_at(sample.vertex, time)` for EVERY sample of a
+//!   vertex, so the whole column is one temperature.
+//! - **`chemosynthate` does not vary by band either, except at a vent's
+//!   seabed sample.** The ambient value is `has_edifice ? 1.0 : 0.0`, a
+//!   per-vertex terrain property, and [`WaterWorld::at`] folds a vent's
+//!   chemistry in at `seabed_sample_index` alone.
+//! - **`insolation` varies by band and NOTHING READS IT.** It is populated
+//!   from `field.light` below; the capacity path's
+//!   `tolerance_liebig_with_fixed` takes moisture and insolation from
+//!   `EraInvariantTolerance`, which has no band dimension at all.
+//! - **`moisture` is the constant [`MARINE_MOISTURE`].**
+//!
+//! So **the five strata are distinguished by depth alone**, through
+//! `height_asl_m`, and four of the five depths are the global constants
+//! `{0, 200, 1000, 4000, 6000}` m — identical at every ocean vertex. Only
+//! the seabed band's depth is a per-vertex quantity.
+//!
+//! **Do not "fix" this by threading light through.** The light that reaches
+//! the readout is `climate.insolation()` — a world *scalar* — attenuated by
+//! `exp(-depth/1000)`. It carries no latitude, so it is a deterministic
+//! function of depth and would duplicate the axis the ladder already has.
+//! The gap is not that light is missing; it is that nothing in the pelagic
+//! column varies per vertex except the seabed depth.
+//!
 //! # Which vent representation this reads
 //!
 //! `WaterVent`, not `hornvale_climate::Biome::HydrothermalVent`. M1 measured
@@ -93,18 +125,35 @@ pub fn pelagic_index(stratum: Stratum) -> Option<usize> {
 /// `Hadal` last. A vertex with no water column reads `[None; 5]` /
 /// `[0.0; 5]`, which is what makes the availability mask fall out of the
 /// scoring loop rather than needing a second, separately-derived flag.
+///
+/// **Carrying a value per band is not the same as that value varying by
+/// band** — see the module doc's "what actually varies" section before
+/// reading a difference into these arrays. Today only `height_asl_m` does,
+/// and four of its five values are global constants.
 /// type-audit: bare-ok(ratio: chemosynthate)
 #[derive(Clone, Debug)]
 pub struct MarineHabitat {
     /// The substrate at each pelagic band, `None` where the column does not
     /// reach that band (every band below the seabed, and every band at a
     /// vertex that is not ocean).
+    ///
+    /// Of its four fields, only `height_asl_m` differs between the `Some`
+    /// bands of one vertex: `temperature_c` is the vertex's single column
+    /// temperature, `moisture` is a constant, and `insolation` is populated
+    /// and read by nothing. Module doc, "what actually varies by band".
     pub substrate: VertexMap<[Option<Substrate>; PELAGIC_BANDS]>,
     /// The `CHEMOSYNTHATE` supply at each pelagic band, on the same `[0, 1]`
     /// ruler [`crate::energy::subterranean_energy`] returns — so the marine
     /// and subterranean chemotrophic supplies are comparable rather than two
     /// scales sharing one axis name. `0.0` where the column does not reach
     /// the band.
+    ///
+    /// **Per band in shape, per vertex in fact, with one exception.** The
+    /// ambient value is `has_edifice ? 1.0 : 0.0` — a terrain property of the
+    /// vertex, identical down the column — and [`WaterWorld::at`] adds a
+    /// vent's chemistry at `seabed_sample_index` alone. So the only band that
+    /// can differ from its neighbours is the seabed band at a vertex a live
+    /// vent is lighting.
     pub chemosynthate: VertexMap<[f64; PELAGIC_BANDS]>,
 }
 
@@ -183,10 +232,19 @@ impl MarineHabitat {
             per_band_substrate[vertex][band] = Some(Substrate {
                 temperature_c: field.temperature_c,
                 moisture: MARINE_MOISTURE,
-                // The pelagic light ladder: `WaterFields::light` is the
-                // world's insolation attenuated by this sample's depth, which
-                // is exactly the quantity the surface substrate's
-                // `insolation` carries at the surface.
+                // The pelagic light ladder — POPULATED AND READ BY NOTHING,
+                // stated here so the next reader does not infer a consumer
+                // from a populated field. `WaterFields::light` is the world's
+                // insolation attenuated by this sample's depth, which is the
+                // same quantity the surface substrate's `insolation` carries
+                // at the surface, so it is the right value to put here. But
+                // the capacity path takes its insolation term from
+                // `EraInvariantTolerance`, which is per species per VERTEX
+                // with no band dimension, and the readout path's insolation
+                // is likewise the surface reading. Kept rather than dropped
+                // because the field is `Substrate`'s and must hold something
+                // true; see the module doc for why threading it through would
+                // add no axis.
                 insolation: field.light,
                 // A sample in the water column sits BELOW sea level, so its
                 // height on that datum is the negation of its depth. This is
