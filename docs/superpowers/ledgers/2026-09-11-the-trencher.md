@@ -462,3 +462,68 @@ system; it proceeds.
 **Capture actions:** this entry; the question put to Nathan; a correction of
 my own in-session claim that the reviewer's concern rested on a
 misattribution — it did not, and the 18/40 count is what settles it.
+
+---
+
+## #8 [Q] — The frustration bug, root-caused; xorn stays sleepless
+
+**Nathan's ruling:** fix the mechanism; **keep `xorn` genuinely sleepless at
+`0.0`** — "that's good for another kind of test."
+
+**That ruling is better than my recommendation, and for a reason I missed.** I
+had recommended giving `xorn` the shared `0.3` rate. That would have left the
+mechanism fix **with no carrier**: the guard would pass because nothing
+exercises it — the exact vacuity pattern this campaign's predecessor found five
+times. Keeping one genuinely sleepless kind means the fix has a live witness
+that can go red.
+
+**ROOT CAUSE, traced rather than guessed** (`systematic-debugging`, Phase 1-2).
+`arbitrate`'s activation predicate, `windows/vessel/src/liveness.rs:~6186`:
+
+```rust
+if d.seek_while_asleep() {
+    !awake || normally        // urgency is NEVER consulted on this arm
+}
+```
+
+`Fatigue` is the only drive overriding `seek_while_asleep()` to `true`,
+"because it is the drive that carries a creature INTO sleep, so the off-phase
+is exactly when it engages." Sound intent; its **unstated assumption** is that
+a creature entering the off-phase has accrued fatigue. At urgency `0.0` the
+drive engages anyway, **nothing can reduce it below zero**, so the blocked
+branch — "no candidate reduces the drive" — fires and labels the creature
+`Frustrated` with a hardcoded `valence: -1.0`.
+
+**A second finding, not a bug but a misreading trap.** Arousal is *the maximum
+urgency across ALL drives*; `object` is *the pursued drive*. They have
+different sources, so `arousal=1.0 object=Fatigue` never meant fatigue was
+urgent — it meant something else was maximally urgent while fatigue was being
+pursued. The trace's rendering invites exactly the wrong reading, and both the
+reviewer and I made it.
+
+**THE HYPOTHESIS THE FIX MUST TEST, and it is why Task 0b writes the general
+case first.** This may never have been `xorn`-specific: a **normal** creature
+that sleeps to full rest while the off-phase is still running has fatigue
+`0.0` and should hit the identical path. If that reproduces, the defect was
+always present and `xorn` merely made it *permanent* rather than *brief* —
+which would mean a pre-existing bug in every creature's sleep, found by
+changing one kind's metabolism.
+
+**The risk the fix carries, written into the task rather than discovered in
+it:** does a creature need the fatigue drive *active* to STAY asleep? If the
+drive going inactive at full rest wakes it mid-off-phase, the fix trades one
+defect for another. Task 0b Step 4 requires this checked before committing and
+**escalates rather than improvising** if it is true.
+
+**Ideonomy passes / overturns:** one pass (tree-finding + dimension-
+identification; spectrum) preceded the trace and produced the region spectrum
+— FULL / SATIATED / UNSATISFIABLE / FROZEN / GATED / UNMODELLED /
+INAPPLICABLE. Its finding stands and named the target precisely: `xorn` was in
+GATED, the intent was FROZEN, and it landed in UNSATISFIABLE because **nothing
+in the system can express "present but never selected."** The pass also found
+this is the split-the-token problem from #4 one layer down — a zero used to
+mean "does not apply".
+
+**Capture actions:** plan Task 0b (TDD, general case before the xorn case);
+this entry; the arousal/object rendering trap recorded because it misled two
+readers today.

@@ -147,6 +147,93 @@ git commit -m "fix(the-trencher): xorn is alive -- decision 0976"
 
 ---
 
+### Task 0b: a drive that cannot rise must not be pursued
+
+**Files:**
+- Modify: `windows/vessel/src/liveness.rs` (the `active` predicate, ~line 6186)
+- Test: `windows/vessel/src/liveness.rs`'s own test module
+- Modify: `windows/lab/tests/fixtures/affect-trace-seed-42.txt` (rebaseline)
+
+**Root cause, already traced — do not re-derive it.** `arbitrate`'s activation
+predicate reads:
+
+```rust
+if d.seek_while_asleep() {
+    !awake || normally        // urgency is NEVER consulted on this arm
+} else if awake {
+    normally
+} else {
+    d.survival_override(u)
+}
+```
+
+Fatigue is the only drive with `seek_while_asleep() == true`, "because it is
+the drive that carries a creature INTO sleep". The rule's **unstated
+assumption** is that a creature entering the off-phase has accrued fatigue.
+When urgency is `0.0`, the drive engages anyway, **nothing can reduce it
+below zero**, so the blocked branch fires and labels the creature
+`Frustrated` with `valence: -1.0`.
+
+Measured: 18 of `xorn`'s 40 ticks in the committed affect golden.
+
+- [ ] **Step 1: Write the GENERAL failing test FIRST — no xorn in it**
+
+The hypothesis worth testing is that **this was never xorn-specific**. A
+normal creature (rise rate `0.3`) that sleeps to *full* rest while the
+off-phase is still running has fatigue `0.0` and should hit the identical
+path.
+
+Write that test before the xorn one: a fully-rested creature, in the
+off-phase, must not be `Frustrated` about `Fatigue`. **If it goes red, the
+defect was always there** and `xorn` merely made it permanent instead of
+brief. Report which.
+
+- [ ] **Step 2: Write the xorn test — the permanent case**
+
+Rise rate `0.0`, off-phase. Same assertion. This is the witness that stays
+live: Nathan ruled `xorn` remains genuinely sleepless, so this test keeps a
+real carrier rather than a synthetic one.
+
+- [ ] **Step 3: Run both and confirm they fail for the RIGHT reason**
+
+Expected: `Frustrated` with `object == Some(DriveKind::Fatigue)`. **If a test
+fails some other way, stop** — it is not reproducing the traced mechanism.
+
+- [ ] **Step 4: Fix the predicate**
+
+```rust
+if d.seek_while_asleep() {
+    (!awake && u > 0.0) || normally
+}
+```
+
+The exact float predicate is yours — any nonzero fatigue means there is
+something to reduce, so `> 0.0` is likely right, but say why in a comment.
+
+**CHECK THIS BEFORE COMMITTING, it is the risk the fix carries:** does a
+creature need the fatigue drive *active* to STAY asleep? If the drive going
+inactive at full rest wakes it mid-off-phase, this fix trades one defect for
+another. Read how sleep is sustained and say what you found. **If it does
+wake them, STOP and report** — the fix then needs a different shape and that
+is a ruling, not an implementation choice.
+
+- [ ] **Step 5: Run both tests, then the vessel suite**
+
+- [ ] **Step 6: Rebaseline and read the diff**
+
+`xorn` should lose its `Fatigue`-objected ticks and keep `Danger`/`Social`.
+Confirm no other creature's block moved — **unless Step 1 went red**, in
+which case other creatures SHOULD move, and that is the finding.
+
+- [ ] **Step 7: `cargo fmt`, gate, commit**
+
+```bash
+cargo fmt && make gate-commit
+git add windows/vessel/src/liveness.rs windows/lab/tests/fixtures/affect-trace-seed-42.txt docs/superpowers/ledgers/2026-09-11-the-trencher.md
+git commit -m "fix(the-trencher): a drive that cannot rise is not pursued"
+```
+
+
 ## Stage 1 — The trichotomy
 
 ### Task 1: The three axes and their sanctioned combinations
