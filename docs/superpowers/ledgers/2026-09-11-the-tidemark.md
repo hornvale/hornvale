@@ -886,6 +886,108 @@ the history showcase repointed 10626 → 9884 (10626 renders an EMPTY column
 now, which `docs_consistency` caught). **No new stream label, no new external
 dependency, no epoch.**
 
+### M8 — the shallow kinds hold the ocean, and depth confines DOWNWARD ONLY
+
+Found after the slate was authored, from M7's own printed distribution rather
+than from a probe written to look for it. **Not retuned** — the controller's
+ruling, and the right one: it was found post-unblinding, and M2 cannot see it.
+
+Held vertices (strict argmax of per-species capacity over the settling
+roster), seeds 42 / 7 / 1234:
+
+| kind | 42 | 7 | 1234 |
+|---|---:|---:|---:|
+| **reef-mason** | **26,344** | **18,213** | **26,769** |
+| hobgoblin | 5,996 | 7,937 | 4,487 |
+| triton | 2,164 | 1,952 | 1,048 |
+| kelp-tender | 276 | 430 | 524 |
+| abyssal-elf | 336 | 368 | 522 |
+| vent-commensal | 377 | 224 | 396 |
+
+The reef mason is the argmax across very nearly the whole ocean (~29,700
+water-column vertices at seed 42), while placing a normal **4** settlements.
+
+**The mechanism, stated because the number alone invites the wrong repair.**
+
+1. Every ocean column has an `Epipelagic` band at `height_asl_m = 0`
+   (`marine_columns` walks `strata()` from the surface down to the vertex's
+   own floor). A kind whose elevation optimum is near the surface is
+   therefore near-optimal at the surface band of EVERY ocean vertex, however
+   narrow its curve: at optimum −40 m and width 350 m, `z = 0.114` and the
+   bump is 0.993.
+2. So **depth confines downward only.** A deep kind is confined because deep
+   columns are rarer — that is what makes M7's abyssal elf well-behaved. A
+   shallow kind is confined by nothing.
+3. Among shallow kinds the argmax then falls to the largest remaining term.
+   `BiomeAffinity`'s `default` IS the kind's sovereignty floor, so the reef
+   mason's 96 kg (floor 0.4448) beats the triton's 82 kg (0.443) at every
+   unlisted class, by ~0.4%, and both weight `MARINE_FORAGE` at 1.0. A
+   0.4% edge decides 26,000 vertices.
+
+**This is MAP-22's competitive-exclusion problem arriving in a new realm** —
+the same shape `radiation_affinity::the_sea_elf_is_confined_to_the_shelf_band`
+records ("authored to the whole ocean this kind would hold ~27,000 vertices
+against wood's ~800"), with one difference that matters for the remedy.
+
+**Band confinement on the sea-elf precedent was considered and rejected**
+(controller's ruling). Sea-elf's confinement repaired a kind that was
+*authored* too broadly; the reef mason is near-optimal everywhere for a
+STRUCTURAL reason, so confining it would simply hand the ocean to the triton.
+
+### Two guards that were over-strong rather than stale
+
+Both had been green on an assumption nothing had ever tested, and both are
+corrected rather than loosened — recorded because "re-pin it" was the wrong
+instinct in each case:
+
+- **The Land list's qualification equality.** `qualified ==
+  in_a_repeating_group` read 174 against 175. `land_list_labels`'s own
+  comment already documents the exception — the label map is keyed by VERTEX,
+  two settlements can stand on one, and "only the first claimant can wear it".
+  A co-tenant can therefore sit in a repeating group unqualified while its
+  group-mate is qualified and the lines stay distinct. It had never happened
+  before. Now subtracted BY NAME: every unqualified member of a repeating
+  group must be provably a co-tenant.
+- **`genesis_observes_an_unoccluded_sky`.** Production observes through
+  `observe_with_sources(.., &sources)`; the test re-derives through
+  `observed_phenomena_as_at`, which takes the DEFAULT sources. The two agree
+  only while the extra sources contribute nothing, and drow's new flagship sits
+  where a `rain` phenomenon arises. Scoped to the sky sources the
+  reconstruction can see, with the residual gap named at the site.
+
+### The cost this campaign imposed on an existing instrument
+
+`founder_collision`'s 0–2999 positive-set sweep budgets **~800 s** in its own
+`#[ignore]` reason (prior sweeps: 692.89 / 744.21 / 768.72 / 798.87 s). At
+this roster it ran **past 4,620 s and had not finished** — a ≥5.8x rise, and
+nobody predicted it. Cause: the sweep builds 3,000 worlds through the
+deep-history bake, and the settling roster went 15 → 20, so every world pays
+for five more peoples' placement and promotion. Worth knowing before any
+future campaign widens the roster again; the instrument is offline-only, so
+the cost is invisible until someone runs it.
+
+### The whole-workspace figure, with its date
+
+**6,089 tests, 1,326.787 s** (`cargo nextest run --workspace
+--no-fail-fast`, MacBookPro, 2026-09-11, at the Task 3 fix round). The first
+whole-workspace number this campaign has taken, recorded because the campaign
+has just taken the roster from 39 kinds to 45 and Task 4 adds nine more: if
+that moves materially, the next reader deserves two numbers rather than an
+anecdote.
+
+### Known-red at the close of this task, and why
+
+`census_sentinel::the_first_three_census_worlds_match_the_committed_rows` and
+`tripwire::the_committed_census_agrees_with_a_live_rebuild_of_the_tripwire_seeds`
+are **RED, expected, and census-blocked** — not unfinished work. Both compare
+a live rebuild against the committed census fixtures, authoring six peoples
+moved the census, and a refresh runs on the canonical box. Deferred to the
+pre-merge close deliberately: Tasks 4 and 5 move the world twice more, so a
+census taken now would be invalidated twice before it could be used. This is
+exactly the shape CLAUDE.md predicts when it keeps the heavy tier off the
+stage-gate list — a census-backed assertion "would red predictably for the
+whole middle of any world-touching campaign".
+
 ## Follow-ups
 
 - **The aerial realm is the empty fourth sibling.** `MAP-11`'s medium axis is
