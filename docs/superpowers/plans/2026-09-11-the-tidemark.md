@@ -224,6 +224,16 @@ stratum; M2 is two-sided green; M7 shows no map domination.
   order (wood-elf ~800, shelf-confined sea-elf ~1,425). If it is an order larger,
   apply the remedy that worked for sea-elf: band confinement with its own pinning
   test. Do not retune niche weights to hide it.
+- [ ] **Revisit I4's wiring guard, which is currently a source-text scan.**
+  `the_bake_hoists_the_vent_bearing_marine_habitat` reads `lib.rs` as text and
+  matches the literal `EraInvariantSupply::build_at(`. It reddens on the real
+  reversion (verified by mutation), but a change that keeps the string in a
+  comment or dead branch while calling `build(` would pass it. The reason an
+  outcome test was impossible was that **no real marine kind existed** — after
+  this task, six do. Check whether a behavioural guard is now possible: a marine
+  kind whose capacity differs measurably with and without the vent layer would
+  redden on the reversion semantically. If it is possible, replace the scan and
+  say so; if it still is not, record why in one sentence.
 - [ ] Record M5, M2 and M7's actual numbers in the ledger. A measurement whose
   result is described rather than stated is not recorded.
 - [ ] Run `make gate-commit`; then submit a stage gate:
