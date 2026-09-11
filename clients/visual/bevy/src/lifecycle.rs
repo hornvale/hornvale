@@ -300,6 +300,25 @@ impl SceneCatalog {
                     0.94,
                 )
             };
+            let mut mesh = mesh;
+            let normal_map = if body.kind == "moon" {
+                mesh.generate_tangents()
+                    .map_err(|e| ViewError::Document(format!("moon tangents: {e}")))?;
+                let moon = mirror
+                    .initial()
+                    .moons
+                    .moons
+                    .iter()
+                    .find(|m| body.id == format!("moon:{}", m.index))
+                    .unwrap();
+                let normal = world
+                    .resource_mut::<Assets<Image>>()
+                    .add(surface::moon_normal(moon));
+                textures.push(normal.clone());
+                Some(normal)
+            } else {
+                None
+            };
             let mesh = world.resource_mut::<Assets<Mesh>>().add(mesh);
             meshes.push(mesh.clone());
             let texture = world.resource_mut::<Assets<Image>>().add(texture);
@@ -317,6 +336,7 @@ impl SceneCatalog {
                 .resource_mut::<Assets<StandardMaterial>>()
                 .add(StandardMaterial {
                     base_color_texture: Some(texture),
+                    normal_map_texture: normal_map,
                     perceptual_roughness: roughness,
                     metallic_roughness_texture: roughness_map,
                     reflectance: crate::camera::ViewSettings::default().reflectance,

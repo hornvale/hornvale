@@ -97,7 +97,7 @@ fn capture(
         "source_revision":revision, "settings":settings, "full_film_frames":film.frames,
         "font_sha256":hash(include_bytes!("../assets/LibreBaskerville-Regular.ttf")),
         "presentation_seed":film.presentation_seed, "view_settings":film.settings, "history":hornvale_bevy_view::HISTORY_RESET_POLICY,
-        "cosmetic_treatments":["seeded descriptor-conditioned pigment, craters and maria", "cosmetic moon orientation where native spin is unavailable", "interpolated terrain mesh and biome materials", "water roughness and reflectance", "cloud shell and opacity", "atmospheric scattering", "ACES fitted tonemapping and exposure", "depth of field", "Libre Baskerville caption overlay"],
+        "cosmetic_treatments":["seeded descriptor-conditioned pigment and maria; stable source-cratering-conditioned moon tangent normals (cosmetic marks, no physical relief)", "static cosmetic moon orientation where native spin is unavailable; no invented spin", "interpolated terrain mesh and biome materials", "water roughness and reflectance", "cloud shell and opacity", "atmospheric scattering", "ACES fitted tonemapping and exposure", "depth of field", "Libre Baskerville caption overlay"],
         "readback":"Bevy Screenshot::image; RGBA8 sRGB tightly packed top-to-bottom, PNG RGB8 lossless",
         "window":"none; independent image target"
     });

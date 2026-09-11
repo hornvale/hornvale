@@ -8,3 +8,5 @@ pub mod package;
 pub mod provenance;
 pub mod review;
 pub mod shots;
+
+pub mod benchmark;

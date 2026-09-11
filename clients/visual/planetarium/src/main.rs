@@ -38,12 +38,13 @@ fn run() -> Result<(), Box<dyn Error>> {
     let revision = arg("--revision")?;
     let film: FilmDefinition = serde_json::from_slice(&std::fs::read(arg("--film")?)?)?;
     match args.get(1).map(String::as_str) {
-        Some("inspect") => planetarium::live::run(world, revision, film, arg("--record").ok().map(PathBuf::from)),
+        Some("inspect") => planetarium::live::run(world, revision, film, arg("--record").ok().map(PathBuf::from), arg("--benchmark-out").ok().map(PathBuf::from)),
         Some("review") => {
             let stride = arg("--stride").unwrap_or_else(|_| "5".into()).parse()?;
             let width = arg("--width").unwrap_or_else(|_| "1920".into()).parse()?;
             planetarium::review::run(world, revision, film, PathBuf::from(arg("--output")?), stride, width)
         }
+        Some("qualify") => planetarium::review::qualify(world, revision, film, PathBuf::from(arg("--output")?)),
         Some("capture") => {
             let limit = if args.iter().any(|v| v == "--limit") {
                 Some(arg("--limit")?.parse()?)

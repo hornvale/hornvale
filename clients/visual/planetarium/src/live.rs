@@ -1,3 +1,7 @@
+#![allow(
+    clippy::disallowed_types,
+    reason = "Instant measures benchmark startup independently of simulation time"
+)]
 //! The visible app owns transport and controls; the shared catalog owns all scene assets.
 use crate::{
     bridge::Bridge,
@@ -106,8 +110,19 @@ pub fn run(
     revision: String,
     film: FilmDefinition,
     recording: Option<PathBuf>,
+    benchmark: Option<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if recording.is_some() && benchmark.is_some() {
+        return Err("benchmark requires screenshot recording disabled".into());
+    }
+    let started = std::time::Instant::now();
+    let benchmark = benchmark
+        .map(|p| crate::benchmark::Benchmark::new(p, started))
+        .transpose()?;
     let (mut source, initial) = Bridge::open(world_path, revision)?;
+    if benchmark.is_some() {
+        source.enable_query_samples();
+    }
     let mut mirror = ObservationMirror::new(&initial)?;
     film.validate(&mirror.initial().binding)?;
     let q = mirror.request(film.clock().tick_at(0)?)?;
@@ -251,6 +266,8 @@ pub fn run(
         .id();
     world.entity_mut(track).add_child(scrub_fill);
     world.entity_mut(toolbar).add_child(track);
+    let benchmark_meshes = world.resource::<Assets<Mesh>>().ids().collect::<Vec<_>>();
+    let benchmark_textures = world.resource::<Assets<Image>>().ids().collect::<Vec<_>>();
     world.insert_resource(Live {
         source,
         observation: ObservationState {
@@ -278,6 +295,32 @@ pub fn run(
         elapsed: 0.,
         render_frames: 0,
     });
+    if let Some(benchmark) = benchmark {
+        use bevy::render::{
+            Render, RenderApp,
+            render_asset::RenderAssets,
+            render_resource::{CachedPipelineState, PipelineCache},
+        };
+        use bevy::{render::mesh::RenderMesh, render::texture::GpuImage};
+        let ready = benchmark.ready.clone();
+        app.insert_resource(benchmark);
+        app.sub_app_mut(RenderApp).add_systems(
+            Render,
+            move |pipelines: Res<PipelineCache>,
+                  meshes: Res<RenderAssets<RenderMesh>>,
+                  images: Res<RenderAssets<GpuImage>>| {
+                if pipelines.pipelines().next().is_some()
+                    && pipelines
+                        .pipelines()
+                        .all(|p| matches!(p.state, CachedPipelineState::Ok(_)))
+                    && benchmark_meshes.iter().all(|h| meshes.get(*h).is_some())
+                    && benchmark_textures.iter().all(|h| images.get(*h).is_some())
+                {
+                    ready.store(true, std::sync::atomic::Ordering::Release);
+                }
+            },
+        );
+    }
     app.add_systems(PreUpdate, update.after(InputSystems));
     app.run();
     Ok(())
@@ -286,6 +329,51 @@ fn update(world: &mut World) {
     let Some(mut live) = world.remove_resource::<Live>() else {
         return;
     };
+    if let Some(mut benchmark) = world.remove_resource::<crate::benchmark::Benchmark>() {
+        let samples = live.source.take_query_samples();
+        if let Some((elapsed, interval)) = benchmark.sample() {
+            benchmark.queries.extend(samples);
+            if elapsed >= 60. {
+                if let Err(error) =
+                    benchmark.finish(&live.film, live.dimensions, &live.observation.error)
+                {
+                    eprintln!("benchmark write failed: {error}");
+                    world.write_message(bevy::app::AppExit::error());
+                } else {
+                    println!(
+                        "BENCHMARK COMPLETE {} samples={}",
+                        benchmark.output.display(),
+                        benchmark.frames.len()
+                    );
+                    world.write_message(bevy::app::AppExit::Success);
+                }
+            } else {
+                benchmark.frames.push(serde_json::json!({"elapsed_seconds":elapsed,"interval_seconds":interval,"frame":live.committed_frame,"pending":live.observation.pending()}));
+                let block = (elapsed / 10.).floor() as u32;
+                live.playback.paused = true;
+                let frame = match block {
+                    0 | 5 => ((elapsed % 10.) * 30.) as u32,
+                    1 => 299 - ((elapsed % 10.) * 30.) as u32,
+                    _ => 150,
+                };
+                live.playback.seek(frame, live.film.frames);
+                let b = bounds(&live.observation.mirror);
+                live.free_camera = (2..=4).contains(&block);
+                let result = match block {
+                    2 => live.orbit.orbit(interval * 0.08, 0., &b),
+                    3 => live.orbit.pan(interval * 0.008, 0., &b),
+                    4 => live.orbit.dolly(interval * 0.008, &b),
+                    _ => Ok(()),
+                };
+                if let Err(error) = result {
+                    live.observation.error = Some(error.to_string());
+                }
+            }
+        } else {
+            benchmark.startup_queries.extend(samples);
+        }
+        world.insert_resource(benchmark);
+    }
     let result = update_inner(world, &mut live);
     if let Err(e) = result {
         live.observation.error = Some(e.clone());
@@ -299,7 +387,7 @@ fn update(world: &mut World) {
     world.insert_resource(live);
 }
 fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
-    let dt = world.resource::<Time>().delta_secs_f64();
+    let dt = world.resource::<Time<Real>>().delta_secs_f64();
     l.elapsed += dt;
     l.render_frames += 1;
     if l.observation.poll(&mut l.source).unwrap_or(false) {
@@ -545,7 +633,7 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
         );
     }
     let info = format!(
-        "{}  |  frame {}/{}  |  {:.2}x{}\nSelected: {}    F Focus    R Reset\nDrag Orbit    Shift-drag / middle Pan    Wheel Dolly\n{}x{} physical; scale {:.2}; {:.1} fps mean\nSource: 100,000 ticks = 1 standard day; distances in km\nCamera: >= 2 x (radius + positive relief) from each body center\nCamera-origin distance <= 2,000,000,000 km\nCloud shapes / 12 km altitude and haze: static cosmetics\nF on unresolved marker: aim only; retain safe eye position\n{}",
+        "{}  |  frame {}/{}  |  {:.2}x{}\nSelected: {}    F Focus    R Reset\nDrag Orbit    Shift-drag / middle Pan    Wheel Dolly\n{}x{} physical; scale {:.2}; {:.1} fps mean\nSource: 100,000 ticks = 1 standard day; distances in km\nCamera: >= 2 x (radius + positive relief) from each body center\nCamera-origin distance <= 2,000,000,000 km\nMoon crater normals: cosmetic, source-cratering conditioned\nCloud shapes / 12 km altitude and haze: static cosmetics\nF on unresolved marker: aim only; retain safe eye position\n{}",
         if l.playback.paused {
             "Paused"
         } else {

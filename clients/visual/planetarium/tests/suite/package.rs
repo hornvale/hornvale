@@ -161,6 +161,8 @@ impl Fixture {
     fn rehash(&self) {
         let mut m: Manifest =
             serde_json::from_slice(&fs::read(self.root.join("manifest.json")).unwrap()).unwrap();
+        m.provenance =
+            serde_json::from_slice(&fs::read(self.root.join("provenance.json")).unwrap()).unwrap();
         for (name, digest) in &mut m.files {
             *digest = hash(&fs::read(self.root.join(name)).unwrap());
         }
@@ -388,4 +390,35 @@ fn capture_refuses_existing_directory_without_touching_it() {
     );
     assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
     fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn clean_provenance_and_rehashed_semantic_contradictions() {
+    let f = Fixture::new();
+    let mut p: Value =
+        serde_json::from_slice(&fs::read(f.root.join("provenance.json")).unwrap()).unwrap();
+    p["rendering_source_tree_clean"] = json!(true);
+    p["build_tree_clean"] = json!(true);
+    p["working_tree_status"] = json!("");
+    p["head"] = p["source_revision"].clone();
+    p["build_revision"] = p["source_revision"].clone();
+    p["purpose"] = json!("clean pinned study");
+    put(&f.root, "provenance.json", &p);
+    f.finish();
+    f.verify().unwrap();
+    for (field, value) in [
+        ("build_revision", json!("f".repeat(40))),
+        ("build_tree_clean", json!(false)),
+        ("working_tree_status", json!(" M source.rs")),
+    ] {
+        let mut contradiction = p.clone();
+        contradiction[field] = value;
+        put(&f.root, "provenance.json", &contradiction);
+        f.rehash();
+        let error = f.verify().unwrap_err().to_string();
+        assert!(
+            error.contains("contradictory clean build provenance"),
+            "{field}: {error}"
+        );
+    }
 }

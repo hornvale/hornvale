@@ -83,3 +83,19 @@ toolchain, frame/capture timing, complete package hashes, full moving review and
 representative full-resolution/phone-size stills. GPU absence or failed readback
 is missing qualification, never a passing skip. Cross-host GPU byte identity is
 not promised. The technical verifier does not approve visual quality or publication.
+
+Task 9's explicit instruments use the same production renderer and live controls:
+`planetarium inspect --world WORLD --revision SHA --film FILM --benchmark-out NEW_DIR`
+measures a fixed 60-second application camera/time script at physical 1920×1080,
+after GPU readiness and two seconds of warmup. It refuses screenshot recording;
+raw real frame intervals and every completed query latency are in `samples.json`.
+This is application-script evidence, not proof of OS mouse delivery.
+`planetarium qualify --world WORLD --revision SHA --film FILM --output NEW_DIR`
+renders frames 0/89/90/209/210/299 plus consecutive frames 210–219 twice with
+fresh production renderers at 4K. Compare retained pixels, camera hashes and
+observations; this witness is separate from a complete verified film package.
+
+Moon tangent normals now add stable, descriptor-conditioned cosmetic crater marks.
+Their locations, sizes and slopes are presentation parameters; the source's
+cratering and maria descriptors condition the shading, but do not resolve actual
+crater geometry. No vertex, physical radius, orbit, body orientation or spin changes.

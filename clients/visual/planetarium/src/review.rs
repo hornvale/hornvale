@@ -88,3 +88,64 @@ pub fn run(
 fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
+
+/// Explicit GPU witness: exact representative set, then consecutive temporal
+/// samples, twice with a fresh production renderer. Never a complete package.
+pub fn qualify(
+    world: PathBuf,
+    revision: String,
+    film: FilmDefinition,
+    output: PathBuf,
+) -> Result<(), Box<dyn Error>> {
+    std::fs::create_dir(&output)?;
+    let provenance = crate::provenance::source_state(&std::env::current_dir()?)?;
+    std::fs::write(
+        output.join("provenance.json"),
+        serde_json::to_vec_pretty(
+            &serde_json::json!({"head":provenance.head,"status":provenance.status,"build_revision":crate::provenance::BUILD_REVISION,"build_tree_clean":crate::provenance::BUILD_CLEAN,"executable_sha256":hash(&std::fs::read(std::env::current_exe()?)?)}),
+        )?,
+    )?;
+    let sequence: Vec<u32> = [0, 89, 90, 209, 210, 299]
+        .into_iter()
+        .chain(210..220)
+        .collect();
+    for pass in 0..2 {
+        let directory = output.join(format!("pass-{pass}"));
+        std::fs::create_dir(&directory)?;
+        let (mut source, initial) = Bridge::open(world.clone(), revision.clone())?;
+        std::fs::write(directory.join("initial.json"), &initial)?;
+        let mut mirror = ObservationMirror::new(&initial)?;
+        film.validate(&mirror.initial().binding)?;
+        let first = mirror.request(film.clock().tick_at(0)?)?;
+        mirror.accept(&source.observe(first)?)?;
+        let mut renderer = Renderer::new(&mirror, 3840, 2160)?;
+        renderer
+            .set_caption_font(include_bytes!("../assets/LibreBaskerville-Regular.ttf").to_vec())?;
+        let mut records = Vec::new();
+        for (index, frame) in sequence.iter().copied().enumerate() {
+            let query = mirror.request(film.clock().tick_at(frame)?)?;
+            let reply = source.observe(query)?;
+            if !mirror.accept(&reply)? {
+                return Err("qualification exact reply rejected".into());
+            }
+            let camera = sample_shot(&film, frame, &positions(&mirror))?;
+            renderer.set_caption(sample_caption(&film, frame)?);
+            renderer.apply(&mirror, &camera)?;
+            let file = format!("{index:02}-frame-{frame:06}.png");
+            renderer.capture(&directory.join(&file))?;
+            std::fs::write(
+                directory.join(format!("{index:02}-observation.json")),
+                &reply,
+            )?;
+            records.push(serde_json::json!({"index":index,"frame":frame,"file":file,"camera":camera,"camera_sha256":hash(&serde_json::to_vec(&camera)?),"observation_sha256":hash(reply.as_bytes()),"png_sha256":hash(&std::fs::read(directory.join(&file))?)}));
+            println!("qualification pass={pass} frame={frame}");
+        }
+        std::fs::write(
+            directory.join("records.json"),
+            serde_json::to_vec_pretty(&records)?,
+        )?;
+    }
+    std::fs::write(output.join("film.json"), serde_json::to_vec_pretty(&film)?)?;
+    println!("QUALIFICATION COMPLETE {}", output.display());
+    Ok(())
+}

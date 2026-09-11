@@ -19,6 +19,7 @@ struct Slot {
     queries: u64,
     coalesced: u64,
     last_query_micros: u128,
+    query_samples: Option<Vec<u128>>,
 }
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Diagnostics {
@@ -33,6 +34,19 @@ pub struct Bridge {
     worker: Option<JoinHandle<()>>,
 }
 impl Bridge {
+    pub fn enable_query_samples(&mut self) {
+        self.shared.0.lock().unwrap().query_samples = Some(Vec::new());
+    }
+    pub fn take_query_samples(&mut self) -> Vec<u128> {
+        self.shared
+            .0
+            .lock()
+            .unwrap()
+            .query_samples
+            .as_mut()
+            .map(std::mem::take)
+            .unwrap_or_default()
+    }
     pub fn open(path: PathBuf, revision: String) -> Result<(Self, String), String> {
         Self::open_with_timeout(path, revision, None)
     }
@@ -135,6 +149,9 @@ impl Bridge {
                     }
                     s.queries += 1;
                     s.last_query_micros = elapsed;
+                    if let Some(samples) = &mut s.query_samples {
+                        samples.push(elapsed);
+                    }
                     s.completed = Some(reply);
                     wake.notify_all();
                 }
@@ -287,6 +304,16 @@ impl Drop for Bridge {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn samples_preserve_every_completed_query_and_drain_once() {
+        let mut b = Bridge::spawn(|| Ok(Box::new(|q| Ok(q.to_owned()))));
+        b.enable_query_samples();
+        for i in 0..5 {
+            b.observe(i.to_string()).unwrap();
+        }
+        assert_eq!(b.take_query_samples().len(), 5);
+        assert!(b.take_query_samples().is_empty());
+    }
     #[test]
     fn capture_timeout_closes_worker_without_waiting_for_blocked_query() {
         let (release_tx, release_rx) = mpsc::channel();

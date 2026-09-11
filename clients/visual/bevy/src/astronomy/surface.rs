@@ -337,3 +337,103 @@ pub fn cloud_shell(t: &Tiles, radius_km: f64, km_per_unit: f64) -> Mesh {
         km_per_unit,
     )
 }
+
+/// Stable, source-cratering-conditioned cosmetic normal map. Crater positions,
+/// sizes and slopes are presentation marks, not measured relief or geometry.
+/// Sphere UV tangents are generated at the material binding; no vertex moves.
+pub fn moon_normal(m: &Moon) -> Image {
+    let (w, h) = (1024_usize, 512_usize);
+    let craters: Vec<_> = (0..420)
+        .map(|i| {
+            let z = 1. - 2. * noise([i as f64 * 17., 9., 3.], m.index + 801);
+            let angle = std::f64::consts::TAU * noise([i as f64 * 19., 1., 7.], m.index + 803);
+            let center = [
+                (1. - z * z).sqrt() * angle.cos(),
+                (1. - z * z).sqrt() * angle.sin(),
+                z,
+            ];
+            let size = 0.012 + 0.13 * noise(center.map(|v| v * 35.), m.index + 901).powi(2);
+            (center, size)
+        })
+        .collect();
+    let mut heights = vec![0.; w * h];
+    for y in 0..h {
+        for x in 0..w {
+            let lon = (x as f64 + 0.5) / w as f64 * std::f64::consts::TAU;
+            let lat = (0.5 - (y as f64 + 0.5) / h as f64) * std::f64::consts::PI;
+            let p = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+            for (center, size) in &craters {
+                let d2: f64 = (0..3).map(|i| (p[i] - center[i]).powi(2)).sum();
+                if d2 < size * size * 2.56 {
+                    let irregularity = noise(p.map(|v| v * 5. / size), m.index + 905);
+                    let r = d2.sqrt() / size * (1. + 0.10 * (irregularity - 0.5));
+                    let bowl = if r < 1. {
+                        -0.08 * size * (1. - r * r).powi(2)
+                    } else {
+                        0.
+                    };
+                    let rim = 0.012 * size * (-((r - 1.) / 0.22).powi(2)).exp();
+                    let maria = noise(p.map(|v| v * 3.5), m.index + 73);
+                    let coverage = ((maria - (1.0 - m.maria_fraction)) * 2.4 + 0.5).clamp(0., 1.);
+                    heights[y * w + x] +=
+                        (bowl + rim) * m.cratering.clamp(0., 1.).sqrt() * (1. - 0.5 * coverage);
+                }
+            }
+        }
+    }
+    let mut bytes = Vec::with_capacity(w * h * 4);
+    for y in 0..h {
+        for x in 0..w {
+            let lat = (0.5 - (y as f64 + 0.5) / h as f64) * std::f64::consts::PI;
+            let dx = (heights[y * w + (x + 1) % w] - heights[y * w + (x + w - 1) % w])
+                / (2. * std::f64::consts::TAU / w as f64 * lat.cos().max(0.01));
+            let dy = (heights[(y + 1).min(h - 1) * w + x] - heights[y.saturating_sub(1) * w + x])
+                / (2. * std::f64::consts::PI / h as f64);
+            let normal = cosmetic_normal(dx, dy);
+            bytes.extend(
+                normal
+                    .to_array()
+                    .map(|v| ((v * 0.5 + 0.5) * 255.).round() as u8),
+            );
+            bytes.push(255);
+        }
+    }
+    let mut result = image(w as u32, h as u32, bytes);
+    result.texture_descriptor.format = TextureFormat::Rgba8Unorm;
+    result
+}
+fn cosmetic_normal(dx: f64, dy: f64) -> Vec3 {
+    Vec3::new(-dx as f32, -dy as f32, 1.).normalize()
+}
+#[cfg(test)]
+mod crater_tests {
+    use super::*;
+    #[test]
+    fn cosmetic_normals_tilt_against_increasing_texture_height() {
+        assert!(cosmetic_normal(0., 1.).y < 0.);
+        assert!(cosmetic_normal(1., 0.).x < 0.);
+    }
+    #[test]
+    fn cosmetic_normals_are_stable_and_conditioned_by_source_cratering() {
+        let mut moon = Moon {
+            index: 2,
+            radius_km: 1000.,
+            albedo: 0.1,
+            cratering: 0.8,
+            maria_fraction: 0.2,
+            tint: [1.; 3],
+        };
+        let first = moon_normal(&moon);
+        assert_eq!(first.data, moon_normal(&moon).data);
+        moon.cratering = 0.;
+        let flat = moon_normal(&moon);
+        assert_ne!(first.data, flat.data);
+        assert!(
+            flat.data
+                .unwrap()
+                .chunks_exact(4)
+                .all(|p| p == [128, 128, 255, 255])
+        );
+        assert_eq!(first.texture_descriptor.format, TextureFormat::Rgba8Unorm);
+    }
+}
