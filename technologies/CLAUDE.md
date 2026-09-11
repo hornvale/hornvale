@@ -141,7 +141,29 @@ no information.
 | `grown` | measured: a people acquires and keeps it | `doc:` |
 | `flat` | measured: never acquired | `doc:` |
 | `lost` | measured: acquired, then given up | `doc:` |
-| `unmeasured` | frozen, not yet scored | none; tallied separately |
+| `unmeasured` | frozen, not yet scored: reach PASSED, trajectory unscored | mechanism (`test:` / `path:`), for the reach half; tallied separately |
+
+**`unmeasured` CARRIES A MECHANISM ANCHOR (campaign ledger #18), AND THIS LINE
+SAID THE OPPOSITE FOR A WHOLE FIX ROUND WHILE BOTH CORPORA CARRIED ONE.** The
+reach half of an `unmeasured` verdict is a positive, checkable claim — *this
+world models this capability* — and it is exactly as checkable as a `present`
+verdict's, because under the pipeline reach has already succeeded. Only the
+trajectory is unmeasured. `technologies/henrich-2004-extended` anchors both of
+its `unmeasured` items at `path:domains/history/src/record.rs`, where
+`TechHorizon::Bronze` and `::Iron` are defined; **two items may cite one path**,
+and a resolver must accept that rather than require anchors to be distinct.
+Line numbers belong in the `note`, never in the anchor, so the anchor survives
+an edit above it — the sibling families' `path:` anchors carry none either.
+
+**Why the stale row is recorded rather than quietly replaced.** Ruling #18's
+capture actions named the rule's *consumers* (a decision record, a resolver) and
+**no contradictor**, so the one document every author of this family is required
+to read went on stating the rule's opposite. A Task 4 or Task 5 author would have
+implemented "no anchor" and reddened the corpus the rule exists to score, and
+would have been right to, because the law said so. **A ruling's capture action
+must name every place that states what it overturns**, not only the places that
+will consume it: "who needs this?" is the question that gets asked, and "who
+currently says the opposite?" is the one that does not (campaign ledger #19).
 
 **A consequence of the pipeline that surprises people:** a corpus none of whose
 items reaches `present` carries **zero** `unmeasured` as well as zero measured
@@ -152,6 +174,46 @@ success that does not exist.
 `doc:` anchors are admissible **only against a path
 `docs/generated-paths.txt` gives a generator** (0936's rule). Hand-written
 prose is refused.
+
+## A row cited by ONE corpus must be ruled on by EVERY corpus
+
+**SILENCE IN ONE COLUMN, NOT DISAGREEMENT BETWEEN TWO, IS THE DETECTABLE
+SIGNAL.** A registry row cited as an anchor by **any** corpus in this family must
+be explicitly ruled on — cited, or refused in writing — in **every other**
+corpus. Task 5's resolver enforces it (plan Step 4b); until it does, nothing
+holds it.
+
+**The obvious check is the wrong one, and it was written and reported before it
+was tested.** Fix round 1 added a harness asserting that *no registry row is
+scored two ways across the matrix*. That check **cannot fire**: only `deferred`
+may carry a `registry:` anchor, every per-corpus validator already asserts that,
+so two columns citing one row always agree by construction. Worse, it could not
+have caught the defect that motivated it: before the amendment, `MAP-8` was cited
+by `henrich-2004-extended` and **absent from `asimov-1989` entirely**, so there
+was no shared anchor for any agreement test to compare. The failure mode is a row
+one column has never looked at, which a cross-column *comparison* is structurally
+blind to — it needs two citations and the defect is one.
+
+**A MENTION IS NOT A RULING, and a text search cannot tell them apart.** Naming a
+sibling's anchor while reporting what the sibling did — "`inv-library` on `MEM-4`"
+— satisfies a grep and rules on nothing. The obligation is a ruling about THIS
+corpus's own demands: this row names item X's demand and is cited, or it names no
+demand here and is refused with the reason. A resolver that greps for the row id
+will pass on a mention, so the check is a floor and the author still owes the
+judgement. **Writing this section immediately exposed two violations in the two
+corpora it governs** — `asimov-1989` was silent on `MAP-18` and
+`henrich-2004-extended` on `BIO-animal-domestication`, each cited by the other —
+both closed in the same commit, which is the only reason this paragraph is not a
+third instance of a law contradicting its data.
+
+**Why this is family law rather than one resolver's test.** The two columns of
+decision 0095's matrix are read ACROSS; a row that discharges a demand in one
+column and is unexamined in the other makes the comparison between them
+meaningless, and neither column can show that alone (0136 clause 2's "an
+instrument that silently switches what it is measuring", across corpora instead
+of within one). The cost is real and is accepted: every corpus added to this
+family owes a ruling on every row any sibling cites, and that cost grows with
+the family.
 
 ## Non-blind items — `disclosure` marks PER-ITEM non-blindness
 
