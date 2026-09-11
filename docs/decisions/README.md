@@ -332,3 +332,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0796](0796-a-lot-is-an-observation-not-a-fact.md) | A lot is an observation, not a fact | Accepted |
 | [0797](0797-commit-the-integral-never-the-path.md) | Commit the integral, never the path | Accepted |
 | [0798](0798-silence-is-a-measurement.md) | Silence is a measurement | Accepted |
+| [0966](0966-the-underworld-budget-is-symmetric-and-its-allocation-is-not.md) | The underworld budget is symmetric and its allocation is not | Accepted |
