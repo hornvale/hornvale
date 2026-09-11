@@ -138,6 +138,45 @@ vector. `ActivityCycle::Crepuscular` is an explicitly reserved empty slot —
 "idle this campaign; authored now so a future species is a data change" — so
 filling it is invited.
 
+**Which axes actually ARRIVE at placement — verified, and binding on the slate.**
+A kind may be authored to differ on any axis; only some of them reach the
+scoring path, and a difference that does not arrive is a distinction on paper.
+Measured at Task 2's landing:
+
+| input | per band? | read at placement? |
+|---|---|---|
+| `temperature_c` | yes | yes — `tolerance_liebig_with_fixed` |
+| `height_asl_m` (= `-depth_m`) | **yes** | yes — the elevation term, and it hard-gates below the floor |
+| `CHEMOSYNTHATE` supply | yes | yes — the only per-band supply axis |
+| `insolation` (`field.light`) | yes | **NO** — populated per band and read by nothing |
+| `moisture` | no (`MARINE_MOISTURE`) | no |
+| every other supply axis | no (per vertex) | yes, but identically for all bands |
+
+`tolerance_liebig_with_fixed` reads only `s.height_asl_m` and `s.temperature_c`
+off the per-band substrate; the moisture and insolation halves come from
+`EraInvariantTolerance`, whose `fixed` is `Vec<VertexMap<f64>>` — per species per
+**vertex**, built from surface moisture and surface insolation, with no band
+dimension at all.
+
+**Consequences, both load-bearing:**
+
+- **The slate may be differentiated on temperature, depth and chemosynthate.
+  It may NOT be differentiated on light or moisture** — two kinds differing only
+  there are identical at placement while reading as distinct in the registry.
+- **The kelp tender is the kind this endangers**, and it is the one the G3
+  package already flagged as least defended. A phototrophic people of the photic
+  zone is *naturally* a light-differentiated kind, and light is the one axis that
+  does not arrive. It must instead be separated by shallow depth and temperature,
+  with its phototrophy carried by `TrophicMode` and the `PHOTOSYNTHATE` weight
+  rather than by an insolation curve. Task 3 verifies this rather than assuming
+  it.
+
+This is the marine half of a finding campaign/the-ceiling made on the underworld
+side, where the situation is worse: a subterranean kind's `height_asl_m` is the
+*surface* height, constant across rungs, so the delve ladder's tolerance product
+varies on temperature alone. The marine ladder is better off only because
+`marine_habitat` encodes depth as elevation.
+
 **The slate.** The implementer authors the values; this table fixes the
 *discriminating* assignments, and every kind is `HabitatRealm::Marine`.
 
@@ -435,14 +474,20 @@ availability, before and after `HabitatRealm::Marine` exists, at seed 42.
   names its size. For `sea-elf` this would be visible as a settling people
   losing the shore it builds on.
 
-**M5 — Are the six kinds actually distinct?** For all 15 pairs of marine kinds,
-count the model-carried axes on which the pair differs, **excluding stratum**.
-Report the per-pair count and the minimum over all pairs.
+**M5 — Are the six kinds actually distinct, on axes that arrive?** For all 15
+pairs of marine kinds, count the model-carried axes on which the pair differs,
+**excluding stratum** and **excluding any axis the table above marks as not
+reaching placement**. Report the per-pair count and the minimum over all pairs.
 
-- *Prediction:* the minimum is at least 1 — no pair is separated by depth alone.
+- *Prediction:* the minimum is at least 1 — no pair is separated by depth alone,
+  and no pair is separated only by an axis that does not arrive.
 - *If the minimum is 0*, that pair is the Delvers' defect reproduced, and the
   remedy is to merge the two kinds or re-author one, not to argue the depths are
   far apart.
+- **The exclusion is the point.** An earlier draft of this measurement counted
+  any authored difference, which would have let a pair separated only by
+  insolation curves score 1 and pass — a distinctness test satisfied by a
+  distinction the engine cannot see.
 
 **M6 — Does the subsistence web close?** For each of the six peoples, resolve its
 subsistence to either a named kind in the roster or an aggregate `WaterStocks`

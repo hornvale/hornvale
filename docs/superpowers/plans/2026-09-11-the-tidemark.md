@@ -199,6 +199,18 @@ stratum; M2 is two-sided green; M7 shows no map domination.
   the **underworld half is open and belongs to THE TENANT**. Do not delete the
   sentence — a successor needs to find it. (Raised by campaign/the-ceiling, which
   is taking larder rung 3.)
+- [ ] **Before authoring any kind, re-derive the arriving-axis table in spec
+  §3.4 against the tree as you find it** — it was measured at Task 2's landing and
+  is the constraint everything else in this task rests on. Confirm in particular
+  that per-band `insolation` still reaches nothing and that `height_asl_m` still
+  carries `-depth_m`. If either has moved, stop and report: the slate's
+  differentiation depends on it.
+- [ ] Differentiate the six on temperature, depth and `CHEMOSYNTHATE` only.
+  **The kelp tender is the trap**: a phototrophic people of the photic zone is
+  naturally light-differentiated, and light does not arrive. Separate it by
+  shallow depth and temperature, and carry its phototrophy through `TrophicMode`
+  and the `PHOTOSYNTHATE` weight — then verify that weight actually moves its
+  score, rather than assuming it does.
 - [ ] Write M5 as a **test**, not a one-off measurement: for all 15 pairs, count
   the model-carried axes on which the pair differs, excluding stratum, and assert
   the minimum is ≥ 1. It names the offending pair when it fails. This is the
