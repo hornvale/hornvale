@@ -210306,7 +210306,7 @@
         "subject": 9157320637894164480,
         "predicate": "species-night-vision",
         "object": {
-          "Number": 0.92
+          "Number": 0.95
         },
         "place": null,
         "day": 0,
@@ -213266,7 +213266,7 @@
         "subject": 9157320637894164510,
         "predicate": "species-night-vision",
         "object": {
-          "Number": 0.45
+          "Number": 0.5
         },
         "place": null,
         "day": 0,
@@ -214006,7 +214006,7 @@
         "subject": 9157320637894164520,
         "predicate": "species-night-vision",
         "object": {
-          "Number": 0.85
+          "Number": 0.9
         },
         "place": null,
         "day": 0,
