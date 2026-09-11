@@ -1185,11 +1185,11 @@ fn rule_four_witness_the_emitter_timeline_copy() {
     );
 }
 
-/// Spec §4 rule 5's shape: seed 42, 10 derived agents, 10 ticks — the lab's
+/// Spec §4 rule 5's shape: seed 28, 10 derived agents, 10 ticks — the lab's
 /// `run_simulation` shape (`windows/lab/src/health.rs`'s waking-instant read),
 /// reproduced over [`bench_shape`]'s pieces rather than a real
 /// `windows/lab` run.
-pub const RULE_FIVE_SEED: u64 = 42;
+pub const RULE_FIVE_SEED: u64 = 28;
 pub const RULE_FIVE_AGENTS: usize = 10;
 pub const RULE_FIVE_TICKS: usize = 10;
 
@@ -1205,7 +1205,7 @@ pub const RULE_FIVE_TICKS: usize = 10;
 /// read instant happen to already be folded in.
 ///
 /// **What the equality proves here, stated exactly.** [`RULE_FIVE_SEED`] is
-/// 42 with `predator: None` (`bench_shape`'s default), the shape the
+/// 28 with `predator: None` (`bench_shape`'s default), the shape the
 /// campaign measured at 0 frightening pairs — so `warm.shunned` and
 /// `fresh.shunned` are both empty on every one of these
 /// [`RULE_FIVE_AGENTS`] comparisons, and the equality pins determinism of an
@@ -1260,7 +1260,7 @@ fn rule_five_witness_past_instant_reads_on_the_lab_shape() {
         // The discard check: the same `hazard_memory_memo` call, served by
         // the WARM store above against a FRESH one rebuilt from scratch at
         // this same past instant, must agree. On this shape (seed
-        // RULE_FIVE_SEED = 42, predator: None) both sides' `shunned` is
+        // RULE_FIVE_SEED = 28, predator: None) both sides' `shunned` is
         // empty by measurement, so this pins determinism of an EMPTY
         // result — see this test's own doc comment above for where the
         // non-empty case is proven.
