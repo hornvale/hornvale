@@ -343,3 +343,14 @@ sea-elf would have.
   (which keys on spec-and-plan campaigns). Not this campaign's to fix, but it is
   why "did The Tenant close?" could not be answered by looking where one would
   look.
+- **`SOC-casus-belli`'s row misdescribes the code.** It states that
+  `OccupationRecord` carries a `cause` field of
+  `Famine`/`Burned`/`Plague`/`Fled`/`Migrated`. Source says otherwise
+  (`domains/history/src/record.rs`): the record carries `founded_from:
+  Founding<EntityId>` and `ended_by: Ended<EntityId>`, and `Ended` has exactly
+  two variants, `Nature` and `By(I)`. The row's actual point — that an occupation
+  records how it ended but never *why anyone did it* — survives intact, so this
+  is a description defect, not a dead row. Caught during the plan's self-review,
+  after the claim had already been repeated twice in this campaign's own
+  documents. Not edited here because the row belongs to another line of work;
+  recorded so whoever picks it up does not inherit the error.

@@ -288,10 +288,19 @@ after its contribution has failed". So the marine realm is the **first realm
 whose habitat quality is time-varying**, and a settlement seated on a vent is
 seated on something that can end.
 
-The history domain already has the vocabulary: `OccupationRecord.cause` carries
-`Famine`, `Burned`, `Plague`, `Fled` and `Migrated`. A vent entering `Failed`
-under an occupied vertex should produce an occupation that ends with a cause,
-not a settlement that silently persists on a dead vent.
+The history domain already has the vocabulary, though not the one the
+`SOC-casus-belli` registry row describes — that row says `OccupationRecord`
+carries a `cause` field of `Famine`/`Burned`/`Plague`/`Fled`/`Migrated`, and the
+code carries no such field. What `OccupationRecord` actually has is
+`ended_by: Ended<EntityId>`, and `Ended` has two variants: `By(I)`, "ended at the
+hand of another entity", and **`Nature`**, documented as "no antagonist entity —
+famine, plague, or an orderly departure."
+
+`Ended::Nature` fits a failed vent exactly, and requires no new variant: a
+habitat that stops supporting you is the textbook case of an ending with no
+antagonist. So a vent entering `Failed` under an occupied vertex should produce
+an occupation that ends by `Nature`, not a settlement that silently persists on a
+dead vent.
 
 **Scope limit.** This campaign makes vent phase an *input to seating and an
 ending*. It does not model dispersal, larval recruitment, or a marine population
