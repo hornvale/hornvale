@@ -643,3 +643,71 @@ opened in decomposing it.
 row's `plans` column filled; two memories written outside the repo (the
 `-A N` truncation family, and campaign-name pointers being claimed by
 unrelated work).
+
+---
+
+## #10 [G5] — Pre-flight scan: three rulings before Task 1
+
+The SDD pre-flight and `dispatching-hornvale-subagents`' step 1 (verify the
+brief against the code), run together before any dispatch. **Budget was three
+minutes of grep; it found two defects in my own plan text, one of them
+silent.**
+
+**Cross-task scan table** (every pair sharing a file or an interface):
+
+| tasks | shared | produced → consumed | finding |
+|---|---|---|---|
+| 1 → 2 | `ceiling_composition_probe.rs` | `separation`, `CombinationRule` | clean |
+| 1 → 3 | same file | world-construction idiom | clean |
+| 1, 6 | the suite registration file | module registration | **R1** |
+| 5 → 6,7 | `THE_KIND` | the authored `KindId` | clean — carried via ledger, not re-derived |
+| 6 → 7 | `ceiling_tenant_probe.rs` | the probe's world setup | clean |
+| 2,3,4,6,8,9 | the committed ledger | append-only | clean |
+| every task | agrees with itself? | tests vs code vs files | **R2** in Task 6 |
+
+**Ruling R1 — the registration file does not exist.** The plan said
+"Modify `windows/worldgen/tests/suite/mod.rs`" in five places. **There is no
+such file.** Registration is `windows/worldgen/tests/suite.rs`, which uses
+`#[path = "suite/<name>.rs"] mod <name>;` (its line 224 registers
+`subterranean_energy_probe`). Plan corrected in all five places. *Cost if
+wrong: none — this is a verified path, not a judgment.*
+
+**Ruling R2 — M4's ablation as specified was UNBUILDABLE, and this is the
+silent one.** The plan's arm (b) said "the same world with the `CHEMOSYNTHATE`
+supply zeroed". **No caller can do that.** `per_species_capacity_at` builds
+`chemosynthate_per_rung` *internally*, inside
+`per_species_capacity_at_with_invariant`; it is not an argument. An
+implementer would have discovered this only after writing the probe.
+
+Ruled: **arm (b) ablates the KIND'S NICHE**, via `species_biosphere:
+&[&BiosphereTraits]`, which *is* an argument. This is not a downgrade — it
+measures the question M4 actually asks ("is this kind's chemotrophic weight
+load-bearing") more directly than zeroing the field would. **Arm (c) re-scoped**
+from a per-source placement counterfactual to a supply-side diagnostic over the
+kind's occupied vertices, for the same reachability reason. *Cost if wrong: a
+narrower per-source result than D5B asked for — a true narrow number in place
+of a placement delta the API cannot produce.*
+
+**Ruling R3 — `CHEMOSYNTHATE` must be the DOMINANT weight (> 0.5).** Prompted
+by D5B's contract question (board `ask`, thread `the-ceiling`), and decided
+rather than deferred because their shadow probe needs it now. Not sole and not
+a minority share:
+
+- **Minority is the decorative trap.** `xorn` is 0.65 `MINERAL` / 0.35
+  `CHEMOSYNTHATE` — exactly the shape that lets a kind place on its mineral
+  half while the chemotrophic weight does nothing. That is the failure D5B's
+  own review caught in the spec, and M4 exists to catch it; a minority share
+  would make M4 likely to RED for a reason that is the authoring's fault.
+- **Sole (1.0) was rejected**: it makes M4 pass trivially and asserts a purity
+  the model has no reason to claim.
+
+The exact values stay the implementer's (Task 5), per the property-not-
+prescription rule; the *dominance* is the contract. *Cost if wrong: the kind
+is a purer chemotroph than the fiction wants, and a successor re-authors one
+row.*
+
+**Capture actions:** plan corrected for R1 and R2 (eight edits); board `reply`
+`01200fcdeca0` answering D5B's four contract questions, carrying R2 as a
+warning that their shadow probe may already assume the unreachable ablation,
+and declining to offer my probe's stdout as a stable interface — naming the
+`pub` registry and functions instead.

@@ -48,7 +48,7 @@ rulings there **as they occur**, never to `.superpowers/sdd/`.
 | file | responsibility |
 |---|---|
 | `windows/worldgen/tests/suite/ceiling_composition_probe.rs` | **Create.** Stage 1's M1 (per-rung composition separation) and M2 (mean vs max, with the positive control). A new file rather than an extension of `subterranean_energy_probe.rs`, because that file's two tests pin The Sources' own falsifications and must not be disturbed. |
-| `windows/worldgen/tests/suite/mod.rs` | **Modify.** Register the new probe module (test-binary consolidation: one `tests/suite.rs` per crate). |
+| `windows/worldgen/tests/suite.rs` | **Modify.** Register each new probe module with `#[path = "suite/<name>.rs"] mod <name>;` — see its line 224 for `subterranean_energy_probe`. **There is no `tests/suite/mod.rs`**; an earlier draft named one and it does not exist (pre-flight ruling R1). |
 | `domains/species/src/lib.rs` | **Modify.** Stage 2: one `BiosphereTraits` row in `biosphere_registry()`, one entry in `habitat_realm_registry()`. |
 | `domains/species/tests/suite/metabolic_pairs.rs` | **Modify.** Its carrier list and count assertions move when a second `Chemotrophic` kind exists. |
 | `windows/worldgen/tests/suite/ceiling_tenant_probe.rs` | **Create.** Stage 2's M4 ablation and the axis-discrimination readout. |
@@ -61,7 +61,7 @@ rulings there **as they occur**, never to `.superpowers/sdd/`.
 
 **Files:**
 - Create: `windows/worldgen/tests/suite/ceiling_composition_probe.rs`
-- Modify: `windows/worldgen/tests/suite/mod.rs`
+- Modify: `windows/worldgen/tests/suite.rs`
 
 **Interfaces:**
 - Consumes: `subterranean_energy_probe.rs`'s own idiom for world construction.
@@ -185,7 +185,7 @@ that no longer reproduces is itself the result.
 ```bash
 cargo fmt
 make gate-commit
-git add windows/worldgen/tests/suite/ceiling_composition_probe.rs windows/worldgen/tests/suite/mod.rs
+git add windows/worldgen/tests/suite/ceiling_composition_probe.rs windows/worldgen/tests/suite.rs
 git commit -m "test(the-ceiling): M2's positive control, reproducing 0.145249"
 ```
 
@@ -508,7 +508,7 @@ git commit -m "feat(the-ceiling): a settled subterranean chemotroph"
 
 **Files:**
 - Create: `windows/worldgen/tests/suite/ceiling_tenant_probe.rs`
-- Modify: `windows/worldgen/tests/suite/mod.rs`
+- Modify: `windows/worldgen/tests/suite.rs`
 
 **Interfaces:**
 - Consumes: `THE_KIND` from Task 5 (read it from the ledger, do not invent it).
@@ -522,7 +522,7 @@ git commit -m "feat(the-ceiling): a settled subterranean chemotroph"
 ///
 /// ```text
 /// arm (a) FULL      the authored kind, unmodified
-/// arm (b) ABLATED   the CHEMOSYNTHATE supply zeroed
+/// arm (b) ABLATED   the same kind with its CHEMOSYNTHATE niche weight removed
 /// PREDICTION: placed(b) < placed(a)
 /// ```
 ///
@@ -532,6 +532,16 @@ git commit -m "feat(the-ceiling): a settled subterranean chemotroph"
 /// the niche, NOT to write the equality up as a finding.
 ///
 /// claim: readout(off-gate, prints both arms before any verdict)
+///
+/// **Arm (b) ablates the KIND'S NICHE, not the supply field — pre-flight
+/// ruling R2, correcting this plan's first draft.**
+/// `per_species_capacity_at` builds `chemosynthate_per_rung` INTERNALLY
+/// (inside `per_species_capacity_at_with_invariant`); it is not an argument,
+/// so no caller can zero the supply. What IS an argument is
+/// `species_biosphere: &[&BiosphereTraits]`, so pass a modified traits value
+/// whose `niche` drops `CHEMOSYNTHATE`. That measures the question M4 asks --
+/// is this kind's chemotrophic weight load-bearing -- more directly than
+/// zeroing the field would.
 #[test]
 #[ignore = "probe: M4, the chemotroph ablation; run by hand (The Ceiling, Stage 2)"]
 fn the_chemosynthate_weight_is_load_bearing() {
@@ -561,10 +571,16 @@ If it REDs, go back to Task 5 Step 4 and re-author the niche. **The three-attemp
 rule applies:** after three failed authorings, stop, write what was tried and
 why it failed into the ledger, and escalate.
 
-- [ ] **Step 3: Add arm (c), the per-source variants**
+- [ ] **Step 3: Add arm (c), the per-source diagnostic**
 
-Seven variants, each zeroing one `EnergySource`. Report the placement and
-capacity delta per source. **Diagnostic — reported, asserted on nothing.**
+**Re-scoped by pre-flight ruling R2.** A per-source *placement* ablation is
+unreachable: zeroing one `EnergySource` means changing a supply derivation
+`per_species_capacity_at` performs internally. Arm (c) is a **supply-side
+diagnostic** instead — over the kind's occupied vertices, report each
+`EnergySource::yield_at` contribution and which `dominant_source` returns
+(both are `pub`). That answers the provenance question — *which rock
+chemistry does this kind actually sit on* — without claiming a placement
+counterfactual the API cannot produce. **Reported, asserted on nothing.**
 Call out `DetritalImport` separately in the report: it reads `drainage` and is
 surface productivity flowing downward, so a kind depending on it is eating the
 surface at depth rather than living on chemical energy.
@@ -573,7 +589,7 @@ surface at depth rather than living on chemical energy.
 
 ```bash
 cargo fmt && make gate-commit
-git add windows/worldgen/tests/suite/ceiling_tenant_probe.rs windows/worldgen/tests/suite/mod.rs docs/superpowers/ledgers/2026-09-11-the-ceiling.md
+git add windows/worldgen/tests/suite/ceiling_tenant_probe.rs windows/worldgen/tests/suite.rs docs/superpowers/ledgers/2026-09-11-the-ceiling.md
 git commit -m "test(the-ceiling): M4 -- the chemotroph ablation, with per-source arms"
 ```
 
