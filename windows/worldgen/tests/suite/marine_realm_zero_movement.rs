@@ -21,10 +21,22 @@
 //! resolution. A regression that quietly reclassified sea-elf or
 //! giant-crocodile as `Marine` (the exact hazard spec §3.6 names: "a reader
 //! meeting a new `Marine` variant will reasonably assume a sea elf belongs
-//! to it") would zero their live-arm suitability everywhere via `availability
-//! = 0.0` (pre-flight ruling P1) while the forced arm stayed unchanged — so
-//! this keeps working as a permanent guard long after this task closes, not
-//! only as a one-off measurement of the moment the variant was introduced.
+//! to it") would move their live-arm suitability while the forced arm stayed
+//! unchanged — so this keeps working as a permanent guard long after this
+//! task closes, not only as a one-off measurement of the moment the variant
+//! was introduced.
+//!
+//! **The size of that movement changed with Task 2 and the guard did not.**
+//! Under Task 1's inert arms a `Marine` misclassification zeroed the live
+//! arm EVERYWHERE (`availability = 0.0`, pre-flight ruling P1), which this
+//! file's header used to say. Task 2 made the arm a real wet/dry presence
+//! mask, so the misclassification now zeroes the live arm on every DRY
+//! vertex instead and rescores the wet ones against the pelagic ladder.
+//! Both are detected here: sea-elf holds 40,799 of seed 42's 40,962
+//! vertices today, and the dry ones it would lose are the ~11,000 the
+//! water column does not reach (`marine_ladder_vents.rs` measures a Marine
+//! kind reaching 29,679), so a silent reclassification still moves
+//! thousands of vertices — just not the whole globe.
 //!
 //! **The positive control (drow).** sea-elf and giant-crocodile are
 //! `Surface` in BOTH arms today, so their equality is arithmetically forced

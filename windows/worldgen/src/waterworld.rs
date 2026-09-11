@@ -401,16 +401,23 @@ fn seabed_sample_index(substrate: &[WaterSubstrate], vertex: Vertex) -> Option<u
         .map(|offset| start + offset)
 }
 
-/// Composition-root entry point for the Waterworld overlay.
-pub fn waterworld_from(
-    world: &World,
+/// Every ocean vertex's marine substrate column, in stable vertex/column
+/// order — the half of [`waterworld_from`] that **draws nothing**.
+///
+/// Extracted rather than inlined because this crate now has two consumers of
+/// the same column walk: [`waterworld_from`] itself, and
+/// [`crate::marine_habitat::MarineHabitat::ambient`], which is the marine
+/// reading a caller with no seed (and therefore no vents) can still take.
+/// Two independent walks would be two opportunities to disagree about which
+/// strata a column has or what depth a sample sits at — the same reason
+/// [`crate::subterranean_substrate_field`] exists as one derivation with two
+/// callers.
+///
+/// Pure: terrain and climate only, no stream, no draw.
+pub fn marine_columns(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
-    config: WaterWorldConfig,
-) -> WaterWorld {
-    if !config.enabled {
-        return WaterWorld::default();
-    }
+) -> Vec<WaterSubstrate> {
     assert_eq!(
         terrain.geosphere().vertex_count(),
         climate.geosphere().vertex_count(),
@@ -462,19 +469,61 @@ pub fn waterworld_from(
             });
         }
     }
-    let fields = substrate
+    substrate
+}
+
+/// The ambient fields of [`marine_columns`]' samples at
+/// [`WorldTime::GENESIS`] — no vent contribution, because a vent's
+/// contribution is a property of an *instant* and lives on
+/// [`WaterWorldSnapshot`], never on the stable overlay.
+///
+/// The same extraction rationale as [`marine_columns`]: one derivation,
+/// two callers. Pure — no stream, no draw.
+pub fn ambient_marine_fields(
+    climate: &GeneratedClimate,
+    substrate: &[WaterSubstrate],
+) -> Vec<WaterFields> {
+    substrate
         .iter()
         .map(|sample| {
             WaterFields::from_substrate(
                 sample,
                 climate.insolation(),
                 climate
-                    .temperature_at(sample.vertex, hornvale_kernel::WorldTime::GENESIS)
+                    .temperature_at(sample.vertex, WorldTime::GENESIS)
                     .get(),
                 climate.current_at(sample.vertex),
             )
         })
-        .collect::<Vec<_>>();
+        .collect()
+}
+
+/// The ambient stocks of [`marine_columns`]' samples — [`derive_stocks`] with
+/// no vent influence, local or transported. Pure; one derivation, two callers,
+/// as above.
+pub fn ambient_marine_stocks(
+    substrate: &[WaterSubstrate],
+    fields: &[WaterFields],
+) -> Vec<WaterStocks> {
+    substrate
+        .iter()
+        .zip(fields)
+        .map(|(sample, field)| derive_stocks(sample, field, 0.0, 0.0))
+        .collect()
+}
+
+/// Composition-root entry point for the Waterworld overlay.
+pub fn waterworld_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    config: WaterWorldConfig,
+) -> WaterWorld {
+    if !config.enabled {
+        return WaterWorld::default();
+    }
+    let substrate = marine_columns(terrain, climate);
+    let fields = ambient_marine_fields(climate, &substrate);
     let marine_vertices = substrate
         .iter()
         .filter(|sample| sample.is_seabed)
@@ -514,11 +563,7 @@ pub fn waterworld_from(
             sample.vertex,
         ));
     }
-    let stocks = substrate
-        .iter()
-        .zip(&fields)
-        .map(|(sample, field)| derive_stocks(sample, field, 0.0, 0.0))
-        .collect::<Vec<_>>();
+    let stocks = ambient_marine_stocks(&substrate, &fields);
     let propagation = WaterPropagation::from_substrate(&substrate, &fields);
     WaterWorld {
         substrate,

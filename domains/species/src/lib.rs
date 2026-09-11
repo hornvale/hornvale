@@ -2746,16 +2746,20 @@ pub enum HabitatRealm {
     /// Scored against the subterranean substrate, and gated by whether the
     /// vertex holds a cave at all. A void that does not exist is not habitat.
     Subterranean,
-    /// Scored against the marine substrate. The gate is spec'd to mirror
-    /// `Subterranean`'s exactly — `1.0` where the vertex holds a water
-    /// column, `0.0` otherwise, because the pelagic ladder is the delve
-    /// ladder at a different realm
-    /// (`hornvale_climate::facets::Stratum`'s own doc) — but The Tidemark's
-    /// Task 1 does not implement it: every consumer's availability arm for
-    /// this variant is unconditionally `0.0` (`per_species_suitability_masked`
-    /// and `per_species_capacity_at_with_invariant` in `windows/worldgen`),
-    /// true rather than placeholder because no kind is `Marine` yet. Task 2
-    /// authors the real mask this paragraph describes.
+    /// Scored against the marine substrate, and gated by whether the vertex
+    /// holds a water column at all — the mirror of `Subterranean`'s cave
+    /// gate, because the pelagic ladder is the delve ladder at a different
+    /// realm (`hornvale_climate::facets::Stratum`'s own doc).
+    ///
+    /// **Implemented since The Tidemark's Task 2** (Task 1 shipped the
+    /// variant with both availability arms unconditionally `0.0`; this
+    /// paragraph used to describe that deferral). A `Marine` kind is scored
+    /// at every band of `Realm::WATERWORLD`'s `strata()` and takes the best,
+    /// exactly as a `Subterranean` kind is scored at every rung of
+    /// `Band::habitation()`; `availability` is `1.0` where some band scored
+    /// and `0.0` where none did, which is the `{0.0, 1.0}` presence mask
+    /// rather than a tolerance. `windows/worldgen`'s `MarineHabitat` is the
+    /// field both consumers read.
     Marine,
 }
 

@@ -109,6 +109,7 @@ pub mod herds;
 pub mod history_bake;
 pub mod history_emit;
 pub mod knownness;
+pub mod marine_habitat;
 pub mod observer;
 pub mod person_promote;
 pub mod placement;
@@ -206,6 +207,7 @@ pub use hornvale_climate::GeneratedClimate;
 /// new dependency edge — the layering graph is unchanged.
 pub use hornvale_demography::DemographyReport;
 pub use knownness::{Knownness, knownness, memory_half_life};
+pub use marine_habitat::{MarineHabitat, PELAGIC_BANDS, pelagic_index};
 pub use placement::{SiteReason, site_facet_for};
 pub use population::{PopulationCensus, population_census};
 pub use reproductive::{
@@ -1919,6 +1921,15 @@ pub fn per_species_suitability_masked(
     let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, terrain, &substrate);
     let chemosynthate_per_rung =
         energy::subterranean_energy_field_per_rung(geo, terrain, &subterranean_per_rung);
+    // The Tidemark: the marine reading of every vertex, hoisted exactly as the
+    // subterranean one above is. Built unconditionally and read only by a
+    // `Marine` kind; the derivation is pure, so this costs one column walk and
+    // no draws — the same bargain `subterranean_substrate_field`'s own hoist
+    // states. This is the AMBIENT reading (no vents): the readout path holds
+    // no seed, so it cannot build the Waterworld overlay, and pretending
+    // otherwise would need a draw. The bake's dimensional twin takes the
+    // vent-bearing reading instead — see `EraInvariantSupply::marine`.
+    let marine_habitat = marine_habitat::MarineHabitat::ambient(geo, terrain, climate);
     // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
@@ -2039,21 +2050,40 @@ pub fn per_species_suitability_masked(
                         }
                     }
                     hornvale_species::HabitatRealm::Marine => {
-                        // The Tidemark, Task 1 (pre-flight ruling P1):
-                        // `availability = 0.0` here is TRUE, not a
-                        // placeholder — no kind is `Marine` yet (that is
-                        // Task 3's job), so a marine kind has no vertex to
-                        // be available at until Task 2 authors the real
-                        // mask (the wet/dry gate `Subterranean`'s mirrors,
-                        // spec §3.2). The score itself is read off the
-                        // ordinary surface substrate rather than invented
-                        // wholesale, purely so `best` is finite; it is
-                        // multiplied away by `availability` below and is
-                        // unobservable until Task 2 lands.
-                        (
-                            score_at(substrate.get(vertex), *marine_chemosynthate.get(vertex)),
-                            0.0,
-                        )
+                        // The Tidemark, Task 2 (spec §3.2, §3.3): the
+                        // pelagic ladder, scored exactly as the delve
+                        // ladder above it — `max` over the whole per-band
+                        // score, never a per-axis max and never a mean, for
+                        // the reasons the `Subterranean` arm states. The
+                        // availability mask falls out of the same loop: a
+                        // vertex holding a water column scores at least its
+                        // `Epipelagic` band and gates at `1.0`; a dry vertex
+                        // reaches no band at all and gates at `0.0`. That is
+                        // the `{0.0, 1.0}` PRESENCE mask spec §3.2 asks for,
+                        // and it stays outside the Liebig minimum below for
+                        // the same reason the cave mask does — it is not a
+                        // tolerance.
+                        //
+                        // The `None` fallback mirrors the cave-less arm: the
+                        // ordinary surface reading, kept finite and then
+                        // multiplied away by `availability = 0.0`.
+                        let substrate_here = marine_habitat.substrate.get(vertex);
+                        let chemosynthate_here = marine_habitat.chemosynthate.get(vertex);
+                        let mut band_best: Option<f64> = None;
+                        for band in 0..marine_habitat::PELAGIC_BANDS {
+                            let Some(s_b) = substrate_here[band] else {
+                                continue;
+                            };
+                            let score = score_at(&s_b, chemosynthate_here[band]);
+                            band_best = Some(band_best.map_or(score, |b: f64| b.max(score)));
+                        }
+                        match band_best {
+                            Some(best) => (best, 1.0),
+                            None => (
+                                score_at(substrate.get(vertex), *marine_chemosynthate.get(vertex)),
+                                0.0,
+                            ),
+                        }
                     }
                 };
                 // LIEBIG, not a product (The Tilth, stage 5). The base field
@@ -2214,10 +2244,24 @@ pub struct EraInvariantSupply {
     /// Marine chemosynthate supply (a vent's `CHEMOSYNTHATE`, The Sources fix
     /// round) — see the caveat above.
     pub marine_chemosynthate: hornvale_kernel::VertexMap<f64>,
+    /// The pelagic ladder a `Marine` kind is scored against (The Tidemark) —
+    /// the marine sibling of the `Subterranean` arm's per-rung fields, which
+    /// this path derives inline.
+    ///
+    /// Era-invariant on a **stated** argument rather than by accident: it is
+    /// read at ONE named instant (see [`EraInvariantSupply::build_at`]), so
+    /// it cannot vary across a series that names no instants of its own. A
+    /// campaign that lets the habitat expire across eras (spec §4) moves it
+    /// off this struct rather than re-reading it here.
+    pub marine_habitat: MarineHabitat,
 }
 
 impl EraInvariantSupply {
-    /// Build the hoisted fields once for a world.
+    /// Build the hoisted fields once for a world, with the **ambient** marine
+    /// reading — no Waterworld overlay, and therefore no vents.
+    ///
+    /// This is the reading a caller without a seed can take. The deep-history
+    /// bake, which has one, calls [`EraInvariantSupply::build_at`] instead.
     /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
     #[must_use]
     pub fn build(
@@ -2234,7 +2278,42 @@ impl EraInvariantSupply {
             detritus: detritus_supply_field(geo, terrain),
             marine: marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE),
             marine_chemosynthate: marine_chemosynthate_supply_field(geo, terrain, climate),
+            marine_habitat: MarineHabitat::ambient(geo, terrain, climate),
         }
+    }
+
+    /// [`EraInvariantSupply::build`] with the Waterworld overlay's vents read
+    /// at one named instant — the reading placement takes.
+    ///
+    /// A `_at` SIBLING rather than an extra parameter on
+    /// [`EraInvariantSupply::build`] itself, on the precedent
+    /// [`mineral_supply_field_masked`] sets for the same shape: `build` has
+    /// call sites across this crate's batteries, none of which holds an
+    /// overlay, and widening its arity for every one of them would buy
+    /// nothing. The delegation is the identity in every field but `marine`.
+    /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub fn build_at(
+        geo: &Geosphere,
+        terrain: &GeneratedTerrain,
+        climate: &GeneratedClimate,
+        obliquity_deg: f64,
+        insolation_scalar: f64,
+        regime: &RotationRegime,
+        water: &waterworld::WaterWorld,
+        time: hornvale_kernel::WorldTime,
+    ) -> Self {
+        let mut hoisted = Self::build(
+            geo,
+            terrain,
+            climate,
+            obliquity_deg,
+            insolation_scalar,
+            regime,
+        );
+        hoisted.marine_habitat = MarineHabitat::at_instant(geo, climate, water, time);
+        hoisted
     }
 }
 
@@ -2460,19 +2539,36 @@ fn per_species_capacity_at_with_invariant(
                         }
                     }
                     hornvale_species::HabitatRealm::Marine => {
-                        // The Tidemark, Task 1 (pre-flight ruling P1),
-                        // mirroring the sibling loop's matching arm: no kind
-                        // is `Marine` yet, so `availability = 0.0` here is
-                        // TRUE rather than a placeholder — see that arm's
-                        // comment for the full argument. Task 2 authors the
-                        // real marine availability mask.
-                        (
-                            score_at(
-                                substrate.get(vertex),
-                                *hoisted.marine_chemosynthate.get(vertex),
+                        // The Tidemark, Task 2: the pelagic ladder, scored
+                        // exactly as the sibling loop scores it — see that
+                        // arm for the full rationale. The one difference is
+                        // WHICH reading of the habitat this path holds:
+                        // `bake_history_from` hoists the VENT-BEARING one
+                        // (`EraInvariantSupply::build_at`), so a vent's
+                        // succession phase reaches placement here, while the
+                        // readout path's ambient reading carries no vent at
+                        // all. That asymmetry is the point of the two
+                        // constructors, not an oversight.
+                        let substrate_here = hoisted.marine_habitat.substrate.get(vertex);
+                        let chemosynthate_here = hoisted.marine_habitat.chemosynthate.get(vertex);
+                        let mut band_best: Option<f64> = None;
+                        for band in 0..marine_habitat::PELAGIC_BANDS {
+                            let Some(s_b) = substrate_here[band] else {
+                                continue;
+                            };
+                            let score = score_at(&s_b, chemosynthate_here[band]);
+                            band_best = Some(band_best.map_or(score, |b: f64| b.max(score)));
+                        }
+                        match band_best {
+                            Some(best) => (best, 1.0),
+                            None => (
+                                score_at(
+                                    substrate.get(vertex),
+                                    *hoisted.marine_chemosynthate.get(vertex),
+                                ),
+                                0.0,
                             ),
-                            0.0,
-                        )
+                        }
                     }
                 };
                 // `availability` stays OUTSIDE the tolerance product, exactly as
@@ -8203,13 +8299,59 @@ fn bake_history_from(
     // against 384 GB on the census host. Streaming one era at a time is the
     // successor if the roster grows to hundreds of settling species, where one
     // era alone is 98 MB (spec §4).
-    let hoisted = EraInvariantSupply::build(
+    // THE WATERWORLD OVERLAY'S FIRST NON-TEST CALLER (The Tidemark, Task 2;
+    // spec §5). Built here rather than one frame up in the `Settlements`
+    // rung's closure, and the reason is `history_for`: the standalone
+    // measurement entry point routes through THIS function precisely so its
+    // output stays byte-identical to the settlement stage's own bake. An
+    // overlay constructed in the closure and passed in would have to be
+    // passed as `None` from there, and the two bakes would silently disagree
+    // about whether the sea has vents in it.
+    //
+    // `WaterWorldConfig { enabled }` SURVIVES AS A KNOB, and is passed
+    // `true` unconditionally here. The alternative the brief names — build
+    // the overlay only when the world has marine vertices — was measured
+    // against this rung's shape and refused: `waterworld_from` already
+    // returns an empty `WaterWorld` for a world with no ocean vertex (the
+    // column walk admits nothing, so `substrate`, `vents` and the rest are
+    // all empty and `WaterWorld::at` short-circuits on the first line), so
+    // an `enabled` gate here would be a second, coarser copy of a test the
+    // overlay already performs on itself. What the flag buys that the
+    // emptiness check cannot is the ABLATION seam: `enabled: false` is the
+    // one way to ask a world what it looks like with the overlay withheld,
+    // which is exactly the control `the_marine_ladder_reads_the_vents` needs.
+    let waterworld = waterworld::waterworld_from(
+        world,
+        terrain,
+        climate,
+        waterworld::WaterWorldConfig { enabled: true },
+    );
+    // THE INSTANT PLACEMENT READS: `WorldTime::GENESIS`, and it is named here
+    // rather than defaulted somewhere below (spec §6's one open determinism
+    // question). Two reasons, in order of weight:
+    //
+    // 1. The overlay ALREADY names genesis for its own ambient fields
+    //    (`ambient_marine_fields`). Reading the succession at any other
+    //    instant would put two instants inside one overlay — ambient
+    //    temperature at genesis, vent temperature at some other tick — and
+    //    nothing downstream could tell which world it was looking at.
+    // 2. Placement at the `Settlements` rung is a genesis-time act. A
+    //    habitat EXPIRING over world-time is spec §4's concern and a later
+    //    task's: it moves the habitat off the era-invariant hoist rather
+    //    than moving this instant.
+    //
+    // The read consumes no draw — `WaterWorld::at`'s own doc says so, and
+    // `the_marine_habitat_read_consumes_no_draw` checks it against the
+    // world's stream state rather than trusting the sentence.
+    let hoisted = EraInvariantSupply::build_at(
         geo,
         terrain,
         climate,
         obliquity_deg,
         insolation_scalar,
         &regime,
+        &waterworld,
+        hornvale_kernel::WorldTime::GENESIS,
     );
     let invariant_tolerance =
         EraInvariantTolerance::build(geo, climate, &hoisted.insolation, &species_biosphere);
@@ -8239,25 +8381,30 @@ fn bake_history_from(
                 crate::delve_seating::seating_for(geo, terrain, niches.get(k))
             }
             hornvale_species::HabitatRealm::Marine => {
-                // The Tidemark, Task 1: no kind is `Marine` yet, so there is
-                // no pelagic ladder to seat against — the marine seating
-                // (spec §3.3, "the pelagic ladder is the delve ladder",
-                // scoring `Realm::WATERWORLD.strata()`'s five bands) is
-                // Task 2's job, not this one's. `Surface` rung at
-                // multiplier `0.0` is deliberately NOT
-                // `Seating::all_surface`'s `1.0` — it is self-contained
-                // rather than leaning on `per_species_capacity_at`'s
-                // sibling `availability = 0.0` elsewhere to stay inert:
-                // `scale_capacity` multiplies whatever capacity this kind
-                // has by this multiplier, so `0.0` keeps the seating inert
-                // on its own terms, and the rung is unobservable either way
-                // since no community can ever found at zero capacity.
-                crate::delve_seating::Seating {
-                    rung: hornvale_kernel::VertexMap::from_fn(geo, |_| {
-                        hornvale_kernel::Band::Surface
-                    }),
-                    multiplier: hornvale_kernel::VertexMap::from_fn(geo, |_| 0.0),
-                }
+                // The Tidemark, Task 2. Task 1 put a `0.0` multiplier here
+                // because no marine ladder existed and an inert arm had to
+                // be inert on its own terms. One now exists, and it is NOT
+                // here: the pelagic ladder is scored inside
+                // `per_species_capacity_at_with_invariant`'s `Marine` arm,
+                // over `MarineHabitat`'s five bands, which is where the
+                // band-by-band substrate actually lives. Leaving `0.0` here
+                // would multiply that whole ladder away and ship Task 3's
+                // peoples unplaceable.
+                //
+                // `Seating` prices a ROCK CHAMBER — `Seating::rung` is a
+                // `hornvale_kernel::Band`, whose variants are the delve
+                // ladder's, and no pelagic stratum is expressible in it. A
+                // marine people occupies no rock chamber, so there is
+                // nothing for this map to discount and the multiplier is
+                // exactly `1.0`, an IEEE-754 no-op, exactly as a surface
+                // people's is. `Band::Surface` is the rung because it is the
+                // one band that names "not in the rock column" — the same
+                // slot every overworld people occupies in the bake's
+                // `(vertex, rung)` node index.
+                //
+                // Deliberately `Seating::all_surface` and not a hand-built
+                // twin of it: the two must not be able to drift apart.
+                crate::delve_seating::Seating::all_surface(geo)
             }
         })
         .collect();

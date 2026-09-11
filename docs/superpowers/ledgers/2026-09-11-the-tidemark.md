@@ -436,6 +436,187 @@ own doc comment described an availability gate ("`1.0` where the vertex is
 wet, `0.0` otherwise") that no code implements yet (fixed — the doc now
 names Task 2, matching the mask arms it describes).
 
+## Task 2 — execution record
+
+Branch `campaign/the-tidemark`. Wires the Waterworld overlay into the
+deep-history bake, makes both marine availability arms real, and seats a
+`Marine` kind on the pelagic ladder.
+
+### M1 — do the two vent representations coincide?
+
+Measured **before any seating code was written**, by
+`windows/worldgen/tests/suite/marine_vent_representation_probe.rs` (an
+`#[ignore]`d probe: three terrain-depth world builds). `|A|` is the count of
+vertices whose climate biome is `HydrothermalVent`; `|B|` the count hosting a
+worldgen `WaterVent`; `|A ∩ B|` the vertices carrying both.
+
+| seed | `|HydrothermalVent|` | `|WaterVent|` | `|A ∩ B|` | smaller set | overlap |
+|---|---:|---:|---:|---:|---:|
+| 42 | 684 | 623 | 174 | 623 | 27.9% |
+| 7 | 802 | 585 | 175 | 585 | 29.9% |
+| 3 | 587 | 509 | 150 | 509 | 29.5% |
+
+**The prediction holds on all three seeds**: the intersection is well under
+half the smaller set (27.9–29.9%, against a preregistered ceiling of 50%).
+The two are different phenomena, exactly as spec §8 argued — one is derived
+straight from `SeafloorFeature::Ridge` with no draw, the other a seeded
+admission over seabed vertices that carry an edifice or a plate boundary.
+
+**Ruling — the authoritative representation for seating is `WaterVent`.** It
+is the only one of the two carrying a succession phase, which is what spec
+§4's expiring habitat needs. `Biome::HydrothermalVent` is unchanged and keeps
+its existing consumer (`marine_chemosynthate_supply_field`, read on the
+`Surface` arm); the campaign records it as the coarser, ridge-derived thing
+and mints no third representation. The spec's large-overlap branch — "stop
+and report it as the headline" — did not fire.
+
+### The instant placement reads: `WorldTime::GENESIS`
+
+Named at the call in `bake_history_from`, and in `MarineHabitat::at_instant`'s
+own doc. Two reasons, in order of weight:
+
+1. **The overlay already names genesis for its own ambient fields**
+   (`ambient_marine_fields`, extracted from `waterworld_from`, which has
+   always derived its `fields` at `WorldTime::GENESIS`). Reading the
+   succession at a different tick would put two instants inside one
+   overlay — ambient temperature at genesis, vent temperature elsewhere — and
+   nothing downstream could say which world it was looking at.
+2. Placement at the `Settlements` rung is a genesis-time act. A habitat
+   *expiring* over world-time is spec §4's concern and a later task's: it
+   moves the habitat off the era-invariant hoist rather than moving this
+   instant.
+
+The read consumes no draw. That is checked rather than asserted:
+`marine_ladder_vents::vent_admission_stays_keyed_to_its_own_vertex`
+re-derives every admitted vent's four values from
+`seed.derive(WATERWORLD_VENT).derive("vertex/<n>")` **alone** and requires
+them bit-identical to what the overlay built — which can only hold if the
+per-vertex sub-stream is the only consumer of that key. No stream label was
+added and no draw order changed.
+
+### Where the overlay is constructed, and why not one frame up
+
+Inside `bake_history_from`, not in the `Settlements` rung's closure that
+calls it. The closure was the brief's stated insertion point, and the
+deciding fact against it is `history_for`: the standalone measurement entry
+point routes through `bake_history_from` **precisely so** its output stays
+byte-identical to the settlement stage's own bake. An overlay built in the
+closure would have to reach `history_for` as `None`, and the two bakes would
+then silently disagree about whether the sea has vents in it.
+
+`WaterWorldConfig { enabled }` **survives as a knob**, passed `true`
+unconditionally. The alternative ("build only when the world has marine
+vertices") is already performed by `waterworld_from` itself — a world with no
+ocean vertex yields an empty `WaterWorld` and `WaterWorld::at` short-circuits
+— so an `enabled` gate at the call site would be a coarser second copy of
+that test. What the flag buys that the emptiness check cannot is the
+**ablation seam**: `enabled: false` is the only way to ask what a world looks
+like with the overlay withheld, which is the control
+`an_ablated_overlay_leaves_the_marine_ladder_exactly_where_it_was` needs.
+
+### The seating, and the two things that changed shape
+
+`MarineHabitat` (`windows/worldgen/src/marine_habitat.rs`) is
+`subterranean_substrate_field_per_rung`'s marine sibling: per vertex, one
+`Option<Substrate>` and one chemosynthate value per band of
+`Realm::WATERWORLD.strata()`. Two constructors over one column walk
+(`waterworld::marine_columns`, extracted from `waterworld_from` so the two
+cannot disagree): `ambient` (pure, no draws, no vents — what the readout path
+`per_species_suitability_masked` hoists for itself) and `at_instant` (the
+vent-bearing reading, hoisted once per bake on
+`EraInvariantSupply::build_at`). Both arms score every band and take the
+best; `availability` is `1.0` where some band scored and `0.0` where none
+did, outside the Liebig minimum exactly as the cave mask is.
+
+**`delve_seating`'s `Marine` arm moved from multiplier `0.0` to
+`Seating::all_surface`.** Task 1's `0.0` was correct while no ladder existed;
+leaving it would have multiplied the whole pelagic ladder away and shipped
+Task 3's peoples unplaceable. `Seating` prices a *rock chamber* — its `rung`
+is a `hornvale_kernel::Band`, in which no pelagic stratum is expressible — so
+a marine people has nothing for that map to discount, takes multiplier
+exactly `1.0`, and sits at `Band::Surface`, the one band meaning "not in the
+rock column". Unobservable today (no kind is `Marine`); Task 3 is where it
+first has an effect, and is the right place to review it.
+
+### Proving the ladder is not vacuous
+
+`windows/worldgen/tests/suite/marine_ladder_vents.rs` scores one frozen kind
+twice over one frozen world, through the production entry point placement
+calls (`per_species_capacity_at`), differing only in whether the hoist
+carries the vent-bearing habitat. At seed 42: 623 vents, the vent layer moves
+**392** `(vertex, band)` habitat slots at genesis, a `Marine` kind reaches
+**29,679 of 40,962** vertices, and the vent layer moves **376** of them. The
+same kind on the `Surface` arm is bit-identical across the two hoists.
+
+**Two source mutations, each with its target text asserted present before
+being perturbed, confirm the two halves of the test are independently live:**
+
+| mutation | precondition | downstream |
+|---|---|---|
+| zero the vent contribution in `WaterWorld::at` (temperature **and** chemistry) | **RED** — habitat slots moved 392 → 0 | (masked) |
+| make the `Marine` capacity arm score the surface substrate instead of the band | green — 392 slots still move | **RED** — capacity moved 376 → 0 |
+
+Both restored; `grep -c -F` on the restored text confirms it.
+
+**The probe kind is synthesised, and that is itself a finding.** No shipped
+kind can score in the water column at all: `human` forced to `Marine` yields
+capacity exactly `0.0` at all 40,962 vertices, because its elevation curve is
+authored for land (`ConditionResponse::eval` underflows kilometres below sea
+level) and its resource weights read axes the sea does not supply. Task 3's
+kinds must carry a sub-sea-level elevation optimum and `MARINE_FORAGE` /
+`CHEMOSYNTHATE` weights, or they will place nowhere and M2 will read zero for
+a reason that is not the realm gate.
+
+### No existing world moved
+
+`bash scripts/regenerate-artifacts.sh` then the drift check over
+`docs/generated-paths.txt` moved **only** the two audit bookkeeping reports —
+`docs/audits/type-audit-report.md` (two per-class counts and the worldgen row,
+from the new `pub` items) and `docs/audits/plumb-roster.md` (the file and
+constant counts, from the two new constants). The almanacs, the elevation
+map, the registry/manifest dumps, the lab studies, the Domesday survey and
+the client fixtures are all byte-identical. `cargo nextest run -p
+hornvale-worldgen --no-fail-fast`: **1172 passed, 0 failed** (641.2 s),
+including `history_byte_identity` and `graph_byte_identity`, which are the
+build-twice-byte-identical assertions this change had to survive.
+
+### Findings carried forward
+
+- **The pelagic light ladder does not reach placement.**
+  `EraInvariantTolerance` precomputes the moisture and insolation halves of
+  the Liebig minimum **at the surface**, and
+  `tolerance_liebig_with_fixed` reads only `temperature_c` and
+  `height_asl_m` off the per-band substrate. So on the capacity path a
+  marine band is distinguished by depth, temperature and chemosynthate, but
+  **not** by light — even though `MarineHabitat` carries it and the readout
+  path (`per_species_suitability_masked`, which calls the full
+  `tolerance_liebig`) does use it. This is not a regression: the
+  `Subterranean` arm has the identical shape for its per-rung moisture, and
+  predates this task. It matters for Task 3 (a kind whose identity is depth
+  cannot express that through light) and for M3.
+- `per_species_suitability_masked` builds the **ambient** habitat, so a
+  `Marine` kind scored through the readout path sees no vents. That
+  asymmetry is deliberate — the readout path holds no seed and cannot build
+  the overlay without a draw — but any measurement that compares readout
+  against placement for a marine kind must account for it.
+
+### Gate
+
+`make gate-commit`: **rc=0, wall=45.364 s** (user 84.210 s, sys 20.303 s,
+cpu_ratio 2.30; 462 sub-floor tests, 4 chunks, all green).
+
+Four gate checks had to be satisfied by hand before it went green, recorded
+because each is a step a reader would otherwise have to rediscover: the new
+`build_at` needed `#[allow(clippy::too_many_arguments)]` (8/7); `PELAGIC_BANDS`,
+`pelagic_index`'s return and `MarineHabitat::chemosynthate` needed
+`type-audit:` verdicts (the field's tag belongs on the STRUCT doc, not the
+field's own — a field-level tag is not read); both audit reports had to be
+regenerated; the M1 probe's seed loop needed a `/// claim: readout(...)` line
+(decision 0093's claim-shape lint); and both new test files needed rows in
+`cli/tests/fixtures/world-build-sites.tsv` (`artifacts:1` each — both need a
+live `GeneratedTerrain`/`GeneratedClimate`, which the committed seed-42
+fixture does not carry).
+
 ## Follow-ups
 
 - **The aerial realm is the empty fourth sibling.** `MAP-11`'s medium axis is
