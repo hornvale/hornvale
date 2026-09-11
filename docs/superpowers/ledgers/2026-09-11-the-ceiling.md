@@ -1002,7 +1002,7 @@ ledger's earlier entries assumed.
 
 ---
 
-## #15 [Q] — "One axis" was too strong, and the ladders are not the same
+## #16 [Q] — "One axis" was too strong, and the ladders are not the same
 
 **The Tidemark re-ran #14 rather than inheriting it** — the discipline this
 campaign asked of them this morning, returned. They confirmed the underworld
@@ -1068,3 +1068,103 @@ which overturned its scope twice.
 **Capture actions:** registry row and spec §3.5 rescoped to tolerance with the
 marine contrast stated; Task 7's phrasing checked against their M5 defect and
 found already correct.
+
+---
+
+## #17 [Ruling] — Row 1's action is UNBUILDABLE: a niche cannot name a source
+
+**M1 = 3 landed (#15), so the branch table says row 1: "Stage 2 authors a
+consumer whose niche favours a NAMED DOMINANT SOURCE."** Verified before
+dispatching Stage 2, and **that action cannot be built.**
+
+- `ResourceVector` weights only the seven `ResourceAxis` values
+  (`kernel/src/ecology.rs`): `PHOTOSYNTHATE`, `PLANT_FORAGE`, `ANIMAL_PREY`,
+  `DETRITUS`, `MINERAL`, `MARINE_FORAGE`, `CHEMOSYNTHATE`.
+- **`EnergySource` appears NOWHERE in `domains/species`** — verified by grep.
+  The seven sources collapse into the single `CHEMOSYNTHATE` supply inside
+  `subterranean_energy` before any niche sees them.
+- This is **layering, not oversight**: `EnergySource` lives in
+  `windows/worldgen`, `ResourceAxis` in the kernel, and a domain may not
+  depend on a window.
+
+**Where composition DOES reach production: flavour text, and only that.**
+`dominant_source`'s sole non-test caller is
+`windows/vessel/src/underground.rs:1061`, whose own doc says it is "carried
+through purely for `inhabitant_datum`'s flavour text, the same 'retained
+beside the scalar' role `dominant_source` plays". It touches no capacity, no
+placement, no world number.
+
+**THE PATTERN, NOW THREE FOR THREE, AND IT IS THIS CAMPAIGN'S HEADLINE.**
+
+| derived richness | who reads it |
+|---|---|
+| nine `MaterialBuffer` lithology fields | nothing — no tolerance axis (#7) |
+| the depth-attenuated light ladder | nothing (#16; The Tidemark's find) |
+| which energy source dominates | **narration only** (this entry) |
+
+**The underworld is richly derived and thinly read.** Each was computed
+correctly and discarded at the same boundary — the niche/substrate boundary
+that `DOM-two-environment-bases` names and that Nathan's kernel-unification
+ruling (#7) targets. That ruling now looks less like tidying a duplicate and
+more like the prerequisite this whole program was missing.
+
+**RULING: Stage 2 builds the AGGREGATE-supply consumer** — row 3/4's action —
+because it is the only one that can be built, and **the campaign's headline
+becomes the unreachability rather than the ceiling.** Surfaced to Nathan with
+the alternative (supersede 0966 outright) offered; proceeding on the aggregate
+unless he overturns, per the rule that a running plan does not stall on a
+question it can answer. *Cost if wrong: Stage 2 ships a consumer on the
+aggregate that a later mechanism would have let read a named source, and one
+niche row is re-authored.*
+
+**0966's status, stated precisely because it is Nathan's ruling.** It is
+**not falsified** — composition genuinely varies between worlds, M1 = 3,
+every rung clearing independently with TV distances 0.14–0.24. It is
+**unimplementable today**: the allocation mechanism it names has no consumer
+that can read it. That is a third state the branch table never contemplated,
+alongside the saturation finding (#13). Recorded as **blocked on mechanism,
+not superseded**, with the kernel unification named as where it unblocks.
+
+**Two caveats on calling the axis "rich", owed because §3.3 asked for scrutiny
+if row 1 landed.** It cleared by exactly one — `max` over rungs is 3, while
+three of five rungs read 2, which is the row-2 this campaign predicted; a
+median-over-rungs aggregator would have returned row 2. And only **four of
+seven** sources ever win at world level: `Serpentinization`, `Geothermal` and
+`DetritalImport` never do. The preregistered statistic was `max over r`,
+frozen before measurement, so **the result stands exactly as measured** — but
+"rich" is the branch table's word, and the honest description is *available
+but narrow*.
+
+**Ideonomy passes / overturns:** none; a verification that overturned a
+branch-table action.
+
+---
+
+## #18 [Ruling] — A controller commit was swept into an implementer's commit
+
+**What happened.** While Task 3's implementer was live in this worktree, I
+staged three doc files and committed. My commit's pre-commit hook ran the FULL
+gate (the implementer's Rust changes were in the tree), the commit did not
+complete, **my changes stayed staged**, and the implementer's own `git add`
+picked them up. They landed inside `75996b1c0` under its commit message.
+
+**Nothing was lost and the implementer caught it.** Its report flagged two
+files it had never edited appearing in its commit and said it could not trace
+how they got there — which is the correct response, and better than silently
+accepting them.
+
+**The cause is mine, and it is not the `git add` form.** I used explicit paths
+throughout, never `add -A`. The cause is that **a controller must not stage or
+commit in a worktree where an implementer is running.** Staging is shared
+mutable state; a failed commit leaves it populated; the next `git add` anywhere
+in that worktree inherits it.
+
+**Consequences taken.** Ledger entry numbering collided (two `#15`s — the
+implementer's measurement and my correction entry, written concurrently);
+mine renumbered to `#16`. Going forward this campaign makes no controller
+commit while a task agent is live — bookkeeping waits for the report. *Cost if
+wrong: none; it costs latency only.*
+
+**The transferable form:** the hazard is not the command, it is the shared
+index. Explicit paths protect other people's files from your commit; they do
+not protect your staged files from other people's commits.
