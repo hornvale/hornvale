@@ -1475,3 +1475,114 @@ focused output and investigation are preserved in
 `task9-controller-review-02/{review-archive-commit.log,roster-leak-focused.log,
 roster-leak-investigation.md}`. If it recurs, collect descendant/handle evidence
 rather than attributing it to the renderer or rewriting an unchanged test.
+
+
+## Campaign census — complete, delivery diff inspected
+
+Request `req-fa1223fd7e82-20260911T001301Z` completed on lefford with rc=0 in
+1387 seconds; main remained `2e8609398`. Its authored census timing row reports
+1366.487 s wall, 41737.936 s user, 406.624 s sys, CPU ratio 30.84. The main
+study returned 1000 rows / zero refusals; the complete log is preserved as
+`task9-controller-review-02/canonical-census.log`.
+
+The delivered branch is `census/fa1223fd7e82-20260911T015448Z`, commit
+`88e8aeb7ff0e37dc13c996cd9512a8dc9bf17681`, based on the requested `fa1223fd7`.
+Root fetched it and inspected the actual two-file diff: six rows in docs/timings.md,
+and two file-count changes in docs/generated-path-writes.tsv (reference count
+22→23; audits count 27→33). No scientific golden, world/system/moon fixture or
+other reference data changed. Gnomon arms are unchanged. The diff itself is in
+`task9-controller-review-02/canonical-census-delivery.diff`.
+
+The runner and queue describe this as TIMINGS ROW ONLY. That is a shorthand
+reporting mismatch: the null-golden verdict is correct, but the delivery includes
+six measurements and the operational write-manifest update. Root corrected the
+user-facing account after reading the diff. Do not infer a whole-branch file list
+from that verdict; retain this concrete operational-reporting follow-up.
+
+The actual local merge preview was clean. Root prepared the delivery merge on
+the campaign branch with --no-commit, retaining the normal commit hook. The
+subsequent hook refused as recorded below; no merge commit or main push occurred,
+and the delivered diff contains no scientific golden changes. The final
+canonical stage remains queued. Census-relevant paths have remained identical
+to fa1223fd7 throughout the reviewed client refinements; subsequent main changes
+still require their own contact/identity check before G6.
+
+
+## Census-delivery commit refused — profiling obligation
+
+The normal pre-commit hook refused the prepared census-delivery merge at
+`921381907`: `census_duration::a_census_over_the_alarm_threshold_owes_a_profiling_followup`
+found the new 1366.487 s run above the 1320 s alarm with no per-run finding.
+This is a real failed commit, not a completed absorption. No threshold, test,
+timing row or golden is removed to bypass it. The actual log is retained at
+`task9-controller-review-02/census-absorb-commit-refused.log`; an independent
+read-only investigation is checking the required profiling path and precedent.
+
+Read-only main contact still finds `2e86093986a69c9ee032e8872a064c3a432ed9df`.
+The delta from absorbed main `cb0331192` is six operational/tooling files:
+CLAUDE.md, lane-outboard/sweep-roots scripts, timings, subfloor roster and the
+lefford baseline. The actual diff contains no simulation or visual-source code.
+It is not yet absorbed while the census merge is pending.
+
+The independent investigation confirmed the live-profile obligation. Current
+total CPU is 42144.560 s versus preceding 42220.324 s (-0.179%); wall is
+-3.284%. These aggregates locate no call-path cause and do not discharge the
+profile requirement. The preceding yellow row's 41780.847 figure is user CPU
+only, not total CPU; it must not be reused as the comparison denominator.
+The existing queue exposes no profiling payload. An operator can instrument
+the ordinary census executor after its normal FIFO claim, but the proposed perf
+wrapper is source-derived and not yet validated for release-stack symbolization.
+The complete report is retained in `task9-controller-review-02/census-alarm-investigation.md`.
+A concrete operator notice is prepared there as `operator-request.txt`; it has
+not been sent. External messaging requires explicit user authorization.
+
+
+## Operator request — authorized and sent
+
+Nathan explicitly approved sending the prepared canonical-operator request.
+Root posted its exact text as board notice `e1c052a4c406080449869b964aec090dda48d82d`,
+routed to `scripts/sluice-queue.sh` and `scripts/sluice-census.sh`, and synced it.
+Both commands returned zero; sync reported a push to
+`refs/hornvale/hosts/MacBookPro` and a fetch of three peer mirrors. Exact notice,
+post receipt and sync log are retained under `task9-controller-review-02/`.
+This authorizes the notice, not G6, a Planetarium merge, or film publication.
+The latest queue read shows vent-succession running, eclipse-rhythm-view queued
+ahead of our final stage, and the separate underworld delivery held by its
+operator. No unrelated queue state was changed by this campaign.
+The requested profile is awaiting operator response; it has not run.
+
+
+## Held stage — actual cause and reviewed repair
+
+Nathan reported the hold. The canonical log shows rc=10 during merge, not a
+renderer/test failure: 1948 of 1961 seconds were spent waiting for the lock,
+after which main `f22860af3` conflicted in `windows/scene/src/lib.rs` and the
+plumb/type-audit reports. No stage phase ran, so Linux qualification is still
+unestablished. Full log: `task9-controller-review-02/canonical-stage4-held.log`.
+
+Root preserved all five pending census/close files, the complete binary patch,
+a separate close-doc patch and both merge parents under
+`task9-controller-review-02/held-stage-recovery/`. The first `git merge --abort`
+refused because two files differed from their index entries; after staging the
+backed-up corrections, abort succeeded. This removed the uncommitted delivery
+merge so main could be integrated independently; it does not erase the delivered
+measurements or their profiling debt. The original census branch is unchanged.
+
+An SDD implementer resolved the source annotation as the union of both features,
+regenerated just the two lint reports and committed main absorption at
+`6d5d5a8bb1452149197e1114711b81eb33b1747f` with parents `921381907` and
+`f22860af3`. Scope checks: 67 astronomy/scene/CLI tests, 4 visual-source tests,
+then the normal commit hook's four subfloor chunks all green; gate wall143.893 s.
+The hook timing row is retained in the next evidence commit.
+
+Root read both incoming chronicles: Eclipse Rhythm and View adds observer and
+ground-track/recurrence reporting; The Living Vent adds the isolated temporal
+Waterworld API. Their declared models add no save/epoch/census work. Actual
+source comparison still governs whether this campaign's captured observations
+remain applicable. No renderer or captured-package bytes are rewritten.
+
+CPU replay at the integrated source `6d5d5a8bb` matched the captured initial
+document semantically and all 300 exact-tick observation replies byte-for-byte.
+`task9-controller-review-02/native-main-replay.json` names the actual checkout
+separately from the original capture binding reused for protocol comparison.
+The temporary example was removed; no new GPU or capture qualification is claimed.

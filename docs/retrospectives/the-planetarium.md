@@ -55,6 +55,11 @@ unrelated expensive artifact authoring belongs to the canonical queue. The first
 task also ran the commit gate manually and then through the normal hook: use the
 hook as the commit gate instead of paying for the same verification twice.
 
+A null-golden census still delivered more than its “timings row only” message
+said: six timing rows and two operational manifest counts. The scientific null
+was correct; the file-list summary was not. Inspect the delivered diff before
+reporting its scope, even when the tool's high-level verdict is green.
+
 ## Deferred review items and their homes
 
 - Task 3 catalog validation and renderer decomposition were addressed in Tasks 4
