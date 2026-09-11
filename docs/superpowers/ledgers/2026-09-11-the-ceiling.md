@@ -233,3 +233,62 @@ ruling stands; its stated reason is now more precise.
 intensive/extensive fork and the two-causes-of-compression risk both lead the
 approach comparison; fire-regime and colonization-resistance recorded above
 as candidate mechanisms rather than adopted ones.
+
+---
+
+## #4 [G2] — The spec, and the two defects its self-review caught
+
+**Decision.** Spec written to
+`docs/superpowers/specs/2026-09-11-the-ceiling-design.md` and proceeding to
+G3 without a section-by-section approval round, per autopilot's G2 policy.
+Decision 0966 minted first, from the reserved block `0966-0975`
+(`make decision-block NAME=the-ceiling`, allocated on lefford) rather than by
+picking a number locally — the failure mode blocks exist to remove.
+
+**The self-review's verification pass, run at drafting time rather than review
+time**, per autopilot's fold-in rule. Two claims were checked by command, and
+one of them mattered:
+
+- **`separation = 0.145249` REPRODUCES EXACTLY at `26003913d`.** The spec's M2
+  positive control requires reproducing a number measured 2026-08-26. A
+  committed baseline is a claim with a date, and had the world moved under it
+  the spec would have shipped a control guaranteed to fail. It did not move;
+  every S1 width, the S2 occupancy table and the realized max `0.424277` all
+  reproduced too.
+- **The dominant-source histogram re-run at base**, quoted in both 0966 and
+  the spec rather than inherited from The Sources' prose.
+
+**DEFECT 1, caught and fixed: M1 pooled the rungs.** The first draft computed
+one histogram per seed over all underground rungs. The re-run printed the
+per-rung S3 histograms, which show composition driven hard by DEPTH —
+`IronReduction` leads shallow, `SulphideOxidation` deep, and two sources are
+structurally absent at `Undercroft` entirely. Depth structure is shared by
+every world, so a pooled argmax is largely a function of each rung's chamber
+count, and **M1 would very likely have returned 1 for a methodological
+reason** — which §3.3's table would then have read as the substantive null
+that supersedes 0966. M1 is now per-rung, `M1 = max_r |{a(s,r) : s in S}|`.
+This is the same pooling defect this campaign had already identified in the
+existing instrument two hours earlier, reproduced in its own preregistration;
+it was caught only because the verification run printed a table the draft did
+not know existed.
+
+**DEFECT 2, caught and fixed: a wrong attribution.** Two passages credited the
+metaplan with placing "a field, a variant, and a draw" on rung 4's side of the
+line. That sentence is The Winze's amendment C.4, not the metaplan's. Both
+corrected to cite C.4 with its own words.
+
+**A third change, made on the evidence rather than on review:** M1's
+prediction was weakened from `>= 3` to `>= 2`. Two is what 0966's quadrants
+actually require — the allocation axis must take more than one value across
+worlds — and three was a richness claim the design does not need and no prior
+measurement supports. The branch table keeps the `>= 3` row so richness is
+still *reported* when it occurs, and §3.3 names row 2 as the expected one so
+that a surprise is recognised as one.
+
+**Ideonomy passes / overturns:** none for this entry; the design passes were
+#3's and the spec is their capture. The two defects were found by verification,
+not by ideation, which is the distinction autopilot's own fold-in rule draws.
+
+**Capture actions:** decision 0966 committed at `2d799dfa8` with README row and
+regenerated digest, 45 docs-consistency tests green; spec committed; G3 package
+next.
