@@ -58,9 +58,10 @@ pub use delve::{
     rungs,
 };
 pub use facet::{
-    BoundaryParameter, EndpointSide, FacetAddress, FacetFieldSample, FeatureEndpoint, FeatureId,
-    FeatureKind, RealizedCurve, TerminalKind, canonical_corner_sample, canonical_edge_sample,
-    feature_sample,
+    BoundaryParameter, ChannelCrossSection, EndpointSide, FacetAddress, FacetFieldSample,
+    FeatureEndpoint, FeatureId, FeatureKind, RealizedCurve, TerminalKind, TerrainFacetInputs,
+    bed_height_profile, canonical_corner_sample, canonical_edge_sample, channel_endpoint_kind,
+    feature_sample, realize_channel_curves,
 };
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,

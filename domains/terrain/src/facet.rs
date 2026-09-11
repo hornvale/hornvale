@@ -2,7 +2,12 @@
 
 use std::cmp::Ordering;
 
-use hornvale_kernel::{Facet, FacetError, Vertex, math};
+use hornvale_kernel::{Facet, FacetError, Geosphere, Vertex, math};
+
+use crate::{
+    CatchmentCut, ChannelNetwork, GeneratedTerrain, TectonicGlobe, WaterKind, band_edges,
+    channel_half_width, local_slope, rills_of, vertex_catchment,
+};
 
 /// A terrain patch below one canonical macro-grid facet.
 ///
@@ -211,6 +216,490 @@ pub struct FacetFieldSample {
     pub ridge_direction: [f64; 3],
     /// Relative strength of the nearest ridge.
     pub ridge_strength: f32,
+}
+
+/// Borrowed, already-generated hydrology used to realize a terrain patch.
+#[derive(Clone, Copy)]
+pub struct TerrainFacetInputs<'a> {
+    /// The authoritative elevations, drainage and downhill graph.
+    pub globe: &'a TectonicGlobe,
+    /// The mesh against which the globe was generated.
+    pub geo: &'a Geosphere,
+    /// The rendered, confluence-repaired channel network.
+    pub channels: &'a ChannelNetwork,
+}
+
+/// World-space borders, left then right looking downstream, at a curve point.
+/// All positions are on the unit sphere; these are geometry, not new routing.
+/// type-audit: pending(wave-1)
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChannelCrossSection {
+    /// Water's two edges.
+    pub banks: [[f64; 3]; 2],
+    /// The outer floodplain edges (coincident with the bank border in a gorge).
+    pub floodplain: [[f64; 3]; 2],
+    /// The outer terrace edges.
+    pub terrace: [[f64; 3]; 2],
+    /// A widening apron on the final reach into standing water, when present.
+    pub delta: Option<[[f64; 3]; 2]>,
+}
+
+/// Classify an inherited endpoint at `vertex`, before any patch clipping.
+/// Upstream land with no inflow is a headwater; a downstream land sink is a
+/// lake. A nonterminal downstream endpoint joins the owning trunk. Clipping,
+/// not the drainage graph, supplies `Continuation`.
+/// type-audit: pending(wave-1: downstream)
+pub fn channel_endpoint_kind(
+    inputs: TerrainFacetInputs<'_>,
+    vertex: Vertex,
+    downstream: bool,
+) -> TerminalKind {
+    if *inputs.globe.water_kind.get(vertex) == WaterKind::Ocean {
+        TerminalKind::Ocean
+    } else if downstream && inputs.globe.downhill.get(vertex).is_none() {
+        TerminalKind::Lake
+    } else if downstream
+        || inputs
+            .geo
+            .neighbors(vertex)
+            .iter()
+            .any(|&upstream| *inputs.globe.downhill.get(upstream) == Some(vertex))
+    {
+        TerminalKind::Confluence
+    } else {
+        TerminalKind::Headwater
+    }
+}
+
+fn trunk_id(inputs: TerrainFacetInputs<'_>, line: usize) -> FeatureId {
+    FeatureId::new(
+        FeatureKind::ChannelReach,
+        inputs.channels.run_vertices[line][0],
+        0,
+    )
+}
+
+fn endpoint(feature: FeatureId, side: EndpointSide, terminal: TerminalKind) -> FeatureEndpoint {
+    FeatureEndpoint {
+        feature,
+        side,
+        boundary: None,
+        terminal,
+    }
+}
+
+fn trunk_curve(inputs: TerrainFacetInputs<'_>, line: usize) -> RealizedCurve {
+    let vertices = &inputs.channels.run_vertices[line];
+    let feature = trunk_id(inputs, line);
+    RealizedCurve {
+        feature,
+        points: inputs.channels.polylines[line].points.clone(),
+        width: inputs.channels.band_edges[line]
+            .iter()
+            .map(|edges| 2.0 * edges[0])
+            .collect(),
+        endpoints: [
+            endpoint(
+                feature,
+                EndpointSide::Upstream,
+                channel_endpoint_kind(inputs, vertices[0], false),
+            ),
+            endpoint(
+                feature,
+                EndpointSide::Downstream,
+                channel_endpoint_kind(
+                    inputs,
+                    *vertices.last().expect("channel has vertices"),
+                    true,
+                ),
+            ),
+        ],
+    }
+}
+
+fn rill_curve(inputs: TerrainFacetInputs<'_>, rill: &crate::Rill, index: usize) -> RealizedCurve {
+    // Zero is reserved for a trunk. Partition order is independent of patch
+    // address and refinement and is the existing Rill identity convention.
+    let ordinal = u32::try_from(index + 1).expect("rill ordinal exceeds feature identity");
+    let feature = FeatureId::new(FeatureKind::ChannelReach, rill.vertex, ordinal);
+    let width = 2.0
+        * channel_half_width(
+            rill.catchment / vertex_catchment(inputs.geo),
+            crate::channel::vertex_spacing(inputs.geo, rill.vertex),
+        );
+    RealizedCurve {
+        feature,
+        points: vec![rill.head, rill.mouth],
+        width: vec![width; 2],
+        endpoints: [
+            endpoint(feature, EndpointSide::Upstream, TerminalKind::Headwater),
+            endpoint(feature, EndpointSide::Downstream, TerminalKind::Confluence),
+        ],
+    }
+}
+
+/// Realize inherited trunks and attached rills intersecting `address`.
+///
+/// Ordinal zero identifies a whole trunk by its head vertex; positive ordinals
+/// identify rills by their vertex and partition index plus one. A trunk can
+/// leave and re-enter a patch, yielding multiple pieces with the same ID.
+/// Rill candidates use a conservative spherical cap enclosing both their
+/// tangent-plane square and parent stretch. The square is an area proxy, not
+/// a claim that the branches lie inside an addressed facet. Every emitted
+/// segment is clipped against the actual facet boundary.
+pub fn realize_channel_curves(
+    inputs: TerrainFacetInputs<'_>,
+    address: &FacetAddress,
+) -> Vec<RealizedCurve> {
+    let facet = address.resolved();
+    let center = facet.centroid();
+    let radius = facet
+        .corners()
+        .iter()
+        .map(|&p| angle(center, p))
+        .fold(0.0, f64::max);
+    let mut curves = Vec::new();
+    for line in 0..inputs.channels.polylines.len() {
+        clip_curve(&trunk_curve(inputs, line), address, &mut curves);
+    }
+    let cut = CatchmentCut::Drawn(inputs.globe.rill_partition_seed());
+    // atan(diagonal / 2) <= diagonal / 2. Include the entire neighboring
+    // trunk segments as well: a root mouth may lie beyond the square.
+    let square_radius = (vertex_catchment(inputs.geo) / 2.0).sqrt();
+    for vertex in inputs.geo.vertices() {
+        let Some((line, index)) = inputs.channels.trunk_vertex(vertex) else {
+            continue;
+        };
+        let points = &inputs.channels.polylines[line].points;
+        let origin = inputs.geo.position(vertex);
+        let reach_radius = points[index.saturating_sub(1)..=index + 1]
+            .iter()
+            .map(|&p| angle(origin, p))
+            .fold(square_radius, f64::max);
+        if angle(origin, center) > reach_radius + radius {
+            continue;
+        }
+        for (index, rill) in rills_of(vertex, inputs.channels, inputs.geo, &cut)
+            .iter()
+            .enumerate()
+        {
+            clip_curve(&rill_curve(inputs, rill, index), address, &mut curves);
+        }
+    }
+    curves
+}
+
+impl RealizedCurve {
+    /// Resolve the one inherited feature this piece joins, if its downstream
+    /// endpoint is a confluence. Endpoint `feature` remains the owning ID.
+    pub fn downstream_feature(&self, inputs: TerrainFacetInputs<'_>) -> Option<FeatureId> {
+        if self.feature.kind != FeatureKind::ChannelReach
+            || self.endpoints[1].terminal != TerminalKind::Confluence
+        {
+            return None;
+        }
+        let vertex = self.feature.macro_anchor;
+        let (line, _) = inputs.channels.trunk_vertex(vertex)?;
+        if self.feature.ordinal == 0 {
+            let mouth = *inputs.channels.run_vertices[line].last()?;
+            let (owner, _) = inputs.channels.trunk_vertex(mouth)?;
+            Some(trunk_id(inputs, owner))
+        } else {
+            let rills = rills_of(
+                vertex,
+                inputs.channels,
+                inputs.geo,
+                &CatchmentCut::Drawn(inputs.globe.rill_partition_seed()),
+            );
+            let rill = rills.get(self.feature.ordinal as usize - 1)?;
+            Some(match rill.parent {
+                Some(parent) => {
+                    FeatureId::new(FeatureKind::ChannelReach, vertex, (parent + 1) as u32)
+                }
+                None => trunk_id(inputs, line),
+            })
+        }
+    }
+
+    /// Generate bank, floodplain, terrace and mouth-apron geometry from the
+    /// same inherited width and slope laws as the channel network. Sampling
+    /// uses the full feature so clipping does not change the transverse frame.
+    pub fn cross_sections(&self, inputs: TerrainFacetInputs<'_>) -> Vec<ChannelCrossSection> {
+        let (source, edges) = source_geometry(self.feature, inputs);
+        self.points
+            .iter()
+            .map(|&point| {
+                let projection =
+                    nearest_segment(&source.points, point).expect("channel has segments");
+                let j = projection.segment;
+                let t = projection.interpolation;
+                let borders: [f64; 4] =
+                    std::array::from_fn(|i| edges[j][i] + t * (edges[j + 1][i] - edges[j][i]));
+                let normal = cross(source.points[j], source.points[j + 1]);
+                // A rill head can already lie on its parent (zero length).
+                // It still carries catchment and width, but no direction of
+                // its own: use the inherited trunk's transverse frame.
+                let left = if dot(normal, normal) <= f64::EPSILON * f64::EPSILON {
+                    let (line, index) = inputs
+                        .channels
+                        .trunk_vertex(self.feature.macro_anchor)
+                        .expect("channel has a trunk");
+                    let points = &inputs.channels.polylines[line].points;
+                    normalize(cross(points[index], points[index + 1]))
+                } else {
+                    normalize(normal)
+                };
+                let offset = |distance: f64| {
+                    [-1.0, 1.0].map(|sign| {
+                        let (sine, cosine) = (math::sin(distance), math::cos(distance));
+                        // Positive cross(a,b) is left facing downstream.
+                        normalize(std::array::from_fn(|i| {
+                            cosine * point[i] - sign * sine * left[i]
+                        }))
+                    })
+                };
+                let at_mouth = j + 2 == source.points.len()
+                    && matches!(
+                        source.endpoints[1].terminal,
+                        TerminalKind::Lake | TerminalKind::Ocean
+                    );
+                ChannelCrossSection {
+                    banks: offset(borders[0]),
+                    floodplain: offset(borders[2]),
+                    terrace: offset(borders[3]),
+                    delta: at_mouth.then(|| offset(borders[0] + t * (borders[2] - borders[0]))),
+                }
+            })
+            .collect()
+    }
+}
+
+fn source_geometry(
+    feature: FeatureId,
+    inputs: TerrainFacetInputs<'_>,
+) -> (RealizedCurve, Vec<[f64; 4]>) {
+    assert_eq!(
+        feature.kind,
+        FeatureKind::ChannelReach,
+        "channel geometry requires a channel feature"
+    );
+    let (line, _) = inputs
+        .channels
+        .trunk_vertex(feature.macro_anchor)
+        .expect("feature has a trunk");
+    if feature.ordinal == 0 {
+        (
+            trunk_curve(inputs, line),
+            inputs.channels.band_edges[line].clone(),
+        )
+    } else {
+        let rills = rills_of(
+            feature.macro_anchor,
+            inputs.channels,
+            inputs.geo,
+            &CatchmentCut::Drawn(inputs.globe.rill_partition_seed()),
+        );
+        let index = feature.ordinal as usize - 1;
+        let rill = &rills[index];
+        let edges = band_edges(
+            rill.catchment / vertex_catchment(inputs.geo),
+            local_slope(inputs.globe, inputs.geo, rill.vertex),
+            crate::channel::vertex_spacing(inputs.geo, rill.vertex),
+        );
+        (rill_curve(inputs, rill, index), vec![edges; 2])
+    }
+}
+
+/// Sample the realized bed at endpoints and three interior positions per
+/// segment. Heights are metres above the terrain datum, not radial positions.
+///
+/// Trunks interpolate the authoritative run's decreasing vertex elevations.
+/// Rills settle exactly onto their parent's bed at the inherited mouth and
+/// rise upstream by the local macro slope times angular length. This realizes
+/// bed geometry without asking a second graph where water should flow. No
+/// settling rise is introduced; roundoff comparisons may allow 1e-8 metres.
+/// type-audit: pending(wave-1: return)
+pub fn bed_height_profile(curve: &RealizedCurve, terrain: &GeneratedTerrain) -> Vec<f64> {
+    let inputs = TerrainFacetInputs {
+        globe: terrain.globe(),
+        geo: terrain.geosphere(),
+        channels: terrain.channels(),
+    };
+    let vertex = curve.feature.macro_anchor;
+    assert_eq!(
+        curve.feature.kind,
+        FeatureKind::ChannelReach,
+        "bed profile requires a channel feature"
+    );
+    let (line, _) = inputs
+        .channels
+        .trunk_vertex(vertex)
+        .expect("feature has a trunk");
+    let trunk = &inputs.channels.polylines[line].points;
+    let heights: Vec<_> = inputs.channels.run_vertices[line]
+        .iter()
+        .map(|&v| terrain.elevation_at(v).get())
+        .collect();
+    let (source, heights) = if curve.feature.ordinal == 0 {
+        (trunk.clone(), heights)
+    } else {
+        let rills = rills_of(
+            vertex,
+            inputs.channels,
+            inputs.geo,
+            &CatchmentCut::Drawn(inputs.globe.rill_partition_seed()),
+        );
+        let index = curve.feature.ordinal as usize - 1;
+        let slope = local_slope(inputs.globe, inputs.geo, vertex);
+        let mut beds: Vec<[f64; 2]> = Vec::with_capacity(index + 1);
+        for rill in &rills[..=index] {
+            let mouth = match rill.parent {
+                Some(parent) => sample_height(
+                    &[rills[parent].head, rills[parent].mouth],
+                    &beds[parent],
+                    rill.mouth,
+                ),
+                None => sample_height(trunk, &heights, rill.mouth),
+            };
+            // atan2 is stable for short and coincident rills. acos(dot(p,p))
+            // can invent a nonzero length from normalization roundoff.
+            let normal = cross(rill.head, rill.mouth);
+            let length = math::atan2(dot(normal, normal).sqrt(), dot(rill.head, rill.mouth));
+            beds.push([mouth + slope * length, mouth]);
+        }
+        (
+            vec![rills[index].head, rills[index].mouth],
+            beds[index].to_vec(),
+        )
+    };
+    let mut profile = Vec::new();
+    for segment in curve.points.windows(2) {
+        for t in [0.0, 0.25, 0.5, 0.75] {
+            profile.push(sample_height(
+                &source,
+                &heights,
+                interpolate(segment[0], segment[1], t),
+            ));
+        }
+    }
+    if let Some(&last) = curve.points.last() {
+        profile.push(sample_height(&source, &heights, last));
+    }
+    profile
+}
+
+fn sample_height(points: &[[f64; 3]], heights: &[f64], point: [f64; 3]) -> f64 {
+    // Preserve the inherited height exactly at an authored endpoint. An
+    // acos-based projection loses precision near t=0/1 on short rills and
+    // can otherwise create a bed step at an exactly attached mouth.
+    if let Some(index) = points.iter().position(|&p| p == point) {
+        return heights[index];
+    }
+    let projection = nearest_segment(points, point).expect("bed has segments");
+    let j = projection.segment;
+    heights[j] + projection.interpolation * (heights[j + 1] - heights[j])
+}
+
+fn interpolate(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
+    if t == 0.0 {
+        return a;
+    }
+    if t == 1.0 {
+        return b;
+    }
+    normalize(std::array::from_fn(|i| a[i] + t * (b[i] - a[i])))
+}
+
+fn boundary_at(address: &FacetAddress, edge: u8, point: [f64; 3]) -> BoundaryParameter {
+    let a = canonical_edge_sample(address, edge, 0.0);
+    let b = canonical_edge_sample(address, edge, 1.0);
+    let normal = cross(a, b);
+    let before = dot(cross(a, point), normal);
+    let after = dot(cross(point, b), normal);
+    BoundaryParameter {
+        address: address.clone(),
+        edge,
+        t: (before / (before + after)).clamp(0.0, 1.0),
+    }
+}
+
+fn clip_curve(source: &RealizedCurve, address: &FacetAddress, output: &mut Vec<RealizedCurve>) {
+    let facet = address.resolved();
+    let corners = facet.corners();
+    let center = facet.centroid();
+    let normals: [[f64; 3]; 4] = std::array::from_fn(|i| {
+        let normal = cross(corners[i], corners[(i + 1) % 4]);
+        let sign = if dot(normal, center) >= 0.0 {
+            1.0
+        } else {
+            -1.0
+        };
+        normal.map(|v| v * sign)
+    });
+    let mut piece: Option<RealizedCurve> = None;
+    for (index, segment) in source.points.windows(2).enumerate() {
+        let (mut enter, mut exit) = (0.0_f64, 1.0_f64);
+        let (mut enter_edge, mut exit_edge) = (None, None);
+        for (edge, &normal) in normals.iter().enumerate() {
+            let (a, b) = (dot(normal, segment[0]), dot(normal, segment[1]));
+            if a < 0.0 && b < 0.0 {
+                exit = -1.0;
+                break;
+            }
+            if a < 0.0 {
+                let t = a / (a - b);
+                if t > enter {
+                    enter = t;
+                    enter_edge = Some(edge as u8);
+                }
+            } else if b < 0.0 {
+                let t = a / (a - b);
+                if t < exit {
+                    exit = t;
+                    exit_edge = Some(edge as u8);
+                }
+            }
+        }
+        if enter >= exit {
+            if let Some(piece) = piece.take() {
+                output.push(piece);
+            }
+            continue;
+        }
+        let make_end = |t, edge, side| {
+            let position = interpolate(segment[0], segment[1], t);
+            let mut end =
+                source.endpoints[if side == EndpointSide::Upstream { 0 } else { 1 }].clone();
+            let position = if let Some(edge) = edge {
+                let boundary = boundary_at(address, edge, position);
+                let position = canonical_edge_sample(address, edge, boundary.t);
+                end.terminal = TerminalKind::Continuation;
+                end.boundary = Some(boundary);
+                position
+            } else {
+                position
+            };
+            (position, end)
+        };
+        let (start, upstream) = make_end(enter, enter_edge, EndpointSide::Upstream);
+        let (end, downstream) = make_end(exit, exit_edge, EndpointSide::Downstream);
+        let width = |t| source.width[index] + t * (source.width[index + 1] - source.width[index]);
+        let current = piece.get_or_insert_with(|| RealizedCurve {
+            feature: source.feature,
+            points: vec![start],
+            width: vec![width(enter)],
+            endpoints: [upstream, downstream.clone()],
+        });
+        current.points.push(end);
+        current.width.push(width(exit));
+        current.endpoints[1] = downstream;
+        if exit_edge.is_some() {
+            output.push(piece.take().expect("piece was started"));
+        }
+    }
+    if let Some(piece) = piece {
+        output.push(piece);
+    }
 }
 
 /// Evaluate a canonical point on an addressed facet edge in world space.
