@@ -470,11 +470,42 @@ settlements **per marine kind** at seed 42 at `BuildDepth::Full`.
 - *Exceeding the surface total* means the marine realm is outcompeting land — a
   placement defect, not a success.
 
-**M3 — Does the habitat expire?** Over a world-time sweep at seed 42, count
-vertices whose marine availability is non-zero at one instant and zero at a
-later one. The prediction is a non-zero count; a zero count means vent phase
-reaches seating in name only, and would falsify §4 — the campaign's headline —
-rather than merely underperforming.
+**M3 — Does the habitat expire?** Split in two, because Task 2 measured that the
+two halves can disagree and a single number could not tell them apart.
+
+**M3a — the mechanism (capacity side).** Over a world-time sweep at seed 42,
+count vertices whose marine availability or capacity is non-zero at one instant
+and zero at a later one.
+
+- *Prediction:* a non-zero count. This is the campaign's headline claim and it is
+  measured where the vent layer demonstrably reaches.
+- *A zero count falsifies §4* — vent phase reaches seating in name only.
+
+**Negative control for M3a:** the same sweep with vent phase held constant must
+produce zero. Written first, before the live sweep is trusted.
+
+**M3b — the reachability (occupation side).** Across the bake, count occupied
+vertices that host a vent transitioning into `Failed`.
+
+- **Both poles are results, and this is why the split exists.** Task 2 measured
+  that the vent layer reaches *capacity* but not *siting*: a CHEMOSYNTHATE-only
+  chemotroph (habitable set 403 → 740 under the vent layer, 337 vent-only) and a
+  thermophile (peak capacity 61.05 → 104.83, improved at 390 vertices) each
+  placed four occupations through the real bake, and **not one site sat on a
+  vent-improved vertex**, because the bake marches epochs rather than taking a
+  capacity argmax.
+- *A non-zero count* means the ending fires in an ordinary world, and the
+  chronicle can say so.
+- *A zero count is a REACHABILITY finding, not a falsification.* It says the
+  mechanism is correct and rarely exercised at this seed — which is a fact about
+  the bake's siting, not about vent succession. It must be reported in those
+  words, and it must not be read as falsifying §4, which M3a settles
+  independently.
+- **The trap this avoids:** measuring expiry only against where communities are
+  *founded* would let a null read as "the habitat does not expire" when the true
+  cause is "nothing was ever built there". That is a falsifier the mechanism
+  cannot produce, and preregistering one is how a campaign talks itself out of a
+  real result.
 
 **M4 — Do the two straddling kinds keep their land habitat?** Count the
 vertices at which `sea-elf` and `giant-crocodile` each have non-zero

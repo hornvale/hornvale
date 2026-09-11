@@ -269,14 +269,27 @@ stratum; M2 is two-sided green; M7 shows no map domination.
 **Success criteria:** M3 non-zero with its negative control at zero; sea-elf
 reach extended without its residence moving; book, ledger and artifacts current.
 
-- [ ] Write M3's **negative control first**: the same world-time sweep with vent
-  phase held constant must produce a count of zero. Written second, it is a
-  rationalisation; written first, it is a control. Confirm it is zero before the
+- [ ] Write M3a's **negative control first**: the same world-time sweep with vent
+  phase held constant must produce a count of zero. Written second it is a
+  rationalisation; written first it is a control. Confirm it is zero before the
   live sweep is trusted.
-- [ ] Run M3: over a world-time sweep at seed 42, count vertices whose marine
-  availability is non-zero at one instant and zero at a later one. A zero count
-  falsifies spec §4 — the campaign's headline — rather than merely
-  underperforming, and is reported as such.
+- [ ] Run **M3a** (the mechanism, capacity side): over a world-time sweep at seed
+  42, count vertices whose marine availability or capacity is non-zero at one
+  instant and zero at a later one. A zero count falsifies spec §4 and is reported
+  as the headline.
+- [ ] Run **M3b** (the reachability, occupation side): count occupied vertices
+  hosting a vent that transitions into `Failed` across the bake. **Task 2
+  measured that this may legitimately be zero** — the vent layer reaches capacity
+  but not siting, and two probe kinds placed four occupations each without one
+  landing on a vent-improved vertex. A zero here is a reachability finding about
+  the bake's siting, NOT a falsification of §4, and must be written in those
+  words. Do not retune anything to make it non-zero.
+- [ ] **Test the ending mechanism directly, regardless of M3b.** Construct an
+  occupied vertex whose vent enters `Failed` and assert the occupation ends,
+  rather than waiting for the bake to produce that situation naturally. A
+  mechanism that is correct and rarely exercised still needs a test that
+  exercises it; M3b measures how often the world does, which is a different
+  question.
 - [ ] Wire a failing vent to an ending: a vent entering `VentState::Failed`
   under an occupied vertex ends that occupation with `Ended::Nature` **and** a
   drawn cause at `OccupationRecord.core.cause` (note the hop through `core` —
