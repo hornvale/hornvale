@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run visual-check visual-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: worktree-reap worktree-reap-dry context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run visual-check visual-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -277,7 +277,38 @@ gate-run:
 # failure rather than as success. A gate that reports green when it does not
 # know is worse than one that reports red when it is unsure.
 	@rm -f target/nextest/ci/nextest.rc
+# `--no-fail-fast` IS LOAD-BEARING HERE AND IS NOT A STYLE CHOICE. Without it
+# nextest CANCELS PENDING TESTS at the first failure — those already in flight
+# finish and report, everything not yet started never runs. So a red chamber
+# reports the failures it happened to have running and leaves the rest of the
+# suite unexecuted. (Verified both ways on two injected failures: the default
+# prints `Cancelling due to test failure`, `--no-fail-fast` does not.) That is
+# fine locally,
+# where a re-run is a keystroke. It is not fine here: a chamber re-run is a
+# slot on the one serial box everything else queues behind, so each red buys
+# the submitter exactly one bit at ~20 minutes a bit.
+#
+# MEASURED, 2026-09-11: campaign/underworld-peoples spent NINE chamber runs
+# landing one campaign, and its eighth red read
+# `4816/6073 tests run: 4815 passed, 1 failed` — 1,257 tests never executed,
+# each subsequent red revealing exactly one more pin its four new peoples had
+# always been going to move. With this flag that is one red listing all of
+# them, and roughly two attempts instead of nine.
+#
+# THE COST IS ASYMMETRIC AND THAT IS THE WHOLE ARGUMENT. A GREEN run is
+# UNCHANGED — there is nothing to fail fast on, so it neither runs nor skips a
+# single extra test. Only a RED run costs more: it finishes the suite instead
+# of stopping early, bounded above by a green run's own wall time (~850 s on
+# lefford), which against that run's 681 s is ~3 minutes. Three minutes on a
+# run that has already failed, to save a ~20-minute slot per additional
+# failure.
+#
+# This is the project's stated position for local runs already — CLAUDE.md's
+# iteration guidance says "Run ONCE, inspect many" and prescribes
+# `--no-fail-fast` for the whole failure list in one pass. The chamber was the
+# one place that most needed it and the one place not doing it.
 	@{ NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
+	    --no-fail-fast \
 	    --message-format libtest-json-plus \
 	    2>&1 1>target/nextest/ci/run.json; \
 	   echo $$? > target/nextest/ci/nextest.rc; \
@@ -673,6 +704,18 @@ worktree-take: ## Claim a recycled campaign worktree (NAME=<campaign> [BASE=main
 #     intervening build did not touch, and `worktree-take` deliberately does
 #     not build. Verified: stamp -> partial build -> `--file` proposes deleting
 #     the live test binaries.
+# REAPING IS NOT SWEEPING, and the two are easy to confuse. `sweep` reclaims
+# dead build GENERATIONS inside a target/; `worktree-reap` removes whole
+# worktrees whose branch already landed. Sweeping a finished campaign's
+# worktree keeps the corpse; reaping it is what actually returns the space and
+# the pool slot. Population comes from `git worktree list`, so it spans BOTH
+# pools — see scripts/worktree-reap.sh's header for why that matters.
+worktree-reap-dry: ## Show which merged worktrees would be reaped, removing nothing
+	@bash scripts/worktree-reap.sh
+
+worktree-reap: ## Remove every worktree whose branch is merged (across all pools)
+	@bash scripts/worktree-reap.sh --apply
+
 sweep-check: ## Fail with an install hint if cargo-sweep is missing
 	@command -v cargo-sweep >/dev/null 2>&1 || { \
 		echo "cargo-sweep not found — install it (decision 0848):"; \
