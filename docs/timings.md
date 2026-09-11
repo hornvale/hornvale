@@ -7315,3 +7315,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T23:09:17Z | gate-commit | 42.732 | 30.135 | 0.901 | 0.73 | 0 | d2f81666d | campaign/the-coherence | MacBookPro | 10 |
 | 2026-09-11T23:15:30Z | gate-commit | 139.579 | 451.247 | 43.778 | 3.55 | 0 | d2f81666d | campaign/the-coherence | MacBookPro | 10 |
 | 2026-09-11T23:16:53Z | gate-commit | 42.032 | 74.932 | 20.510 | 2.27 | 0 | d2f81666d | campaign/the-coherence | MacBookPro | 10 |
+| 2026-09-11T23:18:19Z | gate-commit | 42.237 | 74.284 | 20.547 | 2.25 | 0 | d2f81666d | campaign/the-coherence | MacBookPro | 10 |
+| 2026-09-11T23:30:20Z | gate-commit | 37.423 | 50.403 | 6.209 | 1.51 | 0 | 58839bf25 | campaign/the-coherence | MacBookPro | 10 |
+| 2026-09-11T23:32:00Z | gate-commit | 73.760 | 115.198 | 36.722 | 2.06 | 0 | 58839bf25 | campaign/the-coherence | MacBookPro | 10 |

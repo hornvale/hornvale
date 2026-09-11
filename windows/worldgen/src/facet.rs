@@ -1,6 +1,6 @@
 //! Deterministic composition of addressed terrain and climate surface patches.
 
-use std::fmt;
+use std::fmt::{self, Write as _};
 
 use hornvale_kernel::{Facet, NearestVertexIndex, Seed, Vertex, World};
 use hornvale_terrain::{
@@ -78,14 +78,69 @@ pub struct SurfaceRealizationContext {
     climate: GeneratedClimate,
     nearest: NearestVertexIndex,
     planet_radius_m: f64,
+    configuration: SurfaceConfiguration,
 }
 
-/// The configuration record changes whenever sample topology or channel meaning changes.
-const SURFACE_ALGORITHM_VERSION: &str = "hornvale/surface-realization/v1";
-const SURFACE_CONFIGURATION_SCHEMA: &str = "hornvale/surface-configuration/v1";
-const SAMPLE_TOPOLOGY: &str = "quad-corners-then-centroid/fan-v1";
-const MATERIAL_CHANNELS: &str =
-    "bedrock,soil,sediment,wetland,fresh-water,salt-water,snow-ice,vegetation/v1";
+/// Every authored calibration consumed by surface realization, held once so
+/// the canonical revision record and the realization path cannot drift apart.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct SurfaceConfiguration {
+    record_schema: &'static str,
+    algorithm_version: &'static str,
+    globe_level: u32,
+    sample_topology: &'static str,
+    material_channels: &'static str,
+    flow_half_saturation: f64,
+    slope_half_saturation_m_per_rad: f64,
+    channel_width_multiplier: f64,
+    material_altitude_scale_m: f64,
+    material_shore_scale_m: f64,
+    material_sediment_half_saturation_m: f64,
+    material_drainage_half_saturation: f64,
+    material_warmth_floor_c: f64,
+    material_warmth_span_c: f64,
+    material_cold_ceiling_c: f64,
+    material_cold_span_c: f64,
+    material_fresh_drainage_share: f64,
+    material_bedrock_base: f64,
+    material_soil_base: f64,
+    material_soil_sediment_suppression: f64,
+    material_sediment_drainage_share: f64,
+    material_sediment_shore_share: f64,
+    material_snow_base: f64,
+    material_snow_ocean_share: f64,
+}
+
+impl SurfaceConfiguration {
+    const fn current() -> Self {
+        Self {
+            record_schema: "hornvale/surface-configuration/v2",
+            algorithm_version: "hornvale/surface-realization/v1",
+            globe_level: hornvale_terrain::GLOBE_LEVEL,
+            sample_topology: "quad-corners-then-centroid/fan-v1",
+            material_channels: "bedrock,soil,sediment,wetland,fresh-water,salt-water,snow-ice,vegetation/v1",
+            flow_half_saturation: 24.0,
+            slope_half_saturation_m_per_rad: 80_000.0,
+            channel_width_multiplier: 2.0,
+            material_altitude_scale_m: 4_000.0,
+            material_shore_scale_m: 20_000.0,
+            material_sediment_half_saturation_m: 8.0,
+            material_drainage_half_saturation: 24.0,
+            material_warmth_floor_c: -10.0,
+            material_warmth_span_c: 35.0,
+            material_cold_ceiling_c: 5.0,
+            material_cold_span_c: 30.0,
+            material_fresh_drainage_share: 0.35,
+            material_bedrock_base: 0.2,
+            material_soil_base: 0.2,
+            material_soil_sediment_suppression: 0.5,
+            material_sediment_drainage_share: 0.5,
+            material_sediment_shore_share: 0.5,
+            material_snow_base: 0.25,
+            material_snow_ocean_share: 0.5,
+        }
+    }
+}
 
 impl SurfaceRealizationContext {
     /// Reconstruct and retain the macro terrain and climate used by every patch request.
@@ -93,18 +148,9 @@ impl SurfaceRealizationContext {
     // and retain one terrain/climate pair for all subsequent patch reads.
     #[allow(clippy::disallowed_methods)]
     pub fn build(world: &World) -> Result<SurfaceRealizationContext, SurfaceBuildError> {
+        let configuration = SurfaceConfiguration::current();
         let world_bytes = world.to_json();
-        let source_revision = hexadecimal(&stable_digest(&world_bytes));
-        let configuration_record = canonical_configuration_record(
-            &world_bytes,
-            &source_revision,
-            hornvale_terrain::GLOBE_LEVEL,
-        );
-        let revision = SurfaceRevision {
-            source_revision,
-            algorithm_version: SURFACE_ALGORITHM_VERSION,
-            configuration_hash: stable_digest(&configuration_record),
-        };
+        let revision = surface_revision(&world_bytes, configuration);
 
         let terrain = terrain_of(world).map_err(|error| {
             SurfaceBuildError::MissingMacroContext(format!(
@@ -116,11 +162,11 @@ impl SurfaceRealizationContext {
                 "climate reconstruction failed: {error}"
             ))
         })?;
-        if terrain.geosphere().depth() != hornvale_terrain::GLOBE_LEVEL {
+        if terrain.geosphere().depth() != configuration.globe_level {
             return Err(SurfaceBuildError::MissingMacroContext(format!(
                 "terrain mesh depth {} is not the Level-{} surface authority",
                 terrain.geosphere().depth(),
-                hornvale_terrain::GLOBE_LEVEL
+                configuration.globe_level
             )));
         }
         if climate.geosphere().depth() != terrain.geosphere().depth()
@@ -154,6 +200,7 @@ impl SurfaceRealizationContext {
             climate,
             nearest,
             planet_radius_m,
+            configuration,
         })
     }
 
@@ -251,8 +298,11 @@ impl SurfaceRealizationContext {
         let flow_direction = normalized_or_zero(blend_vector(vertices, weights, |vertex| {
             downhill_direction(&self.terrain, vertex)
         }));
-        let flow_strength = ratio(drainage, 24.0);
-        let slope_strength = ratio(slope_m_per_rad, 80_000.0);
+        let flow_strength = ratio(drainage, self.configuration.flow_half_saturation);
+        let slope_strength = ratio(
+            slope_m_per_rad,
+            self.configuration.slope_half_saturation_m_per_rad,
+        );
         let normal = normalized_or_zero([
             position[0] + flow_direction[0] * slope_m_per_rad / self.planet_radius_m,
             position[1] + flow_direction[1] * slope_m_per_rad / self.planet_radius_m,
@@ -276,7 +326,7 @@ impl SurfaceRealizationContext {
                     let edges = reading.band_edges.map(|edge| edge * self.planet_radius_m);
                     (
                         distance,
-                        2.0 * edges[0],
+                        self.configuration.channel_width_multiplier * edges[0],
                         annulus_weight(distance.abs(), edges[0], edges[1]),
                         annulus_weight(distance.abs(), edges[1], edges[2]),
                         annulus_weight(distance.abs(), edges[2], edges[3]),
@@ -285,19 +335,22 @@ impl SurfaceRealizationContext {
                 None => (max_surface_distance, 0.0, 0.0, 0.0, 0.0),
             };
 
-        let material_weights = material_weights(MaterialInputs {
-            temperature_c,
-            moisture,
-            height_asl_m,
-            slope_strength,
-            shoreline_distance_m,
-            ocean,
-            salt,
-            river,
-            sediment_m,
-            drainage,
-            induration,
-        });
+        let material_weights = material_weights(
+            MaterialInputs {
+                temperature_c,
+                moisture,
+                height_asl_m,
+                slope_strength,
+                shoreline_distance_m,
+                ocean,
+                salt,
+                river,
+                sediment_m,
+                drainage,
+                induration,
+            },
+            self.configuration,
+        );
         let ridge_direction = normalized_or_zero(cross(position, flow_direction));
         let sample = FacetFieldSample {
             position,
@@ -322,26 +375,158 @@ impl SurfaceRealizationContext {
     }
 }
 
+fn surface_revision(world_bytes: &str, configuration: SurfaceConfiguration) -> SurfaceRevision {
+    let source_revision = hexadecimal(&stable_digest(world_bytes));
+    let configuration_record =
+        canonical_configuration_record(world_bytes, &source_revision, configuration);
+    SurfaceRevision {
+        source_revision,
+        algorithm_version: configuration.algorithm_version,
+        configuration_hash: stable_digest(&configuration_record),
+    }
+}
+
+/// Serialize one complete realization configuration in a fixed field order.
+/// Text fields are length-framed and floating-point values use their exact
+/// IEEE-754 bits, so locale and display-format changes cannot move identity.
 fn canonical_configuration_record(
     world_bytes: &str,
     source_revision: &str,
-    globe_level: u32,
+    configuration: SurfaceConfiguration,
 ) -> String {
-    format!(
-        "schema:{}:{}\nalgorithm:{}:{}\nglobe-level:{globe_level}\nsample-topology:{}:{}\nmaterial-channels:{}:{}\nsource-revision:{}:{}\nworld-bytes:{}:{}",
-        SURFACE_CONFIGURATION_SCHEMA.len(),
-        SURFACE_CONFIGURATION_SCHEMA,
-        SURFACE_ALGORITHM_VERSION.len(),
-        SURFACE_ALGORITHM_VERSION,
-        SAMPLE_TOPOLOGY.len(),
-        SAMPLE_TOPOLOGY,
-        MATERIAL_CHANNELS.len(),
-        MATERIAL_CHANNELS,
-        source_revision.len(),
-        source_revision,
-        world_bytes.len(),
-        world_bytes,
-    )
+    let mut record = String::new();
+    push_text_field(&mut record, "record-schema", configuration.record_schema);
+    push_text_field(
+        &mut record,
+        "algorithm-version",
+        configuration.algorithm_version,
+    );
+    push_u32_field(&mut record, "globe-level", configuration.globe_level);
+    push_text_field(
+        &mut record,
+        "sample-topology",
+        configuration.sample_topology,
+    );
+    push_text_field(
+        &mut record,
+        "material-channels",
+        configuration.material_channels,
+    );
+    push_f64_field(
+        &mut record,
+        "flow-half-saturation",
+        configuration.flow_half_saturation,
+    );
+    push_f64_field(
+        &mut record,
+        "slope-half-saturation-m-per-rad",
+        configuration.slope_half_saturation_m_per_rad,
+    );
+    push_f64_field(
+        &mut record,
+        "channel-width-multiplier",
+        configuration.channel_width_multiplier,
+    );
+    push_f64_field(
+        &mut record,
+        "material-altitude-scale-m",
+        configuration.material_altitude_scale_m,
+    );
+    push_f64_field(
+        &mut record,
+        "material-shore-scale-m",
+        configuration.material_shore_scale_m,
+    );
+    push_f64_field(
+        &mut record,
+        "material-sediment-half-saturation-m",
+        configuration.material_sediment_half_saturation_m,
+    );
+    push_f64_field(
+        &mut record,
+        "material-drainage-half-saturation",
+        configuration.material_drainage_half_saturation,
+    );
+    push_f64_field(
+        &mut record,
+        "material-warmth-floor-c",
+        configuration.material_warmth_floor_c,
+    );
+    push_f64_field(
+        &mut record,
+        "material-warmth-span-c",
+        configuration.material_warmth_span_c,
+    );
+    push_f64_field(
+        &mut record,
+        "material-cold-ceiling-c",
+        configuration.material_cold_ceiling_c,
+    );
+    push_f64_field(
+        &mut record,
+        "material-cold-span-c",
+        configuration.material_cold_span_c,
+    );
+    push_f64_field(
+        &mut record,
+        "material-fresh-drainage-share",
+        configuration.material_fresh_drainage_share,
+    );
+    push_f64_field(
+        &mut record,
+        "material-bedrock-base",
+        configuration.material_bedrock_base,
+    );
+    push_f64_field(
+        &mut record,
+        "material-soil-base",
+        configuration.material_soil_base,
+    );
+    push_f64_field(
+        &mut record,
+        "material-soil-sediment-suppression",
+        configuration.material_soil_sediment_suppression,
+    );
+    push_f64_field(
+        &mut record,
+        "material-sediment-drainage-share",
+        configuration.material_sediment_drainage_share,
+    );
+    push_f64_field(
+        &mut record,
+        "material-sediment-shore-share",
+        configuration.material_sediment_shore_share,
+    );
+    push_f64_field(
+        &mut record,
+        "material-snow-base",
+        configuration.material_snow_base,
+    );
+    push_f64_field(
+        &mut record,
+        "material-snow-ocean-share",
+        configuration.material_snow_ocean_share,
+    );
+    push_text_field(&mut record, "source-revision", source_revision);
+    push_text_field(&mut record, "world-bytes", world_bytes);
+    record
+}
+
+fn push_text_field(record: &mut String, name: &str, value: &str) {
+    write!(record, "{}:{name}:text:{}:", name.len(), value.len())
+        .expect("writing a canonical record to String cannot fail");
+    record.push_str(value);
+    record.push('\n');
+}
+
+fn push_u32_field(record: &mut String, name: &str, value: u32) {
+    writeln!(record, "{}:{name}:u32:{value:08x}", name.len())
+        .expect("writing a canonical record to String cannot fail");
+}
+
+fn push_f64_field(record: &mut String, name: &str, value: f64) {
+    writeln!(record, "{}:{name}:f64:{:016x}", name.len(), value.to_bits())
+        .expect("writing a canonical record to String cannot fail");
 }
 
 /// A stable 256-bit metadata digest built from four domain-separated uses of
@@ -474,26 +659,49 @@ struct MaterialInputs {
     induration: f64,
 }
 
-fn material_weights(input: MaterialInputs) -> [f32; 8] {
+fn material_weights(input: MaterialInputs, configuration: SurfaceConfiguration) -> [f32; 8] {
     let moisture = input.moisture.clamp(0.0, 1.0);
     let slope = input.slope_strength.clamp(0.0, 1.0);
     let land = (1.0 - input.ocean - input.salt).clamp(0.0, 1.0);
-    let altitude = (input.height_asl_m.max(0.0) / 4_000.0).clamp(0.0, 1.0);
-    let shore = (1.0 - input.shoreline_distance_m.abs() / 20_000.0).clamp(0.0, 1.0);
-    let sediment = ratio(input.sediment_m.max(0.0), 8.0);
-    let drainage = ratio(input.drainage.max(0.0), 24.0);
-    let warmth = ((input.temperature_c + 10.0) / 35.0).clamp(0.0, 1.0);
-    let cold = ((5.0 - input.temperature_c) / 30.0).clamp(0.0, 1.0);
-    let fresh_water = (input.river + 0.35 * drainage * shore).clamp(0.0, 1.0);
+    let altitude =
+        (input.height_asl_m.max(0.0) / configuration.material_altitude_scale_m).clamp(0.0, 1.0);
+    let shore = (1.0 - input.shoreline_distance_m.abs() / configuration.material_shore_scale_m)
+        .clamp(0.0, 1.0);
+    let sediment = ratio(
+        input.sediment_m.max(0.0),
+        configuration.material_sediment_half_saturation_m,
+    );
+    let drainage = ratio(
+        input.drainage.max(0.0),
+        configuration.material_drainage_half_saturation,
+    );
+    let warmth = ((input.temperature_c - configuration.material_warmth_floor_c)
+        / configuration.material_warmth_span_c)
+        .clamp(0.0, 1.0);
+    let cold = ((configuration.material_cold_ceiling_c - input.temperature_c)
+        / configuration.material_cold_span_c)
+        .clamp(0.0, 1.0);
+    let fresh_water = (input.river
+        + configuration.material_fresh_drainage_share * drainage * shore)
+        .clamp(0.0, 1.0);
     let salt_water = (input.ocean + input.salt).clamp(0.0, 1.0);
     let mut raw = [
-        land * (0.2 + input.induration.clamp(0.0, 1.0) + slope + altitude),
-        land * (1.0 - slope) * (0.2 + moisture) * (1.0 - sediment * 0.5),
-        land * (sediment + 0.5 * drainage + 0.5 * shore),
+        land * (configuration.material_bedrock_base
+            + input.induration.clamp(0.0, 1.0)
+            + slope
+            + altitude),
+        land * (1.0 - slope)
+            * (configuration.material_soil_base + moisture)
+            * (1.0 - sediment * configuration.material_soil_sediment_suppression),
+        land * (sediment
+            + configuration.material_sediment_drainage_share * drainage
+            + configuration.material_sediment_shore_share * shore),
         land * moisture * (1.0 - slope) * (input.river + drainage),
         fresh_water,
         salt_water,
-        cold * (0.25 + altitude + 0.5 * input.ocean),
+        cold * (configuration.material_snow_base
+            + altitude
+            + configuration.material_snow_ocean_share * input.ocean),
         land * warmth * moisture * (1.0 - slope),
     ];
     let total = raw.iter().sum::<f64>();
@@ -556,5 +764,26 @@ fn normalized_or_zero(vector: [f64; 3]) -> [f64; 3] {
         [0.0; 3]
     } else {
         vector.map(|component| component / magnitude)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SurfaceConfiguration, surface_revision};
+
+    #[test]
+    fn changing_consumed_calibration_changes_configuration_hash_and_revision() {
+        let baseline = SurfaceConfiguration::current();
+        let mut changed = baseline;
+        changed.flow_half_saturation += 1.0;
+
+        let baseline_revision = surface_revision("canonical-world-bytes", baseline);
+        let changed_revision = surface_revision("canonical-world-bytes", changed);
+
+        assert_ne!(
+            baseline_revision.configuration_hash,
+            changed_revision.configuration_hash
+        );
+        assert_ne!(baseline_revision, changed_revision);
     }
 }

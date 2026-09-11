@@ -182,14 +182,16 @@ fn same_world_has_same_surface_revision() {
 
 #[test]
 fn patch_bytes_do_not_depend_on_request_order() {
-    let context = SurfaceRealizationContext::build(&world(42)).expect("context builds");
+    let world = world(42);
+    let a_then_b = SurfaceRealizationContext::build(&world).expect("A-then-B context builds");
+    let b_then_a = SurfaceRealizationContext::build(&world).expect("B-then-A context builds");
     let a = address(0, 0);
     let b = address(1, 3);
 
-    let a_first = canonical_patch_bytes(&context.realize(&a).expect("A realizes first"));
-    let b_second = canonical_patch_bytes(&context.realize(&b).expect("B realizes second"));
-    let b_first = canonical_patch_bytes(&context.realize(&b).expect("B realizes first"));
-    let a_second = canonical_patch_bytes(&context.realize(&a).expect("A realizes second"));
+    let a_first = canonical_patch_bytes(&a_then_b.realize(&a).expect("A realizes first"));
+    let b_second = canonical_patch_bytes(&a_then_b.realize(&b).expect("B realizes second"));
+    let b_first = canonical_patch_bytes(&b_then_a.realize(&b).expect("B realizes first"));
+    let a_second = canonical_patch_bytes(&b_then_a.realize(&a).expect("A realizes second"));
 
     assert_eq!(a_first, a_second);
     assert_eq!(b_first, b_second);
