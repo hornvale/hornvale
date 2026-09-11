@@ -328,7 +328,6 @@ hornvale-astronomy::hornvale_astronomy$provider::tests::a_locked_sun_is_aperiodi
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_moon_below_the_phase_threshold_is_a_smear_not_a_face
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_mooned_sky_promises_bloodred_lunar_eclipses_at_night
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_night_sky_reports_each_body_as_its_own_phrase
-hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_heliacal_rising_across_a_year
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_wandering_star_across_two_synodic_periods
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_query_has_a_documented_answer
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_sky_answers_for_the_instant_asked
@@ -1325,7 +1324,7 @@ hornvale-kernel::suite$golden_harness::matching_bytes_pass
 hornvale-kernel::suite$golden_harness::rebaseline_creates_a_missing_fixture_and_its_parents
 hornvale-kernel::suite$golden_harness::rebaseline_on_matching_bytes_is_a_no_op_match
 hornvale-kernel::suite$golden_harness::rebaseline_rewrites_a_drifted_fixture
-hornvale-lab::burr_calibration$the_baseline_roster_is_eighteen_tongues
+hornvale-lab::burr_calibration$the_roster_is_twenty_two_tongues
 hornvale-lab::hornvale_lab$authored::tests::a_changed_value_moves_the_authored_diff
 hornvale-lab::hornvale_lab$authored::tests::a_column_the_live_registry_no_longer_has_is_diverged
 hornvale-lab::hornvale_lab$authored::tests::a_current_fixture_announces_nothing
@@ -1378,13 +1377,11 @@ hornvale-lab::hornvale_lab$diff::tests::csv_round_trip_diffs_through_render_diff
 hornvale-lab::hornvale_lab$diff::tests::header_reports_row_and_refusal_counts
 hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_292_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -1463,7 +1460,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -2262,9 +2258,9 @@ hornvale-scene::suite$one_projection::region_and_room_project_through_the_same_f
 hornvale-scene::suite$wind_contract::documented_band_matches_circulation
 hornvale-sentiment::hornvale_sentiment$axes::smoke_tests::every_axis_self_distance_is_zero
 hornvale-sentiment::hornvale_sentiment$axes::smoke_tests::habitat_distance_is_categorical
-hornvale-sentiment::hornvale_sentiment$tests::catalog_holds_exactly_the_fifteen_peoples
+hornvale-sentiment::hornvale_sentiment$tests::catalog_holds_exactly_the_nineteen_peoples
 hornvale-sentiment::hornvale_sentiment$tests::catalog_is_deterministic
-hornvale-sentiment::hornvale_sentiment$tests::only_drow_is_subterranean_among_the_fifteen
+hornvale-sentiment::hornvale_sentiment$tests::subterranean_peoples_are_all_in_the_underworld_catalog
 hornvale-sentiment::suite$axes::activity_cycle_distance_grows_with_night_vision_gap
 hornvale-sentiment::suite$axes::condition_niche_distance_grows_with_optimum_gap
 hornvale-sentiment::suite$axes::diet_predation_direction_differs_across_a_real_predation_edge
@@ -3491,7 +3487,6 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
-hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -3647,7 +3642,7 @@ hornvale-worldgen::hornvale_worldgen$gazetteer::tests::a_volcanos_salt_is_its_ba
 hornvale-worldgen::hornvale_worldgen$gazetteer::tests::the_salt_is_injective_over_class_and_vertex
 hornvale-worldgen::hornvale_worldgen$gazetteer::tests::two_classes_at_one_vertex_do_not_share_a_name
 hornvale-worldgen::hornvale_worldgen$gazetteer::tests::two_peoples_name_one_feature_differently
-hornvale-worldgen::hornvale_worldgen$gazetteer_wiring_tests::gazetteer_peoples_is_the_settled_roster_at_fifteen
+hornvale-worldgen::hornvale_worldgen$gazetteer_wiring_tests::gazetteer_peoples_is_the_settled_roster_at_nineteen
 hornvale-worldgen::hornvale_worldgen$graph_derive::tests::a_frozen_mire_travels_better_than_a_wet_one
 hornvale-worldgen::hornvale_worldgen$graph_derive::tests::dry_ground_is_unmodified
 hornvale-worldgen::hornvale_worldgen$graph_derive::tests::mud_and_snow_each_impede_travel
@@ -3832,6 +3827,7 @@ hornvale-worldgen::hornvale_worldgen$tests::build_world_generates_settlements_an
 hornvale-worldgen::hornvale_worldgen$tests::build_world_produces_the_full_cascade
 hornvale-worldgen::hornvale_worldgen$tests::cached_fixed_axes_equal_the_liebig_minimum
 hornvale-worldgen::hornvale_worldgen$tests::cascade_regime_of_matches_the_authored_regime_map
+hornvale-worldgen::hornvale_worldgen$tests::collective_autonym_cache_resolves_each_people_once_in_order
 hornvale-worldgen::hornvale_worldgen$tests::culture_lines_name_the_flagship_and_its_subsistence
 hornvale-worldgen::hornvale_worldgen$tests::deity_name_seed_is_pure_and_entity_id_free
 hornvale-worldgen::hornvale_worldgen$tests::domains_roster_crate_names_are_unique_and_nonempty
@@ -3853,7 +3849,6 @@ hornvale-worldgen::hornvale_worldgen$tests::name_gloss_predicate_is_registered_f
 hornvale-worldgen::hornvale_worldgen$tests::no_zero_population_settlements
 hornvale-worldgen::hornvale_worldgen$tests::occlusion_composes_with_species_perception
 hornvale-worldgen::hornvale_worldgen$tests::pacing_elves_harder_than_dwarves_changes_no_drift_regime
-hornvale-worldgen::hornvale_worldgen$tests::placed_peoples_lists_flagship_holders_in_registry_order
 hornvale-worldgen::hornvale_worldgen$tests::referent_ord_discriminates_on_concept
 hornvale-worldgen::hornvale_worldgen$tests::register_all_via_roster_registers_name_gloss
 hornvale-worldgen::hornvale_worldgen$tests::settlement_lines_describe_the_people
@@ -4415,11 +4410,9 @@ hornvale::suite$observations::observations_evidence_status_rejects_editorial_onl
 hornvale::suite$observations::observations_export_missing_manifest_does_not_create_output_directory
 hornvale::suite$observations::observations_export_neighbors_preserves_the_authoritative_scene_and_refuses_systems
 hornvale::suite$observations::observations_export_neighbors_refuses_missing_or_mismatched_declared_world
-hornvale::suite$observations::observations_export_neighbors_resolves_declared_world_from_repository_root
 hornvale::suite$observations::observations_export_refuses_every_non_existing_capability_state_by_name
 hornvale::suite$observations::observations_export_refuses_needs_simulation_extension
 hornvale::suite$observations::observations_fixture_is_a_valid_internal_record
-hornvale::suite$observations::observations_hv_009_neighbor_fixture_is_producer_backed
 hornvale::suite$observations::observations_missing_count_unit_is_refused
 hornvale::suite$observations::observations_missing_object_or_scale_is_refused
 hornvale::suite$observations::observations_non_finite_frame_rate_and_time_are_refused
