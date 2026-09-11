@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–9 local implementation and evidence are independently reviewed; Stages 1–3 have green canonical reports. The final clean 4K package, full moving review and performance/repeatability measurements are complete. Whole-branch technical review is approved with documentation corrections recorded; final canonical stage and census accounting are complete. Nathan approved the final visual direction and merge at G6 on 2026-09-11; canonical landing remains pending.
+**Status:** Complete. Tasks 1–9 local implementation and evidence are independently reviewed; Stages 1–3 have green canonical reports. The final clean 4K package, full moving review and performance/repeatability measurements are complete. Whole-branch technical review is approved with documentation corrections recorded; final canonical stage and census accounting are complete. Nathan approved the final visual direction and merge at G6 on 2026-09-11; canonical merge landed at `c0b76af87388ef33fa841b659684cfba52994a0a` on 2026-09-11.
 
 ## Global Constraints
 
@@ -595,7 +595,7 @@ review MP4 is SDR. Preserve the original PNGs as the high-quality source.
 **Goal:** Make the libraries/client maintainable, demonstrate the final visual and performance result, and prepare the G6 review package.
 **Success Criteria:** Client CPU gates run in the canonical client phase; docs match behavior; the final moving package and measurements are reviewable; G6 decision is recorded before merge.
 **Tests:** Tasks 8–9; dependency mutation witnesses, scoped client gates, final package verification, canonical stage evidence and GPU review.
-**Status:** In Progress
+**Status:** Complete
 
 ### Task 8: enforce reuse boundaries and integrate client checks
 
@@ -654,7 +654,7 @@ Canonical compilation of this new client remains the final Stage 4 request.
 - [x] Complete census-close accounting: the authorized census returned no scientific golden changes. A same-ref, 1000-row live main-study profile supports the scoped per-run finding; original timing delivery incorporated at `e8fdb804c` through the green normal hook. The meeting study and pipeline tail were not profiled; no scaling guarantee or changed alarm is claimed.
 - [x] Reconcile all ledger follow-ups. Write the chronicle/retrospective from measured results, not the concept image. Update reconciliation/spec/plan links and the four-stage tracker; do not call the campaign complete while visual acceptance remains pending.
 - [x] Present G6: leading schema/model/determinism rulings (including radius), post-G3 ledger digest, verified video/stills, performance and limitations, actual check results, and candidate SHA. Wait for Nathan's final visual/merge decision under campaign-autopilot; this approval is separate from publication.
-- [ ] After approval use `closing-a-campaign` and `submitting-to-the-sluice` for the actual integration. Remove only the Planetarium section of `IMPLEMENTATION_PLAN.md` when these stages are complete; preserve the inherited unrelated tracker above it. Remove the whole file only if no unfinished tracker remains. Keep this permanent plan with checked steps and final evidence links. Do not release the worktree or declare a landed result before the queue reports the tested merge has landed.
+- [x] After approval use `closing-a-campaign` and `submitting-to-the-sluice` for the actual integration. Remove only the Planetarium section of `IMPLEMENTATION_PLAN.md` when these stages are complete; preserve the inherited unrelated tracker above it. Remove the whole file only if no unfinished tracker remains. Keep this permanent plan with checked steps and final evidence links. Do not release the worktree or declare a landed result before the queue reports the tested merge has landed.
 
 ## Execution and review rules
 
@@ -687,3 +687,5 @@ consume the current observed body positions explicitly, and preserved the
 inherited unfinished stage tracker instead of overwriting it. No unapproved
 fidelity change, source/GPU execution claim or outstanding planning question
 remains. G4 passes; execution follows the user's standing SDD preference.
+
+Final integration: `c0b76af87388ef33fa841b659684cfba52994a0a`, all five canonical phases green. See the [landing receipt](../../audits/the-planetarium/close-review.md#canonical-landing--2026-09-11).

@@ -2,7 +2,7 @@
 
 **Close state:** local implementation and moving review qualified; whole-branch technical
 review approved, with three documentation findings corrected. Canonical close
-stage and census results are complete. Nathan approved the pilot and merge on 2026-09-11, with visual refinement left to future campaigns; canonical landing remains pending. Product scope is in the
+stage and census results are complete. Nathan approved the pilot and merge on 2026-09-11, with visual refinement left to future campaigns; canonical merge landed at `c0b76af87388ef33fa841b659684cfba52994a0a`. Product scope is in the
 [chronicle](../../book/src/chronicle/the-planetarium.md); rulings and task outcomes
 are in the [ledger](../superpowers/ledgers/2026-09-10-the-planetarium.md).
 
@@ -128,3 +128,10 @@ index-cell limit. The normal hook caught it. Restoring the existing proposal
 and adding the evidence link in Where preserved the index's job; the profile
 audit holds the argument. The second normal commit passed, including the
 previously blocking per-run census-alarm finding check.
+
+
+A stale inherited root tracker was preserved during main absorption because it
+said In Progress, despite its campaign having already landed. That resurrected
+the file Plan Hygiene had retired. The operator caught it at close; checking
+the inherited campaign's actual landing, rather than trusting its stale label,
+resolved the conflict and allowed complete tracker removal.

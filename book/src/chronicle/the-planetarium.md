@@ -1,6 +1,6 @@
 # The Planetarium
 
-**September 2026 · pilot accepted at G6; canonical landing pending**
+**September 2026 · pilot accepted at G6; landed**
 
 The Observation Series made a checked route from simulation data to a movie,
 but its rasterized text layouts did not deliver the intended visual experience.
