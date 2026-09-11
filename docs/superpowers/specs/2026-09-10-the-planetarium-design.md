@@ -374,13 +374,13 @@ render treatment. Their existence is not a requirement to finish this pilot.
   frame target require actual Bevy/GPU evidence. The earlier days/weeks discussion
   was a rough estimate, not a delivery commitment.
 
-Approval accepts this campaign's scope and boundaries. It does not approve a
+G3 approval accepts this campaign's scope and boundaries. It does not approve a
 public film, replace final visual review, or authorize a merge.
 
 ## 12. Execution decisions for final review
 
-These post-G3 rulings sharpen the approved scope; final visual/merge acceptance
-remains pending. The [ledger](../ledgers/2026-09-10-the-planetarium.md) records
+These post-G3 rulings sharpen the approved scope. Nathan accepted the pilot and
+approved its merge at G6 on 2026-09-11; canonical landing remains pending. The [ledger](../ledgers/2026-09-10-the-planetarium.md) records
 the alternatives, evidence and costs. Cross-campaign ownership is recorded in
 decisions [0956](../../decisions/0956-planetarium-schedules-a-directed-graphical-study.md),
 [0957](../../decisions/0957-evaluated-astronomy-stays-native.md) and
