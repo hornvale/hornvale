@@ -392,3 +392,73 @@ unplanned repairs to keep the build honest.
 **Capture actions:** this entry; task-0-report.md in scratch per the
 dispatch contract; concerns above flagged for the controller/review rather
 than resolved unilaterally.
+
+---
+
+## #7 [G5] — Task 0 complete, and a guard whose premise Task 0 invalidated
+
+**Task 0 approved** (commit `e65584918`), spec ✅, one Minor. The review traced
+mechanisms rather than accepting the report's claims, and confirmed:
+
+- **The vacuity guard's replacement is narrower, not newly vacuous.** The
+  removed clause asserted the golden witnessed the ametabolic `None` branch
+  *through a registry carrier* — impossible after 0976, so keeping it would
+  have made the test permanently red rather than a guard. **Coverage moved
+  rather than disappearing:** `allometry.rs`'s own
+  `ametabolic_nulls_the_biological_traits` still exercises the `Absent` branch
+  directly, off-registry.
+- **`an_ametabolic_kind_is_never_asked_for_a_lifespan` still routes through
+  production** (`cascade_regime_of` called on the fixture, not mocked), and
+  that function reads only mass/thermal/schedule/social_form — never
+  `trophic_mode`.
+- **`SANCTIONED`'s count does not pass by coincidence.** Net-zero is exactly
+  the case a count guard cannot see, but `every_kind_carries_a_sanctioned_pair`
+  checks membership per kind and `PINNED` pins every kind's trophic mode by
+  name, so a wrong substitution fails one of those.
+- **The affect change's real cause:** `is_ametabolic` gates the **entire**
+  drives vector — all six — not one drive. `xorn` had no drives at all.
+
+**Minor, deferred:** the synthetic fixture encodes `(Absent, Chemotrophic)`,
+the exact pair 0976 just closed, without a comment noting the mismatch. Inert
+to the mechanism under test.
+
+## THE FINDING: a zero that was inert and is now load-bearing
+
+`fatigue_rise_registry()` pins `xorn` at `0.0`, explicitly, added in a prior
+campaign's fix round with its own comment. **Its stated justification is now
+false**, and Task 0 is what falsified it:
+
+> `xorn` (`ThermalStrategy::Absent`) is EXPLICIT here, at `0.0` … the walk's
+> ametabolic gate already excludes exactly that kind from the REST drive.
+
+Both clauses fail. `xorn` is `Unmodelled`, and the gate excludes *all* drives
+together rather than REST specifically — and excludes none of them for `xorn`
+any more.
+
+**Measured in the committed golden:** of `xorn`'s 40 ticks, **18 carry
+`object=Some(Fatigue)`** — the plurality, against 11 `Danger` and 11 `Social`.
+So the kind's most frequent affect object is a drive whose rise rate is pinned
+at zero.
+
+**The structure of the defect, which is the transferable part.** A constant
+justified by *"a gate upstream already excludes this case"* is safe only while
+the gate holds. It is not merely stale documentation — the value was **inert
+under the old gate and became live under the new one**, and nothing marks the
+transition. Grepping for stale docs would not find it; only a change to the
+gate reveals it.
+
+**NOT resolved here, and deliberately.** Whether a `Fatigue`-objected affect
+on a zero-rise drive is wrong depends on what `arbitrate` does with a drive of
+zero urgency — whether it is selected on serviceability or a tie-break rather
+than magnitude. Neither the reviewer nor this session traced that to
+certainty, and guessing would put a fidelity claim in the record on an
+untraced mechanism. **Referred to Nathan with its numbers.**
+
+**Not a blocker.** Stage 1 touches the metabolic vocabulary, not the drive
+system; it proceeds.
+
+**Ideonomy passes / overturns:** none; a review finding plus a measurement.
+
+**Capture actions:** this entry; the question put to Nathan; a correction of
+my own in-session claim that the reviewer's concern rested on a
+misattribution — it did not, and the 18/40 count is what settles it.
