@@ -593,3 +593,53 @@ edit outside this campaign's surface, and the row now carries the correction.
   Falsified by climate's own H5 (`{0.0, 0.2}`, 2026-08-17). Not edited here;
   a kernel-layer doc fix belongs with whoever next opens that file, and
   `BIO-underground-light-is-unfed` carries the correction meanwhile.
+
+---
+
+## #9 [G4] — Plan review, self-resolved
+
+**Decision.** Plan written to `docs/superpowers/plans/2026-09-11-the-ceiling.md`
+(nine tasks) and proceeding to execution without a ratification round, per
+autopilot's G4 policy. Execution is subagent-driven per Nathan's standing
+preference.
+
+**Self-review against the approved spec.** Coverage checked section by section
+and recorded in the plan's own Self-Review block: §2/§2a → Tasks 1 and 5;
+§3.2 → Tasks 1-3; §3.3 → Task 4; §3.4 → Task 3 and Task 7; §3.5 → Tasks 5 and
+7; §4's M1/M2/M3/M4 → Tasks 3, 1-2, 3, 6; §5 → Task 8; §7 → Task 9. §6 maps to
+no task by construction — it is the NOT list.
+
+**Three things the plan does deliberately, recorded so a reviewer does not
+read them as defects.**
+
+1. **Task 1 ships M2's positive control ALONE and FIRST**, before the
+   measurement it controls. A re-implementation that cannot reproduce
+   `0.145249` makes every M2 number uninterpretable, so the control is not a
+   step inside M2 — it is the gate on whether M2 may be read at all. Its
+   Step 5 says to stop rather than widen the tolerance.
+2. **Two steps name a PROPERTY instead of prescribing code** — the niche's
+   authored values (Task 5) and the per-source ablation arms (Task 6). This is
+   autopilot's own rule ("never prescribe a specific mutation from outside the
+   code"): a plan author does not know which values discriminate and the
+   implementer does, after reading. Stated in the plan's self-review so it
+   reads as intent.
+3. **Task 8 gates committing at all**, and its three-way branch refuses one
+   case outright: a moved stream consumption order stops and returns to
+   Nathan with an epoch. That is the only case in this campaign that can
+   silently corrupt every world.
+
+**Two escalation points are written into the plan rather than left to
+judgment.** Task 4 Step 2 escalates branch-table row 4 to Nathan before any
+Stage 2 code, because that row supersedes decision 0966 and a decision-log act
+is his. Task 6 Step 2 invokes the three-attempt rule explicitly on a red M4:
+after three failed niche authorings, stop and escalate rather than continuing
+to tune.
+
+**Ideonomy passes / overturns:** none for this entry. The plan is the capture
+of #3's design pass and the spec's own branch tables; no new design space was
+opened in decomposing it.
+
+**Capture actions:** plan committed at `a09e88d7a` with the reconciliation
+row's `plans` column filled; two memories written outside the repo (the
+`-A N` truncation family, and campaign-name pointers being claimed by
+unrelated work).
