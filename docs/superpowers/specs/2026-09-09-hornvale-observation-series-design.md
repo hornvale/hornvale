@@ -1,5 +1,12 @@
 # Hornvale Observation Series Design
 
+> **Partial supersession (2026-09-10):** [The Planetarium](2026-09-10-the-planetarium-design.md)
+> and [decision 0956](../../decisions/0956-planetarium-schedules-a-directed-graphical-study.md)
+> schedule the graphical study and amend Observation Series direction, cadence,
+> release staircase and reserve requirements. Existing manifests and records retain
+> their historical meaning and approval status. The ten-second study is not a
+> public episode; exact video/copy publication still requires approval.
+
 ## Status
 
 Design approved in conversation on 2026-09-09. This document defines the

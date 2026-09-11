@@ -61,6 +61,10 @@
 - [Ten Lives of Seed 42](./gallery/generated/the-lot-seed-42.md)
 - [The Lot, Live](./gallery/the-lot.md)
 
+# Clients
+
+- [Planetarium](./clients/planetarium.md)
+
 # The Laboratory
 
 - [Studies Are Data, Metrics Are Code](./laboratory/overview.md)
@@ -110,6 +114,7 @@
 - [Scene Schema: tiles-region v1](./reference/scene-tiles-region-v1.md)
 - [Scene Schema: surrounds v2](./reference/scene-surrounds-v2.md)
 - [Scene Schema: system v1](./reference/scene-system-v1.md)
+- [Scene Schema: astronomy-at v1](./reference/scene-astronomy-at-v1.md)
 - [Scene Schema: moons v1](./reference/scene-moons-v1.md)
 - [Scene Schema: neighbors v1](./reference/scene-neighbors-v1.md)
 - [Scene Schema: eclipses v3](./reference/scene-eclipses-v3.md)
@@ -495,6 +500,7 @@
 - [Skyworld Seams](./chronicle/skyworld-seams.md)
 - [The Observation Series](./chronicle/the-observation-series.md)
 - [The Vent](./chronicle/the-vent.md)
+- [The Planetarium](./chronicle/the-planetarium.md)
 - [The Living Vent](./chronicle/the-living-vent.md)
 - [Eclipse Rhythm and View](./chronicle/eclipse-rhythm-view.md)
 

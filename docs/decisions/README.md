@@ -332,3 +332,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0796](0796-a-lot-is-an-observation-not-a-fact.md) | A lot is an observation, not a fact | Accepted |
 | [0797](0797-commit-the-integral-never-the-path.md) | Commit the integral, never the path | Accepted |
 | [0798](0798-silence-is-a-measurement.md) | Silence is a measurement | Accepted |
+| [0956](0956-planetarium-schedules-a-directed-graphical-study.md) | Planetarium schedules a directed graphical study | Accepted |
+| [0957](0957-evaluated-astronomy-stays-native.md) | Evaluated astronomy stays native | Accepted |
+| [0958](0958-visual-libraries-are-independent-of-the-film.md) | Visual libraries are independent of the film | Accepted |

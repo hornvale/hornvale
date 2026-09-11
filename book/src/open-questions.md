@@ -2264,6 +2264,21 @@ the only reason this instance surfaced at all was a defect that fell far
 enough from a determinism check's usual territory that nobody thought to
 look for it there.
 
+[The Planetarium](./chronicle/the-planetarium.md) supplies a new consumer witness:
+a native Bevy scene and an actual 300-frame 4K movie driven by evaluated Hornvale
+astronomy at exact integer ticks. Independent comparison found all 300 captured
+astronomy objects equal to the prior native-qualified observations. The source
+and renderer remain separate libraries, and the missing physical anchor radius
+was supplied through a documented model before the globe claimed physical scale.
+This strengthens the scene-interface bet for a bounded astronomical consumer.
+It does not turn semantic agreement into aesthetic acceptance: the movie, phone
+readability and interaction require separate review, and cosmetic surfaces do not
+become simulated geography. Nor does an unrestricted scientific observer establish
+what a situated game is permitted to show. The stronger evidence is that source
+quantities are actually drawn, with their model and presentation limits stated;
+the broader gameplay and whole-world claims remain untested.
+
+
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
 worth more than the check.** The entries above are all forms of *the drawn thing

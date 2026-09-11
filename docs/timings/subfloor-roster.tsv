@@ -421,6 +421,13 @@ hornvale-astronomy::hornvale_astronomy$wanderers::tests::kepler_holds_and_period
 hornvale-astronomy::hornvale_astronomy$wanderers::tests::no_wanderer_crowds_the_anchor
 hornvale-astronomy::hornvale_astronomy$wanderers::tests::wanderer_count_pin_is_honored_for_every_legal_value
 hornvale-astronomy::hornvale_astronomy$wanderers::tests::wanderers_are_deterministic_and_bounded
+hornvale-astronomy::suite$anchor_radius::every_supported_tabulated_reference_is_exact
+hornvale-astronomy::suite$anchor_radius::mass_above_the_supported_range_is_rejected_with_context
+hornvale-astronomy::suite$anchor_radius::one_earth_mass_is_within_one_percent_of_earths_reference_radius
+hornvale-astronomy::suite$anchor_radius::radius_is_positive_and_monotonic_across_supported_masses
+hornvale-astronomy::suite$anchor_radius::radius_matches_a_published_interior_reference_point
+hornvale-astronomy::suite$anchor_radius::supported_boundaries_are_interpolated_from_the_covering_curve
+hornvale-astronomy::suite$anchor_radius::unsupported_mass_is_not_silently_extrapolated
 hornvale-astronomy::suite$calendar_negative_time::alignment_drift_is_defined_across_genesis
 hornvale-astronomy::suite$calendar_negative_time::daylight_and_solar_angles_stay_in_range_across_genesis
 hornvale-astronomy::suite$calendar_negative_time::every_phase_stays_in_the_unit_interval_across_genesis
@@ -462,6 +469,10 @@ hornvale-astronomy::suite$night_sky_regimes::epoch_drift_moves_the_equinox_refer
 hornvale-astronomy::suite$night_sky_regimes::locked_worlds_freeze_the_instrument
 hornvale-astronomy::suite$night_sky_regimes::retrograde_flips_wheeling_not_dates
 hornvale-astronomy::suite$night_sky_regimes::zero_obliquity_keeps_heliacal_events_but_kills_seasons
+hornvale-astronomy::suite$planetarium_geometry::locked_orientation_turns_synchronously_and_keeps_prime_meridian_substellar
+hornvale-astronomy::suite$planetarium_geometry::missing_moon_cycle_is_absent
+hornvale-astronomy::suite$planetarium_geometry::native_basis_preserves_calendar_sightline_and_handedness
+hornvale-astronomy::suite$planetarium_geometry::native_moons_follow_existing_longitude_latitude_and_node
 hornvale-astronomy::suite$sky_conformance::every_stellar_source_has_a_day_sky_sun
 hornvale-astronomy::suite$sky_conformance::nothing_in_a_sky_outranks_its_sun
 hornvale-astronomy::suite$sky_conformance::the_sun_never_leaves_the_visible_bodies_list
@@ -1372,6 +1383,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_column
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_292_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
@@ -2202,6 +2214,7 @@ hornvale-religion::hornvale_religion$tests::empty_phenomena_means_no_pantheon
 hornvale-religion::hornvale_religion$tests::genesis_is_deterministic
 hornvale-religion::hornvale_religion$tests::pantheon_takes_every_phenomenon_above_the_floor
 hornvale-religion::hornvale_religion$tests::priesthood_sets_the_cult_form
+hornvale-scene::hornvale_scene$astronomy_at::tests::astronomy_at_no_cycle_is_a_query_error
 hornvale-scene::hornvale_scene$region::tests::interp_at_a_vertex_center_returns_that_vertexs_value
 hornvale-scene::hornvale_scene$region::tests::level_zero_center_node_points_along_face_normal
 hornvale-scene::hornvale_scene$region::tests::node_grid_is_sized_and_deterministic
@@ -2241,6 +2254,9 @@ hornvale-scene::hornvale_scene$tests::icy_albedo_can_exceed_the_old_zero_point_f
 hornvale-scene::hornvale_scene$tests::icy_composition_damps_maria_fraction_but_never_zeroes_it
 hornvale-scene::hornvale_scene$tests::mass_bias_actually_bites_across_seeds
 hornvale-scene::hornvale_scene$tests::surface_class_table_is_normative
+hornvale-scene::suite$astronomy_at::astronomy_at_matches_native_all_topologies_and_preserves_missing_dimensions
+hornvale-scene::suite$astronomy_at::astronomy_at_rejects_epochs_with_nonphysical_native_luminosity
+hornvale-scene::suite$astronomy_at::astronomy_at_repeated_time_is_byte_identical_and_ticks_are_integer
 hornvale-scene::suite$illumination_hypotheses::h3_control_fixture_pins_the_exact_degradation_mechanism
 hornvale-scene::suite$one_projection::region_and_room_project_through_the_same_function
 hornvale-scene::suite$wind_contract::documented_band_matches_circulation
@@ -3475,6 +3491,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -4270,6 +4287,7 @@ hornvale::suite$architecture::external_dependencies_are_allowlisted
 hornvale::suite$architecture::the_kernel_depends_on_no_workspace_crate
 hornvale::suite$architecture::the_layering_page_matches_the_enforced_graph
 hornvale::suite$architecture::the_layering_render_is_deterministic_and_grounded
+hornvale::suite$architecture::visual_client_keeps_three_independent_crates_and_a_cpu_gate
 hornvale::suite$architecture::windows_depend_only_on_kernel_domains_and_windows
 hornvale::suite$attest::a_job_can_be_both_owed_but_absent_and_undetermined_at_once
 hornvale::suite$attest::a_job_carrying_an_unowed_phase_is_reported
@@ -4419,7 +4437,6 @@ hornvale::suite$provision::declared_absent_row_carries_its_reason
 hornvale::suite$provision::declared_but_unserved_token_is_not_served
 hornvale::suite$provision::feels_toward_does_not_resolve
 hornvale::suite$regularity_corpus::a_corpus_parses_its_items_criteria_and_verdicts
-hornvale::suite$regularity_corpus::a_deferred_item_whose_registry_row_settled_is_stale
 hornvale::suite$regularity_corpus::a_doc_anchor_into_generated_prose_resolves
 hornvale::suite$regularity_corpus::a_doc_anchor_into_hand_written_prose_is_refused
 hornvale::suite$regularity_corpus::a_lost_regularity_is_red
@@ -4493,6 +4510,8 @@ hornvale::suite$repertory_corpus::the_orange_is_frozen_at_its_authored_size
 hornvale::suite$repertory_corpus::two_in_a_room_is_frozen_at_its_authored_size
 hornvale::suite$repose_byte_identity::no_rendered_artifact_names_a_geohazard
 hornvale::suite$retired_gate_signposts::retired_gate_targets_refuse
+hornvale::suite$scene_astronomy_at_cli::astronomy_at_accepts_exact_negative_ticks
+hornvale::suite$scene_astronomy_at_cli::astronomy_at_rejects_missing_fractional_and_overflow_ticks
 hornvale::suite$scene_context_discipline::the_catalog_reuses_one_scene_context_per_world
 hornvale::suite$scene_eclipses_cli::help_names_the_v3_observer_query
 hornvale::suite$sentence_corpus::a_classify_only_entry_resolves_as_covered
