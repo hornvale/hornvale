@@ -1698,3 +1698,56 @@ that #20 left to this task, resolved directly from spec §2's table and
 
 **Capture actions:** this entry; task-3-report.md in scratch per the
 dispatch contract.
+
+---
+
+## #22 [G5] — Task 3 complete: the metabolite axes, and ledger #20's join defect proved live
+
+Commit `88373ff39`. Four axes registered, all four of #20's corrections
+applied. `make gate-commit` rc=0; `hornvale-kernel` 383/383.
+
+| name | id | kind |
+|---|---|---|
+| `HYDROGEN` | 7 | `Field` |
+| `REDUCED_IRON` | 8 | `Field` |
+| `REDUCED_SULPHUR` | 9 | `Field` |
+| `METHANE` | 10 | `Field` |
+
+`CHEMOSYNTHATE` keeps id 6.
+
+**The `Field` argument is one argument, not four, and it is the right shape.**
+The implementer did not reason "rock-derived, therefore ambient" — which would
+have been wrong, since `MINERAL` is also rock-derived and is `Stock`. It
+reasoned that all four are **a disaggregation of `CHEMOSYNTHATE` itself**,
+which is already `Field`. A split of one axis into four inherits that axis's
+kind unless something argues otherwise. Flagged by the implementer for a
+second look, and I am leaving it flagged rather than resolving it here: Task 4
+wires supply and is where a wrong `kind` would first show as a trophic cap
+that does not bite.
+
+**I VERIFIED THE JOIN TEST CAN RED, RATHER THAN READING IT.** #20.A's whole
+point was that the brief's test passed whether or not the axes were appended
+to `v1_basis()`, so a replacement test that merely *looked* stronger would
+have been the same defect wearing better prose — and a guard authored
+alongside its own fix is exactly the shape that asserts the data instead of
+the effect.
+
+Mutation: removed `HYDROGEN` from `v1_basis()` **only**, leaving the `pub
+const` defined — the precise orphan #20.A describes.
+
+```
+FAIL  ecology::tests::the_metabolite_axes_are_registered_and_reachable_via_the_basis
+FAIL  ecology::tests::the_basis_ids_are_append_only
+        left: [0, 1, 2, 3, 4, 5, 6, 8, 9, 10]
+       right: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+```
+
+Both red; restored to an empty diff; both green again. So the join is pinned
+by something that routes **through `v1_basis()`** and asserts the const *is*
+the axis reachable at that id — not a const compared against itself.
+
+**Ruling:** accept. Concern 2 (the `coexist.rs:298` denominator now spanning 11
+members) is recorded as predicted-and-inert-today, load-bearing from Task 4 —
+carried into Task 4's dispatch rather than closed.
+
+**Ideonomy passes / overturns:** none; a task acceptance with one mutation.

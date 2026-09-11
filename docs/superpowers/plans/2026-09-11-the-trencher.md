@@ -581,6 +581,135 @@ The same seed with metaphysics pinned **must differ**, and the readout names *wh
 
 ## Stage 4 — The biota
 
+> **AMENDMENT (2026-09-11, ledger #21) — READ BEFORE ANY OF TASKS 10-12.**
+> This stage authors species kinds, and the plan below originally listed
+> `domains/species/src/lib.rs` as the only file each of those tasks touches.
+> **That is wrong, and it is wrong in a way that costs three red tests.**
+> Authoring a kind is a three-file operation.
+
+### The accession contract every kind-authoring task owes
+
+A species kind registers a concept named `<kind>-kind` (see `KIND_CONCEPTS`,
+`domains/species/src/lib.rs:5962`, and `kind_concept` at 6033 — the gloss is
+**authored**, not derived from the id, so `giant-elk-kind` reads as "a giant
+elk"). Every registered concept must also appear in an accession cohort.
+So each of Tasks 10, 11 and 12 touches **three** files, in **one** commit:
+
+| file | what it owes |
+|---|---|
+| `domains/species/src/lib.rs` | the kind rows **and** their `KIND_CONCEPTS` entries, each with an authored gloss |
+| `domains/language/src/accession.rs` | the `<kind>-kind` names, in **one appended cohort at the END** of `EPOCH_COHORTS` |
+| `cli/tests/suite/accession.rs` | raise the `>= 253` floor in `the_parity_check_is_over_a_non_empty_roster` to the new count |
+
+**Append the cohort. Never edit an existing one.** A kind's name is drawn
+from the lexicon and the proto-root walk consumes draws in registration
+order, so inserting into an existing cohort shifts every later draw — it does
+not append names, it re-deals the hand from the insertion point and renames
+existing kinds in **every world ever generated from this seed space**. That
+is the same class of change as a seed-label rename.
+
+This is not hypothetical. `campaign/underworld-peoples` took gate rc=2, five
+failures with one cause, when their duergars took `Dazha` — the gully dwarfs'
+existing autonym — and pushed the gully dwarfs to `Xabxat`.
+
+Write the cohort comment in the house style of epochs 20-22
+(`accession.rs:618-638`): name the campaign, the task, and **why it is a fresh
+cohort rather than an edit to an earlier one**. Epoch 22 is the closest
+precedent — The Murrain's five pathogen species rows, appended for exactly
+this reason.
+
+**The rule is about ARRIVAL, not DESCENT — and that is the half that will
+actually catch you.** `campaign/the-tidemark` put it best, declining to fold
+their new `abyssal-elf` into epoch 10 despite it being an elf:
+
+> re-sorting the epoch-10 cohort would move the six existing `elf-kind`
+> concepts' already assigned proto-roots, which are part of every saved
+> world. **A family is a shared ancestor, not a shared moment.**
+
+Carry that into this stage. "Do not edit a cohort" is easy to agree with and
+easy to violate, because **descent tempts you**: a new cave fungus obviously
+belongs beside the other fungi, and the module is not organised by descent at
+all. It is organised by when a concept ARRIVED. Your organisms arrive now, so
+they go in one cohort at the end, however unrelated they are to each other and
+however related they are to something in epoch 4.
+
+**Do not write an epoch NUMBER into the cohort comment.** Earlier text here
+said "do not hardcode the index," which overstated it — verified 2026-09-11,
+nothing reads a cohort by hardcoded index, and
+`domains/language/tests/suite/accession_append_only.rs` prefix-ratchets the
+table, so the append itself is safe under any merge order. The narrower real
+hazard is the **comment**: `campaign/underworld-peoples` is live and unmerged
+and its own comment claims "Epoch 23," so a second comment claiming the same
+number is wrong as soon as either lands. Describe the cohort, not its index.
+
+**And know that ratchet's SCOPE, because it is smaller than its name
+suggests — and shrinks.** `existing_cohorts_are_never_edited` freezes
+`EPOCH_COHORTS[..FROZEN_HISTORICAL_COHORTS.len()]`. That length is **12**, and
+the frozen array is a **verbatim literal** snapshotted at The Confidant. An
+edit to any LATER cohort is **not** caught by it; what catches that is
+`the_additivity_law`, by showing a committed name move.
+
+**Do not state this as a fraction.** An earlier draft here said "12 of 23,"
+which is true in this tree and false in `campaign/the-tidemark`'s, where 24
+cohorts are live because they have already appended theirs. We each counted
+our own tree correctly and got different numbers — which is the tell that the
+ratio is the wrong statistic. The durable statement is:
+
+> The frozen population is a constant 12. The live table grows without bound.
+> **So the guard's coverage erodes by design — one cohort at a time, every
+> time someone does the correct thing.**
+
+Nobody has to do anything wrong for this to decay. This stage's own append
+widens the unprotected set by one, and so will the next campaign's. That is
+worth knowing before you trust the name: the guard is most trusted at the
+moment it covers least, which is the same shape as a lifecycle-population
+guard going blind exactly when the lifecycle succeeds.
+
+**The consequence for this stage is narrow and concrete:** append, and do not
+take a green `existing_cohorts_are_never_edited` as evidence you left the
+recent cohorts alone. It cannot see them. Read the `the_additivity_law` result
+for that, and if it reds, the moved name is the bug — never the stale pin.
+
+### The guards, so a red is read correctly rather than "repaired" wrongly
+
+All three are **loud**. None fails silently — that is the good news, and it is
+why this amendment is a budgeting correction rather than a defect report.
+
+- `every_registered_concept_has_an_accession_epoch` — registered ⊆ cohorted.
+  Reds if you add a kind and no cohort entry. Its own message names the
+  remedy: a cohort **at the end**, never an edit to an existing one.
+- `the_parity_check_is_over_a_non_empty_roster` — asserts exact set equality
+  **and** a `>= 253` floor. Reds if the two tables disagree either way, or if
+  you grow the roster without raising the floor in the same commit.
+- `the_additivity_law` and `folk_sections_are_byte_unchanged` — these are the
+  ones that catch an **edited or inserted** cohort, by showing a committed
+  people's name moving. **If either of these reds, do not refresh the pin.**
+  A moved name is the bug, not a stale fixture.
+
+### One consequence to expect rather than discover
+
+An appended cohort trades the rename for an **autonym ambiguity**.
+`assign_proto_roots` injectivity is per-CONCEPT within a family; two *species*
+sharing a root for the *same* concept — each people's own word for "person",
+which is where an autonym comes from — is outside what it spans, so nothing
+objects. It breaks a rendered page, not a contract. `cli/src/repl.rs` already
+carries the render-time disambiguation pattern for settlements.
+
+### Scope: this campaign authors no settled people
+
+Nathan's direction was "add settled peoples IMHO. We should already have 4-5
+underworld sentient species. Use 'em and/or add more," flagging that dwarves
+were being readmitted elsewhere.
+
+`campaign/underworld-peoples` is live and adds **four** — duergars, kuo-toas,
+mountain dwarfs, svirfneblins — and is past its save-format fix, near merge.
+**Stage 4 authors no settled people that duplicates those four.** It takes the
+"use 'em" half and spends its whole budget on the biota: the fungi, the
+chemotrophs, the weird flora and fauna that are this campaign's subject and
+that nobody else is building. If the peoples land first, giving them
+metabolite-aware diets is a JOIN between two campaigns' halves and is worth
+more than a fifth people.
+
 ### Task 9: Biotic import — the third doorway
 
 **Files:**
