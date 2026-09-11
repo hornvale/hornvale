@@ -382,8 +382,8 @@ succession phase). Report `|A|`, `|B|` and `|A ∩ B|` as **counts** at seeds 42
 settlements **per marine kind** at seed 42 at `BuildDepth::Full`.
 
 - *Prediction, two-sided:* each of the five `Settled` kinds places at least one
-  settlement and fewer than the surface total; the `Gregarious` pelagic nomad
-  places **exactly zero**, because a kind that forms no fixed place must not
+  settlement and fewer than the surface total; `merfolk`, being `Gregarious`,
+  place **exactly zero**, because a kind that forms no fixed place must not
   form one.
 - *A zero for a `Settled` kind* means the realm gate admits nothing for it and
   that kind has shipped unreachable. *A non-zero for merfolk* means
