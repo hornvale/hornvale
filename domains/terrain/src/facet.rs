@@ -252,6 +252,9 @@ pub fn feature_sample(curve: &RealizedCurve, position: [f64; 3]) -> (f64, f64) {
     let Some(projection) = nearest_segment(&curve.points, position) else {
         return (f64::INFINITY, 0.0);
     };
+    if curve.points.len() == 1 {
+        return (projection.distance, curve.width[0]);
+    }
     let index = projection.segment;
     let width = curve.width[index]
         + projection.interpolation * (curve.width[index + 1] - curve.width[index]);
@@ -329,6 +332,11 @@ fn nearest_segment(points: &[[f64; 3]], position: [f64; 3]) -> Option<NearestSeg
             ]);
             let inside =
                 dot(cross(a, foot), unit_normal) >= 0.0 && dot(cross(foot, b), unit_normal) >= 0.0;
+            let side = if dot(position, unit_normal) >= 0.0 {
+                1.0
+            } else {
+                -1.0
+            };
             if inside {
                 let segment_length = angle(a, b);
                 let t = if segment_length == 0.0 {
@@ -336,19 +344,19 @@ fn nearest_segment(points: &[[f64; 3]], position: [f64; 3]) -> Option<NearestSeg
                 } else {
                     angle(a, foot) / segment_length
                 };
-                (angle(position, foot), t.clamp(0.0, 1.0))
+                (side * angle(position, foot), t.clamp(0.0, 1.0))
             } else {
                 let distance_a = angle(position, a);
                 let distance_b = angle(position, b);
                 if distance_a <= distance_b {
-                    (distance_a, 0.0)
+                    (side * distance_a, 0.0)
                 } else {
-                    (distance_b, 1.0)
+                    (side * distance_b, 1.0)
                 }
             }
         };
-        if distance < best_distance {
-            best_distance = distance;
+        if distance.abs() < best_distance {
+            best_distance = distance.abs();
             best = Some(NearestSegment {
                 distance,
                 segment: index,

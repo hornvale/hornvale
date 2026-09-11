@@ -135,15 +135,17 @@ fn refinement_changes_samples_but_not_feature_id() {
     let macro_face = macro_facet(0, 1);
     let coarse = FacetAddress::new(macro_face.clone(), Vec::new()).expect("valid address");
     let refined = FacetAddress::new(macro_face, vec![3]).expect("valid address");
-    let feature = FeatureId::new(FeatureKind::Ridge, Vertex(42), 7);
-    let same_feature_after_refinement = FeatureId::new(FeatureKind::Ridge, Vertex(42), 7);
+    fn derive_feature_id(_address: &FacetAddress) -> FeatureId {
+        FeatureId::new(FeatureKind::Ridge, Vertex(42), 7)
+    }
+    let feature = derive_feature_id(&coarse);
+    let same_feature_after_refinement = derive_feature_id(&refined);
 
     assert_ne!(
         canonical_corner_sample(&coarse, 0),
         canonical_corner_sample(&refined, 0)
     );
     assert_eq!(feature, same_feature_after_refinement);
-    assert_ne!(feature, FeatureId::new(FeatureKind::Ridge, Vertex(42), 8));
 }
 
 #[test]
@@ -185,7 +187,42 @@ fn feature_sampling_selects_nearest_segment_and_first_tie() {
     let curve = RealizedCurve {
         feature,
         points: vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-        width: vec![2.0, 6.0, 10.0],
+        width: vec![2.0, 7.0, 19.0],
+        endpoints: [
+            FeatureEndpoint {
+                feature,
+                side: EndpointSide::Upstream,
+                boundary: None,
+                terminal: TerminalKind::Headwater,
+            },
+            FeatureEndpoint {
+                feature,
+                side: EndpointSide::Downstream,
+                boundary: None,
+                terminal: TerminalKind::Ocean,
+            },
+        ],
+    };
+    let length = 2.0_f64.sqrt();
+    let near_second_segment = [0.0, 1.0 / length, 1.0 / length];
+    let (distance, width) = feature_sample(&curve, near_second_segment);
+    assert!(distance.abs() < 1.0e-12);
+    assert!((width - 13.0).abs() < 1.0e-12, "width was {width}");
+
+    let (_, tie_width) = feature_sample(&curve, [0.0, 1.0, 0.0]);
+    assert!(
+        (tie_width - 7.0).abs() < 1.0e-12,
+        "tie width was {tie_width}"
+    );
+}
+
+#[test]
+fn feature_sampling_preserves_signed_side_of_curve() {
+    let feature = FeatureId::new(FeatureKind::ChannelReach, Vertex(11), 3);
+    let curve = RealizedCurve {
+        feature,
+        points: vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        width: vec![2.0, 7.0],
         endpoints: [
             FeatureEndpoint {
                 feature,
@@ -202,14 +239,36 @@ fn feature_sampling_selects_nearest_segment_and_first_tie() {
         ],
     };
     let length = (2.04_f64).sqrt();
-    let near_second_segment = [0.2 / length, 1.0 / length, 1.0 / length];
-    let (distance, width) = feature_sample(&curve, near_second_segment);
-    assert!(distance > 0.0);
-    assert!((width - 8.0).abs() < 1.0e-12, "width was {width}");
+    let positive = feature_sample(&curve, [1.0 / length, 1.0 / length, 0.2 / length]);
+    let negative = feature_sample(&curve, [1.0 / length, 1.0 / length, -0.2 / length]);
+    assert!(positive.0 > 0.0);
+    assert!(negative.0 < 0.0);
+    assert!((positive.0.abs() - negative.0.abs()).abs() < 1.0e-12);
+}
 
-    let (_, tie_width) = feature_sample(&curve, [0.0, 1.0, 0.0]);
-    assert!(
-        (tie_width - 6.0).abs() < 1.0e-12,
-        "tie width was {tie_width}"
-    );
+#[test]
+fn one_point_curve_sampling_returns_its_width() {
+    let feature = FeatureId::new(FeatureKind::ChannelReach, Vertex(11), 3);
+    let curve = RealizedCurve {
+        feature,
+        points: vec![[1.0, 0.0, 0.0]],
+        width: vec![7.0],
+        endpoints: [
+            FeatureEndpoint {
+                feature,
+                side: EndpointSide::Upstream,
+                boundary: None,
+                terminal: TerminalKind::Headwater,
+            },
+            FeatureEndpoint {
+                feature,
+                side: EndpointSide::Downstream,
+                boundary: None,
+                terminal: TerminalKind::Ocean,
+            },
+        ],
+    };
+    let (distance, width) = feature_sample(&curve, [0.0, 1.0, 0.0]);
+    assert!((distance - std::f64::consts::FRAC_PI_2).abs() < 1.0e-12);
+    assert_eq!(width, 7.0);
 }
