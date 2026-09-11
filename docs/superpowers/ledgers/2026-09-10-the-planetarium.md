@@ -1,6 +1,6 @@
 # The Planetarium — decision ledger
 
-Status: execution authorized; local Tasks 1–9 independently reviewed; Stages 1–3 canonical green; whole-branch technical review approved with documentation corrections; final canonical stage green including Linux visual-client checks; census returned no scientific golden changes but its live-profiling/timing incorporation remains open; G6 visual/merge approval pending.
+Status: execution authorized; local Tasks 1–9 independently reviewed; Stages 1–3 canonical green; whole-branch technical review approved with documentation corrections; final canonical stage green including Linux visual-client checks; census returned no scientific golden changes; same-ref main-study profiling and timing incorporation complete with scope limits; final close review and G6 visual/merge approval pending.
 Branch: `campaign/the-planetarium`.
 Starting revision: `b6b374f6d2dea329d904b56322a09b1dfb29983f`.
 
@@ -1683,3 +1683,21 @@ completion despite main retiring that shared path. Its inherited block is
 Eclipse Rhythm and View (not the earlier remembered Murrain block), and the
 whole file was preserved byte-for-byte. No reaper was run. Scoped tooling
 checks and the ordinary 76-test hook passed, 4.289 s.
+
+
+## Census-close obligation completed
+
+The original census delivery and scoped live-profile finding were committed
+together at `e8fdb804ce9aa1c9f6a8927b77be8bb598ab4ddc`. The normal hook
+passed all 76 prose-subject tests in 4.027 s, including the census alarm's
+per-run finding check. Its first attempt correctly refused an overlong idea
+index cell; root restored the existing cell and put the new profile link in
+the Where column, retaining the full reasoning in the audit. No test, threshold
+or calibration reference was weakened.
+
+Main contact at this boundary remains `007936ed6`, already absorbed. No
+simulation or visual-client source changed after the successful stage and
+300-reply comparison. The seed-42 keystone is checked against current main;
+no fresh physical or GPU claim is inferred from these operational/doc changes.
+The [profile audit](../../audits/the-planetarium/census-profile.md) is the final scope of census attribution.
+The G6 decision and subsequent queue merge/heavy phase are still required.

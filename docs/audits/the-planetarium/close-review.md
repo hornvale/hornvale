@@ -3,7 +3,8 @@
 This is the review candidate's close record. Whole-branch technical review is
 approved with three documentation corrections recorded below. The final canonical
 stage passed after main integration, including the Linux visual-client checks.
-Census profiling/accounting and Nathan's G6 visual/merge decision remain pending.
+Census profiling/accounting is complete with the scope recorded below. Final
+close review and Nathan's G6 visual/merge decision remain pending.
 Nothing in this file grants publication or reports a landed campaign.
 
 ## Review artifacts
@@ -51,8 +52,8 @@ refinements within that scope, not additional physical assertions.
 Every campaign scratch file was enumerated, all task reports/reviews and the
 committed ledger were read before close prose, and Task 9's delta was read again
 after qualification. The final reviewer must explicitly identify anything from
-scratch or ledger that did not reach a committed home. A durable archive and its
-file-hash manifest will be recorded here after that review finishes.
+scratch or ledger that did not reach a committed home. The durable archive and file-hash manifest are recorded below; subsequent
+canonical and profile evidence is retained in the companion artifact directories.
 
 | Item | Durable home and outcome |
 |---|---|
@@ -222,3 +223,21 @@ The census's null-golden result is already known, but its 1366.487 s timing
 still owes the requested live profile before delivery incorporation. No
 operator profiling result has been reported. That obligation, final G6
 approval, and the post-approval merge/heavy run remain open.
+
+
+## Census-close obligation completed
+
+The original census delivery and scoped live-profile finding were committed
+together at `e8fdb804ce9aa1c9f6a8927b77be8bb598ab4ddc`. The normal hook
+passed all 76 prose-subject tests in 4.027 s, including the census alarm's
+per-run finding check. Its first attempt correctly refused an overlong idea
+index cell; root restored the existing cell and put the new profile link in
+the Where column, retaining the full reasoning in the audit. No test, threshold
+or calibration reference was weakened.
+
+Main contact at this boundary remains `007936ed6`, already absorbed. No
+simulation or visual-client source changed after the successful stage and
+300-reply comparison. The seed-42 keystone is checked against current main;
+no fresh physical or GPU claim is inferred from these operational/doc changes.
+The [profile audit](census-profile.md) is the final scope of census attribution.
+The G6 decision and subsequent queue merge/heavy phase are still required.

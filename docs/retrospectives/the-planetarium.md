@@ -121,3 +121,10 @@ nor excludes distributed quadratic work. The meeting study and pipeline tail
 were not profiled. The per-run acknowledgement states those limits and changes
 no timing threshold. A measurement with a bounded claim closes this referral;
 a broad claim inferred from a flat profile would merely hide a new uncertainty.
+
+
+The profiling receipt initially exceeded the idea registry's 600-character
+index-cell limit. The normal hook caught it. Restoring the existing proposal
+and adding the evidence link in Where preserved the index's job; the profile
+audit holds the argument. The second normal commit passed, including the
+previously blocking per-run census-alarm finding check.
