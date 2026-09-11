@@ -427,6 +427,23 @@ make doctor        # the repo self-map — run this first in a fresh session
 #
 # cargo-sweep is a dev tool on the 0040 pattern (`cargo install cargo-sweep` /
 # `brew install cargo-sweep`); `make sweep-check` fails with an install hint.
+#
+# **IT IS ALSO A PREREQUISITE OF THE `outboard` SET, ON EVERY CHAMBER HOST.**
+# Unlike the sweep targets — which a human types, and which refuse with an
+# install hint when it is absent — `scripts/test-sweep-roots.sh` runs in
+# `outboard` on whatever box the chamber is using, and its case 5 (the only
+# case that distinguishes the fix from the bug it guards) needs the real
+# binary. It FAILS rather than skipping when the tool is missing, deliberately:
+# a scope test that opts out of measuring scope is the bug it was written
+# against. So a chamber host without cargo-sweep reds `outboard`, and the red
+# looks like a code regression to whoever meets it first.
+#
+# THIS IS NOT HYPOTHETICAL AND IT IS WHY THE LINE IS HERE. lefford lacked the
+# tool on 2026-09-10 and red the `sweep-scope` candidate on its first run; the
+# operator installed 0.8.0 by hand and requeued. That install is host state the
+# repo does not record, so a rebuilt lefford reproduces the red with no trace
+# of the cause — which is strictly worse than the original gap, because a
+# working box now hides the dependency. Provision it with nextest.
 # Cargo cannot do it itself: `cargo clean` has no age or reachability option and
 # `-Z gc` is nightly-only and governs the GLOBAL REGISTRY cache, not `target/`.
 #   make sweep-dry              # what would go, deleting nothing
@@ -468,24 +485,46 @@ make doctor        # the repo self-map — run this first in a fresh session
 # builds. `SWEEP_DAYS` is namespaced because bare `DAYS` is already
 # `board-digest`'s, defined nowhere so its tool applies its own 14-day default.
 #
-# REAPING IS THE OTHER HALF, AND IT IS NOT SWEEPING (`make worktree-reap-dry`
-# / `worktree-reap`). `sweep` reclaims dead build GENERATIONS inside a
-# `target/`; the reaper removes whole worktrees whose branch already landed.
-# Sweeping a finished campaign's worktree keeps the corpse and its working set;
-# reaping it returns the space and the pool slot. Population comes from `git
-# worktree list`, so it spans BOTH pools — which is the entire point, since
-# `worktree-take` filters to the pool it owns and therefore never reached the
-# 29 under `~/.config/superpowers/worktrees/`. Measured at first dry run:
-# 17 reapable, 22 skipped.
+# THE SECOND POOL WAS OUTSIDE EVERY RECYCLING AND REAPING MECHANISM, AND IS
+# NOT ANY MORE (measured 2026-09-10; fixed the same night). `worktree-take.sh`
+# enumerates correctly — from `git worktree list`, never `find` — and then
+# filters to the pool it owns (`case "$wt" in "$POOL"/*`), so the 29 worktrees
+# under `~/.config/superpowers/worktrees/` were unreachable by it. 11 sat on
+# merged branches holding ~161 GB. The Sexton's rationale for the pool (73
+# branches in a month against 3 live worktrees, each new one paying a measured
+# 771 s cold build) applied to those 29 exactly and reached none of them: a
+# campaign taking a worktree there always paid the cold build and always left
+# the corpse behind.
+#
+# REAPING IS THE REMEDY, AND IT IS NOT SWEEPING (`make worktree-reap-dry` /
+# `worktree-reap`). `sweep` reclaims dead build GENERATIONS inside a `target/`;
+# the reaper removes whole worktrees whose branch already landed. Sweeping a
+# finished campaign's worktree keeps the corpse and its working set; reaping it
+# returns the space and the pool slot — which is why `make sweep` reaching the
+# second pool did not close this hazard by itself. The reaper's population also
+# comes from `git worktree list`, so it spans BOTH pools, which is the entire
+# point. First dry run: 17 reapable, 22 skipped; the reap freed ~99 GiB and took
+# this repo from 805 GB to 300 GB.
 #
 # IT DOES NOT REFUSE ON THE TWO FILES `gate-run` WRITES, AND THAT IS
 # DELIBERATE. `docs/timings.md` and `docs/timings/test-baseline-<host>.tsv` are
 # written by every green local gate, including the last one a campaign runs
 # after its final commit, so "has run a gate" — the normal end state — would
 # otherwise make every worktree unreapable and the tool would report success
-# having done nothing. That is The Sexton's `worktree-take` bug exactly. Since
-# `docs/timings.md` is append-only and NOT regenerable, the rows a reap would
-# destroy are PRINTED first; the dry run is the moment to rescue one.
+# having done nothing. That is The Sexton's `worktree-take` bug exactly, which
+# this tool would have inherited verbatim. Since `docs/timings.md` is
+# append-only and NOT regenerable, the rows a reap would destroy are PRINTED
+# first; the dry run is the moment to rescue one.
+#
+# THE FIX IS NOT A SOURCE-SCAN RATCHET, AND THAT WAS CHECKED RATHER THAN
+# ASSUMED. A default-deny scan for a hardcoded pool prefix was specified and
+# abandoned on reading all 11 files it would cover: every enumerator already
+# derives from `git worktree list`, so the violation set is EMPTY and the
+# allowlist would be the whole population — and, decisively, such a scan could
+# not have caught the bug that motivated it, because `cargo sweep -r .`
+# hardcoded no pool path at all. What catches that class is an assertion that a
+# scope covers every worktree git reports, which is
+# `scripts/test-sweep-roots.sh`.
 #
 # AND DO NOT TRY TO SHARE OR CLONE A `target/` BETWEEN WORKTREES to avoid the
 # cost. It dedupes (cargo reports `Fresh` across two paths, one rlib) and it is
