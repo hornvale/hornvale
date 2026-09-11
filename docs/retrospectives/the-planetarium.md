@@ -76,6 +76,10 @@ hook as the commit gate instead of paying for the same verification twice.
   independent re-review. The successful capture retains its original revision.
 - The post-completion Bevy destroyed-window warning remains nonblocking and
   documented in the performance/final audits; it was not suppressed.
+- The archive receipt's hook passed with one LEAK annotation on the unchanged
+  cargo-metadata roster test. A focused repeat was clean and no matching process
+  remained on inspection. Its cause remains unestablished; logs and a recurrence
+  investigation note are retained in the ledger's post-review check.
 - Near-surface precision and future film stories remain frontier follow-ups.
   They do not imply a universal renderer or a scheduled film series.
 

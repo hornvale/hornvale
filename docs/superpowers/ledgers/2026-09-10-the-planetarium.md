@@ -1456,3 +1456,22 @@ prerequisite prose, sweep harness changes and operational timing/roster artifact
 no kernel/domain/window/CLI/visual-source path changed. The queued census remains
 behind the active earlier census-delivery merge. No final stage/census pass is
 inferred from that queue movement.
+
+
+## Post-review check — one repository-test leak warning retained
+
+The normal hook for archive receipt `2dfa72465` returned zero: 76 tests passed in
+4.252 s, with one LEAK annotation on the unchanged repository test
+`subfloor_roster_coverage::every_workspace_crate_has_a_roster_entry_or_a_declared_reason`.
+Root inspected that test's cargo-metadata subprocess path and confirmed it has no
+campaign diff. A subsequent process snapshot showed no matching surviving test or
+cargo-metadata process. One focused nextest rerun passed (one test, 0.026 s)
+without LEAK. This does not establish the original cause or claim a fix.
+
+The [nextest leak documentation](https://nexte.st/docs/features/leaky-tests/)
+explains the inherited-output-handle signal. The exact handle/descendant was not
+captured here; no timeout, test, warning or process was suppressed. Original hook,
+focused output and investigation are preserved in
+`task9-controller-review-02/{review-archive-commit.log,roster-leak-focused.log,
+roster-leak-investigation.md}`. If it recurs, collect descendant/handle evidence
+rather than attributing it to the renderer or rewriting an unchanged test.
