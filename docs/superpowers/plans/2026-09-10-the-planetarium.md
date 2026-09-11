@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–9 local implementation and evidence are independently reviewed; Stages 1–3 have green canonical reports. The final clean 4K package, full moving review and performance/repeatability measurements are complete. Whole-branch technical review is approved with documentation corrections recorded; final canonical integration and census accounting remain pending. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–9 local implementation and evidence are independently reviewed; Stages 1–3 have green canonical reports. The final clean 4K package, full moving review and performance/repeatability measurements are complete. Whole-branch technical review is approved with documentation corrections recorded; final canonical stage and census accounting are complete. Nathan approved the final visual direction and merge at G6 on 2026-09-11; canonical landing remains pending.
 
 ## Global Constraints
 
@@ -27,7 +27,7 @@
 - Existing scene schemas retain their meaning and ordering. Add `scene/astronomy-at/v1` separately; no new simulation draws or save-epoch change are presumed.
 - Source/observation-scope/world/request identities bind every reply and cached entity. Scrubbing never accepts an obsolete reply.
 - Export follows semantic state and frame indices, not wall-clock time. PNG completion and encoding success are required; no static-film fallback.
-- Human visual acceptance and merge remain G6; publication is outside this campaign.
+- Human visual acceptance and merge were approved at G6 on 2026-09-11; publication is outside this campaign.
 - Use subagent-driven development for execution, per Nathan's standing preference. Before each dispatch follow `dispatching-hornvale-subagents`, verify live signatures, and give the worker this spec, plan, exact worktree and branch. Planning self-review is local.
 - Use one existing integration-test binary per simulation crate. Do not add a top-level test target for every module.
 - Local iteration: scoped checks and `make gate-commit`. Stage/merge/heavy/census run through the canonical queue. GPU evidence on the Mac does not authorize a local workspace stage gate.
@@ -653,7 +653,7 @@ Canonical compilation of this new client remains the final Stage 4 request.
 - [x] Run the required canonical stage request for the final candidate and record actual artifact changes/costs. Request `req-a9593ffa367e-20260911T120920Z` passed all four phases, including Linux visual-client CPU checks; the ledger records exact merge/artifact revisions.
 - [x] Complete census-close accounting: the authorized census returned no scientific golden changes. A same-ref, 1000-row live main-study profile supports the scoped per-run finding; original timing delivery incorporated at `e8fdb804c` through the green normal hook. The meeting study and pipeline tail were not profiled; no scaling guarantee or changed alarm is claimed.
 - [x] Reconcile all ledger follow-ups. Write the chronicle/retrospective from measured results, not the concept image. Update reconciliation/spec/plan links and the four-stage tracker; do not call the campaign complete while visual acceptance remains pending.
-- [ ] Present G6: leading schema/model/determinism rulings (including radius), post-G3 ledger digest, verified video/stills, performance and limitations, actual check results, and candidate SHA. Wait for Nathan's final visual/merge decision under campaign-autopilot; this approval is separate from publication.
+- [x] Present G6: leading schema/model/determinism rulings (including radius), post-G3 ledger digest, verified video/stills, performance and limitations, actual check results, and candidate SHA. Wait for Nathan's final visual/merge decision under campaign-autopilot; this approval is separate from publication.
 - [ ] After approval use `closing-a-campaign` and `submitting-to-the-sluice` for the actual integration. Remove only the Planetarium section of `IMPLEMENTATION_PLAN.md` when these stages are complete; preserve the inherited unrelated tracker above it. Remove the whole file only if no unfinished tracker remains. Keep this permanent plan with checked steps and final evidence links. Do not release the worktree or declare a landed result before the queue reports the tested merge has landed.
 
 ## Execution and review rules

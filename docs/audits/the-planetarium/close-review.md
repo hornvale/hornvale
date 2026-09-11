@@ -4,7 +4,7 @@ This is the review candidate's close record. Whole-branch technical review is
 approved with three documentation corrections recorded below. The final canonical
 stage passed after main integration, including the Linux visual-client checks.
 Census profiling/accounting is complete with the scope recorded below. Final
-close review is approved; Nathan's G6 visual/merge decision remains pending.
+close review is approved; Nathan approved G6 on 2026-09-11. Canonical landing remains pending.
 Nothing in this file grants publication or reports a landed campaign.
 
 ## Review artifacts
@@ -257,3 +257,15 @@ The controller evidence snapshot contains 92 file hashes at
 `174766c0f6267812500da122924782288895909dc056392f73e46297659b7696`. It precedes this final approval-receipt metadata;
 the original 4K package and census raw-profile archive retain their separate
 manifests. This does not grant publication or report a landed campaign.
+
+
+## G6 approval — 2026-09-11
+
+Nathan reviewed the package at `83a4fa3d08da54b4339ebaccf1df3b0891e028e8`
+and approved the visual direction and merge: “Yeah, it's fine. We'll need to
+refine it in future campaigns, but it's fine for now.” This accepts the bounded
+pilot with its recorded limitations; further aesthetic refinement stays with
+future campaigns. It does not claim the broader visual ambition is finished.
+The post-approval changes record this decision and prepare the authorized merge;
+the frozen film/app identity remains `81ba2bfa6`. Publication is outside scope.
+The actual canonical merge and heavy result must be read before reporting landing.

@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-10
 
-**Status:** G3 approved by Nathan on 2026-09-10: “LGTM; let's proceed to the plan!” Implementation planning is authorized; final visual acceptance and merge remain at G6.
+**Status:** G3 approved by Nathan on 2026-09-10: “LGTM; let's proceed to the plan!” Implementation and technical qualification are complete. Nathan approved the final visual direction and merge at G6 on 2026-09-11, accepting this pilot for now with further refinement in future campaigns. Canonical landing remains pending; publication is outside scope.
 
 **Campaign:** The Planetarium
 

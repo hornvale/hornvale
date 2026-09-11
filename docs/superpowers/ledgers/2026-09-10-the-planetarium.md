@@ -1,6 +1,6 @@
 # The Planetarium — decision ledger
 
-Status: execution authorized; local Tasks 1–9 independently reviewed; Stages 1–3 canonical green; whole-branch technical review approved with documentation corrections; final canonical stage green including Linux visual-client checks; census returned no scientific golden changes; same-ref main-study profiling and timing incorporation complete with scope limits; final close review approved; G6 visual/merge approval pending.
+Status: execution authorized; local Tasks 1–9 independently reviewed; Stages 1–3 canonical green; whole-branch technical review approved with documentation corrections; final canonical stage green including Linux visual-client checks; census returned no scientific golden changes; same-ref main-study profiling and timing incorporation complete with scope limits; final close review approved; G6 visual/merge approved by Nathan on 2026-09-11; canonical merge pending.
 Branch: `campaign/the-planetarium`.
 Starting revision: `b6b374f6d2dea329d904b56322a09b1dfb29983f`.
 
@@ -1717,3 +1717,15 @@ The controller evidence snapshot contains 92 file hashes at
 `174766c0f6267812500da122924782288895909dc056392f73e46297659b7696`. It precedes this final approval-receipt metadata;
 the original 4K package and census raw-profile archive retain their separate
 manifests. This does not grant publication or report a landed campaign.
+
+
+## G6 approval — 2026-09-11
+
+Nathan reviewed the package at `83a4fa3d08da54b4339ebaccf1df3b0891e028e8`
+and approved the visual direction and merge: “Yeah, it's fine. We'll need to
+refine it in future campaigns, but it's fine for now.” This accepts the bounded
+pilot with its recorded limitations; further aesthetic refinement stays with
+future campaigns. It does not claim the broader visual ambition is finished.
+The post-approval changes record this decision and prepare the authorized merge;
+the frozen film/app identity remains `81ba2bfa6`. Publication is outside scope.
+The actual canonical merge and heavy result must be read before reporting landing.

@@ -2,7 +2,7 @@
 
 **Close state:** local implementation and moving review qualified; whole-branch technical
 review approved, with three documentation findings corrected. Canonical close
-results and Nathan's visual/merge decision remain pending. Product scope is in the
+stage and census results are complete. Nathan approved the pilot and merge on 2026-09-11, with visual refinement left to future campaigns; canonical landing remains pending. Product scope is in the
 [chronicle](../../book/src/chronicle/the-planetarium.md); rulings and task outcomes
 are in the [ledger](../superpowers/ledgers/2026-09-10-the-planetarium.md).
 
