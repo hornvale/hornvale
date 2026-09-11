@@ -95,7 +95,7 @@ The successful GPU capture and review app remain at `81ba2bfa6`; the later
 terminal failure propagation has CPU/scoped-review evidence only. The final visual
 audit names that distinction and the retained shutdown warning.
 
-Exact routing locations at this close-preparation revision are: spec section 12
+Routing locations recorded at `b5fa355c3` were: spec section 12
 at line 380; retrospective deferred-items section at line 47; final visual audit
 refinement at line 36 and UI evidence at line 124; frontier game/climate/camera/
 story rows at lines 2244/2245/2246/2247; Confidence Gradient witness at line 2267;
@@ -119,6 +119,6 @@ summaries agree with the Stage 3 green report; and the retrospective now promote
 the concrete Task 1 stale-brief/local-regeneration incident. It records the
 interruption and the exact retained plumb-roster versus absent fixture drift.
 The explicit scratch/ledger survival audit found no other unpromoted substantive
-ruling, parked finding or idea. Its report and the scoped documentation review
-are included in the campaign archive; these findings do not grant G6 or turn
-queued canonical requests into completed checks.
+ruling, parked finding or idea. Archive both its report and the subsequent scoped
+documentation review after that review finishes, then record the actual manifest.
+These findings do not grant G6 or turn queued canonical requests into completed checks.
