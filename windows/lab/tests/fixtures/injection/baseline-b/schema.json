@@ -2261,7 +2261,7 @@
       "rung": "full"
     },
     {
-      "doc": "Whether every dwarf daughter's (desert-dwarf, gully-dwarf, hill-dwarf) Root derivation.proto matches an INDEPENDENT re-draw of the shared \"dwarf\" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no dwarf daughter minted a Root",
+      "doc": "Whether every dwarf daughter's (desert-dwarf, duergar, gully-dwarf, hill-dwarf, mountain-dwarf) Root derivation.proto matches an INDEPENDENT re-draw of the shared \"dwarf\" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no dwarf daughter minted a Root",
       "domain": "language",
       "kind": "flag",
       "name": "monophyly-dwarf",
@@ -4241,7 +4241,7 @@
   },
   "rows": {
     "count": 20,
-    "fnv1a64": "0xb26d6d8c521966bb"
+    "fnv1a64": "0x20b0cea302bb00da"
   },
   "schema_version": 1,
   "study": {

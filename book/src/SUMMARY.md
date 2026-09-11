@@ -386,6 +386,7 @@
 - [The Rhumb](./chronicle/the-rhumb.md)
 - [The Palimpsest](./chronicle/the-palimpsest.md)
 - [The Underworld](./chronicle/the-underworld.md)
+- [The Underworld Peoples](./chronicle/the-underworld-peoples.md)
 - [The Parley](./chronicle/the-parley.md)
 - [The Illumination](./chronicle/the-illumination.md)
 - [The Gazetteer](./chronicle/the-gazetteer.md)

@@ -853,11 +853,37 @@ fn a_settlement_coming_within_call_is_derived_once_and_only_appended() {
     let world = common::build(42).expect("seed 42 builds");
     let ctx = hornvale_locale::LocaleContext::build(&world).expect("a context builds");
     let flagship = village_info(&world).expect("seed 42 places a flagship");
-    let neighbour = hornvale_settlement::all_settlements(&world)
-        .into_iter()
+    let settlements = hornvale_settlement::all_settlements(&world);
+    let mut mesh_memo = RoomMeshMemo::new();
+    let neighbour = settlements
+        .iter()
         .filter(|v| v.id != flagship.id)
-        .max_by_key(|v| v.population)
-        .expect("seed 42 places more than one settlement");
+        .find(|candidate| {
+            let mut probe = world.ledger.clone();
+            let candidate_body =
+                hornvale_vessel::liveness::derive_npcs(&world, &ctx, &mut probe, 1, candidate.id)
+                    [0]
+                .clone();
+            let window = rooms_within(&candidate_body.home, ROLL_HOPS, &mut mesh_memo);
+            settlements
+                .iter()
+                .filter(|settlement| {
+                    let mut probe = world.ledger.clone();
+                    let body = hornvale_vessel::liveness::derive_npcs(
+                        &world,
+                        &ctx,
+                        &mut probe,
+                        1,
+                        settlement.id,
+                    )[0]
+                    .clone();
+                    window.contains(&body.home.pack().expect("derived room packs"))
+                })
+                .count()
+                == 1
+        })
+        .cloned()
+        .expect("seed 42 places an isolated settlement within the roll radius");
 
     // That settlement's own room, and the entity `derive_npcs` mints for it —
     // read off a THROWAWAY ledger, so nothing here is what the session under
@@ -877,7 +903,6 @@ fn a_settlement_coming_within_call_is_derived_once_and_only_appended() {
     );
 
     session.refresh_roll_at(&room);
-
     assert_eq!(
         session.bodies().len(),
         before + neighbour.population as usize,

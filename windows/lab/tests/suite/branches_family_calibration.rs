@@ -885,17 +885,17 @@ fn homophony_count_is_measured_and_pinned() {
     // daughters — is asserted below and is re-checked rather than assumed:
     // 21.853 against goblin's 5.916 and hobgoblin's 6.170, a margin that
     // WIDENED with this refresh. Only magnitudes moved.
-    // The Wanderers merge product (2026-09-10, D4 absorbed at 8c5e6e95)
-    // re-seats the naming population again, moving the means to 5.885,
-    // 6.225, 21.858, and 6.382. Bugbear remains highest by more than 3x,
-    // so this re-pins the witnesses rather than the claim.
-    assert!((mg - 5.885).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.225).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 21.858).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // The Underworld Peoples census delivery (2026-09-10, 1000 worlds) adds
+    // four sentient peoples and re-seats the naming population, moving the
+    // means to 6.595, 6.856, 24.465, and 7.013. Bugbear remains highest by
+    // more than 3x, so this re-pins the witnesses rather than the claim.
+    assert!((mg - 6.595).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.856).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 24.465).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
     // Unmoved at 6.326 through The Foliot and The Sources' second and third
     // censuses; 6.326 -> 6.36 at The Precedence's, with the other three.
-    assert!((mk - 6.382).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mk - 7.013).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

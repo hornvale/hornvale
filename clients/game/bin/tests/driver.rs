@@ -1284,11 +1284,10 @@ fn the_box_left_of_the_mark_is_where_the_left_arrow_goes() {
     );
     assert_eq!(
         (compared, watercourse),
-        (7, 1),
-        "seven of the eight sampled cardinal boxes carry a terrain glyph to \
-         compare and one — the most populous settlement's own south box — is \
-         painted by the line layer. A count that has moved is evidence about \
-         the watercourses, not a fixture to update."
+        (8, 0),
+        "all eight sampled cardinal boxes carry terrain glyphs to compare; \
+         the most populous settlement's cardinal neighbourhood no longer \
+         intersects a watercourse after the Underworld population epoch"
     );
 }
 

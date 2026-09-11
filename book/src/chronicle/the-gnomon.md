@@ -714,3 +714,15 @@ one. It is not a new point in the six-epoch comparable series, whose verdict
 remains “cannot tell.” The reusable distinction is that changed world facts
 can arrive with changed census and fixture inputs; a moved scorer input is not
 a comparable world, even when the scorer itself is unchanged.
+
+## Postscript 10 — four peoples, another incomparable world (The Underworld Peoples, 2026-09-10)
+
+The Underworld Peoples campaign added mountain dwarves, duergar, kuo-toa, and
+svirfneblin. Those committed world facts moved the census surface and fixture
+inputs together; the scorer was unchanged. The witness reads **68/120 =
+0.5667**, with no void pairs: geothermal 20/20, unconformity 1/20, aquifer
+20/20, karst 3/20, pantheon 7/20, phonology 17/20.
+
+This is the twelfth canonical reading and another incomparable one. The six
+comparable readings remain within one standard error of the 0.60 bar, so the
+verdict remains “cannot tell.”

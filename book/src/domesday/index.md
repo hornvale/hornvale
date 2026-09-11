@@ -21,7 +21,7 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 | Religion | 21 | 12 | [page](./religion.md) |
 | Language | 48 | 36 | [page](./language.md) |
 | Naming | 17 | 10 | [page](./naming.md) |
-| History | 34 | 25 | [page](./history.md) |
+| History | 34 | 27 | [page](./history.md) |
 
 ## Crate coverage (D8)
 
@@ -39,8 +39,8 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | detector | findings |
 |---|---|
 | D1 | 29 |
-| D2 | 41 |
-| D3 | 18 |
+| D2 | 42 |
+| D3 | 19 |
 | D4 | 56 |
 | D5 direction | 1 |
 | D5 strength | 19 |

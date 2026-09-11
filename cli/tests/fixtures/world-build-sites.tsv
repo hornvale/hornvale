@@ -250,6 +250,7 @@ windows/worldgen/tests/suite/underworld_chamber_reach.rs	2	unmigrated:2
 windows/worldgen/tests/suite/underworld_conditions_probe.rs	2	unmigrated:2
 windows/worldgen/tests/suite/underworld_ladder_probe.rs	2	unmigrated:2
 windows/worldgen/tests/suite/underworld_lithology_probe.rs	1	unmigrated:1
+windows/worldgen/tests/suite/underworld_peoples_probe.rs	1	build-path:1
 windows/worldgen/tests/suite/underworld_per_rung_switch.rs	1	unmigrated:1
 windows/worldgen/tests/suite/underworld_separation.rs	1	unmigrated:1
 windows/worldgen/tests/suite/underworld_water_table_probe.rs	2	unmigrated:2

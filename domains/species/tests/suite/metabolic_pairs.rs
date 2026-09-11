@@ -153,14 +153,18 @@ fn sanctioned_thermal_keys_are_pairwise_distinct() {
         ("giant-crocodile", M::Heterotrophic),
         ("gnoll", M::Heterotrophic),
         ("human", M::Heterotrophic),
+        ("kuo-toa", M::Heterotrophic),
+        ("mountain-dwarf", M::Heterotrophic),
         ("desert-dwarf", M::Heterotrophic),
         ("gully-dwarf", M::Heterotrophic),
         ("hill-dwarf", M::Heterotrophic),
         ("desert-elf", M::Heterotrophic),
         ("drow", M::Heterotrophic),
+        ("duergar", M::Heterotrophic),
         ("high-elf", M::Heterotrophic),
         ("sea-elf", M::Heterotrophic),
         ("snow-elf", M::Heterotrophic),
+        ("svirfneblin", M::Heterotrophic),
         ("wood-elf", M::Heterotrophic),
     ];
 

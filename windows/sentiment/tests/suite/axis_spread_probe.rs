@@ -20,8 +20,8 @@ fn axis_spread_probe() {
     let ids: Vec<PeopleId> = cat.keys().copied().collect();
     assert_eq!(
         ids.len(),
-        15,
-        "the catalog must hold exactly the fifteen settling peoples"
+        19,
+        "the catalog must hold exactly the nineteen settling peoples"
     );
 
     println!(

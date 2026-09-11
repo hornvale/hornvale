@@ -6831,6 +6831,54 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T23:48:48Z | sluice:gate | 806.968 | 24199.571 | 746.968 | 30.91 | 0 | 071123fcd |  | lefford | 40 |
 | 2026-09-08T23:51:56Z | sluice:clients | 188.433 | 3130.761 | 319.969 | 18.31 | 0 | 4eec2d166 |  | lefford | 40 |
 | 2026-09-09T00:01:34Z | sluice:heavy | 577.160 | 12961.594 | 211.813 | 22.82 | 0 | 4e340af28 |  | lefford | 40 |
+| 2026-09-09T11:33:50Z | gate-commit | 2.545 | 2.255 | 0.156 | 0.95 | 0 | 045d8f634 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T11:37:33Z | gate-commit | 176.424 | 72.926 | 19.334 | 0.52 | 0 | 045d8f634 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T11:37:33Z | gate-commit | 216.461 | 988.973 | 57.699 | 4.84 | 0 | 045d8f634 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T11:38:33Z | gate-commit | 40.741 | 70.917 | 19.435 | 2.22 | 0 | 045d8f634 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T11:39:45Z | gate-commit | 62.073 | 74.747 | 19.743 | 1.52 | 0 | 045d8f634 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T11:46:34Z | gate-commit | 31.610 | 44.272 | 4.585 | 1.55 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T11:48:04Z | gate-commit | 77.860 | 387.890 | 28.378 | 5.35 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:04:18Z | gate-commit | 45.562 | 124.212 | 14.189 | 3.04 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:05:46Z | gate-commit | 33.484 | 47.796 | 10.871 | 1.75 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:07:57Z | gate-commit | 47.054 | 50.758 | 9.650 | 1.28 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:10:35Z | gate-commit | 48.295 | 52.344 | 10.077 | 1.29 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:11:56Z | gate-commit | 32.605 | 45.635 | 9.469 | 1.69 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:12:56Z | gate-commit | 33.514 | 53.246 | 11.564 | 1.93 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:14:28Z | gate-commit | 45.254 | 93.206 | 31.857 | 2.76 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:15:47Z | gate-commit | 62.697 | 89.082 | 24.341 | 1.81 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:16:57Z | gate-commit | 54.477 | 133.943 | 36.300 | 3.13 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:18:18Z | gate-commit | 56.958 | 187.502 | 38.016 | 3.96 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:19:18Z | gate-commit | 35.847 | 67.395 | 18.221 | 2.39 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:20:15Z | quick | 26.152 | 25.001 | 0.764 | 0.99 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:24:39Z | census-tail-chorus | 51.695 | 202.317 | 8.399 | 4.08 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:24:40Z | census-tail-domesday | 0.317 | 0.271 | 0.032 | 0.96 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:24:40Z | census-tail-anomalies | 0.245 | 0.206 | 0.027 | 0.95 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:24:42Z | rebaseline | 207.303 | 478.910 | 21.679 | 2.41 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:43:04Z | census-tail-chorus | 26.430 | 201.065 | 8.421 | 7.93 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:43:05Z | census-tail-domesday | 0.312 | 0.267 | 0.031 | 0.96 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:43:05Z | census-tail-anomalies | 0.258 | 0.215 | 0.028 | 0.94 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:43:07Z | rebaseline | 154.951 | 472.216 | 21.655 | 3.19 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T13:34:11Z | gate-commit | 53.277 | 56.930 | 7.975 | 1.22 | 0 | 9e133f78b | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T13:37:25Z | gate-commit | 97.553 | 58.876 | 14.126 | 0.75 | 0 | 9e133f78b | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T13:39:04Z | gate-commit | 46.185 | 68.291 | 16.663 | 1.84 | 0 | 9e133f78b | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T13:40:24Z | gate-commit | 63.997 | 82.081 | 20.577 | 1.60 | 0 | 9e133f78b | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T13:42:01Z | gate-commit | 88.968 | 76.323 | 19.995 | 1.08 | 0 | 9e133f78b | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:07:24Z | gate-commit | 61.805 | 89.349 | 28.509 | 1.91 | 0 | 171c3b518 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:08:29Z | gate-commit | 50.660 | 70.645 | 18.410 | 1.76 | 0 | 171c3b518 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:14:04Z | gate-commit | 4.810 | 4.870 | 0.428 | 1.10 | 0 | 452ea9056 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:15:20Z | gate-commit | 63.764 | 213.338 | 41.650 | 4.00 | 0 | 452ea9056 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:18:43Z | census-tail-chorus | 54.069 | 208.196 | 8.064 | 4.00 | 0 | 452ea9056 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:18:43Z | census-tail-domesday | 0.334 | 0.287 | 0.030 | 0.95 | 0 | 452ea9056 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:18:44Z | census-tail-anomalies | 0.250 | 0.208 | 0.027 | 0.94 | 0 | 452ea9056 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:18:46Z | rebaseline | 199.465 | 486.585 | 20.905 | 2.54 | 0 | 452ea9056 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:25:30Z | gate-commit | 89.266 | 96.461 | 29.492 | 1.41 | 0 | 452ea9056 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T14:26:17Z | gate-commit | 38.546 | 68.228 | 18.048 | 2.24 | 0 | 452ea9056 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T16:24:40Z | gate-commit | 50.489 | 84.461 | 27.206 | 2.21 | 0 | 74adac6eb | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T16:25:24Z | gate-commit | 39.416 | 69.520 | 18.637 | 2.24 | 0 | 74adac6eb | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T18:12:52Z | gate-commit | 40.361 | 72.795 | 20.933 | 2.32 | 0 | de9ea12ac | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T18:13:35Z | gate-commit | 35.427 | 66.883 | 18.022 | 2.40 | 0 | de9ea12ac | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T20:05:24Z | gate-commit | 37.471 | 68.121 | 18.411 | 2.31 | 0 | a9a76a872 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T20:06:08Z | gate-commit | 36.606 | 67.733 | 18.086 | 2.34 | 0 | a9a76a872 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T00:40:48Z | gate-commit | 108.454 | 641.749 | 46.273 | 6.34 | 0 | 865000166 | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-09T01:53:46Z | gate-commit | 41.851 | 76.001 | 22.102 | 2.34 | 0 | 0f901813b | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-09T12:15:36Z | gate-commit | 51.376 | 71.944 | 19.740 | 1.78 | 0 | 893943296 | campaign/the-wanderers | MacBookPro | 10 |
@@ -6934,6 +6982,16 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T20:46:51Z | sluice:gate | 864.744 | 25406.499 | 799.676 | 30.31 | 0 | a8b8995d8 |  | lefford | 40 |
 | 2026-09-09T20:50:23Z | sluice:clients | 211.429 | 3353.439 | 305.325 | 17.30 | 0 | 062e2dd9c |  | lefford | 40 |
 | 2026-09-09T21:00:12Z | sluice:heavy | 588.777 | 12958.498 | 195.346 | 22.34 | 0 | c1ca0f6e2 |  | lefford | 40 |
+| 2026-09-09T21:24:49Z | gate-commit | 79.001 | 65.620 | 7.429 | 0.92 | 0 | 21efd8d07 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:32:43Z | gate-commit | 446.461 | 848.107 | 53.988 | 2.02 | 0 | 21efd8d07 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:38:48Z | census-tail-chorus | 61.806 | 201.659 | 7.649 | 3.39 | 0 | c592612bd | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:38:49Z | census-tail-domesday | 0.524 | 0.411 | 0.044 | 0.87 | 0 | c592612bd | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:38:50Z | census-tail-anomalies | 0.334 | 0.263 | 0.034 | 0.89 | 0 | c592612bd | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:38:55Z | rebaseline | 347.708 | 495.807 | 23.469 | 1.49 | 0 | c592612bd | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T22:41:22Z | gate-commit | 5.127 | 5.225 | 0.511 | 1.12 | 0 | 6be88ddc6 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T22:42:50Z | gate-commit | 77.968 | 226.773 | 47.040 | 3.51 | 0 | 6be88ddc6 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T22:43:37Z | gate-commit | 38.875 | 71.264 | 18.924 | 2.32 | 0 | 6be88ddc6 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T23:10:10Z | gate-commit | 45.309 | 72.788 | 20.565 | 2.06 | 0 | 8ca1ae631 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T21:33:12Z | gate-commit | 456.960 | 859.250 | 58.699 | 2.01 | 0 | ce06113df | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-10T00:06:44Z | census-tail-chorus | 59.133 | 777.023 | 24.319 | 13.55 | 0 | 079f6963c |  | lefford | 40 |
 | 2026-09-10T00:18:39Z | census-study-the-census | 714.910 | 26704.825 | 158.913 | 37.58 | 0 | 079f6963c |  | lefford | 40 |
@@ -6991,6 +7049,18 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T02:40:22Z | sluice:gate | 765.055 | 23975.645 | 727.178 | 32.29 | 0 | a2c03b082 |  | lefford | 40 |
 | 2026-09-10T02:43:22Z | sluice:clients | 180.402 | 2932.308 | 258.071 | 17.68 | 0 | 377cf9f37 |  | lefford | 40 |
 | 2026-09-10T02:50:47Z | sluice:heavy | 444.504 | 12884.475 | 270.333 | 29.59 | 0 | 0a7199730 |  | lefford | 40 |
+| 2026-09-10T03:01:52Z | census-tail-chorus | 47.731 | 204.797 | 8.768 | 4.47 | 0 | 0cd02dc2d | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T03:01:53Z | census-tail-domesday | 0.395 | 0.331 | 0.032 | 0.92 | 0 | 0cd02dc2d | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T03:01:53Z | census-tail-anomalies | 0.308 | 0.239 | 0.031 | 0.88 | 0 | 0cd02dc2d | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T03:01:55Z | rebaseline | 207.181 | 532.526 | 23.733 | 2.68 | 0 | 0cd02dc2d | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T03:04:05Z | gate-commit | 111.342 | 632.746 | 52.955 | 6.16 | 0 | 437446dc3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T04:06:16Z | census-tail-chorus | 62.457 | 829.197 | 24.192 | 13.66 | 0 | f9da733bf |  | lefford | 40 |
+| 2026-09-10T04:19:46Z | census-study-the-census | 809.380 | 30476.056 | 149.644 | 37.84 | 0 | f9da733bf |  | lefford | 40 |
+| 2026-09-10T04:25:28Z | census-study-the-meeting | 342.461 | 12369.432 | 137.659 | 36.52 | 0 | f9da733bf |  | lefford | 40 |
+| 2026-09-10T04:25:30Z | census-tail-domesday | 1.274 | 1.117 | 0.118 | 0.97 | 0 | f9da733bf |  | lefford | 40 |
+| 2026-09-10T04:25:31Z | census-tail-anomalies | 1.080 | 0.934 | 0.146 | 1.00 | 0 | f9da733bf |  | lefford | 40 |
+| 2026-09-10T04:25:33Z | census | 1434.633 | 45310.882 | 383.654 | 31.85 | 0 | f9da733bf |  | lefford | 40 |
+| 2026-09-10T04:32:59Z | gnomon-injection | 440.526 | 5166.565 | 169.800 | 12.11 | 0 | f9da733bf |  | lefford | 40 |
 | 2026-09-10T02:56:40Z | census-tail-chorus | 57.531 | 732.629 | 29.337 | 13.24 | 0 | 4c28b470a |  | lefford | 40 |
 | 2026-09-10T02:56:42Z | census-tail-anomalies | 0.988 | 0.864 | 0.124 | 1.00 | 0 | 4c28b470a |  | lefford | 40 |
 | 2026-09-10T02:56:42Z | census-tail-domesday | 1.412 | 1.267 | 0.145 | 1.00 | 0 | 4c28b470a |  | lefford | 40 |
@@ -7026,6 +7096,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T03:49:05Z | sluice:gate | 848.398 | 25315.506 | 847.330 | 30.84 | 0 | b0f9f07ca |  | lefford | 40 |
 | 2026-09-10T03:52:35Z | sluice:clients | 209.248 | 3210.433 | 319.001 | 16.87 | 0 | 0895b0e43 |  | lefford | 40 |
 | 2026-09-10T04:00:15Z | sluice:heavy | 460.506 | 12876.342 | 299.182 | 28.61 | 0 | 406c12114 |  | lefford | 40 |
+| 2026-09-10T12:10:48Z | gate-commit | 75.385 | 70.166 | 8.117 | 1.04 | 0 | f9da733bf | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T12:13:05Z | gate-commit | 122.143 | 568.832 | 46.541 | 5.04 | 0 | f9da733bf | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-10T13:20:49Z | gate-commit | 34.273 | 43.691 | 8.189 | 1.51 | 0 | df3065784 | census-delivery/f9da733bfc24 | MacBookPro | 10 |
+| 2026-09-10T13:30:24Z | gate-commit | 40.749 | 72.988 | 20.659 | 2.30 | 0 | df3065784 | census-delivery/f9da733bfc24 | MacBookPro | 10 |
 | 2026-09-10T13:28:41Z | gate-commit | 2.533 | 2.333 | 0.143 | 0.98 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
 | 2026-09-10T13:29:06Z | gate-commit | 6.377 | 7.469 | 0.473 | 1.25 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
 | 2026-09-10T13:29:42Z | gate-commit | 17.481 | 41.019 | 4.519 | 2.60 | 0 | 6b1a419c8 | campaign/the-vent | MacBookPro | 10 |
@@ -7079,6 +7153,13 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T14:05:55Z | sluice:gate | 867.811 | 26001.488 | 895.978 | 30.99 | 0 | c83cca5c1 |  | lefford | 40 |
 | 2026-09-10T14:09:22Z | sluice:clients | 206.554 | 3225.895 | 321.208 | 17.17 | 0 | e7bffedb9 |  | lefford | 40 |
 | 2026-09-10T14:16:50Z | sluice:heavy | 448.031 | 12863.108 | 281.643 | 29.34 | 0 | 271f5b367 |  | lefford | 40 |
+| 2026-09-10T16:27:55Z | census-tail-chorus | 63.664 | 854.755 | 24.007 | 13.80 | 0 | be229e301 |  | lefford | 40 |
+| 2026-09-10T16:41:18Z | census-study-the-census | 803.191 | 30475.412 | 176.261 | 38.16 | 0 | be229e301 |  | lefford | 40 |
+| 2026-09-10T16:47:03Z | census-study-the-meeting | 344.052 | 12300.643 | 140.835 | 36.16 | 0 | be229e301 |  | lefford | 40 |
+| 2026-09-10T16:47:05Z | census-tail-domesday | 1.416 | 1.253 | 0.134 | 0.98 | 0 | be229e301 |  | lefford | 40 |
+| 2026-09-10T16:47:05Z | census-tail-anomalies | 0.825 | 0.694 | 0.132 | 1.00 | 0 | be229e301 |  | lefford | 40 |
+| 2026-09-10T16:47:07Z | census | 1443.918 | 45597.162 | 427.770 | 31.88 | 0 | be229e301 |  | lefford | 40 |
+| 2026-09-10T16:54:34Z | gnomon-injection | 442.649 | 5196.539 | 167.149 | 12.12 | 0 | be229e301 |  | lefford | 40 |
 | 2026-09-10T16:04:00Z | prewarm | 241.292 | 1649.675 | 59.537 | 7.08 | 0 | d99f847e6 | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-10T17:22:38Z | gate-commit | 132.960 | 215.368 | 39.997 | 1.92 | 0 | d61ad3f99 | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-10T17:25:42Z | gate-commit | 82.121 | 78.806 | 21.840 | 1.23 | 0 | d61ad3f99 | campaign/the-planetarium | MacBookPro | 10 |
@@ -7272,6 +7353,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T14:48:49Z | sluice:gate | 784.109 | 24489.478 | 744.559 | 32.18 | 0 | b26dec03b |  | lefford | 40 |
 | 2026-09-11T14:51:48Z | sluice:clients | 179.352 | 2921.006 | 244.374 | 17.65 | 0 | d38f9982b |  | lefford | 40 |
 | 2026-09-11T14:59:18Z | sluice:heavy | 449.428 | 12878.114 | 270.420 | 29.26 | 0 | 88db26da7 |  | lefford | 40 |
+| 2026-09-11T17:37:15Z | gate-commit | 22.075 | 42.775 | 5.260 | 2.18 | 0 | 1bb8cb3e8 |  | MacBookPro | 10 |
 | 2026-09-11T01:36:44Z | census-tail-chorus | 60.346 | 811.712 | 26.351 | 13.89 | 0 | fa1223fd7 |  | lefford | 40 |
 | 2026-09-11T01:48:40Z | census-study-the-census | 715.525 | 26783.065 | 158.304 | 37.65 | 0 | fa1223fd7 |  | lefford | 40 |
 | 2026-09-11T01:54:19Z | census-study-the-meeting | 339.430 | 12233.722 | 134.850 | 36.44 | 0 | fa1223fd7 |  | lefford | 40 |

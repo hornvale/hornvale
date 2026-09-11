@@ -3182,6 +3182,16 @@ a people and nothing that places a people consults it — but the standing
 precondition since The Delvers has been the underworld *being declared as
 places*, and a place nobody can reach is a weaker candidate than one they can.
 
+*Re-scored again by [The Underworld Peoples](./chronicle/the-underworld-peoples.md)
+(2026-09-10).* The bet moves from "the underworld has no participants" to
+"the underworld can host several real, registry-backed participants": mountain
+dwarf, duergar, svirfneblin, and kuo-toa now seat on reachable rungs, with
+kuo-toa's fit changing with water rather than darkness alone. This is evidence
+for the habitat-medium and people-facing halves, not a resolution of the
+vertical-relationship mechanisms themselves. Surface–underground commerce,
+speciation by stratum, predation inversion, and subterranean cultural valence
+remain unbuilt, so the bet stays open at partial confidence.
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,

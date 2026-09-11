@@ -43,6 +43,7 @@ dire-wolf-kind: Qaa /qaa/
 door: Nagoa /nagoa/
 drink: Qeego /qeego/
 drow-kind: Genoa /genoa/
+duergar-kind: Gena /gena/
 eager: Nene /nene/
 earth: Pode /pode/
 east: Paenao /paenao/
@@ -106,6 +107,7 @@ kill: Dapo /dapo/
 killer-whale-kind: Gaqo /gaqo/
 know: Naena /naena/
 kobold-kind: Naeno /naeno/
+kuo-toa-kind: Poqe /poqe/
 lake: Qao /qao/
 ledge: Notoe /notoe/
 liana-forest: Neene /neene/
@@ -127,6 +129,7 @@ millet: Noapea /noapea/
 moon: Koo /koo/
 mossy-deadfall: Kae /kae/
 mountain: Dotoo /dotoo/
+mountain-dwarf-kind: Pedee /pedee/
 mouth: Noanaa /noanaa/
 move: Goatee /goatee/
 muskeg: Deoqa /deoqa/
@@ -200,6 +203,7 @@ stone: Peotea /peotea/
 strongbox: Qonoa /qonoa/
 sun: Pago /pago/
 supports-rest: Geno /geno/
+svirfneblin-kind: Neana /neana/
 taiga: Qe /qe/
 temperate-forest: Na /na/
 temperate-grassland: Noo /noo/
