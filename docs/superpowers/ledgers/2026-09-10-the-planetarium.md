@@ -1394,3 +1394,20 @@ required if the canonical queue advances those inputs.
 Task 9's allocated local implementation and visual/performance evidence are
 approved. Whole-branch review and final canonical integration remain next;
 G6 is still Nathan's final visual and merge decision, not an automatic task gate.
+
+
+## Final canonical stage — request queued
+
+After the normal 76-test prose hook passed in 4.674 s, root pushed
+`62fc0480f1e7de0448e8a848ad6652087ee8b54e` and submitted
+`make sluice-stage BRANCH=campaign/the-planetarium
+REF=62fc0480f1e7de0448e8a848ad6652087ee8b54e`. Both returned zero.
+The durable request is `req-62fc0480f1e7-20260911T010052Z`, kind=stage,
+host=lefford. It is queued, not passed. This request includes the final client
+code and its Linux CPU-gate integration. The independent whole-branch review
+uses this exact HEAD against absorbed main `cb0331192`.
+
+No optional operator nudge or message was sent. The queue preserves FIFO;
+root did not start a competing drain or operate another campaign's request.
+Actual census and final stage reports remain required before G6 preparation
+can claim those checks passed. The final review's pending state is deliberate.

@@ -100,3 +100,9 @@ refinement at line 36 and UI evidence at line 124; frontier game/climate/camera/
 story rows at lines 2244/2245/2246/2247; Confidence Gradient witness at line 2267;
 client library ownership at line 8. These are lookup locations, not frozen line
 contracts; the named headings and row IDs remain the durable identifiers.
+
+
+Final stage request `req-62fc0480f1e7-20260911T010052Z` is queued at
+`62fc0480f1e7de0448e8a848ad6652087ee8b54e`. Its normal push and request returned
+zero. Whole-branch review is evaluating that same candidate while the canonical
+queue works; no final stage or census result is claimed yet.
