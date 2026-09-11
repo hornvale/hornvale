@@ -322,9 +322,36 @@ pub fn run(
         );
     }
     app.add_systems(PreUpdate, update.after(InputSystems));
-    app.run();
-    Ok(())
+    run_app(&mut app)
 }
+
+fn run_app(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
+    match app.run() {
+        bevy::app::AppExit::Success => Ok(()),
+        bevy::app::AppExit::Error(code) => {
+            Err(format!("live application exited with error code {code}").into())
+        }
+    }
+}
+fn finish_benchmark(
+    benchmark: &crate::benchmark::Benchmark,
+    film: &FilmDefinition,
+    dimensions: (u32, u32),
+    observation_error: &Option<String>,
+) -> bevy::app::AppExit {
+    if let Err(error) = benchmark.finish(film, dimensions, observation_error) {
+        eprintln!("benchmark write failed: {error}");
+        bevy::app::AppExit::error()
+    } else {
+        println!(
+            "BENCHMARK COMPLETE {} samples={}",
+            benchmark.output.display(),
+            benchmark.frames.len()
+        );
+        bevy::app::AppExit::Success
+    }
+}
+
 fn update(world: &mut World) {
     let Some(mut live) = world.remove_resource::<Live>() else {
         return;
@@ -334,19 +361,12 @@ fn update(world: &mut World) {
         if let Some((elapsed, interval)) = benchmark.sample() {
             benchmark.queries.extend(samples);
             if elapsed >= 60. {
-                if let Err(error) =
-                    benchmark.finish(&live.film, live.dimensions, &live.observation.error)
-                {
-                    eprintln!("benchmark write failed: {error}");
-                    world.write_message(bevy::app::AppExit::error());
-                } else {
-                    println!(
-                        "BENCHMARK COMPLETE {} samples={}",
-                        benchmark.output.display(),
-                        benchmark.frames.len()
-                    );
-                    world.write_message(bevy::app::AppExit::Success);
-                }
+                world.write_message(finish_benchmark(
+                    &benchmark,
+                    &live.film,
+                    live.dimensions,
+                    &live.observation.error,
+                ));
             } else {
                 benchmark.frames.push(serde_json::json!({"elapsed_seconds":elapsed,"interval_seconds":interval,"frame":live.committed_frame,"pending":live.observation.pending()}));
                 let block = (elapsed / 10.).floor() as u32;
@@ -685,4 +705,48 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
         n.width = percent(desired as f32 / (l.film.frames - 1) as f32 * 100.);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn benchmark_app(output: PathBuf, remove_output: bool) -> App {
+        let benchmark =
+            crate::benchmark::Benchmark::new(output.clone(), std::time::Instant::now()).unwrap();
+        if remove_output {
+            std::fs::remove_dir(&output).unwrap();
+        }
+        let film: FilmDefinition =
+            serde_json::from_str(include_str!("../films/pilot.json")).unwrap();
+        let mut app = App::new();
+        app.set_runner(move |_| finish_benchmark(&benchmark, &film, (1920, 1080), &None));
+        app
+    }
+
+    #[test]
+    fn benchmark_output_failure_reaches_app_caller() {
+        let output =
+            std::env::temp_dir().join(format!("planetarium-exit-failure-{}", std::process::id()));
+        let mut app = benchmark_app(output.clone(), true);
+        let result = run_app(&mut app);
+        assert!(!output.join("samples.json").exists());
+        assert!(
+            result.is_err(),
+            "failed benchmark output must not return success"
+        );
+    }
+
+    #[test]
+    fn benchmark_output_success_reaches_app_caller() {
+        let output =
+            std::env::temp_dir().join(format!("planetarium-exit-success-{}", std::process::id()));
+        let mut app = benchmark_app(output.clone(), false);
+        let result = run_app(&mut app);
+        let samples: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(output.join("samples.json")).unwrap()).unwrap();
+        std::fs::remove_dir_all(output).unwrap();
+        assert!(result.is_ok());
+        assert_eq!(samples["schema"], "planetarium/interactive-benchmark/v1");
+    }
 }

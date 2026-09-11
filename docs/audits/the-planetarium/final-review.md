@@ -147,6 +147,20 @@ source point illumination, static cosmetic cloud/haze layers, unsupported moon
 spin, no eclipse shadows, and the bounded orbital camera envelope. The source
 schema/model rulings and post-G3 ledger remain governing context for G6.
 
+## Terminal failure handling after capture
+
+Task 9 review found that the live runner discarded Bevy's returned `AppExit`.
+The later candidate propagates an error exit to the CLI while retaining the
+contextual benchmark-write diagnostic. CPU regressions exercise actual missing
+output-directory failure and successful samples-file creation through that exit
+boundary. This change is confined to terminal failure handling; it does not alter
+sampling, source, film, material or rendering. The successful GPU qualification
+and retained review app remain bound to capture SHA
+`81ba2bfa6d1654c1e99d28b18ab8dc03d602c7ae`, not the later failure-handling
+candidate. The scoped reviewer required CPU regression and re-review, without
+another unchanged GPU capture. The retained post-completion destroyed-window
+warning remains a nonblocking shutdown limitation; warnings were not suppressed.
+
 ## Source, tools, assets and publication
 
 Hornvale source and authored procedural presentation code use the repository's
