@@ -1367,12 +1367,12 @@ hornvale-lab::hornvale_lab$diff::tests::csv_round_trip_diffs_through_render_diff
 hornvale-lab::hornvale_lab$diff::tests::header_reports_row_and_refusal_counts
 hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_292_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -1451,7 +1451,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -1695,6 +1694,7 @@ hornvale-lab::suite$health_calibration::one_stuck_creature_among_nine_recovering
 hornvale-lab::suite$health_calibration::searching_is_not_distress
 hornvale-lab::suite$health_calibration::the_chronic_threshold_is_exact_at_chronic_ticks
 hornvale-lab::suite$hearth_population_calibration::the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close
+hornvale-lab::suite$hearth_population_calibration::the_hearth_never_worsens_a_planted_cold_built_population
 hornvale-lab::suite$individuation::awakening_is_a_fact_and_the_large_owlbear_stays_large
 hornvale-lab::suite$individuation::mighty_things_in_the_cold_north
 hornvale-lab::suite$individuation::the_roster_passes_integrity_and_stays_out_of_the_canon
@@ -3474,7 +3474,6 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
-hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
