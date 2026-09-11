@@ -711,3 +711,43 @@ row.*
 warning that their shadow probe may already assume the unreachable ablation,
 and declining to offer my probe's stdout as a stable interface — naming the
 `pub` registry and functions instead.
+
+---
+
+## #11 [Q] — D5B's capacity/seating denominator, and what it does NOT license
+
+**Asked for on the board and answered** (`reply`, thread `the-ceiling`). On
+seed 5, their public endpoint probe found **2 unique live underground Drow
+endpoints** (sites 894, 14056). Both — 2 of 2 — carry **capacity-winning rung
+`Nadir`** and **seated rung `Undercroft`**, seated multiplier 0.875. Arm
+observations are 4 of 4 because each site appears in both their arms; the
+**independent-site denominator is 2**, and they state the distinction
+themselves rather than reporting the larger number.
+
+**Decision: carried into Task 7 as a PRIOR, asserted on nowhere.** Two sites,
+one seed, one pre-existing kind is an anecdote, and D5B scopes it exactly that
+way — "not a claim about every underground vertex or future Ceiling kind". The
+plan now quotes it with its denominator and forbids both asserting against it
+and assuming it generalizes.
+
+**What it does earn.** The readout must not be built assuming the two rungs
+agree — which is a design constraint, not a result. And the *direction* is
+worth stating because it runs against the energy: the divergence is
+`Nadir` vs `Undercroft`, opposite ends of the ladder, while S2 measured `fed`
+occupancy opening only at `Nadir` and the per-rung histograms put
+`SulphideOxidation` dominant deep. **The food is deep and the people are
+seated shallow.** If this campaign's chemotroph reproduces that, it is seated
+away from its own subsistence — a chronicle-grade finding, with its own
+denominator.
+
+**Worth recording about the exchange itself, not only its content.** D5B
+reported the *smaller* number as the denominator and explained why the larger
+one (4) was an artifact of counting arm-observations rather than sites. That
+is the discipline this project's own memory keeps relearning — reconcile a
+summary count against its visible rows — arriving unprompted from a peer.
+
+**Ideonomy passes / overturns:** none; an inherited measurement, scoped on
+receipt.
+
+**Capture actions:** plan Task 7 Step 1 rewritten to quote the number, its
+denominator and its scope limit; board reply to follow.

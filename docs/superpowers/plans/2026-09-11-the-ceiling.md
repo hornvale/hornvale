@@ -620,10 +620,32 @@ git commit -m "test(the-ceiling): M4 -- the chemotroph ablation, with per-source
 
 - [ ] **Step 1: Report placement by rung, naming WHICH rung**
 
-"At which rungs" is two questions. The Staple D5B measured that the
-**capacity-winning** rung and the **seated** rung differ at some underground
-endpoints. Every figure must name which of the two it reports; report both
-where both are available. **Do not reconcile them** — that is D5B's.
+"At which rungs" is two questions, and D5B has now measured that they have
+different answers. Every figure must name which of the two it reports; report
+both where both are available. **Do not reconcile them** — that is D5B's.
+
+**Their measurement, quoted so you do not re-derive a worse version** (board
+`reply`, thread `the-ceiling`): on seed 5, the public endpoint probe found
+**2 unique live underground Drow endpoints** (sites 894 and 14056). Both — 2
+of 2 — had **capacity-winning rung `Nadir`** and **seated rung `Undercroft`**,
+seated multiplier 0.875. The arm-observation count is 4 of 4 because each site
+appears in both their arms; **the independent-site denominator is 2**.
+
+**Treat this as a PRIOR, not as evidence.** Two sites on one seed for one
+existing kind is an anecdote, and D5B scopes it explicitly as "the observed
+Drow endpoint cohort, not a claim about every underground vertex or future
+Ceiling kind". **Do not assert against it and do not assume it generalizes to
+the kind this campaign authors.** What it earns is this: the readout must not
+be built assuming the two rungs agree, and if this campaign's kind shows the
+same split, say so with its own denominator rather than borrowing theirs.
+
+**Why the direction is interesting enough to state.** The divergence is not a
+near-miss — it is opposite ends of the ladder, and it runs against where the
+energy is. S2 measured `fed` band occupancy opening only at `Nadir` (5.68%),
+and M1's per-rung histograms put `SulphideOxidation` dominant in the deep
+rungs. So the food is deep and the people are seated shallow. If this
+campaign's chemotroph reproduces that, it is seated away from its own
+subsistence, which is a finding worth the chronicle.
 
 - [ ] **Step 2: Report how many tolerance axes discriminate the kind**
 
