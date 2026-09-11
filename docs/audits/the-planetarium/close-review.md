@@ -185,3 +185,10 @@ document semantically and all 300 exact-tick observation replies byte-for-byte.
 `task9-controller-review-02/native-main-replay.json` names the actual checkout
 separately from the original capture binding reused for protocol comparison.
 The temporary example was removed; no new GPU or capture qualification is claimed.
+
+Independent scoped integration review approved with no findings at `6d5d5a8bb`.
+Main remains `f22860af3`; the final merge preview is clean. Recovery backup,
+fix/review reports, packages and replay evidence are durably archived in
+`task9-controller-review-02/held-stage-recovery/` with 17 file hashes;
+manifest SHA-256 `83abeb0e89277dc0cd5366d0c128774f24023e1e64b58e951d40b298a0e3ae6d`. The next action is a fresh stage
+submission. The earlier held request is not relabeled as passing.

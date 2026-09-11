@@ -94,3 +94,13 @@ the 100-file implementation-review archive. Final review found the Task 1
 regeneration lesson missing; it is promoted above and passed scoped re-review. The Confidence Gradient has a relevant scene-interface
 bet: a real rendered consumer strengthens it within this bounded astronomical
 scope; it does not establish gameplay or general world visualization.
+
+
+The final stage met main after the eclipse campaign landed. Its 1961-second
+held result included 1948 seconds waiting for the canonical lock; no gate phase
+ran before the merge conflict. Read the actual log before attributing a long
+red result to renderer compilation or tests. The repair retained both scene
+error annotations, regenerated the two audit reports, and passed scoped plus
+normal commit checks. Independent review found no issues, and a CPU replay
+matched all 300 recorded observation replies exactly, preserving the original
+capture's bounded claim without relabeling it as a newer GPU run.
