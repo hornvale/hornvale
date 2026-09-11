@@ -2,7 +2,7 @@
 
 This is the review candidate's close record. Whole-branch technical review is
 approved with three documentation corrections recorded below. The final canonical
-stage was held on a merge conflict and is being resubmitted after integration.
+stage passed after main integration, including the Linux visual-client checks.
 Census profiling/accounting and Nathan's G6 visual/merge decision remain pending.
 Nothing in this file grants publication or reports a landed campaign.
 
@@ -192,3 +192,33 @@ fix/review reports, packages and replay evidence are durably archived in
 `task9-controller-review-02/held-stage-recovery/` with 17 file hashes;
 manifest SHA-256 `83abeb0e89277dc0cd5366d0c128774f24023e1e64b58e951d40b298a0e3ae6d`. The next action is a fresh stage
 submission. The earlier held request is not relabeled as passing.
+
+
+## Final canonical stage — green report
+
+Request `req-a9593ffa367e-20260911T120920Z` at
+`a9593ffa367ecbbca89a362fc27ef5b907380a7f` is **reported green**: all four
+phases returned zero in 2127 s. The tested merge product is
+`914aaf8a53651163894300495f5210c1570e2bef`; the final artifact commit is
+`3f2030a2f1bae992b3c5254f4592fb0d81b4e4d6`. Main was unchanged at
+`f22860af31313a7dc9ad48ed24aa008d539912bf`; root fetched that same main
+after reading the report and confirmed a clean merge preview.
+
+Measured phases: artifacts 281.565 s, outboard 147.279 s, gate 861.821 s,
+clients 817.181 s. The Linux visual-client section actually ran: 79 Rust
+tests plus 6 Python dependency tests passed. This establishes the client CPU
+gate on Linux, not a Linux GPU-quality claim. The final artifact diff contains
+only four operational files: generated-path write counts, timings, subfloor
+roster, and the lefford test baseline (120 insertions / 95 deletions). No
+scientific fixture or renderer source changed in that authoring delta.
+
+Full log, actual diff and hashed report are preserved in
+`task9-controller-review-02/canonical-stage5*`. The earlier held request remains
+a failed merge attempt; this fresh report is the successful qualification.
+The captured movie/app remain bound to `81ba2bfa6`, with the separately
+recorded integrated-source replay proving 300/300 reply byte agreement.
+
+The census's null-golden result is already known, but its 1366.487 s timing
+still owes the requested live profile before delivery incorporation. No
+operator profiling result has been reported. That obligation, final G6
+approval, and the post-approval merge/heavy run remain open.
