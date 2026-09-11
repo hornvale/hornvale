@@ -1328,9 +1328,25 @@ own.
 The near-miss that prompted it: a session wrote the file with `cat >` — never
 having read it — and landed the clobber through a commit that staged other
 paths explicitly (`git commit` takes the whole INDEX, not the paths you last
-`add`ed). Zero lines of the-murrain's survived, the merge raised **no
-conflict**, and the-murrain was live with Stage 4 In Progress. No gate saw it;
-the merge queue's operator caught it by reading the file.
+`add`ed). Zero lines of the-murrain's survived and the merge raised **no
+conflict**. No gate saw it; the merge queue's operator caught it by reading
+the file.
+
+**AND THE CONTENT IT WOULD HAVE DESTROYED WAS ITSELF STALE, WHICH IS THE
+STRONGER ARGUMENT.** It was first reported — by the operator, and repeated
+here — that the-murrain was *live* with Stage 4 In Progress. Checked
+afterwards: `campaign/the-murrain` and `campaign/the-murrain-across-world` are
+both merged into main, and `book/src/chronicle/the-murrain.md` and
+`docs/retrospectives/the-murrain.md` are both present there. The campaign was
+finished. The file said `Stage 4: In Progress` because this guide's own
+instruction to delete a staging document when its stages are done was never
+carried out — so the one copy that looked alive was abandoned residue too.
+
+That is the real indictment, and it is duller than a race between two writers:
+**the typical content of this path was a finished campaign's abandoned
+staging, inherited by every branch that absorbed main.** Not merely shared —
+usually wrong. A path whose common case is unwitting inheritance of stale
+state is not one anyone can be careful enough with.
 
 **The file is now deleted and gitignored, and staging documents are scratch.**
 Put a staging document where exactly one effort will ever touch it — the
