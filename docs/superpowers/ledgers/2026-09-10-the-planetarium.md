@@ -1270,3 +1270,28 @@ Stage 3 request `req-2dd219cef400-20260910T233741Z` is running as observed from
 `make sluice-status`; no green report is claimed. Final canonical integration,
 census, Task 9 review, final artifact archive and G6 remain outstanding. A fresh
 scratch/ledger delta sweep is required after Task 9 before the final handoff.
+
+
+## Pre-close census — authorized request queued
+
+The authorized census is queued as `req-fa1223fd7e82-20260911T001301Z` at
+`fa1223fd7e82d059b61788506f90abcaf271dc9c`. The normal push and
+`make sluice-census BRANCH=campaign/the-planetarium
+REF=fa1223fd7e82d059b61788506f90abcaf271dc9c` both returned zero; the request
+reported kind=census, host=lefford. This is submission evidence, not a census
+result. No main merge or publication occurred.
+
+The committed simulation work is ready for this pre-close measurement while
+Task 9 refines client presentation. Immediately before submission,
+`git diff --name-only HEAD -- domains kernel windows cli clients/visual/source`
+was empty. Final review must compare those source/model paths between this
+censused ref and the eventual candidate before using its result; a later change
+to census-relevant code would require reassessment. The final stage gate still
+runs against the final client candidate. Queue work does not occupy the Mac's
+reserved interactive measurement window.
+
+Root inspected actual Task 9 draft frames 01 and 03. Varied placement improved
+the first regular crater grid, but the later rims still read as stamped rings.
+The worker is reassessing the continuous crater profile before full clean capture;
+this is appearance refinement within the approved scope, not physical moon
+terrain. No final visual result is accepted here.
