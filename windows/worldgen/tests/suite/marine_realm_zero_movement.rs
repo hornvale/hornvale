@@ -26,6 +26,17 @@
 //! this keeps working as a permanent guard long after this task closes, not
 //! only as a one-off measurement of the moment the variant was introduced.
 //!
+//! **The positive control (drow).** sea-elf and giant-crocodile are
+//! `Surface` in BOTH arms today, so their equality is arithmetically forced
+//! and demonstrates nothing about whether the comparison can detect a real
+//! difference. drow is genuinely `Subterranean` in `realm_live` and forced
+//! to `Surface` in `realm_surface_forced`, so its live and forced
+//! suitability are asserted UNEQUAL — the same live-vs-surface-forced
+//! divergence `deep_realm_rehome.rs` measures for xorn (ratio 1.697). This
+//! is what rules out the blind spot: a bug that made `per_species_
+//! suitability` ignore `species_realm` entirely would leave every other
+//! assertion in this file green.
+//!
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
 //! points directly to build its own world state, once per test — the
 //! sanctioned test-fixture posture, reused from `deep_realm_rehome.rs`.
@@ -121,6 +132,43 @@ fn marine_realm_introduction_moves_sea_elf_and_giant_crocodile_nowhere() {
         &realm_surface_forced,
         &none_affinity,
     );
+
+    // THE POSITIVE CONTROL, required alongside the two target kinds: without
+    // it, every assertion below runs over two arms that are equal BY
+    // CONSTRUCTION (`realm_live` and `realm_surface_forced` already agree at
+    // sea-elf's and giant-crocodile's index, since both resolve to `Surface`
+    // today), so a bug that made `per_species_suitability` ignore
+    // `species_realm` ENTIRELY would leave this file green and silent — the
+    // one failure mode a zero-movement guard must not have. `realm_live` and
+    // `realm_surface_forced` genuinely DIFFER at drow's index (Subterranean
+    // vs forced Surface — the same pair `deep_realm_rehome.rs` measures
+    // diverging, e.g. xorn's live/surface-forced ratio 1.697), so drow's
+    // live and forced suitability must be UNEQUAL. This converts "the
+    // numbers matched" into "the instrument can tell a difference when
+    // there is one".
+    {
+        let tag = names
+            .iter()
+            .position(|n| *n == "drow")
+            .unwrap_or_else(|| panic!("drow missing from the biosphere roster"))
+            as u32;
+        let live_map = &k_live.iter().find(|(t, _)| *t == tag).unwrap().1;
+        let forced_map = &k_surface_forced.iter().find(|(t, _)| *t == tag).unwrap().1;
+        let live_count = count_nonzero(geo, live_map);
+        let forced_count = count_nonzero(geo, forced_map);
+        println!(
+            "drow (positive control): live_nonzero={live_count} surface_forced_nonzero={forced_count} \
+             (of {} vertices)",
+            geo.vertices().count()
+        );
+        assert_ne!(
+            live_count, forced_count,
+            "drow's non-zero-suitability vertex count must DIFFER between the live \
+             (Subterranean) realm and the forced-Surface control — an equal count here means \
+             `per_species_suitability` is not actually reading `species_realm` at all, which \
+             would make every equality assertion below vacuous rather than a real check"
+        );
+    }
 
     for label in ["sea-elf", "giant-crocodile"] {
         let tag = names

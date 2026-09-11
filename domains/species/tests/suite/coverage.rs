@@ -856,6 +856,65 @@ fn the_two_realms_order_hardness_oppositely() {
     );
 }
 
+/// THE TIDEMARK, Task 1: pins the entire stated argument for
+/// `substrate_response`'s marine curve, which is otherwise unasserted.
+/// `MARINE_OPTIMUM`/`MARINE_WIDTH` are literal aliases of the subterranean
+/// values (same specialist peak, same specialist band -- see the function's
+/// own doc), so `devotion` is the ONLY independent number Task 1 authored
+/// for `Marine`. Without this test, a later edit setting `MARINE_DEVOTION`
+/// to `SUBTERRANEAN_DEVOTION` (erasing the one distinction the third curve
+/// exists to make) would pass every other gate silently.
+///
+/// Asserts the RELATIONSHIP the doc argues -- devotion falls by the same
+/// step twice, `Surface` (1.0) to `Subterranean` (0.8) to `Marine` (0.6) --
+/// never the literal constants, so a deliberate future re-tuning of any one
+/// value stays green as long as the ordering (and, more specifically, the
+/// EQUAL step) survives it.
+#[test]
+fn marine_devotion_falls_below_subterranean_by_the_same_step_that_separated_it_from_surface() {
+    let surface = substrate_response(HabitatRealm::Surface);
+    let under = substrate_response(HabitatRealm::Subterranean);
+    let marine = substrate_response(HabitatRealm::Marine);
+
+    assert!(
+        marine.devotion < under.devotion,
+        "a marine kind's habitat is the water column, not the seabed beneath it -- its \
+         devotion ({}) must sit below a subterranean kind's ({}), which is already below a \
+         surface kind's whole ({})",
+        marine.devotion,
+        under.devotion,
+        surface.devotion
+    );
+    assert!(
+        under.devotion < surface.devotion,
+        "the three-way ordering's other half: a subterranean kind's devotion ({}) must still \
+         sit below a surface kind's whole ({})",
+        under.devotion,
+        surface.devotion
+    );
+
+    let surface_to_subterranean_step = surface.devotion - under.devotion;
+    let subterranean_to_marine_step = under.devotion - marine.devotion;
+    assert!(
+        (surface_to_subterranean_step - subterranean_to_marine_step).abs() < 1e-12,
+        "the doc's stated argument is that devotion falls again \"by the same 0.2 step\" -- \
+         surface-to-subterranean is {surface_to_subterranean_step}, subterranean-to-marine is \
+         {subterranean_to_marine_step}; these must be equal, not merely both positive"
+    );
+
+    // Marine's optimum and width are aliases of subterranean's by
+    // construction (same specialist argument) -- pinned here so a change
+    // to either is a deliberate, reviewed edit rather than a silent drift.
+    assert_eq!(
+        marine.optimum, under.optimum,
+        "MARINE_OPTIMUM is authored as an alias of SUBTERRANEAN_OPTIMUM -- see substrate_response's doc"
+    );
+    assert_eq!(
+        marine.width, under.width,
+        "MARINE_WIDTH is authored as an alias of SUBTERRANEAN_WIDTH -- see substrate_response's doc"
+    );
+}
+
 /// The reversal must survive the LOOKUP, not just the two curves: `drow` and
 /// `human` must actually land in different realms. The curves are useless if
 /// every species resolves to the same one, and nothing in the test above

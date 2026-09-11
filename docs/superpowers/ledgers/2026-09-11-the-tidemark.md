@@ -354,6 +354,88 @@ counts are promised to the board for the peer either way, since rung 3 derives
 off the same biome map. The peer was also told about this ledger's
 `SOC-casus-belli` finding, which is what led to it being corrected (below).
 
+## Task 1 — execution record
+
+Commit `d6775158c` ("feat(the-tidemark): add the marine habitat realm"),
+branch `campaign/the-tidemark`. This section is the committed home for the
+three records the brief asked to be kept "in the ledger" — they had been
+written only into per-worktree scratch (`.superpowers/sdd/2026-09-11-
+the-tidemark/task-1-report.md`), which is git-ignored and dies with the
+worktree; folded in here at review round 1's request (IMPORTANT #2).
+
+**The compiler-produced site list**, obtained by adding `HabitatRealm::Marine`
+and running `cargo build --workspace --all-targets` repeatedly, fixing one
+reported site at a time, never grepping ahead (`substrate_response`'s own
+doc promises the `match` is exhaustive with no wildcard, so the compiler
+enumerates the sites rather than the spec or the implementer guessing at
+them):
+
+1. `domains/species/src/lib.rs:4774` — `substrate_response`'s `match realm`
+   — the real curve, authored per pre-flight ruling P1's companion
+   resolution (a).
+2. `windows/worldgen/src/lib.rs:2008` — `per_species_suitability_masked`'s
+   `let (best, availability) = match realm`.
+3. `windows/worldgen/src/lib.rs:2417` — the identically-shaped match inside
+   `per_species_capacity_at_with_invariant` (the dimensional capacity twin
+   of site 2; not named in ruling P1's text but the same architectural
+   pattern, treated identically).
+4. `windows/worldgen/src/lib.rs:8202` (pre-fmt line number) — the
+   `seatings: Vec<crate::delve_seating::Seating>` build's
+   `match species_realm[i]` — delve-seating / pelagic-ladder assignment,
+   explicitly Task 2's scope per the pre-flight conflict table ("marine
+   availability mask + pelagic seating").
+5. `windows/worldgen/tests/suite/hidage_probe.rs:373` — a test-fixture copy
+   of site 4's seating match (decision 0092's test-fixture posture: copied,
+   not shared).
+6. `windows/worldgen/tests/suite/hidage_probe.rs:425` — a second match in
+   the same file, over `pf.realm`, restricted to ALIVE occupations.
+7. `windows/worldgen/tests/suite/staple_d3b_probe.rs:690` — a third copy of
+   site 4's seating match.
+
+Site 1 is `domains/species`, which compiles before `hornvale-worldgen`; the
+other six surfaced only once site 1 was fixed and the dependent crate could
+compile again.
+
+**M4's counts** (`windows/worldgen/tests/suite/marine_realm_zero_movement.rs`,
+seed 42, `BuildDepth::Terrain`, 40962 total vertices), including the
+positive control added at review round 1 (IMPORTANT #1):
+
+| kind | live non-zero | surface-forced non-zero | equal? |
+|---|---:|---:|---|
+| drow (positive control — Subterranean live, forced Surface) | 874 | 11283 | **no** (required) |
+| sea-elf | 40799 | 40799 | yes |
+| giant-crocodile | 40799 | 40799 | yes |
+
+sea-elf and giant-crocodile are additionally asserted bit-identical
+(`f64::to_bits()`) at every one of the 40962 vertices, not merely
+count-equal. The drow row is what makes the sea-elf/giant-crocodile
+equalities a real finding rather than an arithmetic certainty: without a
+kind whose live and forced realms genuinely differ, a bug that made
+`per_species_suitability` ignore `species_realm` entirely would leave the
+whole file green.
+
+**`make gate-commit`'s exit code and duration**, both runs:
+
+- Standalone run before committing (after fixing the sub-floor
+  `world_build_sites` roster gap): `rc=0`, `wall=44.976s`.
+- The commit's own `pre-commit` hook re-running the full gate as part of
+  `git commit`: `rc=0`, `wall=41.892s`.
+
+**Review round 1 (spec: narrow; quality: approved-with-findings, 0
+Critical / 4 Important).** Findings and dispositions: M4 lacked a positive
+control (fixed — drow row above); this record was scratch-only, not ledgered
+(fixed — this section); `habitat_realm_registry`'s doc comment asserted
+"only kinds that are not `Surface` appear" and `HabitatRealm`'s own doc
+comment said the placement layer needs "a two-valued question", both made
+false by this commit's own two `Surface` rows and third variant (fixed in
+`domains/species/src/lib.rs`); the three new `substrate_response` constants
+had no assertion pinning the argued devotion ordering
+(fixed — extended `domains/species/tests/suite/coverage.rs`'s
+`the_two_realms_order_hardness_oppositely`); and `HabitatRealm::Marine`'s
+own doc comment described an availability gate ("`1.0` where the vertex is
+wet, `0.0` otherwise") that no code implements yet (fixed — the doc now
+names Task 2, matching the mask arms it describes).
+
 ## Follow-ups
 
 - **The aerial realm is the empty fourth sibling.** `MAP-11`'s medium axis is

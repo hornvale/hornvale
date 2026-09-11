@@ -2735,8 +2735,10 @@ impl LifeSchedule {
 /// Which environmental frame a kind's carrying capacity is scored in (The
 /// Warren). `domains/climate` owns the richer `Realm { medium, access }`;
 /// this is deliberately NOT that type — a domain crate may not depend on a
-/// sibling domain, and what the placement layer needs is a two-valued
-/// question, not a realm vocabulary.
+/// sibling domain, and what the placement layer needs is a three-valued
+/// question (The Tidemark added `Marine` to what was a two-valued one), not
+/// a realm vocabulary — `windows/worldgen`'s bijection test is what proves
+/// the two enumerations still agree despite being declared twice.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HabitatRealm {
     /// Scored against the surface substrate — every kind not in the store.
@@ -2744,11 +2746,16 @@ pub enum HabitatRealm {
     /// Scored against the subterranean substrate, and gated by whether the
     /// vertex holds a cave at all. A void that does not exist is not habitat.
     Subterranean,
-    /// Scored against the marine substrate, and gated by whether the vertex
-    /// holds a water column at all. The Tidemark, Task 1: mirrors
-    /// `Subterranean`'s gate exactly — `1.0` where the vertex is wet, `0.0`
-    /// otherwise — because the pelagic ladder is the delve ladder at a
-    /// different realm (`hornvale_climate::facets::Stratum`'s own doc).
+    /// Scored against the marine substrate. The gate is spec'd to mirror
+    /// `Subterranean`'s exactly — `1.0` where the vertex holds a water
+    /// column, `0.0` otherwise, because the pelagic ladder is the delve
+    /// ladder at a different realm
+    /// (`hornvale_climate::facets::Stratum`'s own doc) — but The Tidemark's
+    /// Task 1 does not implement it: every consumer's availability arm for
+    /// this variant is unconditionally `0.0` (`per_species_suitability_masked`
+    /// and `per_species_capacity_at_with_invariant` in `windows/worldgen`),
+    /// true rather than placeholder because no kind is `Marine` yet. Task 2
+    /// authors the real mask this paragraph describes.
     Marine,
 }
 
@@ -2759,10 +2766,19 @@ impl HabitatRealm {
 
 impl Component for HabitatRealm {}
 
-/// The sparse habitat-realm component: **only** kinds that are not
-/// `Surface` appear. Two rows today, both re-homed by The Deep Realm, whose
+/// The sparse habitat-realm component: absence still means `Surface`, but
+/// **presence no longer implies non-`Surface`.** This doc used to say "only
+/// kinds that are not `Surface` appear", which The Tidemark's Task 1 makes
+/// false on purpose: `sea-elf` and `giant-crocodile` are listed below as
+/// EXPLICIT `Surface` rows, not because the default is wrong for them (it
+/// isn't) but because a reader meeting `HabitatRealm::Marine` for the first
+/// time will reasonably assume a sea elf belongs to it (spec §3.6) — so
+/// their classification is stated rather than left to an absence a new
+/// variant makes ambiguous to read. Five rows today: three non-`Surface`
+/// (`rust-monster`/`xorn`/`drow`, all re-homed by The Deep Realm, whose
 /// niches have been authored for darkness and near-saturation since that
-/// campaign and scored against sunlit surface vertices until this one.
+/// campaign and scored against sunlit surface vertices until it landed) and
+/// two explicit `Surface` rows (see above).
 ///
 /// Sparse rather than a `BiosphereTraits` field because this has a single
 /// consumer (`per_species_suitability`) which holds a slice, not a row —
