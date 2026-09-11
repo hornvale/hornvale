@@ -751,3 +751,45 @@ receipt.
 
 **Capture actions:** plan Task 7 Step 1 rewritten to quote the number, its
 denominator and its scope limit; board reply to follow.
+
+---
+
+## #12 [M] — Task 2 measured: M2 is rock, not mean
+
+**Measured 2026-09-11**, `windows/worldgen/tests/suite/ceiling_composition_probe.rs::max_of_seven_separates_worlds_the_mean_does_not`, `Q6_SEEDS` (n=12), `BuildDepth::Terrain`:
+
+- `separation(mean-of-seven) = 0.145249` — control, reproduces Task 1's (and
+  the originally published) number exactly.
+- `separation(max-of-seven) = 0.040745` — the composition-preserving
+  diagnostic. `ratio max/mean = 0.2805`.
+
+**PREREGISTRATION NOT MET (spec §4): 0.040745 < 0.25.** Worse than a plain
+miss: `max-of-seven` separates worlds *less* than the mean it was meant to
+bound, not more. Swapping the combination rule does not merely fail to help —
+it moves the statistic the wrong way, so the diagnostic's own premise
+("bounds what the mean is costing") does not hold either. **The rock is the
+cause, not the combination rule; the metaplan's inherited diagnosis stands
+unqualified.** No `EnergySource` was retuned; the test's assertion now pins
+this measured null (tolerance `5e-7`), matching
+`subterranean_energy_probe.rs`'s own pattern for a falsified prediction.
+
+**Branch-table row (spec §3.3): not yet fully determined — M1 is Task 3's
+job, not this task's.** What this measurement DOES settle: **row 3 ("exactly
+1, mean is a major cause") is excluded.** M2 measured the opposite of that
+row's condition. The three rows still open, pending M1 (Task 3):
+
+| M1 result | row that lands |
+|---|---|
+| exactly 1 | **row 4** — the null as headline: composition cannot carry allocation, 0966 superseded by a record choosing between C.3's original two |
+| exactly 2 | row 2 — binary axis, 0966 stands narrowed (the spec's own "expected" row) |
+| ≥ 3 at some rung | row 1 — named-dominant-source axis, 0966 stands as written |
+
+If M1 lands "exactly 1", M2's measurement here means the campaign lands on
+row 4, not row 3 — the more consequential of the two "exactly 1" outcomes for
+Stage 2's design (aggregate-supply consumer either way, but row 4 additionally
+supersedes decision 0966 rather than leaving it standing with a combination-
+rule repair still owed).
+
+**Housekeeping:** `CombinationRule::MaxOfSeven`'s `#[allow(dead_code)]` is
+removed (this task's test constructs it) and its doc comment now points at
+`max_of_seven_separates_worlds_the_mean_does_not` instead of a future task.

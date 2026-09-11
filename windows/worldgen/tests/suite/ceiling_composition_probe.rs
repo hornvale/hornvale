@@ -119,11 +119,9 @@ enum CombinationRule {
     MeanOfSeven,
     /// The composition-preserving extreme: the largest single yield.
     ///
-    /// Not yet constructed by this task's own test — Task 1's only
-    /// deliverable is the positive control, which runs
-    /// [`CombinationRule::MeanOfSeven`] alone. Task 2 is the diagnostic that
-    /// exercises this variant.
-    #[allow(dead_code)]
+    /// Constructed by Task 2's diagnostic,
+    /// [`max_of_seven_separates_worlds_the_mean_does_not`] — Task 1's own
+    /// test ran [`CombinationRule::MeanOfSeven`] alone.
     MaxOfSeven,
 }
 
@@ -224,5 +222,69 @@ fn mean_of_seven_reproduces_the_published_separation() {
         "positive control FAILED: separation(mean-of-seven) = {sep:.6}, \
          expected 0.145249 as published by subterranean_energy_probe.rs. \
          This file is measuring something else; do not interpret M2."
+    );
+}
+
+/// THE CEILING, M2: is the magnitude compression caused by the ROCK or by
+/// `subterranean_energy`'s mean-of-seven?
+///
+/// The metaplan attributes it to the rock ("roughly three near-constant
+/// categorical states") and instructs rung 3 to design against that. A mean of
+/// seven gated terms compresses by construction. Nothing had separated the two
+/// causes.
+///
+/// PREREGISTERED (spec §4): `separation(MaxOfSeven) >= 0.25` — the bar Q1 set
+/// and the shipped rule failed at 0.145249.
+///
+/// BOTH POLES SHIP. Clearing it means the combination rule is a major cause
+/// and composition is more available than the metaplan's inherited diagnosis
+/// implies. Failing it means the rock is the cause and that diagnosis stands
+/// unqualified. Neither is a failure; record whichever was measured.
+///
+/// **PREREGISTRATION NOT MET — measured 2026-09-11, `Q6_SEEDS` (n=12),
+/// `BuildDepth::Terrain`.** `separation(mean-of-seven) = 0.145249` (control,
+/// reproduces the published number exactly) and
+/// `separation(max-of-seven) = 0.040745` — not only short of the 0.25 bar but
+/// **lower than the mean it was meant to bound**, `ratio max/mean = 0.2805`.
+/// The composition-preserving extreme separates worlds LESS than the
+/// averaging rule does, not more. This falsifies the diagnostic's own premise
+/// ("the rule that discards the least composition ... bounds what the mean is
+/// costing") along with the prediction: swapping the combination rule is not
+/// merely insufficient here, it moves the statistic the wrong way. **The rock
+/// is the cause, not the combination rule; the metaplan's inherited diagnosis
+/// stands unqualified.** No `EnergySource` was retuned and this assertion now
+/// pins the measured null — a future drift here is a fresh finding, not a bar
+/// to loosen.
+///
+/// claim: readout(off-gate, prints both rules' separation before any verdict)
+#[test]
+#[ignore = "probe: M2, rock vs mean; run by hand (The Ceiling, Stage 1)"]
+fn max_of_seven_separates_worlds_the_mean_does_not() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let mean = separation(&wc, CombinationRule::MeanOfSeven);
+    let max = separation(&wc, CombinationRule::MaxOfSeven);
+
+    // Report BEFORE asserting: the pair is the finding, the bar is its floor.
+    println!("separation(mean-of-seven) = {mean:.6}   [shipped rule, control]");
+    println!("separation(max-of-seven)  = {max:.6}   [diagnostic]");
+    println!("ratio max/mean            = {:.4}", max / mean);
+
+    assert!(
+        (mean - 0.145_249).abs() < 5e-7,
+        "control drifted inside M2: mean-of-seven = {mean:.6}, expected 0.145249"
+    );
+    // PREREGISTERED PREDICTION FALSIFIED 2026-09-11 (spec §4, decision 0016):
+    // separation(max-of-seven) did not clear 0.25 — it measured 0.040745,
+    // below even the mean-of-seven control. This assertion now pins the
+    // MEASURED null rather than the originally hoped-for threshold; if it
+    // ever fails, the field has moved again and needs a fresh measurement
+    // recorded in this test's doc comment, never a source retuned to force
+    // either outcome.
+    assert!(
+        (max - 0.040_745).abs() < 5e-7,
+        "MEASURED VALUE CHANGED from the 2026-09-11 reading recorded in this \
+         test's doc comment: separation(max-of-seven) was {max:.6}, expected \
+         0.040745. Record a fresh measurement with today's date — do NOT \
+         retune any EnergySource to force a particular outcome."
     );
 }
