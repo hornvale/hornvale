@@ -5,8 +5,9 @@ the Planetarium's terrain and surface detail.
 Branch: `campaign/the-coherence`. Autopilot is engaged; G3 design review and
 G6 close remain hard stops.
 
-**Current status:** G2 design direction approved in conversation; design
-package is prepared for G3 review. No implementation has started.
+**Current status:** G2 design direction approved in conversation; Astra review
+incorporated; revised design package awaits G3 approval. No implementation has
+started.
 
 ## #1 [G1] — What problem is this campaign solving?
 
@@ -88,6 +89,46 @@ lazy regional detail.
 **Capture:** the patch contract and continuity invariants are in §§4–7 of the
 design spec.
 
+## #4 [G3] — Astra review and revision resolution
+
+**Finding:** the architecture met the perceptual goal, but five areas were too
+aspirational for implementation: hydrology topology was conflated with bed
+geometry; same-resolution seams did not cover mixed LOD; narrow features could
+fall between patch vertices; composition ownership and revision behavior were
+underspecified; and the proof/scope boundary left cloud hooks and performance
+acceptance vague.
+
+**Resolution:** retain the Level-6 authority plus lazy facet realization, and
+make the missing contracts explicit. The revised spec separates inherited
+macro routing from realized bed geometry; defines headwaters, confluences,
+terminal basins, outlets, mouths, continuation tokens, and bed-profile tests;
+separates feature identity from sampling resolution and adds canonical
+edge/corner evaluation, mixed-LOD stitching, parent-child preservation, and
+refine/coarsen tests; requires source-owned curves, fields, or adaptive
+geometry for narrow features; names `windows/worldgen` as composition owner and
+`clients/visual/source` as protocol owner; defines revision/configuration
+identity, stale-reply rejection, stream versus hash-label behavior, and byte
+versus numerical comparison rules; removes cloud/precipitation hooks; and
+expands the fixture and before/after acceptance set.
+
+**Why:** these changes directly target the audience's visible failure modes and
+prevent the earlier facet mistake of passing local one-step checks while
+creating globally incoherent flows. They preserve the approved campaign scope
+and defer Living Surface weather.
+
+**Alternatives discarded:** rejecting the campaign in favor of a global Level-8
+rewrite would increase cost without solving semantic continuity; accepting the
+original wording would leave the implementation to rediscover the same seam
+and routing ambiguities; moving semantic curves into Bevy would violate the
+simulation ownership boundary.
+
+**Ideonomy passes / overturns:** three prior G1/G2 passes; Astra's independent
+review added no new campaign branch and overturned no approved direction. Its
+findings were incorporated as explicit contracts and acceptance tests.
+
+**Capture:** revised §§3–10 of the design spec and this ledger entry. The
+reconciliation row records the Astra revision review.
+
 ## Follow-ups
 
 - Decide the exact patch serialization/transport shape at implementation
@@ -101,4 +142,3 @@ design spec.
   currents, snow, water motion, and weather-qualified roughness.
 - Measure patch-generation cost on the first proof slice before considering
   broader refinement levels or any Level-8 macro experiment.
-
