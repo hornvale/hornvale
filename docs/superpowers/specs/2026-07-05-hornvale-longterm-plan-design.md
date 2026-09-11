@@ -1,5 +1,10 @@
 # Hornvale: Long-Term Design & Roadmap
 
+> **Narrow scheduling amendment (2026-09-10):** [The Planetarium](2026-09-10-the-planetarium-design.md)
+> and [decision 0956](../../decisions/0956-planetarium-schedules-a-directed-graphical-study.md)
+> schedule a native graphical observation client as an exception to §7's deferral.
+> Constitutional simulation ownership and query-surface rules remain intact.
+
 **Date:** 2026-07-05
 **Status:** Approved (brainstorming session)
 **Scope:** Multi-year vision, architecture, and campaign roadmap for Hornvale — an experimental text adventure and computational social science sandbox.

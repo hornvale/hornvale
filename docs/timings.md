@@ -7079,6 +7079,15 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T14:05:55Z | sluice:gate | 867.811 | 26001.488 | 895.978 | 30.99 | 0 | c83cca5c1 |  | lefford | 40 |
 | 2026-09-10T14:09:22Z | sluice:clients | 206.554 | 3225.895 | 321.208 | 17.17 | 0 | e7bffedb9 |  | lefford | 40 |
 | 2026-09-10T14:16:50Z | sluice:heavy | 448.031 | 12863.108 | 281.643 | 29.34 | 0 | 271f5b367 |  | lefford | 40 |
+| 2026-09-10T16:04:00Z | prewarm | 241.292 | 1649.675 | 59.537 | 7.08 | 0 | d99f847e6 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T17:22:38Z | gate-commit | 132.960 | 215.368 | 39.997 | 1.92 | 0 | d61ad3f99 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T17:25:42Z | gate-commit | 82.121 | 78.806 | 21.840 | 1.23 | 0 | d61ad3f99 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T18:00:44Z | gate-commit | 65.591 | 225.062 | 40.760 | 4.05 | 0 | 4e06e3349 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T18:02:14Z | gate-commit | 37.937 | 72.051 | 20.802 | 2.45 | 0 | 4e06e3349 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T18:03:47Z | gate-commit | 38.775 | 72.883 | 20.909 | 2.42 | 0 | 4e06e3349 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T19:03:58Z | gate-commit | 40.385 | 72.961 | 21.646 | 2.34 | 0 | 1fc81e6ac | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T19:19:05Z | gate-commit | 51.959 | 74.108 | 20.913 | 1.83 | 0 | ef006cd9a | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T19:20:42Z | gate-commit | 43.352 | 74.078 | 21.918 | 2.21 | 0 | ef006cd9a | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-10T14:51:10Z | gate-commit | 121.114 | 738.411 | 53.720 | 6.54 | 0 | e983902f7 | campaign/the-vent | MacBookPro | 10 |
 | 2026-09-10T14:52:19Z | gate-commit | 40.117 | 71.791 | 20.553 | 2.30 | 0 | cabc8001a | campaign/the-vent | MacBookPro | 10 |
 | 2026-09-10T17:06:35Z | census-tail-chorus | 57.253 | 725.317 | 22.413 | 13.06 | 0 | 1a830cc95 |  | lefford | 40 |
@@ -7095,6 +7104,20 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T17:51:49Z | sluice:artifacts | 255.876 | 2331.137 | 92.727 | 9.47 | 0 | 54a7f9f21 |  | lefford | 40 |
 | 2026-09-10T17:53:28Z | sluice:outboard | 98.201 | 122.946 | 84.646 | 2.11 | 0 | 6bd2332e4 |  | lefford | 40 |
 | 2026-09-10T18:07:30Z | sluice:gate | 841.541 | 25802.832 | 868.484 | 31.69 | 0 | c315a6efc |  | lefford | 40 |
+| 2026-09-10T19:26:12Z | gate-commit | 182.889 | 639.339 | 53.335 | 3.79 | 0 | a39066ae5 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T19:45:46Z | gate-commit | 41.278 | 73.060 | 21.448 | 2.29 | 0 | ace76195c | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T19:48:00Z | gate-commit | 97.509 | 79.502 | 22.015 | 1.04 | 0 | ace76195c | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T21:25:29Z | gate-commit | 44.473 | 73.742 | 20.883 | 2.13 | 0 | 0db7b7108 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T21:56:37Z | gate-commit | 69.957 | 72.371 | 21.943 | 1.35 | 0 | 1e1163020 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T21:58:21Z | gate-commit | 67.478 | 78.178 | 24.963 | 1.53 | 0 | 1e1163020 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T22:17:48Z | gate-commit | 128.174 | 81.138 | 23.478 | 0.82 | 0 | 555ffd2f9 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T22:28:40Z | gate-commit | 59.995 | 76.305 | 23.417 | 1.66 | 0 | 2c2cf0224 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T22:57:22Z | gate-commit | 45.905 | 74.539 | 22.587 | 2.12 | 0 | 3d84d84f6 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T23:20:17Z | gate-commit | 44.719 | 72.705 | 21.055 | 2.10 | 0 | 760457f01 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T23:28:00Z | gate-commit | 41.850 | 71.859 | 20.468 | 2.21 | 0 | 61eb24543 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T23:41:41Z | visual-check | 0.077 | 0.042 | 0.020 | 0.81 | 0 | 2dd219cef | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T23:42:57Z | visual-check | 47.578 | 56.170 | 8.576 | 1.36 | 0 | 2dd219cef | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-10T23:49:00Z | gate-commit | 42.895 | 73.726 | 21.516 | 2.22 | 0 | 2dd219cef | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-10T19:08:12Z | gate-commit | 210.209 | 1043.092 | 68.301 | 5.29 | 0 | 637c8830e | campaign/the-vent-succession | MacBookPro | 10 |
 | 2026-09-10T19:09:30Z | gate-commit | 47.996 | 77.013 | 22.499 | 2.07 | 0 | 637c8830e | campaign/the-vent-succession | MacBookPro | 10 |
 | 2026-09-10T19:11:08Z | gate-commit | 40.977 | 73.486 | 21.583 | 2.32 | 0 | 637c8830e | campaign/the-vent-succession | MacBookPro | 10 |
@@ -7141,6 +7164,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T22:35:33Z | sluice:gate | 847.533 | 25798.182 | 866.027 | 31.46 | 0 | 43102e23f |  | lefford | 40 |
 | 2026-09-10T22:38:49Z | sluice:clients | 195.556 | 3208.254 | 317.368 | 18.03 | 0 | b5ae83812 |  | lefford | 40 |
 | 2026-09-10T22:46:27Z | sluice:heavy | 457.308 | 12947.179 | 294.833 | 28.96 | 0 | f5649d02e |  | lefford | 40 |
+| 2026-09-10T23:54:31Z | gate-commit | 43.565 | 74.834 | 21.856 | 2.22 | 0 | a483c5d9f | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-11T00:19:39Z | gate-commit | 40.406 | 72.057 | 20.720 | 2.30 | 0 | cdc73a74f | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-11T00:36:50Z | gate-commit | 89.563 | 80.097 | 23.588 | 1.16 | 0 | 4d1e07354 | campaign/the-planetarium | MacBookPro | 10 |
+| 2026-09-11T00:56:35Z | gate-commit | 75.626 | 77.078 | 21.693 | 1.31 | 0 | b5fa355c3 | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-11T00:48:43Z | gate-commit | 263.433 | 1171.554 | 66.712 | 4.70 | 0 | a17336f1d | campaign/plan-hygiene | MacBookPro | 10 |
 | 2026-09-10T23:42:02Z | gate-commit | 49.074 | 84.472 | 21.137 | 2.15 | 0 | a08c80b62 | sweep-followups | MacBookPro | 10 |
 | 2026-09-11T00:43:53Z | census-tail-chorus | 59.996 | 785.939 | 22.915 | 13.48 | 0 | 03baf06ae |  | lefford | 40 |
@@ -7213,6 +7240,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T03:06:04Z | sluice:gate | 853.676 | 25716.965 | 887.091 | 31.16 | 0 | 64e79b2fe |  | lefford | 40 |
 | 2026-09-11T03:09:33Z | sluice:clients | 209.135 | 3227.205 | 342.234 | 17.07 | 0 | 1eb0522b4 |  | lefford | 40 |
 | 2026-09-11T03:17:12Z | sluice:heavy | 458.265 | 12936.512 | 279.283 | 28.84 | 0 | 1c9471ef9 |  | lefford | 40 |
+| 2026-09-11T12:04:00Z | gate-commit | 143.893 | 518.752 | 47.056 | 3.93 | 0 | 921381907 | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-11T12:08:15Z | census-tail-chorus | 55.441 | 172.835 | 6.917 | 3.24 | 0 | 644f043a1 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-11T12:08:16Z | census-tail-domesday | 0.355 | 0.310 | 0.028 | 0.95 | 0 | 644f043a1 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-11T12:08:16Z | census-tail-anomalies | 0.306 | 0.251 | 0.028 | 0.91 | 0 | 644f043a1 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
@@ -7244,3 +7272,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T14:48:49Z | sluice:gate | 784.109 | 24489.478 | 744.559 | 32.18 | 0 | b26dec03b |  | lefford | 40 |
 | 2026-09-11T14:51:48Z | sluice:clients | 179.352 | 2921.006 | 244.374 | 17.65 | 0 | d38f9982b |  | lefford | 40 |
 | 2026-09-11T14:59:18Z | sluice:heavy | 449.428 | 12878.114 | 270.420 | 29.26 | 0 | 88db26da7 |  | lefford | 40 |
+| 2026-09-11T01:36:44Z | census-tail-chorus | 60.346 | 811.712 | 26.351 | 13.89 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:48:40Z | census-study-the-census | 715.525 | 26783.065 | 158.304 | 37.65 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:54:19Z | census-study-the-meeting | 339.430 | 12233.722 | 134.850 | 36.44 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:54:21Z | census-tail-domesday | 1.285 | 1.107 | 0.130 | 0.96 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:54:21Z | census-tail-anomalies | 0.983 | 0.844 | 0.140 | 1.00 | 0 | fa1223fd7 |  | lefford | 40 |
+| 2026-09-11T01:54:47Z | census | 1366.487 | 41737.936 | 406.624 | 30.84 | 0 | fa1223fd7 |  | lefford | 40 |
