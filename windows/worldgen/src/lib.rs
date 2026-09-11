@@ -2701,7 +2701,9 @@ pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::VertexMap<f64>, B
 /// excluded from the v1 prey base (a carnivore is drawn to the WILD, not toward
 /// settlements — the acute-hunt tier owns predators-stalk-towns), and
 /// PHOTOTROPHS are excluded (a plant is not a carnivore's prey) — asked of the
-/// TROPHIC axis, which is the axis that question is about. THE GOSSAN's field
+/// ENERGY-SOURCE axis (THE TRENCHER factored the old `TrophicMode` this
+/// question read into `EnergySource`/`ElectronDonor`/`CarbonSource`; this is
+/// still the axis that question is about). THE GOSSAN's field
 /// split first routed this through `ThermalStrategy::Unmodelled`, which is
 /// today the same three kinds but is a coincidence with an expiry date: when
 /// BIO-autotroph-physics gives the autotrophs a real thermal model they stop
@@ -2725,7 +2727,7 @@ pub fn prey_pressure_from(
     let geo = terrain.geosphere();
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
     // species — not a settling people (`social_form != Settled`), not a
-    // rooted phototroph (`trophic_mode != Phototrophic`), and not itself
+    // rooted phototroph (`energy_source != Phototrophic`), and not itself
     // prey-dominant (`ANIMAL_PREY <= threshold`).
     let prey: std::collections::BTreeSet<u32> = wc
         .biosphere
@@ -2734,7 +2736,7 @@ pub fn prey_pressure_from(
         .filter(|(_, (_kind, bio))| {
             bio.niche.weight(hornvale_kernel::ANIMAL_PREY) <= CARNIVORE_THRESHOLD
                 && bio.social_form != hornvale_species::SocialForm::Settled
-                && bio.trophic_mode != hornvale_species::TrophicMode::Phototrophic
+                && bio.energy_source != hornvale_species::EnergySource::Phototrophic
         })
         .map(|(i, _)| i as u32)
         .collect();

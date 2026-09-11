@@ -2544,10 +2544,12 @@ fn wood_elf_condition_niche() -> ConditionNiche {
 /// only one allometry reads.
 ///
 /// Split out of `MetabolicClass` by THE GOSSAN. That enum conflated this
-/// with the supply axis ([`TrophicMode`]): its own doc says its job is to
-/// select B₀ and the pace multiplier, and `Autotroph` — a supply value —
-/// ended up grouped with `Endotherm` in `basal_metabolic_rate_w` because
-/// allometry had nothing else to do with it.
+/// with the supply axis (later `TrophicMode`, then THE TRENCHER's
+/// [`EnergySource`] / [`ElectronDonor`] / [`CarbonSource`] trichotomy):
+/// its own doc says its job is to select B₀ and the pace multiplier, and
+/// `Autotroph` — a supply value — ended up grouped with `Endotherm` in
+/// `basal_metabolic_rate_w` because allometry had nothing else to do with
+/// it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ThermalStrategy {
     /// Warm-blooded (mammal/bird analogue): high, temperature-stable basal rate.
@@ -2614,19 +2616,47 @@ pub enum ThermalStrategy {
     Absent,
 }
 
-/// Where a species gets its energy — the **supply** axis.
+/// Where a species gets its ENERGY — the first of three axes THE TRENCHER
+/// factors the old `TrophicMode` into (decision 0976; design authority
+/// `BIO-trophic-trichotomy`, `book/src/frontier/idea-registry.md`).
+/// Microbiology's own vocabulary factorises metabolism as energy source
+/// (photo/chemo) × electron donor (litho/organo) × carbon source
+/// (auto/hetero) — eight named points, of which the roster occupies three.
+/// This axis is the first of those three; see [`ElectronDonor`] and
+/// [`CarbonSource`] for the other two.
 ///
-/// Split out of `MetabolicClass` by THE GOSSAN. Making a chemotroph
-/// expressible is the whole of that campaign, and giving this axis a
-/// SECOND consumer is rung 2 of the Underworld Larder.
+/// **`TrophicMode` flattened all three into four values, and that is what
+/// this split undoes.** THE GOSSAN split this whole supply side out of
+/// `MetabolicClass`, making a chemotroph expressible at all; what it could
+/// not express is that a photolithoautotroph and a chemolithoautotroph
+/// (`xorn`) share an electron donor and a carbon source and differ only in
+/// energy source, while a chemolithoautotroph and an ordinary
+/// chemoorganoheterotroph (every other kind in the roster) share an energy
+/// source and differ in both remaining axes. A single four-value enum has no
+/// way to say which similarity is which; three independent axes do.
 ///
-/// **It has one production reader already**, acquired the moment the axis
-/// existed: `hornvale_worldgen::prey_pressure_from` excludes phototrophs from
-/// the prey base ("a plant is not a carnivore's prey") and asks
-/// `trophic_mode == Phototrophic` to do it. That question was being asked of
-/// the metabolic enum, and briefly of `ThermalStrategy::Unmodelled`, for want
-/// of anywhere better to ask it — which is precisely the conflation this
-/// split removes.
+/// **`Absent` does not reappear on this axis, or on [`ElectronDonor`] or
+/// [`CarbonSource`], and that is a ruling, not an oversight** (The Trencher
+/// ledger #4, decided by Nathan as decision 0976). `TrophicMode::Absent` had
+/// zero carriers and conflated three different claims — an organism having
+/// no energy source (ontological), the axis not applying (inapplicable), and
+/// nobody having decided yet (epistemic, and decaying by nature). Copying it
+/// onto three axes would have tripled that ambiguity instead of resolving
+/// it. Ontological absence — a construct with no energy source, no electron
+/// donor and no carbon source, one claim about the organism rather than
+/// three coincidences — sits OUTSIDE this triple entirely: it is what
+/// [`ThermalStrategy::Absent`] names, on the thermal axis alone, reserved
+/// for the first genuinely non-living kind. A kind carrying that thermal
+/// value simply carries no metabolic triple at all; there is nothing to
+/// build for a population of zero, and whoever authors the first one decides
+/// its shape then. The epistemic case already has a careful name,
+/// [`ThermalStrategy::Unmodelled`], and does not need reinventing here.
+///
+/// **It has one production reader already**, acquired the moment the old
+/// axis existed: `hornvale_worldgen::prey_pressure_from` excludes
+/// phototrophs from the prey base ("a plant is not a carnivore's prey") by
+/// asking `trophic_mode == Phototrophic`; the equivalent read post-split is
+/// `energy_source == EnergySource::Phototrophic`.
 ///
 /// An axis nobody reads is how `MetabolicClass` rotted, so the guard in
 /// `tests/suite/metabolic_pairs.rs` is additionally a genuine reader of every
@@ -2635,66 +2665,82 @@ pub enum ThermalStrategy {
 /// baseline duration into `docs/timings/subfloor-roster.tsv`, which selects the
 /// sub-floor tier by exact test name and excludes a test it has never timed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TrophicMode {
-    /// Eats other organisms — prey, detritus, or their remains.
-    Heterotrophic,
-    /// Energy from light (plant-folk/fungal analogue).
+pub enum EnergySource {
+    /// Energy from light (plant-folk/fungal analogue). Every kind whose old
+    /// `TrophicMode` was `Phototrophic` (`treant`, `twig-blight`,
+    /// `shrieker`) carries this, paired with [`ElectronDonor::Lithotrophic`]
+    /// and [`CarbonSource::Autotrophic`] — a photolithoautotroph.
     Phototrophic,
-    /// Energy from chemical gradients in rock or water — a hydrothermal vent
-    /// community, and the underworld's only possible productive base.
+    /// Energy from a chemical reaction — either oxidizing organic matter (an
+    /// ordinary animal) or a chemical/mineral gradient in rock or water (a
+    /// chemolithotroph — a hydrothermal-vent community, and the
+    /// underworld's only possible productive base). This axis alone cannot
+    /// tell the two apart, which is exactly why it is one of three:
+    /// [`ElectronDonor`] is what distinguishes an animal
+    /// (`Organotrophic`) from `xorn` (`Lithotrophic`).
     ///
-    /// **Witnessed by `xorn`** (rung 2 of the Underworld Larder,
-    /// `tests/suite/metabolic_pairs.rs`): a thing that burrows through stone
-    /// and eats mineral and a chemical gradient is a chemolithotroph, and
-    /// `Absent`/`Absent` was only ever the honest encoding available before
-    /// this variant existed. The `niche` weight that actually feeds it
-    /// (`CHEMOSYNTHATE`) landed in THE SOURCES, Task 9, in the same commit as
-    /// the per-rung energy field that supplies it — see the `xorn` row's own
-    /// comment.
+    /// **`xorn`'s chemolithoautotroph combination is witnessed** (rung 2 of
+    /// the Underworld Larder, `tests/suite/metabolic_pairs.rs`): a thing
+    /// that burrows through stone and eats mineral and a chemical gradient
+    /// is a chemolithotroph. The `niche` weight that actually feeds it
+    /// (`CHEMOSYNTHATE`) landed in THE SOURCES, Task 9, in the same commit
+    /// as the per-rung energy field that supplies it — see the `xorn` row's
+    /// own comment.
     Chemotrophic,
-    /// No metabolism at all. See [`ThermalStrategy::Absent`] for the naming.
-    Absent,
+}
+
+/// The species' electron donor — the second factored axis, and the one
+/// `TrophicMode` never named at all: it had no way to distinguish an animal
+/// (an organic donor) from a chemolithotroph (an inorganic one), because
+/// both fell under the single flattened value that also carried the energy
+/// and carbon axes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ElectronDonor {
+    /// An inorganic donor — water, a mineral, or a chemical gradient. Pairs
+    /// with [`CarbonSource::Autotrophic`] in every kind authored so far:
+    /// nothing in the roster today is a lithoheterotroph.
+    Lithotrophic,
+    /// An organic donor: another organism's tissue, its detritus, or its
+    /// remains. Every kind whose old `TrophicMode` was `Heterotrophic`
+    /// carries this.
+    Organotrophic,
+}
+
+/// Where the species' CARBON comes from — the third factored axis.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CarbonSource {
+    /// Fixed from an inorganic source (CO2 or an equivalent) — a
+    /// self-sufficient producer. Every kind whose old `TrophicMode` was
+    /// `Phototrophic` or `Chemotrophic` (a photolithoautotroph or `xorn`'s
+    /// chemolithoautotroph) carries this.
+    Autotrophic,
+    /// Built from organic compounds taken from other organisms. Every kind
+    /// whose old `TrophicMode` was `Heterotrophic` carries this.
+    Heterotrophic,
 }
 
 /// Whether this describes something with **no metabolism at all** — the
 /// question four separate sites ask, in two crates, with no shared name
-/// (spec §4.3). That is the same drift that produced the mixed enum this
-/// campaign split.
+/// (spec §4.3). That is the same drift that produced the mixed enum THE
+/// GOSSAN split and THE TRENCHER later factored further.
 ///
-/// **THE DIRECTION THIS RELIES ON, STATED.** It reads the thermal axis alone,
-/// so it is correct only when `ThermalStrategy::Absent` implies zero basal
-/// metabolic rate — which is NOT the same claim as "implies
-/// `TrophicMode::Absent` too" (rung 1 could get away with conflating the two;
-/// rung 2 cannot). The type admits **six** pairs where thermal- and
-/// trophic-`Absent` diverge — three `(Absent, <live trophic mode>)` and three
-/// `(<live thermal strategy>, Absent)` (spec §4.4); this count is a fact about
-/// the TYPE and does not move with sanctioning. Keep it distinct from the
-/// **eleven** UNSANCTIONED pairs (16 combinations less the 5 sanctioned
-/// rows): eleven is what the pair table refuses, six is what the type merely
-/// admits, and only the second is the direction stated here.
-///
-/// **Decision 0976 closed the one divergent pair that was ever sanctioned,
-/// and this function never had to change.** This paragraph used to describe
-/// `(Absent, Chemotrophic)` — `xorn`'s pair under rung 2 of the Underworld
-/// Larder — as a deliberate, safe exception: a chemolithotroph's chemical
-/// energy extraction is a non-thermal process that needs no BMR, so `xorn`'s
-/// `thermal_strategy` stayed `Absent` by construction precisely so this
-/// function's invariant would hold for it. Decision 0976 ("Ametabolic life is
-/// a category error") ruled that framing wrong at the root: a living kind
-/// always has a metabolism, so `xorn` moved to
-/// [`ThermalStrategy::Unmodelled`] instead, and `(Absent, Chemotrophic)` left
-/// `SANCTIONED` with it in favour of `(Unmodelled, Chemotrophic)`. As of that
-/// fix, **none** of the six divergent pairs is sanctioned — `SANCTIONED`
-/// pairs `Absent` only with itself (`(Absent, Absent)`, the
-/// ghost/construct/undead corner) — so this function's thermal-axis-only
-/// reading needs no special-case argument any more; it is correct for every
-/// kind in the registry today by the same argument that made it correct
-/// before rung 2 ever landed. `tests/suite/metabolic_pairs.rs`'s
-/// sanctioned-pair table — which consults every kind's pair in the workspace
-/// suite, and in the commit gate once a green chamber run records its
-/// baseline duration into `docs/timings/subfloor-roster.tsv` — is still what
-/// would catch a future kind reintroducing a divergent sanctioned pair; if it
-/// ever does, this is again the first place to check.
+/// **THE DIRECTION THIS RELIES ON, STATED, AND SIMPLER THAN IT USED TO BE.**
+/// It reads the thermal axis alone, so it is correct only when
+/// `ThermalStrategy::Absent` implies zero basal metabolic rate. Before
+/// decision 0976 that needed an argument, because `TrophicMode::Absent`
+/// existed as a *second* place ametabolism could be expressed, and the two
+/// could diverge (`xorn` briefly did: `Absent` thermal strategy paired with
+/// a live trophic mode). Decision 0976 ("Ametabolic life is a category
+/// error", The Trencher) removed the second place entirely: a living kind
+/// always has a metabolism, so ametabolism is now expressible in exactly one
+/// spot, [`ThermalStrategy::Absent`], and nothing on the metabolic triple
+/// ([`EnergySource`] / [`ElectronDonor`] / [`CarbonSource`]) can diverge from
+/// it — there is no `Absent` value on any of those three axes to diverge
+/// *with* (see [`EnergySource`]'s doc for why not). A kind carrying
+/// `ThermalStrategy::Absent` simply carries no metabolic triple at all, by
+/// construction, not by a pairing rule this function's callers must trust.
+/// So this function's thermal-axis-only reading needs no cross-axis argument
+/// any more; it is definitionally correct.
 ///
 /// A two-axis signature was specified and is not available: every one of the
 /// four call sites holds a `ThermalStrategy` and nothing else, because `Body`
@@ -3624,13 +3670,22 @@ pub struct BiosphereTraits {
     /// How this species regulates body temperature — the axis life-history
     /// allometry reads (spec BIO-2).
     pub thermal_strategy: ThermalStrategy,
-    /// Where this species gets its energy (THE GOSSAN). Read in production by
+    /// Where this species gets its energy (THE GOSSAN; factored from
+    /// `TrophicMode` by THE TRENCHER, decision 0976). Read in production by
     /// `hornvale_worldgen::prey_pressure_from`, which excludes phototrophs
-    /// from the prey base; `tests/suite/metabolic_pairs.rs` reads every kind's
-    /// value in the workspace suite — and in the commit gate once a green
-    /// chamber run records its baseline duration — so the axis cannot rot the
-    /// way `MetabolicClass` did.
-    pub trophic_mode: TrophicMode,
+    /// from the prey base; `tests/suite/metabolic_pairs.rs` reads every
+    /// kind's value in the workspace suite — and in the commit gate once a
+    /// green chamber run records its baseline duration — so the axis cannot
+    /// rot the way `MetabolicClass` did.
+    pub energy_source: EnergySource,
+    /// The species' electron donor — see [`ElectronDonor`]. Factored out of
+    /// `TrophicMode` alongside [`EnergySource`] and [`CarbonSource`] by THE
+    /// TRENCHER; guarded by the same `metabolic_pairs.rs` reader.
+    pub electron_donor: ElectronDonor,
+    /// Where the species' carbon comes from — see [`CarbonSource`]. Factored
+    /// out of `TrophicMode` alongside [`EnergySource`] and [`ElectronDonor`]
+    /// by THE TRENCHER; guarded by the same `metabolic_pairs.rs` reader.
+    pub carbon_source: CarbonSource,
     /// The species' ecological niche: a sparse utilization profile over the
     /// resource-axis basis (`hornvale_kernel::ecology`). Feeds the packer's
     /// Pianka overlap between coexisting species.
@@ -3697,7 +3752,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(18.1).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
                 condition_niche: goblin_condition_niche(),
                 potency: 0.0,
@@ -3710,7 +3767,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(13.6).unwrap(),
                 thermal_strategy: ThermalStrategy::Ectothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
                 condition_niche: kobold_condition_niche(),
                 potency: 0.0,
@@ -3723,7 +3782,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(74.8).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
                 condition_niche: hobgoblin_condition_niche(),
                 potency: 0.0,
@@ -3736,7 +3797,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(132.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
                 condition_niche: bugbear_condition_niche(),
                 potency: 0.0,
@@ -3749,7 +3812,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(1800.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Unmodelled,
-                trophic_mode: TrophicMode::Phototrophic,
+                energy_source: EnergySource::Phototrophic,
+                electron_donor: ElectronDonor::Lithotrophic,
+                carbon_source: CarbonSource::Autotrophic,
                 niche: ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap(),
                 condition_niche: treant_condition_niche(),
                 potency: 9.0 / 30.0, // treant — CR 9 (5E MM); potency = CR/30
@@ -3762,7 +3827,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(5.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Unmodelled,
-                trophic_mode: TrophicMode::Phototrophic,
+                energy_source: EnergySource::Phototrophic,
+                electron_donor: ElectronDonor::Lithotrophic,
+                carbon_source: CarbonSource::Autotrophic,
                 niche: ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap(),
                 condition_niche: twig_blight_condition_niche(),
                 potency: 0.0,
@@ -3775,7 +3842,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(450.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: giant_elk_condition_niche(),
                 potency: 0.0,
@@ -3788,7 +3857,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(6000.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: woolly_mammoth_condition_niche(),
                 potency: 0.0,
@@ -3801,7 +3872,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(140.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: giant_goat_condition_niche(),
                 potency: 0.0,
@@ -3814,7 +3887,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(260.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(DETRITUS, 1.0)]).unwrap(),
                 condition_niche: otyugh_condition_niche(),
                 potency: 0.0,
@@ -3827,7 +3902,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(55.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Unmodelled,
-                trophic_mode: TrophicMode::Chemotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Lithotrophic,
+                carbon_source: CarbonSource::Autotrophic,
                 niche: ResourceVector::new(&[(MINERAL, 0.65), (CHEMOSYNTHATE, 0.35)]).unwrap(),
                 condition_niche: xorn_condition_niche(),
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
@@ -3856,7 +3933,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 // is *made of* (it eats the rock it tunnels through), while
                 // `CHEMOSYNTHATE` is what *powers* it (the redox/thermal
                 // gradient a chemotroph actually metabolizes) — the same
-                // material/energy distinction `TrophicMode::Chemotrophic`
+                // material/energy distinction `EnergySource::Chemotrophic`
                 // names, now given a number. Kept a minority share of the
                 // niche because a xorn is authored as a stone-eater first;
                 // the energy axis differentiates it by depth without
@@ -3871,7 +3948,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(90.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Ectothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
                 condition_niche: rust_monster_condition_niche(),
                 potency: 0.0,
@@ -3884,7 +3963,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(2200.0).unwrap(), // 5E adult white dragon
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(), // obligate apex
                 condition_niche: white_dragon_condition_niche(),
                 potency: 13.0 / 30.0, // adult white dragon — CR 13 (5E MM); potency = CR/30
@@ -3897,7 +3978,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(2700.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: red_dragon_condition_niche(),
                 potency: 17.0 / 30.0, // adult red dragon — CR 17 (5E MM); potency = CR/30
@@ -3910,7 +3993,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(2200.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: black_dragon_condition_niche(),
                 potency: 14.0 / 30.0, // adult black dragon — CR 14 (5E MM); potency = CR/30
@@ -3923,7 +4008,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(450.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: owlbear_condition_niche(),
                 potency: 0.0,
@@ -3939,7 +4026,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(300.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Ectothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 0.3), (DETRITUS, 0.7)]).unwrap(),
                 condition_niche: giant_scorpion_condition_niche(),
                 potency: 0.0, // giant scorpion — CR 3 (5E MM); mundane, potency stays 0
@@ -3952,7 +4041,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(160.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: giant_hyena_condition_niche(),
                 potency: 0.0, // giant hyena — CR 1 (5E MM); mundane, potency stays 0
@@ -3965,7 +4056,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(150.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: dire_wolf_condition_niche(),
                 potency: 0.0, // dire wolf — CR 1 (5E MM); mundane, potency stays 0
@@ -3978,7 +4071,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(2300.0).unwrap(), // real white rhinoceros adult male average
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: rhinoceros_condition_niche(),
                 potency: 0.0, // rhinoceros — CR 2 (5E MM); mundane, potency stays 0
@@ -3991,7 +4086,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(500.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Ectothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: giant_constrictor_snake_condition_niche(),
                 potency: 0.0, // giant constrictor snake — CR 2 (5E MM); mundane, potency stays 0
@@ -4004,7 +4101,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(200.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(DETRITUS, 1.0)]).unwrap(),
                 condition_niche: carrion_crawler_condition_niche(),
                 potency: 0.0, // carrion crawler — CR 2 (5E MM); mundane, potency stays 0
@@ -4017,7 +4116,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(35.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Unmodelled,
-                trophic_mode: TrophicMode::Phototrophic,
+                energy_source: EnergySource::Phototrophic,
+                electron_donor: ElectronDonor::Lithotrophic,
+                carbon_source: CarbonSource::Autotrophic,
                 niche: ResourceVector::new(&[(DETRITUS, 1.0)]).unwrap(),
                 condition_niche: shrieker_condition_niche(),
                 potency: 0.0, // shrieker — CR 0 (5E MM); CR/30 = 0 regardless of set
@@ -4034,7 +4135,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(18.5).unwrap(), // real grey reef shark average
                 thermal_strategy: ThermalStrategy::Ectothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(MARINE_FORAGE, 1.0)]).unwrap(),
                 condition_niche: reef_shark_condition_niche(),
                 potency: 0.0, // reef shark — CR 1/2 (5E MM); mundane, potency stays 0
@@ -4047,7 +4150,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(180.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Ectothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(MARINE_FORAGE, 1.0)]).unwrap(),
                 condition_niche: giant_octopus_condition_niche(),
                 potency: 0.0, // giant octopus — CR 1 (5E MM); mundane, potency stays 0
@@ -4060,7 +4165,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(5400.0).unwrap(), // real adult male average (upper of range)
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(MARINE_FORAGE, 1.0)]).unwrap(),
                 condition_niche: killer_whale_condition_niche(),
                 potency: 0.0, // killer whale — CR 3 (5E MM); mundane, potency stays 0
@@ -4073,7 +4180,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(250.0).unwrap(), // real Architeuthis dux, large-adult estimate
                 thermal_strategy: ThermalStrategy::Ectothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(MARINE_FORAGE, 1.0)]).unwrap(),
                 condition_niche: giant_squid_condition_niche(),
                 potency: 0.0, // giant squid — CR 7 (5E MM); mundane, potency stays 0
@@ -4086,7 +4195,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(1000.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Ectothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // the amphibious proof case: MARINE_FORAGE (sea) plus
                 // ANIMAL_PREY (land) — no special case, see the condition
                 // niche's doc comment.
@@ -4117,7 +4228,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 // available published numbers, not authored from scratch.
                 mass: Mass::new(136.1).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // mixed omnivore weighted toward ANIMAL_PREY — a pack
                 // hunter that also forages, not a pure predator (contrast
                 // bugbear's 0.85 ANIMAL_PREY lean).
@@ -4138,7 +4251,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(70.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
                 condition_niche: human_condition_niche(),
                 potency: 0.0,
@@ -4196,7 +4311,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(66.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // Sums to 1.00, like every other kind in the roster. A
                 // forager leaning on plants over game, in the same
                 // proportion a sparse-ground people would.
@@ -4229,7 +4346,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(62.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // A SURFACE scavenger, on the axis otyugh, carrion-crawler
                 // and shrieker hold. It shares `DETRITUS` with the two cave
                 // dwarves but arrives at it from the opposite direction —
@@ -4256,7 +4375,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(70.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // PLANT_FORAGE-dominant: a farmer and herder, leaning harder
                 // on plants than human's 0.55/0.45 and much harder than
                 // bugbear's predatory 0.15/0.85.
@@ -4301,7 +4422,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(50.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // an arid-margin forager, near the roster's midpoint between
                 // plants and game — a sparse ground supports neither
                 // exclusively.
@@ -4317,7 +4440,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(52.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // `DETRITUS`-dominant: the fungus axis gully-dwarf, otyugh,
                 // carrion-crawler and shrieker share. This kind arrives at it
                 // from the direction the withdrawn cave dwarves would have —
@@ -4352,7 +4477,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 // divergence in the other.
                 mass: Mass::new(55.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
                 condition_niche: high_elf_condition_niche(),
                 potency: 0.0,
@@ -4365,7 +4492,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(58.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // THE ONLY ELF ON `MARINE_FORAGE`, and it must be: that axis
                 // is what `marine_forage_supply_field` pays out on a water
                 // vertex, so a sea people without a weight on it would draw zero
@@ -4393,7 +4522,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(60.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // the family's only `ANIMAL_PREY`-dominant row: a cold
                 // people's calories come from animals, because a tundra grows
                 // very little a person can eat.
@@ -4409,7 +4540,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(55.0).unwrap(),
                 thermal_strategy: ThermalStrategy::Endothermic,
-                trophic_mode: TrophicMode::Heterotrophic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
                 // `PLANT_FORAGE`-dominant, at human's temper rather than
                 // hill-dwarf's 0.70: a forest people gathers more than it
                 // farms, and hunts the rest. Shared with high-elf, exactly.
@@ -7094,7 +7227,7 @@ mod tests {
         // rust-monster is the pure-MINERAL basis constant; xorn shares the
         // axis but no longer owns it alone — THE SOURCES, Task 9 split its
         // niche 0.65 MINERAL / 0.35 CHEMOSYNTHATE (Ruling P2), the
-        // material/energy distinction `TrophicMode::Chemotrophic` names,
+        // material/energy distinction `EnergySource::Chemotrophic` names,
         // now given a number (see the `xorn` row's own comment).
         assert_eq!(w("rust-monster", MINERAL), 1.0);
         assert_eq!(w("xorn", MINERAL), 0.65);

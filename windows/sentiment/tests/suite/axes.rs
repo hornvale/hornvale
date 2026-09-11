@@ -17,8 +17,9 @@ use hornvale_kernel::{ANIMAL_PREY, ConditionResponse, Mass, PLANT_FORAGE, Resour
 use hornvale_language::speech::{ArticulationVector, ExoticManner};
 use hornvale_sentiment::{Axis, PeopleId, PeopleTraits, axis_distance, catalog};
 use hornvale_species::{
-    ActivityCycle, ConditionNiche, HabitatRealm, LifeSchedule, MindVector, PerceptionVector,
-    Sociality, SocietyVector, StatusBasis, ThermalStrategy, TrophicMode,
+    ActivityCycle, CarbonSource, ConditionNiche, ElectronDonor, EnergySource, HabitatRealm,
+    LifeSchedule, MindVector, PerceptionVector, Sociality, SocietyVector, StatusBasis,
+    ThermalStrategy,
 };
 
 /// A synthetic, self-consistent `PeopleTraits` for probing a single axis's
@@ -55,7 +56,9 @@ fn synthetic(id: &'static str) -> PeopleTraits {
         },
         mass: Mass::new(70.0).expect("valid mass"),
         thermal_strategy: ThermalStrategy::Endothermic,
-        trophic_mode: TrophicMode::Heterotrophic,
+        energy_source: EnergySource::Chemotrophic,
+        electron_donor: ElectronDonor::Organotrophic,
+        carbon_source: CarbonSource::Heterotrophic,
         schedule: LifeSchedule::Allometric,
         society: SocietyVector {
             sociality: Sociality::Hierarchic,

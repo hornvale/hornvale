@@ -267,8 +267,8 @@ mod smoke_tests {
     use hornvale_kernel::{Mass, PLANT_FORAGE, ResourceVector};
     use hornvale_language::speech::ExoticManner;
     use hornvale_species::{
-        ActivityCycle, HabitatRealm, LifeSchedule, MindVector, Sociality, StatusBasis,
-        ThermalStrategy, TrophicMode,
+        ActivityCycle, CarbonSource, ElectronDonor, EnergySource, HabitatRealm, LifeSchedule,
+        MindVector, Sociality, StatusBasis, ThermalStrategy,
     };
     use std::collections::BTreeSet;
 
@@ -305,7 +305,9 @@ mod smoke_tests {
             },
             mass: Mass::new(70.0).expect("valid mass"),
             thermal_strategy: ThermalStrategy::Endothermic,
-            trophic_mode: TrophicMode::Heterotrophic,
+            energy_source: EnergySource::Chemotrophic,
+            electron_donor: ElectronDonor::Organotrophic,
+            carbon_source: CarbonSource::Heterotrophic,
             schedule: LifeSchedule::Allometric,
             society: SocietyVector {
                 sociality: Sociality::Hierarchic,

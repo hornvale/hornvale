@@ -133,7 +133,7 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [32] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [33] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [34] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [35] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [35] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
 # Lot 1 — seed 42
 
@@ -224,7 +224,7 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [31] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [32] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [33] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [34] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [34] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
 # Lot 2 — seed 42
 
@@ -315,7 +315,7 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [31] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [32] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [33] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [34] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [34] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
 # Lot 3 — seed 42
 
@@ -401,7 +401,7 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [26] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [27] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [28] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [29] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [29] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
 # Lot 4 — seed 42
 
@@ -492,7 +492,7 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [31] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [32] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [33] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [34] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [34] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
 # Lot 5 — seed 42
 
@@ -588,7 +588,7 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [36] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [37] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [38] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [39] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [39] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
 # Lot 6 — seed 42
 
@@ -680,7 +680,7 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [32] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [33] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [34] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [35] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [35] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
 # Lot 7 — seed 42
 
@@ -771,7 +771,7 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [31] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [32] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [33] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [34] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [34] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
 # Lot 8 — seed 42
 
@@ -863,7 +863,7 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [32] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [33] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [34] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [35] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [35] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
 # Lot 9 — seed 42
 
@@ -951,5 +951,5 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [28] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [29] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [30] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [31] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [31] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 

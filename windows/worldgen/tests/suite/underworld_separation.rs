@@ -321,8 +321,8 @@ use hornvale_kernel::{
     Vertex, WATER, sovereignty_floor,
 };
 use hornvale_species::{
-    AxisPreference, BiosphereTraits, ConditionNiche, EnvironmentNiche, HabitatRealm, LifeSchedule,
-    SocialForm, ThermalStrategy, TrophicMode,
+    AxisPreference, BiosphereTraits, CarbonSource, ConditionNiche, ElectronDonor, EnergySource,
+    EnvironmentNiche, HabitatRealm, LifeSchedule, SocialForm, ThermalStrategy,
 };
 use hornvale_terrain::{CaveKind, TerrainPins, rungs, water_table_depth_m};
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists, rung_rank};
@@ -539,7 +539,9 @@ fn mountain_dwarf_traits() -> BiosphereTraits {
     BiosphereTraits {
         mass: Mass::new(72.0).unwrap(),
         thermal_strategy: ThermalStrategy::Endothermic,
-        trophic_mode: TrophicMode::Heterotrophic,
+        energy_source: EnergySource::Chemotrophic,
+        electron_donor: ElectronDonor::Organotrophic,
+        carbon_source: CarbonSource::Heterotrophic,
         niche: ResourceVector::new(&[(DETRITUS, 0.55), (PLANT_FORAGE, 0.25), (ANIMAL_PREY, 0.20)])
             .unwrap(),
         condition_niche: mountain_dwarf_condition_niche(),
@@ -556,7 +558,9 @@ fn duergar_traits() -> BiosphereTraits {
     BiosphereTraits {
         mass: Mass::new(72.0).unwrap(),
         thermal_strategy: ThermalStrategy::Endothermic,
-        trophic_mode: TrophicMode::Heterotrophic,
+        energy_source: EnergySource::Chemotrophic,
+        electron_donor: ElectronDonor::Organotrophic,
+        carbon_source: CarbonSource::Heterotrophic,
         niche: ResourceVector::new(&[(DETRITUS, 0.60), (ANIMAL_PREY, 0.40)]).unwrap(),
         condition_niche: duergar_condition_niche(),
         potency: 0.0,

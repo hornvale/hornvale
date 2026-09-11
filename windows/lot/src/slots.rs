@@ -1607,25 +1607,56 @@ fn ground(ctx: &LotContext, life: &Life) -> Answer {
 }
 
 /// `diet` — where the people got its energy, at the species level.
+///
+/// THE TRENCHER factored `TrophicMode` into three axes
+/// (`energy_source`/`electron_donor`/`carbon_source`; decision 0976). The
+/// match below preserves EXACTLY the set the old four-arm match selected,
+/// keyed on the full triple rather than the old single value, because the
+/// new `EnergySource::Chemotrophic` alone is carried by every ordinary
+/// heterotroph too (an animal's energy source is chemical) — only the full
+/// triple distinguishes "ate other living things" from "took its energy
+/// from chemical gradients in rock and water" (xorn's chemolithoautotroph
+/// triple) the way the old `Heterotrophic`/`Chemotrophic` values did.
+///
+/// There is no arm for the old `TrophicMode::Absent` ("ate nothing at
+/// all — it had no metabolism"), and none was added: `Absent` had zero
+/// carriers before this split and is not expressible as a triple after it
+/// (ledger #4/#5) — ontological absence now lives solely on
+/// `ThermalStrategy`, off this struct's three metabolic fields entirely. So
+/// there is no state left for that arm to describe; the wildcard below
+/// covers the five triples `SANCTIONED` refuses, which — like the old
+/// `Absent` arm before this task — no kind in the registry may ever carry.
 fn diet(ctx: &LotContext, life: &Life) -> Answer {
     let people = people_of(ctx, life);
     let Some(body) = ctx.components.biosphere.get_by_label(people) else {
         return no_fact("this people has no body in the world's roster");
     };
-    let text = match body.trophic_mode {
-        hornvale_species::TrophicMode::Heterotrophic => {
-            "ate other living things — prey, detritus, or their remains"
-        }
-        hornvale_species::TrophicMode::Phototrophic => "took its energy from light",
-        hornvale_species::TrophicMode::Chemotrophic => {
-            "took its energy from chemical gradients in rock and water"
-        }
-        hornvale_species::TrophicMode::Absent => "ate nothing at all — it had no metabolism",
+    let text = match (body.energy_source, body.electron_donor, body.carbon_source) {
+        (
+            hornvale_species::EnergySource::Chemotrophic,
+            hornvale_species::ElectronDonor::Organotrophic,
+            hornvale_species::CarbonSource::Heterotrophic,
+        ) => "ate other living things — prey, detritus, or their remains",
+        (
+            hornvale_species::EnergySource::Phototrophic,
+            hornvale_species::ElectronDonor::Lithotrophic,
+            hornvale_species::CarbonSource::Autotrophic,
+        ) => "took its energy from light",
+        (
+            hornvale_species::EnergySource::Chemotrophic,
+            hornvale_species::ElectronDonor::Lithotrophic,
+            hornvale_species::CarbonSource::Autotrophic,
+        ) => "took its energy from chemical gradients in rock and water",
+        other => unreachable!(
+            "{people} carries an unsanctioned metabolic combination {other:?}; \
+             tests/suite/metabolic_pairs.rs guards every registry kind against \
+             exactly this"
+        ),
     };
     derived(
         text.to_string(),
-        "species::BiosphereTraits::trophic_mode",
-        "the people's authored trophic mode",
+        "species::BiosphereTraits::{energy_source,electron_donor,carbon_source}",
+        "the people's authored metabolic triple",
     )
 }
 

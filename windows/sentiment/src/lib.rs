@@ -27,9 +27,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use hornvale_kernel::{Mass, ResourceVector};
 use hornvale_language::speech::{ArticulationVector, articulation_registry};
 use hornvale_species::{
-    BiosphereTraits, ConditionNiche, HabitatRealm, LifeSchedule, MindVector, PerceptionVector,
-    SocietyVector, ThermalStrategy, TrophicMode, biosphere_registry, habitat_realm_registry,
-    perception_registry, psyche_registry, society_registry,
+    BiosphereTraits, CarbonSource, ConditionNiche, ElectronDonor, EnergySource, HabitatRealm,
+    LifeSchedule, MindVector, PerceptionVector, SocietyVector, ThermalStrategy, biosphere_registry,
+    habitat_realm_registry, perception_registry, psyche_registry, society_registry,
 };
 
 /// One people, as this crate identifies it — the species catalog's stable
@@ -64,11 +64,23 @@ pub struct PeopleTraits {
     /// Thermal strategy, feeding `Reproductive` via
     /// `hornvale_species::reproductive_tempo`.
     pub thermal_strategy: ThermalStrategy,
-    /// Trophic mode, carried through from the biosphere component. **Nothing
+    /// Energy source, carried through from the biosphere component. **Nothing
     /// in this crate reads it** (THE GOSSAN) — see
-    /// [`hornvale_species::TrophicMode`], which has a production reader in
-    /// `hornvale_worldgen`.
-    pub trophic_mode: TrophicMode,
+    /// [`hornvale_species::EnergySource`], which has a production reader in
+    /// `hornvale_worldgen`. Factored from the old `TrophicMode` into three
+    /// fields by THE TRENCHER (decision 0976); migrated as a faithful
+    /// pass-through, unread here before and unread here now — whether a
+    /// pass-through field should exist at all is a separate question with
+    /// its own campaign.
+    pub energy_source: EnergySource,
+    /// Electron donor, carried through from the biosphere component. Same
+    /// pass-through status as `energy_source` above — see
+    /// [`hornvale_species::ElectronDonor`].
+    pub electron_donor: ElectronDonor,
+    /// Carbon source, carried through from the biosphere component. Same
+    /// pass-through status as `energy_source` above — see
+    /// [`hornvale_species::CarbonSource`].
+    pub carbon_source: CarbonSource,
     /// Life-history pacing, feeding `Reproductive` the same way.
     pub schedule: LifeSchedule,
     /// Social-organization vector, feeding `Sociality`.
@@ -138,7 +150,9 @@ pub fn catalog() -> BTreeMap<PeopleId, PeopleTraits> {
                 condition_niche: bio.condition_niche,
                 mass: bio.mass,
                 thermal_strategy: bio.thermal_strategy,
-                trophic_mode: bio.trophic_mode,
+                energy_source: bio.energy_source,
+                electron_donor: bio.electron_donor,
+                carbon_source: bio.carbon_source,
                 schedule: bio.schedule,
                 society: *society
                     .get(id)

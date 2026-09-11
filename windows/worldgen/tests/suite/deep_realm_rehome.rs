@@ -349,7 +349,7 @@ fn xorn_live_path_no_longer_reproduces_c2as_flat_ratio() {
     // C2a measured the xorn's ratio at 1.02, flat within noise — but that
     // flatness was an artifact of an UNFED axis, not a structural property
     // of xorn's authored condition curves. Its `niche` carried no
-    // `CHEMOSYNTHATE` weight (witnessed by `TrophicMode::Chemotrophic`, fed
+    // `CHEMOSYNTHATE` weight (witnessed by `EnergySource::Chemotrophic`, fed
     // by nothing), so nothing about the subterranean per-rung reading this
     // ratio exercises could ever move xorn's live score away from a
     // surface-forced one.

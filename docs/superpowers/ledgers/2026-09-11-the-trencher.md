@@ -763,3 +763,325 @@ in the world was rendering to a player as *lost*, and had been.
 
 It was found because Nathan ruled that a rock-eater ought to have a
 metabolism.
+
+---
+
+## #12 [R] — Task 1 executed: `TrophicMode` factored into three axes
+
+**The three types, for Tasks 2, 4 and 9-12 to consume verbatim — do not
+guess these names.** All defined in `domains/species/src/lib.rs`, replacing
+`TrophicMode` at what was line 2638 (Task 0 had already shifted it once):
+
+```rust
+pub enum EnergySource {
+    Phototrophic,
+    Chemotrophic,
+}
+
+pub enum ElectronDonor {
+    Lithotrophic,
+    Organotrophic,
+}
+
+pub enum CarbonSource {
+    Autotrophic,
+    Heterotrophic,
+}
+```
+
+`BiosphereTraits`'s single `pub trophic_mode: TrophicMode` field became three:
+`pub energy_source: EnergySource`, `pub electron_donor: ElectronDonor`,
+`pub carbon_source: CarbonSource` — same names as the types, lowercased with
+underscores, no abbreviation.
+
+**The mapping from every kind's old `TrophicMode`, applied uniformly, per
+Step 1's reading of the roster and its variants' own doc comments:**
+
+| old `TrophicMode` | `energy_source` | `electron_donor` | `carbon_source` | carriers |
+|---|---|---|---|---|
+| `Heterotrophic` | `Chemotrophic` | `Organotrophic` | `Heterotrophic` | 35 kinds (every ordinary animal/people) |
+| `Phototrophic` | `Phototrophic` | `Lithotrophic` | `Autotrophic` | `treant`, `twig-blight`, `shrieker` |
+| `Chemotrophic` | `Chemotrophic` | `Lithotrophic` | `Autotrophic` | `xorn` alone |
+| `Absent` | — not expressible as a triple, by design — | | | zero carriers (unaffected) |
+
+No kind's mapping was ambiguous. Every one of the three live `TrophicMode`
+values reads unambiguously off its own doc comment as a single point in the
+microbiology trichotomy (energy × donor × carbon): `Heterotrophic` names an
+ordinary consumer (chemoorganoheterotroph), `Phototrophic` names a
+photosynthesizer whose own doc already said "plant-folk/fungal analogue"
+pulling energy from light with no donor/carbon ambiguity (every real
+phototroph in the shipped sense is a photolithoautotroph), and
+`Chemotrophic`'s own doc named `xorn` explicitly as "a thing that burrows
+through stone and eats mineral and a chemical gradient... a chemolithotroph"
+— donor and carbon source both stated in the variant's own prose. `Absent`
+had zero carriers, so no mapping question arose for it at all; it is simply
+not one of the three sanctioned triples (see ledger #4/#5, already ruled).
+
+**`SANCTIONED` decouples from `ThermalStrategy` entirely, and this is a
+design decision beyond what ledger #4/#5 ruled, made reading the task
+brief's own illustrative code.** The old two-axis `SANCTIONED` paired
+`(ThermalStrategy, TrophicMode)` because `TrophicMode::Absent` needed to
+pair with `ThermalStrategy::Absent` to close the ghost/construct/undead
+corner — the one place the two axes were coupled. Decision 0976 already
+removed that coupling (`TrophicMode::Absent` — now no axis's `Absent` at
+all — sits outside the triple per ledger #4). With the coupling gone,
+`SANCTIONED` is now `&[(EnergySource, ElectronDonor, CarbonSource)]` alone,
+**3** entries (down from the old 5, which counted `(Absent, Absent)` as a
+row that no longer exists in this shape):
+
+```rust
+const SANCTIONED: &[(E, D, C)] = &[
+    (E::Chemotrophic, D::Organotrophic, C::Heterotrophic), // chemoorganoheterotrophy
+    (E::Phototrophic, D::Lithotrophic, C::Autotrophic),    // photolithoautotrophy
+    (E::Chemotrophic, D::Lithotrophic, C::Autotrophic),    // chemolithoautotrophy (xorn)
+];
+```
+
+The count-assertion guard from `metabolic_pairs.rs` (the one that caught the
+silent widening when `(Unmodelled, Chemotrophic)` was added and `treant`
+flipped) is preserved in this three-axis form: `every_kind_is_pinned_to_its_
+metabolic_triple`'s final assertion pins `SANCTIONED.len() == 3`.
+
+**Tests, renamed for the new shape (no test name was mandated beyond the
+brief's Step 2 illustration):**
+- `every_kind_carries_a_sanctioned_combination` — brief's Step 2, verbatim
+  shape.
+- `chemolithoautotrophy_is_witnessed_by_xorn_alone` — replaces
+  `chemotrophic_is_declared_and_unwitnessed`; same witness-count discipline,
+  now naming the actual rare triple (xorn's) rather than the old
+  `Chemotrophic` trophic value alone, which under the new axes is also
+  carried by all 35 ordinary heterotrophs (an animal's energy source *is*
+  chemotrophic — the axis alone no longer distinguishes it from xorn; only
+  the full triple does).
+- `every_kind_is_pinned_to_its_metabolic_triple` — replaces
+  `sanctioned_thermal_keys_are_pairwise_distinct`; same exhaustive
+  set-equality + per-kind pin discipline, over the triple instead of the old
+  single `TrophicMode` value, plus the `SANCTIONED.len() == 3` guard.
+
+**A discrepancy in the controller's own measured surface, found by the
+compiler as instructed ("If cargo check --workspace --all-targets implies a
+materially different surface, STOP and report").** The controller's
+resolution said `windows/sentiment`'s only exposure was `#[cfg(test)]`
+fixtures. `cargo check --workspace --all-targets` after this task's change
+shows that is only PART of the story: `windows/sentiment/src/lib.rs` carries
+a genuine **production** field, `PeopleTraits::trophic_mode: TrophicMode`
+(struct at ~line 61, constructed at ~line 141 from `bio.trophic_mode`), and
+`windows/sentiment/src/axes.rs:271` is the `#[cfg(test)]` site the
+resolution named. `PeopleTraits`'s own doc already says "Nothing in this
+crate reads it" (THE GOSSAN) — so it is dead weight carried through, not a
+behavioural reader — but it is still a real struct field outside
+`#[cfg(test)]`, and whichever task fixes `windows/sentiment` needs to touch
+`src/lib.rs` as a fourth production file, not only its test fixtures. Flagged
+here rather than fixed, since `windows/sentiment` is out of this task's
+declared scope (`domains/species/src/lib.rs` and `metabolic_pairs.rs` only).
+
+**`cargo check -p hornvale-species --all-targets`: clean, 0 errors.**
+`cargo check --workspace --all-targets`: **6** `error[...]` diagnostics
+(3 in `hornvale-sentiment`'s lib + lib-test builds: two `E0432` unresolved
+imports at `windows/sentiment/src/lib.rs:31` and `axes.rs:271`, one `E0609`
+missing field at `lib.rs:141`; 3 more in `hornvale-worldgen`'s lib +
+lib-test builds, all the same site, `windows/worldgen/src/lib.rs:2737`,
+`bio.trophic_mode != hornvale_species::TrophicMode::Phototrophic`). Every
+crate depending on `hornvale-worldgen` (`windows/lot`, `windows/lab`,
+`windows/vessel`-adjacent consumers, `cli/`) could not be attempted at all
+in this run, because cargo cannot type-check a dependent of a crate that
+fails to build — not because they carry additional undiscovered sites. This
+matches the controller's own count (47 sites / 49 arms across
+`domains/species/src/lib.rs`, `windows/lot/src/slots.rs`,
+`windows/worldgen/src/lib.rs`, plus `windows/sentiment`), with the one
+addition (`windows/sentiment/src/lib.rs`'s production field) noted above.
+
+**Rebaseline (the empty-diff proof) is BLOCKED, not run, and not "empty" by
+inference.** `make rebaseline` shells out through `scripts/regenerate-
+artifacts.sh`'s `run()` helper, which is `cargo run -q -p hornvale ...` —
+the CLI, which depends on `hornvale-worldgen`, which does not compile right
+now (see above). The workspace-wide proof this task's brief asks for
+literally cannot execute until whichever task fixes
+`windows/worldgen/src/lib.rs:2737` lands. What COULD be checked, and was:
+`domains/species`'s own suite is green end to end (79/79, including the
+three tests above), and specifically `life_history_golden`'s two tests
+(`every_kinds_life_history_is_frozen`, `the_life_history_table_is_not_
+vacuous`) pass unchanged against the existing byte-golden fixture — that
+golden is driven by `thermal_strategy` and `mass` alone (untouched by this
+task) and reads no trophic field at all, so it cannot move from this
+change and didn't. The exhaustive `every_kind_is_pinned_to_its_metabolic_
+triple` test is the stronger, machine-checked version of the same claim the
+brief wants a rebaseline diff to demonstrate: every one of the registry's 39
+kinds maps to exactly the triple this ledger's table above says it should,
+checked by name, not sampled. The workspace-level rebaseline (almanacs,
+elevation maps, etc.) should be re-attempted once `windows/worldgen` and
+`windows/lot` are fixed — nothing here predicts it will move anything (the
+mapping is a pure bijection on the old `TrophicMode` value), but it has not
+been observed, so it is not claimed.
+
+**`make gate-commit` currently REDS, on `clippy`, at exactly the two files
+named above — expected and by design, per the task brief's own Step 5
+("Other tests referencing TrophicMode will fail to compile — that is Task
+2's work... Do not hunt for sites by grep").** Everything else in the gate
+that COULD run was run and is green: `cargo fmt --check` (workspace-wide),
+`cargo clippy -p hornvale-species --all-targets -- -D warnings` (scoped,
+clean), the three `check` tools (`type-audit`, `placement-audit`, `plumb` —
+all 0 findings against this change), and all three report-freshness checks
+(`type-audit-report`, `placement-audit-report` green with no drift;
+`plumb-report` was stale on pure line-number churn from this task's edits —
+regenerated and now green, `docs/audits/plumb-roster.md` included in this
+commit). The sub-floor nextest tier was not attempted, since it also builds
+`--workspace` and would fail for the identical reason.
+
+**Files touched, beyond the brief's two.** `docs/audits/plumb-roster.md`
+(regenerated, line-number-only diff) and this ledger entry, per the brief's
+own Step 6 instruction to include the ledger in the commit.
+
+**Ideonomy passes / overturns:** none; execution of Task 1 per the brief and
+ledger #4/#5's prior rulings, plus one design decision (decoupling
+`SANCTIONED` from `ThermalStrategy` entirely) made reading the brief's own
+illustrative Step 2 code as the intended shape rather than guessing a
+4-tuple was wanted.
+
+**Capture actions:** this entry (type/variant names for Tasks 2, 4, 9-12);
+the `windows/sentiment/src/lib.rs` production-field discrepancy flagged for
+whichever task or review picks up `windows/sentiment`; the blocked
+rebaseline flagged for a re-run once `windows/worldgen`/`windows/lot`
+compile again.
+
+**UPDATE, per ledger #13's ruling: Tasks 1 and 2 land in ONE commit, and
+everything BLOCKED above is now done.** This entry's BLOCKED analysis stands
+as written — it is what was true at the time and it is why the ruling
+exists — but every paragraph above describing something as blocked, not
+run, or a controller error to fix later is superseded by the work below,
+completed in the same commit as Task 1.
+
+**The four production files (three named plus the corrected fourth from
+ledger #13) are migrated:**
+- `windows/worldgen/src/lib.rs:2737` (`prey_pressure_from`) —
+  `bio.trophic_mode != TrophicMode::Phototrophic` became
+  `bio.energy_source != EnergySource::Phototrophic`. A pure rename: the
+  three kinds this excludes from the prey base (treant, twig-blight,
+  shrieker) are identical before and after, since `EnergySource::Phototrophic`
+  is carried by exactly the same three kinds `TrophicMode::Phototrophic` was.
+- `windows/lot/src/slots.rs`'s `diet()` — **the one site the ruling asked to
+  be checked by hand, not approximated.** The old match had FOUR arms keyed
+  on a single `TrophicMode` value, and one axis alone no longer distinguishes
+  them: under the split, `EnergySource::Chemotrophic` is carried by every
+  ordinary heterotroph too (an animal's energy source is chemical), not by
+  `xorn` alone. So the new match keys on the FULL TRIPLE
+  `(energy_source, electron_donor, carbon_source)`, with three explicit arms
+  reproducing the exact old text for the exact old selected sets
+  (chemoorganoheterotroph → "ate other living things…"; photolithoautotroph →
+  "took its energy from light"; `xorn`'s chemolithoautotroph → "took its
+  energy from chemical gradients in rock and water"), plus a wildcard arm.
+  The wildcard is `unreachable!()`, not approximated text — there is no
+  surviving state for the old `Absent` arm ("ate nothing at all") to
+  describe, since `Absent` is unrepresentable on any of the three new axes
+  (ledger #4/#5) and every kind `ctx.components.biosphere` can return is
+  drawn from `hornvale_species::biosphere_registry()`, which
+  `every_kind_carries_a_sanctioned_combination` already guards against ever
+  producing an unsanctioned triple. This is the same shape the old code
+  already used: `TrophicMode::Absent` had zero carriers too, so that arm was
+  always dead in practice, just not spelled `unreachable!()`.
+- `windows/sentiment/src/lib.rs` — `PeopleTraits::trophic_mode: TrophicMode`
+  (the field ledger #13 found) became the same three fields
+  `BiosphereTraits` got, migrated as a faithful pass-through per the ruling's
+  instruction: "nothing in this crate reads it" stays true field-for-field,
+  and whether the pass-through should exist at all stays a separate,
+  undecided question.
+- Plus the mechanical remainder found by the compiler, all doc-comment or
+  synthetic-fixture updates with no selection-set question of their own:
+  `windows/sentiment/src/axes.rs`, `windows/sentiment/tests/suite/axes.rs`,
+  `windows/sentiment/tests/suite/judgment.rs` (all three: a `#[cfg(test)]`
+  synthetic `PeopleTraits`, `Heterotrophic`'s triple substituted in),
+  `windows/worldgen/tests/suite/underworld_separation.rs` (two synthetic
+  `BiosphereTraits` fixtures, mountain-dwarf and duergar, both
+  `Heterotrophic`'s triple), and one stale doc-comment cross-reference in
+  `windows/worldgen/tests/suite/deep_realm_rehome.rs`.
+
+**`cargo check --workspace --all-targets`: 0 errors** (was 6, all in the two
+files above). **`cargo clippy --workspace --all-targets -- -D warnings`:
+clean.** **`HV_TEST_OK=1 cargo nextest run --workspace --no-fail-fast`:
+6070/6070 passed, 0 failed, 248 skipped** (1345.212 s). **`HV_TEST_OK=1
+cargo test --workspace --doc`: green.** **`make gate-commit`: green, rc=0**
+(460 tests via the sub-floor tier, 43.162 s wall).
+
+**`make rebaseline`'s empty-diff proof: NOT literally empty, and here is
+exactly what moved and why.** `git diff --exit-code` against
+`docs/generated-paths.txt`'s paths shows exactly one file,
+`book/src/gallery/generated/the-lot-seed-42.md`, 10 lines changed (one per
+drawn lot). Every changed line is a bibliography-style source citation this
+task's own edit to `slots.rs::diet()` renamed on purpose:
+`- [N] derived: species::BiosphereTraits::trophic_mode (the people's
+authored trophic mode)` became `- [N] derived: species::BiosphereTraits::
+{energy_source,electron_donor,carbon_source} (the people's authored
+metabolic triple)`. That field name is gone, so the old citation string
+would now name a field that does not exist — leaving it unchanged would be
+the actual defect. **Confirmed separately that no kind's DIET NARRATIVE
+moved**: `grep -n "ate other living things" book/src/gallery/generated/
+the-lot-seed-42.md` returns the identical ten lines, byte-for-byte, in both
+the pre- and post-rebaseline trees (git did not flag them, which is the
+positive control — a real text change on any of those lines would have shown
+in the diff above and did not). So the branch this task's brief asked to
+distinguish resolves as: the retyping was faithful (no kind's metabolism or
+narrated meaning changed); the one thing that moved is the citation
+mechanism's own self-description of which field it reads, which is required
+to move by the same retyping and is not a finding about any kind.
+
+**Ideonomy passes / overturns:** none for this update; execution of ledger
+#13's ruling.
+
+**Capture actions:** this update (supersedes the BLOCKED-era capture actions
+above); `docs/superpowers/plans/2026-09-11-the-trencher.md`'s Task 2 section
+already carries the ruling and the corrected four-file count (written
+alongside ledger #13, not duplicated here).
+
+---
+
+## #13 [Ruling] — Tasks 1 and 2 share a commit; and my blast-radius measurement was wrong
+
+**The implementer BLOCKED correctly**, and did three right things at once: it
+did not bypass the pre-commit hook, it did not expand scope into another
+task's work unasked, and it reported options rather than choosing one.
+
+**RULING: Tasks 1 and 2 land in ONE commit.** The boundary was mis-drawn and
+that is my defect. Removing `TrophicMode` breaks its consumers and
+`make gate-commit` is workspace-wide, so **no green commit exists between
+these two tasks.** The plan asserted one could. A task is supposed to be the
+smallest unit that carries its own test cycle; "define the type" cannot carry
+one when the type and its consumers are a single compile unit.
+
+**Alternative discarded:** leave `TrophicMode` as a deprecated alias so Task 1
+commits alone. It buys a commit boundary at the price of a temporary alias,
+and a deprecated alias is precisely the kind of thing that outlives its
+deprecation. *Cost if wrong: one larger commit to review instead of two
+smaller ones.*
+
+**AND MY MEASUREMENT WAS WRONG — four production files, not three.** I wrote,
+in the spec and twice in the plan, that `windows/sentiment`'s five
+`TrophicMode` mentions were "ALL inside `#[cfg(test)]` — fixtures, not
+consumers." Verified now:
+
+```
+windows/sentiment/src/lib.rs:71    pub trophic_mode: TrophicMode,    <- PRODUCTION
+windows/sentiment/src/lib.rs:141   trophic_mode: bio.trophic_mode,   <- PRODUCTION
+windows/sentiment/src/lib.rs:175   #[cfg(test)]                      <- tests begin here
+```
+
+**How I got it wrong is the reusable part.** I read `axes.rs` carefully — saw
+its `#[cfg(test)]` at 264 and its uses at 269 and 308, and correctly concluded
+test-side. Then I reported its **sibling** `lib.rs` in the same sentence
+without checking whether its three mentions fell before or after the
+`cfg(test)` line I had *already printed to my own screen*. I had the number
+and did not use it. **Verified one file, inferred the neighbour, reported
+both with equal confidence.**
+
+This is the same shape as the day's other text defects and the one I have now
+committed most often: a claim about a set, where part of the set was checked
+and the rest was assumed to resemble it.
+
+**Consequence taken:** the plan now states the four-file surface, and Task 2's
+dispatch tells the implementer to expect `PeopleTraits` to need the same
+three-field treatment `BiosphereTraits` got. Its doc notes "nothing in this
+crate reads it (THE GOSSAN)" — a pass-through whose reader lives in
+`hornvale_worldgen` — so it is migrated faithfully rather than removed;
+whether a pass-through field should exist is a separate question.
+
+**Ideonomy passes / overturns:** none; a structural ruling plus a correction
+of my own measurement.

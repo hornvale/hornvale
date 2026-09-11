@@ -330,7 +330,25 @@ git commit -m "feat(the-trencher): TrophicMode becomes three axes"
 
 ---
 
-### Task 2: Migrate the 39 kinds and the three consumers
+### Task 2: Migrate the kinds and consumers — SHARES TASK 1'S COMMIT
+
+**RULING (ledger #13): Tasks 1 and 2 land in ONE commit.** They were never
+separately committable and the plan was wrong to imply it: removing
+`TrophicMode` breaks its consumers, `make gate-commit` is workspace-wide, and
+so **no green commit exists between these two tasks.** A task is the smallest
+unit that carries its own test cycle, and "define the type" cannot carry one
+here.
+
+Leaving `TrophicMode` behind as a deprecated alias was considered and rejected
+— it buys a commit boundary at the price of a temporary alias, and a
+deprecated alias is exactly the kind of thing that outlives its deprecation.
+
+**The consumer surface is FOUR production files, not three.** An earlier
+measurement in this plan said `windows/sentiment`'s mentions were all inside
+`#[cfg(test)]`. That is true of `axes.rs` and **false of `lib.rs`**, which
+carries `pub trophic_mode: TrophicMode` at line 71 — a production field on
+`PeopleTraits`, copied in production at line 141, with `#[cfg(test)]` not
+starting until 175. The measurement checked one file and inferred its sibling.
 
 **Files:**
 - Modify: `domains/species/src/lib.rs` (the 39 `trophic_mode:` sites)
