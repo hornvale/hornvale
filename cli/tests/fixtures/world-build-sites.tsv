@@ -159,6 +159,7 @@ windows/worldgen/tests/suite/beta_calibration_sweep.rs	1	unmigrated:1
 windows/worldgen/tests/suite/breach.rs	2	unmigrated:2
 windows/worldgen/tests/suite/brief_axis_probe.rs	1	identity:1
 windows/worldgen/tests/suite/capacity_cost_probe.rs	4	unmigrated:4
+windows/worldgen/tests/suite/ceiling_composition_probe.rs	1	identity:1
 windows/worldgen/tests/suite/chorus_params.rs	1	unmigrated:1
 windows/worldgen/tests/suite/confluence.rs	5	unmigrated:5
 windows/worldgen/tests/suite/consonance_properties.rs	1	unmigrated:1

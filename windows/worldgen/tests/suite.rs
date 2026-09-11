@@ -31,6 +31,8 @@ mod breach;
 mod brief_axis_probe;
 #[path = "suite/capacity_cost_probe.rs"]
 mod capacity_cost_probe;
+#[path = "suite/ceiling_composition_probe.rs"]
+mod ceiling_composition_probe;
 #[path = "suite/chorus_params.rs"]
 mod chorus_params;
 #[path = "suite/color_naming.rs"]
