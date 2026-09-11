@@ -371,10 +371,47 @@ conclusion drawn from (b) would be uninterpretable. **If the control does not
 reproduce, M2 reports that and asserts nothing else** — a mismatch is itself a
 finding about the committed number.
 
-Choosing `max` as (b) is deliberate and narrow: it is the combination rule that
-discards the least composition, so it bounds how much the mean is costing. It
-is a **diagnostic instrument, not a proposed replacement** — nothing in this
+**CORRECTION, 2026-09-11, after M2 ran.** An earlier draft of this paragraph
+justified `max` as "the combination rule that discards the least composition,
+so it bounds how much the mean is costing." **That is inverted, and a formal
+check says so:** `mean = (1/7)Σyᵢ` gives every one of the seven sources a
+nonzero derivative (1/7) — none is discarded, only diluted — while `max` gives
+the winner derivative 1 and the other six **exactly 0**, so a world-to-world
+difference appearing in any non-winning source is invisible to it. `max`
+discards the **most** composition per chamber; `mean` the least. The sentence
+is corrected here rather than quietly deleted because a future reader citing
+it would be citing something false.
+
+`max` remains a legitimate diagnostic on a narrower argument: it is a
+genuinely **non-averaging** rule, so if dilution-by-averaging were what
+flattens the signal, `max` should separate at least as well as `mean`. It is a
+**diagnostic instrument, not a proposed replacement** — nothing in this
 campaign adopts it.
+
+**MEASURED (Task 2, 2026-09-11):** `separation(mean) = 0.145249`,
+`separation(max) = 0.040745`. The prediction was not met, and `max` separated
+**3.6x worse** than the rule it was meant to indict.
+
+**A THIRD CAUSE THIS SPEC'S BINARY DID NOT CONTEMPLATE.** §3.3's table offers
+"the rock" or "the mean". The review that investigated the anomaly found a
+mechanism that is neither: **order-statistic saturation.** Every
+`EnergySource::yield_at` arm is a saturating function — a `bump()` over
+`silica` times a `water_gate()` saturating at thresholds of 0.1–0.4 — and
+`subterranean_energy`'s own doc records that "four to six of the seven sources
+… are simultaneously non-trivial" at most chambers. So whichever source wins is
+usually sitting near its own ceiling, and *which* ceiling wins is set by a
+small number of shared, near-constant inputs (the silica band, and depth,
+which every world shares). `max` snaps to that and varies less across worlds
+than a blend still carrying signal from non-winning, unsaturated terms.
+
+**What this does and does not change.** The branch table's *actions* stand:
+M2 legitimately excludes row 3, because a non-averaging rule failing too is
+real evidence against "the mean is a major cause". Its *vocabulary* is now
+known to be incomplete — row 4's label "rock is the cause" should be read as
+"not the mean", since `separation(max) = 0.040745` does **not** independently
+confirm the metaplan's specific ~three-categorical-states diagnosis. A
+successor deciding what to fix must distinguish the rock from saturation, and
+this spec does not.
 
 ### M3 — Does the ruler stay unreachable? (diagnostic)
 

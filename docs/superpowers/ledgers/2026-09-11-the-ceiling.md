@@ -793,3 +793,68 @@ rule repair still owed).
 **Housekeeping:** `CombinationRule::MaxOfSeven`'s `#[allow(dead_code)]` is
 removed (this task's test constructs it) and its doc comment now points at
 `max_of_seven_separates_worlds_the_mean_does_not` instead of a future task.
+
+---
+
+## #13 [G5] — M2's result, and the inverted rationale it exposed
+
+**Measured (Task 2, commit `ab6da0871`).** `separation(mean-of-seven) =
+0.145249` (control, reproduced exactly); `separation(max-of-seven) =
+0.040745`. Preregistered bar `>= 0.25` **not met**, and `max` separated
+**3.6x worse** than the rule it was meant to indict.
+
+**The spec's rationale for choosing `max` was INVERTED, and the measurement is
+what exposed it.** The spec said `max` "discards the least composition". A
+formal check of the two rules says the opposite: `mean = (1/7)Σyᵢ` gives every
+source a nonzero derivative (1/7), so none is discarded, only diluted; `max`
+gives the winner derivative 1 and the other six **exactly 0**, so a
+world-to-world difference in any non-winning source is invisible to it. `max`
+discards the **most**. Spec §4 corrected in place with the correction stated
+rather than the sentence quietly deleted.
+
+**A THIRD CAUSE THE BRANCH TABLE NEVER CONTEMPLATED: order-statistic
+saturation.** Every `yield_at` arm is a saturating function (a `bump()` over
+silica times a `water_gate()` saturating at 0.1–0.4), and
+`subterranean_energy`'s own doc records that four to six of seven sources are
+simultaneously non-trivial at most chambers. So the winner usually sits near
+its own ceiling, and which ceiling wins is set by a few shared near-constant
+inputs. This is neither "the rock" nor "the mean" — the two options §3.3
+offered.
+
+**Ruling: the branch table's ACTIONS stand, its VOCABULARY is narrowed.** M2
+legitimately excludes row 3 — a non-averaging rule failing too is real
+evidence against "the mean is a major cause". But row 4's label "rock is the
+cause" must be read as "**not the mean**": `separation(max) = 0.040745` does
+not independently confirm the metaplan's ~three-categorical-states diagnosis.
+Recorded in the spec so a successor deciding what to fix knows it must still
+distinguish the rock from saturation. *Cost if wrong: a successor spends
+effort separating two causes that turn out to be one.*
+
+**My review prompt overstated the evidence, and the reviewer caught it.** I
+wrote that the per-rung histograms show `IronReduction` leading shallow
+"across all twelve seeds". They are **pooled** over twelve seeds, which shows
+the aggregate argmax is depth-determined and **not** that every seed agrees at
+every rung — a pooled majority can hide per-seed disagreement. That per-seed
+question is precisely M1's, and it has not run. This is the second time in
+this campaign that a pooled statistic was mistaken for a per-seed one, the
+first being the M1 defect the spec's own self-review caught; the two share a
+cause and it is mine.
+
+**Deferred minor, folded into Task 3 rather than a fix round.** Task 2's test
+pins the **exact** measured null (`|max - 0.040745| < 5e-7`), while
+`subterranean_energy_probe.rs`'s own falsified predictions pin **direction
+only** (`separation < 0.25`). The report characterises it as matching that
+precedent; it actually matches the positive-control pattern. Direction-only is
+the right semantic for a falsified prediction — it asserts *the prediction
+still fails* rather than *this number has not moved*, and an exact pin will red
+on any unrelated upstream change in a way that reads as "M2 broke". The exact
+value belongs in the doc comment with its date, where it already is. Task 3
+touches the same file, so it carries the change; no fix round for a Minor.
+
+**Ideonomy passes / overturns:** none; this is a measured result plus a
+correction of my own text, not a design space.
+
+**Capture actions:** spec §4 corrected (inverted rationale, the measured
+numbers, saturation as a third cause, and what the branch table's vocabulary
+can no longer claim); `CombinationRule::MaxOfSeven`'s doc comment inherits the
+same false framing and is folded into Task 3's dispatch.
