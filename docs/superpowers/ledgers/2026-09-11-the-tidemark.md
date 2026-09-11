@@ -1,7 +1,7 @@
-# The Shoal — campaign ledger
+# The Tidemark — campaign ledger
 
 Campaign: architectural continuation of The Vent and The Living Vent, taking up
-`WAT-sea-peoples`. Provisional title: "The Shoal". Branch: `campaign/the-shoal`.
+`WAT-sea-peoples`. Provisional title: "The Tidemark". Branch: `campaign/the-tidemark`.
 
 ## #1 [G1] — What should a sea-peoples campaign deliver, given the Waterworld
 ## overlay has no non-test caller?
@@ -109,7 +109,7 @@ pending his correction at G3. The raider reading is recorded in Follow-ups.
 
 ## #3 [Q] — Does the marine consumer belong to this campaign or to THE TENANT?
 
-**Decision:** Split by question, not by realm. The Shoal does **placement**: the
+**Decision:** Split by question, not by realm. The Tidemark does **placement**: the
 `Marine` realm gate, the availability mask, an `EnvironmentNiche` row, and
 seating. It does **not** give any marine kind a `CHEMOSYNTHATE` weight or touch
 `TrophicMode` — that is THE TENANT's, and the boundary is recorded here so the
@@ -138,6 +138,39 @@ realm). The homogeneity prompt surfaced the observation recorded in Follow-ups.
 
 **Capture actions:** Boundary stated as a spec constraint; the observation about
 THE TENANT's prerequisite chain recorded in Follow-ups.
+
+## #4 [Q] — The campaign's name, after a collision
+
+**Decision:** "The Tidemark". The campaign opened as "The Shoal" and the branch
+was cut as `campaign/the-shoal` before the name was checked.
+
+**Why:** "The Shoal" is already a merged campaign — `book/src/chronicle/the-shoal.md`
+and `docs/retrospectives/the-shoal.md` both exist, and it was itself
+marine-flavoured (its retrospective's first lesson is that no gallery page
+sampled a marine room), so the collision would have been actively confusing
+rather than merely duplicative. Caught by
+`docs_consistency::campaign_reconciliation_covers_every_campaign_record`
+refusing the spec's first commit, not by the session. Candidates were checked
+mechanically against `docs/retrospectives/`, `book/src/chronicle/`,
+`docs/superpowers/specs/` and the branch list; "the-fathom" was also taken
+(3 files), and "the-tidemark" was free on all four. It names the campaign's
+headline — the line a receding habitat leaves — rather than a zone of the sea.
+
+**Alternatives discarded:** the-benthos (precise but names seabed life, while
+seating spans the whole pelagic ladder), the-littoral (same narrowness, at the
+other end of the column), the-anchorage, the-strand, the-demersal — all free,
+none naming the expiring-habitat claim.
+
+**Ideonomy passes / overturns:** None, and stated explicitly rather than left
+blank: this was a forced rename resolved against a mechanically checked
+candidate list, not a design question.
+
+**Capture actions:** The worktree directory remains `.claude/worktrees/the-shoal`
+and is deliberately NOT renamed — `CARGO_MANIFEST_DIR`, `CARGO_TARGET_TMPDIR`
+and `CARGO_BIN_EXE_*` are baked at compile time, so renaming a worktree with a
+warm `target/` hands it stale paths (CLAUDE.md's worktree note, and
+`scripts/worktree-take.sh`'s own grep+touch mitigation). The branch is the
+identity that matters; the pool member's directory name is not.
 
 ## Follow-ups
 
