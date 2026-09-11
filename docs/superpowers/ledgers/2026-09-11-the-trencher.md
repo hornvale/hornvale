@@ -1211,3 +1211,64 @@ distinctions survived.
 
 **Capture actions:** this entry; Stage 4's authoring constraint recorded above
 for its tasks to carry; the retraction sent.
+
+---
+
+## #16 [Q] — SANCTIONED validates legality, never correctness
+
+**The Tidemark raised a near-miss; verifying it closed that one and exposed
+the unguarded neighbour.**
+
+**Their concern:** `Unmodelled` and `Absent` are one word apart in prose and a
+whole metabolic triple apart in the model. Their kelp tender's slate reads
+"(unmodelled)" — written weeks before this split existed. Authored as
+`Absent`, they reasoned, migration would silently erase a phototrophic
+people's phototrophy.
+
+**Verified, and it cannot happen — two independent reasons.**
+
+1. **The three axes are MANDATORY fields**, not `Option`
+   (`domains/species/src/lib.rs:3680`, `:3684`, `:3688`). A
+   `BiosphereTraits` cannot be constructed without all three, whatever its
+   thermal strategy. `metabolic_pairs.rs`'s header line "carries no metabolic
+   triple at all" states ametabolism's **intent**, not the type's shape.
+2. **It would not be silent regardless.** `no_living_kind_is_ametabolic`
+   (`coverage.rs:178`) iterates the live registry and REDs on any carrier of
+   `ThermalStrategy::Absent`, by name.
+
+**A second-order effect worth recording:** that guard was written in Task 0
+for an entirely different reason — decision 0976 ruling ametabolic life a
+category error — and it now also protects another campaign's authoring
+against a hazard nobody had in mind when it was written. **A guard that
+encodes a real distinction protects uses its author never enumerated.**
+
+## The neighbour, which has no net
+
+**A kind mis-authored as `Absent` reds. A kind authored with the WRONG TRIPLE
+does not.** Nothing checks that a phototrophic people is photo/litho/auto
+rather than chemo/organo/hetero. `SANCTIONED` asks only whether a combination
+is **legal**, and all three are legal.
+
+**SANCTIONED validates legality, never correctness. A wrong-but-sanctioned
+triple is exactly as green as a right one.**
+
+This is #15's bijection finding in its sharpest form: the mechanical-migration
+hazard and this one are the same defect, and **only the version with a wrong
+*enum* is caught — the version with a wrong *value* is not.**
+
+**Stage 4's constraint, in these words:** the only thing that catches a wrong
+triple is someone asking, of each authored kind, whether the triple is **true
+of the organism**. That is a reading, not a test, and no ratchet will do it.
+Stage 4's tasks must require the reading explicitly rather than assuming
+`SANCTIONED` covers it.
+
+**One mechanical partial net exists and is worth considering in Stage 4:** a
+test asserting that every kind whose niche carries a `PHOTOSYNTHATE` weight
+also has `EnergySource::Phototrophic`, and the converse — **cross-checking two
+independently authored fields against each other**. It catches the plant case
+specifically. It does not generalize to all three axes, but the shape does:
+wherever two authored fields imply each other, an agreement test turns a
+reading into a ratchet. Raised to The Tidemark for their kelp tender as well.
+
+**Ideonomy passes / overturns:** none; a peer's near-miss, verified, which
+overturned its own premise and relocated the hazard.
