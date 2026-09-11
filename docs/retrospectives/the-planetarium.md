@@ -128,3 +128,10 @@ index-cell limit. The normal hook caught it. Restoring the existing proposal
 and adding the evidence link in Where preserved the index's job; the profile
 audit holds the argument. The second normal commit passed, including the
 previously blocking per-run census-alarm finding check.
+
+
+A stale inherited root tracker was preserved during main absorption because it
+said In Progress, despite its campaign having already landed. That resurrected
+the file Plan Hygiene had retired. The operator caught it at close; checking
+the inherited campaign's actual landing, rather than trusting its stale label,
+resolved the conflict and allowed complete tracker removal.

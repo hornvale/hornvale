@@ -292,8 +292,21 @@ operator after about two minutes so the corrected G6 acceptance text could land
 with the implementation; it was not a test failure, and main did not move.
 The replacement above is the completed qualification.
 
-All Planetarium stages are complete. Its section was removed from the temporary
-root tracker, preserving the inherited unfinished Eclipse tracker. Further
+All Planetarium stages are complete. The temporary root tracker was removed
+after verifying that its inherited Eclipse campaign had also landed at
+`f22860af3`; its remaining In Progress label was stale, not unfinished work. Further
 visual refinement remains with future campaigns. This close receipt is a
 prose-only follow-up to the landed implementation, not a new visual candidate.
 Publication remains outside scope; leave the warm worktree in the pool.
+
+
+### Tracker retirement correction
+
+The operator held receipt candidate `489e00f36` before a chamber run because it
+kept the root tracker that Plan Hygiene had deleted and gitignored at
+`0d266b32a`. Root verified that revision has no `IMPLEMENTATION_PLAN.md` and
+that the Eclipse ledger Closeout and reconciliation row both record its
+completed landing at `f22860af3`. The earlier preservation decision read a
+stale In Progress label as live work. There is no unfinished inherited work
+to preserve; removing the file now satisfies the approved plan's condition
+to remove it once all trackers are complete. Permanent campaign plans survive.
