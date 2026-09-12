@@ -7279,3 +7279,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-12T02:47:09Z | rebaseline | 221.223 | 580.563 | 28.035 | 2.75 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-12T02:48:55Z | gate-commit | 79.797 | 200.343 | 51.697 | 3.16 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-12T02:50:01Z | gate-commit | 44.023 | 81.870 | 19.175 | 2.30 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:51:19Z | gate-commit | 44.478 | 82.308 | 19.672 | 2.29 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
