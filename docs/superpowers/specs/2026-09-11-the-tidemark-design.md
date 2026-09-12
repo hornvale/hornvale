@@ -456,8 +456,13 @@ tick and consumes no draws; the implementer verifies it rather than assuming it.
 
 ## 8. Preregistered measurement
 
-Frozen before the code that would move it (decision 0016). Each states both
-poles, so neither outcome is a failure.
+Frozen before the code that would move it (decision 0016), with one declared
+exception: **M8 was added after Task 3 landed**, recording a measurement nobody
+predicted. It is marked as such in its own text and is a *record*, not a
+prediction — but it is not preregistered and this header would otherwise say it
+was. Everything else here was frozen before the code that moves it.
+
+Each measurement states both poles, so neither outcome is a failure.
 
 **M1 — Do the two vent representations coincide?** There are two today:
 `climate::Biome::HydrothermalVent` ("a hydrothermal-vent field on a spreading

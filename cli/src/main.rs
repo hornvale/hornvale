@@ -816,7 +816,18 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 .ok_or_else(|| "--creature must be a nonzero u64 entity id".to_string())?;
             hornvale_vessel::PossessTarget::Creature(entity)
         }
-        (None, None) => hornvale_vessel::PossessTarget::Flagship,
+        // **THE SHIPPED DEFAULT IS DRY GROUND** (The Tidemark, Task 3, fix
+        // round 2). It was `Flagship` — `village_info`, "the first
+        // `is-settlement` fact in ledger order" — and after the marine
+        // peoples landed that meant `possess --seed 42` opened in open blue
+        // water with "Ways on: surface." Re-aiming the test fixtures alone
+        // left the thing a PERSON runs untouched, which is the half that was
+        // actually asked about.
+        //
+        // `--target flagship` still says exactly what it always said, so
+        // nothing is lost: the ledger's first settlement is one flag away,
+        // and it is now a choice rather than what you get by not choosing.
+        (None, None) => hornvale_vessel::PossessTarget::LandSettlement,
         (Some("flagship"), None) => hornvale_vessel::PossessTarget::Flagship,
         (Some("most-populous-settlement"), None) => {
             hornvale_vessel::PossessTarget::MostPopulousSettlement

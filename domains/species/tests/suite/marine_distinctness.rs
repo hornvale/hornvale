@@ -46,13 +46,38 @@
 //!    of 0.42–0.45 — so the fast path fires at every vertex and temperature,
 //!    moisture and insolation are computed and discarded. `sea_elf_condition_
 //!    niche`'s own doc has said so since The Radiation ("PREPARED: never
-//!    binds"). Excluding it costs this test nothing and buys it the property
-//!    that every axis it counts is an axis that reaches a placed settlement.
+//!    binds"). Excluding it costs this test nothing.
 //!
 //! What is LEFT is where the six actually differ, and `biome_affinity` is the
 //! load-bearing member: a graded per-biome factor, resolved by biome NAME,
 //! multiplied OUTSIDE the Liebig minimum, and therefore the only per-vertex
 //! environmental channel a PREPARED people has at all.
+//!
+//! # What this measurement does NOT claim, said because it claimed it once
+//!
+//! The sentence above used to end: "...and buys it the property that every
+//! axis it counts is an axis that reaches a placed settlement." **That is
+//! false, and it is false in the campaign's own signature shape** — a
+//! sentence true of the exclusions and false of what is left, in a header
+//! written to warn about exactly that. `per_species_capacity_at` takes
+//! `BiosphereTraits`, `HabitatRealm` and `BiomeAffinity` and nothing else, so
+//! `sociality`, `status_basis`, `in_group_radius` and `activity_cycle` reach
+//! placement NOWHERE. Four of the axes counted below are model-carried and do
+//! not site a settlement.
+//!
+//! What this test measures is what spec §8's M5 asks for — "the model-carried
+//! axes on which the pair differs" — and §3.4 names `SocietyVector` and
+//! `PerceptionVector` among the axes available, so counting them is the
+//! preregistration honoured rather than stretched. The assertion is correct
+//! as it stands and is deliberately unchanged.
+//!
+//! **The placement-reaching subset is the smaller number, and it is recorded
+//! here rather than asserted**, because asserting it would be a second,
+//! unpreregistered measurement smuggled into M5's name. For the worst pair —
+//! `reef-mason` vs `triton`, the pair M5's minimum of 5 names — the axes that
+//! reach `per_species_capacity_at` are `mass` and `biome_affinity`: **2**.
+//! Read M5 as "the six are distinct kinds", never as "the six are distinct
+//! places"; M2 and M7 are the measurements that speak to placement.
 
 use hornvale_kernel::{
     ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, KindId, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,

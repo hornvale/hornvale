@@ -11958,6 +11958,8 @@ mod tests {
         let world = vigil_world();
         let wc = WorldComponents::assemble().expect("world components assemble");
         let mut placed_pantheons = 0;
+        let mut total_dropped = 0usize;
+        let mut species_dropping = 0usize;
         for (species, flagship) in placed_peoples(&world) {
             let observed = observed_phenomena_as_at(&world, &wc, species, flagship.id)
                 .expect("unoccluded genesis observation succeeds");
@@ -11980,29 +11982,38 @@ mod tests {
                 !beliefs.is_empty(),
                 "placed people {species} must reach genesis religion"
             );
-            // **THE COMPARISON IS OVER THE SKY SOURCES THIS RECONSTRUCTION
-            // CAN SEE, and that is a limitation of the reconstruction rather
-            // than a loosening of the claim** (The Tidemark, Task 3).
+            // **THE COMPARISON IS OVER THE PHENOMENA THIS RECONSTRUCTION
+            // CAN SEE, and the divergence is the VANTAGE** (The Tidemark,
+            // Task 3; the diagnosis corrected in fix round 2).
             //
-            // Production observes through `observe_with_sources(.., position,
-            // &sources)` — the build's own source list — while this test
-            // re-derives through `observed_phenomena_as_at`, which takes the
-            // DEFAULT sources. The two agree exactly whenever the extra
-            // sources contribute nothing at the vantage, and that was true of
-            // every placed flagship until the marine peoples re-placed seed
-            // 42 and drow's flagship landed where a `rain` phenomenon arises:
-            // the committed pantheon then read
-            // `[.., celestial-body, rain, tide]` against a reconstruction
-            // that cannot produce `rain` at all.
+            // **The first version of this comment blamed the source list and
+            // was wrong**, which matters because a wrong diagnosis points the
+            // next person's fix at the wrong seam. Both paths build their
+            // sources from `phenomena_sources_from(world, &climate)` over the
+            // same static `DOMAINS`; the source lists are identical.
             //
-            // Filtering to the kinds this observation carries keeps the sky
-            // half EXACT — order, multiplicity and the `take` cut are all
-            // still asserted — and stops the test claiming something about
-            // sources it never modelled. What it can no longer catch is a
-            // spurious NON-sky source entering a pantheon; that gap is real,
-            // is named here rather than left implicit, and closing it wants
-            // the production source list reachable from a test, which is a
-            // different campaign's seam.
+            // What differs is WHERE each observes from. Production hoists one
+            // vantage outside its per-species loop — `sp_place` is
+            // `places(&world).first()`, the world's first place, and every
+            // species is observed from it — while this test observes each
+            // species from its OWN flagship. The two agree wherever the two
+            // vantages see the same phenomena, and that held for every placed
+            // people until the marine peoples re-placed seed 42: drow's
+            // flagship now sits where a `rain` phenomenon arises that the
+            // world's first place does not carry, so the committed pantheon
+            // read `[.., celestial-body, rain, tide]` against a
+            // reconstruction that cannot produce `rain` at all.
+            //
+            // So the remedy, if a later campaign wants this exact, is to
+            // observe from production's vantage — not to widen a source list,
+            // which would change nothing.
+            //
+            // Filtering to the kinds this observation carries keeps the
+            // shared half EXACT — order, multiplicity and the `take` cut are
+            // all still asserted. What it can no longer catch is a source
+            // entering a pantheon that the test's vantage does not see, and
+            // the assertion below bounds how much of the population that
+            // hides rather than letting it erode in silence.
             let observed_kinds: std::collections::BTreeSet<&str> =
                 observed.iter().map(|p| p.kind.as_str()).collect();
             let actual_sources: Vec<&str> = beliefs
@@ -12010,12 +12021,64 @@ mod tests {
                 .map(|belief| belief.source_kind.as_str())
                 .filter(|kind| observed_kinds.contains(kind))
                 .collect();
+            // **THE FILTER IS BOUNDED AND REPORTED**, because an unbounded
+            // one shrinks this test's coverage invisibly: every belief it
+            // drops is a belief nothing compares, and a reconstruction that
+            // drifted further from production would quietly compare less and
+            // less while staying green.
+            //
+            // Measured at seed 42, the vigil world: FOUR species drop
+            // exactly ONE belief each (drow 1 of 8, gully-dwarf 1 of 13,
+            // vent-commensal 1 of 8, wood-elf 1 of 12) and the other sixteen
+            // drop none. The bound below is per species and deliberately
+            // tight — one belief is a vantage disagreeing about a single
+            // phenomenon, which is the case this filter exists for; two would
+            // mean the two vantages have genuinely parted company and the
+            // reconstruction needs fixing rather than filtering.
+            let dropped = beliefs.len() - actual_sources.len();
+            if dropped > 0 {
+                println!(
+                    "{species}: the reconstruction's vantage misses {dropped} of \
+                     {} committed belief(s)",
+                    beliefs.len()
+                );
+            }
+            assert!(
+                dropped <= 1,
+                "{species}: this test's vantage misses {dropped} of {} committed \
+                 beliefs. One is the known single-phenomenon disagreement between \
+                 the world's first place (production's hoisted vantage) and a \
+                 species' own flagship; more than one means the two have parted \
+                 company, and the fix is to observe from production's vantage \
+                 rather than to widen this bound",
+                beliefs.len()
+            );
+            total_dropped += dropped;
+            if dropped > 0 {
+                species_dropping += 1;
+            }
             assert_eq!(
                 actual_sources, expected_sources,
                 "{species} pantheon must come from its unoccluded genesis observation"
             );
             placed_pantheons += 1;
         }
+        // The population-level half of the bound above: one species drifting
+        // is the known case, a MAJORITY drifting means the reconstruction has
+        // stopped reconstructing. Four of twenty at seed 42; the ceiling is
+        // half the placed roster, so this reports erosion long before the
+        // test becomes decorative.
+        println!(
+            "the reconstruction's vantage misses {total_dropped} belief(s) across \
+             {species_dropping} of {placed_pantheons} placed pantheon(s)"
+        );
+        assert!(
+            species_dropping * 2 <= placed_pantheons,
+            "{species_dropping} of {placed_pantheons} placed pantheons carry a belief \
+             this test's vantage cannot see. Past half the roster the filter is no \
+             longer covering a known single-phenomenon disagreement, it is hiding \
+             the comparison — observe from production's vantage instead"
+        );
         assert!(
             placed_pantheons > 0,
             "genesis must place at least one pantheon"
@@ -15122,42 +15185,95 @@ mod tests {
             Some(hornvale_religion::Sentiment::Ambient),
             "locked world (post-epoch): the felt-tide default heads the pantheon"
         );
-        // **THE REORGANIZATION IS MEASURED OVER THE WHOLE PANTHEON NOW, NOT
-        // OVER WHICHEVER BELIEF IS FIRST** (The Tidemark, Task 3).
+        // **THE REORGANIZATION IS MEASURED PER SPECIES NOW** (The Tidemark,
+        // Task 3; teeth restored in fix round 2).
         //
-        // `beliefs_of(w).first()` is the world's first committed belief —
-        // a LEDGER-ORDER artifact, the same class of thing `village_info` is,
+        // `beliefs_of(w).first()` is the world's first committed belief — a
+        // LEDGER-ORDER artifact, the same class of thing `village_info` is,
         // and it was carrying the campaign's real claim. Six marine peoples
         // reordered the ledger, the first belief in BOTH worlds became the
-        // abyssal-elf hold's, and both of its heads read `Ambient`: the two
-        // head assertions collapsed together even though the religions
+        // abyssal-elf hold's, and both of its heads read `Ambient`, so the
+        // two head assertions collapsed together even though the religions
         // plainly still differ.
         //
-        // Comparing the sentiment MULTISETS says what those two assertions
-        // were reaching for and says it independently of order — it is the
-        // whole population rather than one draw from it, so no future
-        // roster change can make it stop measuring the property. The
-        // locked-head pin above is kept: it is a claim about a named regime's
-        // dominant reading, which order does not decide.
-        let sentiments = |w: &World| {
-            let mut all: Vec<hornvale_religion::Sentiment> = hornvale_religion::beliefs_of(w)
-                .iter()
-                .map(|b| b.sentiment)
-                .collect();
-            all.sort_by_key(|s| format!("{s:?}"));
-            all
-        };
-        let (spin_s, lock_s) = (sentiments(&spinning), sentiments(&locked));
+        // **THE FIRST REPAIR WAS VACUOUS AND IS RECORDED AS SUCH**, because
+        // the shape of the mistake is worth more than the fix: it compared
+        // the two worlds' sorted sentiment VECTORS. Those vectors have one
+        // element per belief, and the two worlds hold 129 and 90 beliefs, so
+        // `assert_ne!` was satisfied by `129 != 90` before a single sentiment
+        // was read. It would have passed with every belief in both worlds
+        // carrying one identical sentiment. A comment claiming to measure
+        // "the whole pantheon" was true of the shape and false of the effect
+        // — which is exactly the hazard this campaign keeps naming, committed
+        // by the campaign that named it.
+        //
+        // What replaces it compares a species' OWN head sentiment across the
+        // two regimes, over the species placed in BOTH worlds — so a
+        // difference is a difference in religion rather than in roster or in
+        // belief count, and no cardinality can satisfy it.
+        let head_by_species =
+            |w: &World| -> std::collections::BTreeMap<&'static str, hornvale_religion::Sentiment> {
+                placed_peoples(w)
+                    .into_iter()
+                    .filter_map(|(species, village)| {
+                        hornvale_religion::beliefs_held_by(w, village.id)
+                            .first()
+                            .map(|b| (species, b.sentiment))
+                    })
+                    .collect()
+            };
+        let (spin_heads, lock_heads) = (head_by_species(&spinning), head_by_species(&locked));
+        let shared: Vec<&'static str> = spin_heads
+            .keys()
+            .filter(|k| lock_heads.contains_key(*k))
+            .copied()
+            .collect();
+        assert!(
+            !shared.is_empty(),
+            "no species is placed in BOTH regimes, so nothing below compares two \
+             religions — it would compare two rosters"
+        );
+        let differing: Vec<&'static str> = shared
+            .iter()
+            .copied()
+            .filter(|k| spin_heads[k] != lock_heads[k])
+            .collect();
         println!(
-            "pantheon reorganization: spinning {} beliefs, locked {} beliefs",
-            spin_s.len(),
-            lock_s.len()
+            "pantheon reorganization: {} species placed in both regimes, {} differ in head \
+             sentiment: {differing:?}",
+            shared.len(),
+            differing.len()
         );
-        assert_ne!(
-            spin_s, lock_s,
-            "the two skies yield different religions — the whole pantheon, not \
-             just whichever belief the ledger committed first"
+        assert!(
+            !differing.is_empty(),
+            "the two skies yield different religions: of {} species placed in both \
+             regimes, not one has a different head sentiment. Compared per SPECIES \
+             deliberately — a belief-count difference is not a religion difference, \
+             and the assertion this replaced was satisfied by exactly that.",
+            shared.len()
         );
+        // **The positive content pin, restored.** The assertion this file
+        // used to carry (`head_sentiment(&spinning) != Some(Ambient)`) was
+        // the only thing pinning what the spinning regime's religion
+        // CONTAINS rather than merely that it differs from the locked one,
+        // and fix round 1 removed it and replaced it with nothing. Its
+        // generalization: neither regime's pantheon may be a constant field.
+        // A world in which every belief carried one sentiment would satisfy
+        // every difference test above by cardinality alone and is exactly
+        // the degenerate case that was silently admissible.
+        for (label, w) in [("spinning", &spinning), ("locked", &locked)] {
+            let distinct: std::collections::BTreeSet<String> = hornvale_religion::beliefs_of(w)
+                .iter()
+                .map(|b| format!("{:?}", b.sentiment))
+                .collect();
+            assert!(
+                distinct.len() >= 2,
+                "{label} world's pantheon carries only {:?} — a constant sentiment field \
+                 is not a religion, and it would satisfy every difference assertion \
+                 above without carrying any content",
+                distinct
+            );
+        }
         // A pantheon, not a single belief.
         assert!(!hornvale_religion::beliefs_of(&spinning).is_empty());
     }

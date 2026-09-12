@@ -983,6 +983,36 @@ has just taken the roster from 39 kinds to 45 and Task 4 adds nine more: if
 that moves materially, the next reader deserves two numbers rather than an
 anecdote.
 
+### Fix round 2: two statements this record made that were false
+
+Both are corrected in the tree; recorded here because both are the campaign's
+own named hazard committed by the campaign that named it.
+
+- **"Marine villages are simply not the default walk."** True of the test
+  fixtures, false of the program: `cli/src/main.rs`'s no-flag arm still
+  resolved `Flagship`, so `possess --seed 42` opened in open blue water with
+  "Ways on: surface." Re-aiming the fixtures had left untouched the half that
+  was actually asked about. The CLI's no-flag arm now resolves
+  `LandSettlement`; `--target flagship` still reaches the ledger's first
+  settlement.
+- **M5's header: "every axis it counts is an axis that reaches a placed
+  settlement."** False. `per_species_capacity_at` takes `BiosphereTraits`,
+  `HabitatRealm` and `BiomeAffinity` only, so `sociality`, `status_basis`,
+  `in_group_radius` and `activity_cycle` reach placement nowhere. **M5's
+  minimum is 5; the placement-reaching separation for that same worst pair is
+  2** (`mass`, `biome_affinity`). The assertion is spec-compliant and
+  unchanged — §3.4 names `SocietyVector` and `PerceptionVector` among the
+  model-carried axes — but M5 measures distinct KINDS, never distinct PLACES.
+  M2 and M7 are the placement measurements.
+
+Two guards were also repaired rather than re-pinned: the pantheon
+reorganization check had become vacuous (it compared sorted sentiment vectors
+whose lengths differ, 129 against 90, so `assert_ne!` passed on cardinality
+before reading a sentiment — and the positive content pin it replaced had been
+deleted with nothing put back), and the `focalize` marine-noun fix had shipped
+with its own witness re-aimed away in the same commit. Both now
+mutation-verified red on the exact revert.
+
 ### Known-red at the close of this task, and why
 
 **Five tests, in two groups, neither of them unfinished re-pinning.**

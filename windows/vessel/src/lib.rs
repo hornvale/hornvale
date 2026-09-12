@@ -237,12 +237,23 @@ pub enum PossessTarget {
     ///
     /// # What it does NOT change
     ///
-    /// `Flagship` still means exactly what it meant, `village_info` is
-    /// untouched, and the default is unmoved — the alternative remedies (give
-    /// `village_info` a defined flagship; teach the walk surface to render an
-    /// ocean locale) were both considered and declined for that campaign.
-    /// Marine villages stay in the world; they are simply not the default
-    /// walk, which is a stated limitation rather than an accident.
+    /// `Flagship` still means exactly what it meant and `village_info` is
+    /// untouched — the alternative remedies (give `village_info` a defined
+    /// flagship; teach the walk surface to render an ocean locale) were both
+    /// considered and declined for that campaign.
+    ///
+    /// **What DID move is the shipped default** (fix round 2). This
+    /// paragraph read "the default is unmoved ... marine villages are simply
+    /// not the default walk", and that was true of the library default and
+    /// FALSE of what a person saw: `cli/src/main.rs`'s no-flag arm still
+    /// resolved `Flagship`, so `possess --seed 42` opened in open blue water
+    /// with "Ways on: surface." Re-aiming the test fixtures alone had left
+    /// the half that was actually asked about untouched — this campaign's own
+    /// named hazard (a sentence true of the code and false of the world),
+    /// committed by the campaign that named it. The CLI's no-flag arm now
+    /// resolves here too, so the sentence is true of the program and not just
+    /// of the tests. `--target flagship` still reaches the ledger's first
+    /// settlement, marine or not.
     ///
     /// Resolution is `agent::land_settlement`: ledger order, exactly as the
     /// flagship is, filtered on the settlement's own committed `biome` fact
@@ -325,9 +336,16 @@ impl Default for PossessOpts {
     /// the thing they all meant, in one place, with one reason.
     ///
     /// A caller that genuinely wants the ledger's first settlement, marine or
-    /// not, still names `PossessTarget::Flagship` and gets exactly what it
-    /// always got — which is what `cli/src/main.rs` does when no `--target`
-    /// flag is given, so the shipped `possess` command is unchanged.
+    /// not, still names [`PossessTarget::Flagship`] and gets exactly what it
+    /// always got.
+    ///
+    /// **`cli/src/main.rs`'s no-flag arm resolves `LandSettlement` too**
+    /// (fix round 2), so the shipped `possess` command agrees with this
+    /// default rather than diverging from it. This doc previously said the
+    /// opposite — "which is what `cli/src/main.rs` does when no `--target`
+    /// flag is given, so the shipped `possess` command is unchanged" — and
+    /// that sentence was the reason `possess --seed 42` went on opening in
+    /// open water while every test claimed dry ground.
     fn default() -> Self {
         PossessOpts {
             day: hornvale_kernel::WorldTime::from_std_days(0.5).expect("a day value is finite"),
