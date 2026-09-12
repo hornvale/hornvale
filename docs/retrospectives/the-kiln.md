@@ -145,12 +145,15 @@ Four requirement defects in my plan text were found this way — more than any
 review stage produced, and in every case the gap was structurally invisible to
 review because the plan was internally consistent:
 
-| found by declining | the defect |
+The four are summarised rather than quoted; the implementers' own wording is in
+the ledger entries named beside each.
+
+| what was reported, in substance | the defect it exposed |
 |---|---|
-| "I did not wire the `absent`-count ratchet — the brief scoped this task elsewhere and I left its home to a later task" | **no later task specified it.** Three of the governing decision's four conditions had a home; the fourth had none, and the plan's checklist would have read complete without it |
-| "the brief fixes this function's signature as two verdicts and no identity, so I cannot attach an item id" | the finding that fires when **a capability was lost** — the one event the campaign exists to make visible — could not name the item that lost it |
-| "the brief specifies this statistic through a worked test rather than defining it; here are the two readings and here is the one the test rules out" | the statistic's semantics existed only as a solution to a test, and the sibling family's own test name points at the *wrong* reading |
-| "there is no render-level test file here, unlike the two sibling families, which do test their own render" | the report's five compliance properties — ordering, caveat placement, separate unscored tally, both headline counts, no backlog heading — were asserted by nothing |
+| the brief scoped this task to the freeze and the lattice and did not ask for the `absent`-count ratchet, so its home was left to whichever later task specifies it (#26) | **no later task specified it.** Three of the governing decision's four conditions had a home; the fourth had none, and the plan's checklist would have read complete without it |
+| the brief fixes this function's signature as two verdicts and no identity, so an item id cannot be attached (#30) | the finding that fires when **a capability was lost** — the one event the campaign exists to make visible — could not name the item that lost it |
+| the brief specifies this statistic through a worked test rather than defining it; here are both readings, and here is the assertion that rules one out (#31) | the statistic's semantics existed only as a solution to a test, and the sibling family's own test name points at the *wrong* reading |
+| there is no render-level test file here, unlike the two sibling families, which do test their own render (#33) | the report's five compliance properties — ordering, caveat placement, separately reported unscored tally, both headline counts, no backlog heading — were asserted by nothing |
 
 The pattern is identical in all four: **an implementer neither silently built
 the missing thing nor silently skipped it.** It reported the gap. The
@@ -415,7 +418,7 @@ motivated it is not ceremony.
 
 ## 12. A cited mitigation that does not exist is worse than an absent one
 
-A fix round wrote into a frozen corpus's provenance that a rule was "ENFORCED
+A fix round wrote into a frozen corpus's provenance: "THE RULE IS ENFORCED
 RATHER THAN ASSERTED … the build refuses to write this file unless every root
 carries a disclosure." No such harness is committed, and the *same file's*
 freeze field asserts that no evaluation code exists in the repository as

@@ -107,7 +107,9 @@ And states what it wants instead:
 
 > A technology in Hornvale is not a node a people unlocks; it is a
 > **capability threshold the world crosses when a computed bar is cleared** —
-> biome resources × subsistence mode × accumulated surplus.
+> biome resources × subsistence mode × accumulated surplus — and its interest is
+> entirely in *what its crossing changes downstream*, which is always demography
+> and social structure, never a number that goes up.
 
 What shipped is the rejected object with the graph removed: **a level without
 a tree.** A tech tree at least encodes prerequisites, incomparability and
