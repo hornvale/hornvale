@@ -638,10 +638,16 @@ impl EnergySource {
 /// *guaranteed* `[0,1]`; this does not, and the overshoot is not hypothetical:
 /// measured 2026-09-11 over seeds 42/7/1234 at `BuildDepth::Terrain`, the
 /// per-rung medians of [`ChemicalSupply::chemosynthate`] are **1.004527 /
-/// 1.316387 / 1.993109 / 2.094758 / 2.094758** (`Undercroft` → `Nadir`), so
-/// the aggregate sits *above* the corpus's `E_TEEMING = 1.0` at the median of
-/// every rung. An earlier draft of this paragraph said "can in principle
-/// exceed"; that was true and useless, and the number replaces it.
+/// 1.316387 / 1.993109 / 2.094758 / 2.094758** (`Undercroft` → `Nadir`) —
+/// projected onto the `ENERGY` ruler by [`subterranean_energy`]'s
+/// `raw / (1 + raw)` transfer (below), that is **0.501 / 0.568 / 0.666 /
+/// 0.677 / 0.677**, all between `E_FED` (0.5) and `E_RICH` (0.75) — so the
+/// aggregate sits *above* the corpus's `E_TEEMING = 1.0` at the median of
+/// every rung **as a raw magnitude**, which is exactly what a resource
+/// magnitude is allowed to do; it is [`subterranean_energy`]'s job, not
+/// this field's, to read that back onto the ruler. An earlier draft of this
+/// paragraph said "can in principle exceed"; that was true and useless, and
+/// the number replaces it.
 ///
 /// **This is not the old saturation returning, and the distinction is the
 /// measurement's own.** Each individual metabolite stays small at the median
@@ -649,18 +655,28 @@ impl EnergySource {
 /// 0.053→0.556, methane 0.025 flat, same run), so the "at most two reactions"
 /// argument above holds exactly where it was made — at the metabolite. What
 /// leaves the ruler is the four-way AGGREGATE, which is arithmetic rather than
-/// clamping: four terms near 0.4 sum to 1.6 however narrow each is. Whether
-/// the `ENERGY` ruler should be rescaled, or `GEOTHERMAL_MODIFIER_GAIN`
-/// lowered, or the aggregate rule changed, is The Trencher's Task 5 to decide
-/// from its own corpus-band occupancy table — not something to retune here to
-/// make a number look like a ruler it no longer shares units with.
+/// clamping: four terms near 0.4 sum to 1.6 however narrow each is.
 ///
-/// Nothing in this tree constructs an `EnvironmentVector` from this value, so
-/// the overshoot panics nothing: `crate::inhabitant_fit` clamps at its own
-/// boundary (and therefore now saturates at essentially every chamber, worth
-/// knowing before reading a chemotroph's fit), and
-/// `subterranean_energy_probe.rs` already reports a realized max above `1.0`
-/// as a finding rather than treating it as impossible.
+/// **Decided (The Trencher, ledger #24), and the paragraph that used to defer
+/// this to "Task 5" is corrected rather than merely updated, because the
+/// deferred option it named was never actually on the table.** Rescaling the
+/// `ENERGY` ruler's corpus bands cannot be expressed: the corpus is authored
+/// through `hornvale_kernel::EnvironmentVector`, whose constructor rejects
+/// any value outside `[0, 1]`, so the bands cannot move without breaking a
+/// kernel invariant. Lowering `GEOTHERMAL_MODIFIER_GAIN` was also refused —
+/// `1 + gain * g` is accepted as-is. What actually ships is neither: this
+/// field (the raw sum, a resource magnitude) is left untouched, and
+/// [`subterranean_energy`] — the ruler readout, not the magnitude — applies
+/// its own saturating transfer on the way out. See that function's doc for
+/// the mechanism and the projected medians above.
+///
+/// Nothing in this tree constructs an `EnvironmentVector` directly from
+/// *this* raw field, so its own overshoot panics nothing; the value that
+/// reaches a chamber's fit and every other ruler consumer is
+/// [`subterranean_energy`]'s bounded projection, not this one.
+/// `subterranean_energy_probe.rs`'s historical note that the derived field
+/// reports a realized max above `1.0` describes this raw magnitude, still
+/// true of it and unaffected by the ruler fix.
 ///
 /// # `Geothermal`'s modifier form: `1 + gain * g`
 ///
@@ -735,8 +751,9 @@ pub fn chemical_supply(
     out
 }
 
-/// The `ENERGY` reading at one point: [`chemical_supply`]'s `CHEMOSYNTHATE`
-/// aggregate.
+/// The `ENERGY` reading at one point: a Type-II (`raw / (1 + raw)`) transfer
+/// of [`chemical_supply`]'s `CHEMOSYNTHATE` aggregate — the ruler readout,
+/// not the raw resource magnitude.
 ///
 /// Kept as a named scalar because that is what every readout consumer wants
 /// (`crate::marine_chemosynthate_supply_field`, the vessel's chamber
@@ -745,6 +762,41 @@ pub fn chemical_supply(
 /// ladder). It is a *projection* of [`chemical_supply`], never a second
 /// derivation: change the combination rule there and every reader of this
 /// moves with it.
+///
+/// # Why this saturates and `ChemicalSupply::chemosynthate` does not (The
+/// Trencher, ledger #24, deciding Task 4's open calibration question)
+///
+/// `CHEMOSYNTHATE` and `ENERGY` are two different things wearing one name
+/// until this function: the former is a resource *magnitude* (unbounded,
+/// summed from four metabolites — see [`chemical_supply`]'s doc for why
+/// their sum legitimately exceeds `1.0`), the latter is the **ruler**
+/// compared against the authored corpus bands (`E_INERT`..`E_TEEMING`) that
+/// live inside `hornvale_kernel::EnvironmentVector`'s `[0, 1]` contract
+/// (`EnvironmentVector::new` rejects anything outside it). Rescaling the
+/// bands to fit the magnitude — the option this module's doc used to defer
+/// to "Task 5" — is not expressible: the corpus is authored *through* that
+/// contracted type, so moving the bands breaks a kernel invariant rather
+/// than a convention. Lowering `GEOTHERMAL_MODIFIER_GAIN`, or changing the
+/// `CHEMOSYNTHATE` aggregate rule, were also considered and refused (ledger
+/// #24) — neither is this function's job.
+///
+/// So the fix un-collapses the two: [`chemical_supply`]'s `chemosynthate`
+/// field stays the raw sum (every other `per_axis` entry the capacity loops
+/// build is an unbounded magnitude that saturates itself,
+/// `supply / (1.0 + supply)`, in `crate::per_species_capacity_at`'s own
+/// `score_at` — bounding it a second time here would saturate a generalist
+/// TWICE while a metabolite specialist saturates once), and this function
+/// applies that same saturating transfer once, on the way out, for the
+/// ruler alone. It is not an arbitrary rescale or a "divide by four": it is
+/// the identical form already used one call away for exactly the same
+/// reason.
+///
+/// Projected medians (`raw / (1 + raw)` on the raw medians `chemical_supply`'s
+/// doc records), `Undercroft`→`Nadir`: **0.501 / 0.568 / 0.666 / 0.677 /
+/// 0.677** — all landing between `E_FED` (0.5) and `E_RICH` (0.75), so
+/// ordering and contrast survive and nothing saturates flat the way the raw
+/// sum did against `windows/vessel/src/underground.rs`'s `inhabitant_fit`
+/// and its `energy.clamp(0.0, 1.0)`.
 /// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(ratio: moisture), bare-ok(diagnostic-value: drainage), bare-ok(ratio: return)
 pub fn subterranean_energy(
     material: &MaterialBuffer,
@@ -753,7 +805,8 @@ pub fn subterranean_energy(
     moisture: f64,
     drainage: f64,
 ) -> f64 {
-    chemical_supply(material, gradient, depth_m, moisture, drainage).chemosynthate
+    let raw = chemical_supply(material, gradient, depth_m, moisture, drainage).chemosynthate;
+    raw / (1.0 + raw)
 }
 
 /// Which source contributes the most yield at one point — the scalar this
@@ -1218,9 +1271,10 @@ mod tests {
         );
         assert_eq!(
             subterranean_energy(&m, g, depth, moisture, drainage).to_bits(),
-            cs.chemosynthate.to_bits(),
-            "the ENERGY scalar must be a projection of chemical_supply, never a \
-             second derivation"
+            (cs.chemosynthate / (1.0 + cs.chemosynthate)).to_bits(),
+            "the ENERGY scalar must be the ruler's raw/(1+raw) projection of \
+             chemical_supply's CHEMOSYNTHATE, never a second derivation (The \
+             Trencher, ledger #24)"
         );
     }
 
