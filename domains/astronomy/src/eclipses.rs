@@ -1062,6 +1062,8 @@ mod tests {
                 }
             );
             assert_eq!(sun_angular_rel_at(&system, &calendar, instant), 0.0);
+            let illumination = crate::ephemeris::stellar_illumination_at(&system, instant);
+            assert!(illumination.combined_flux_rel.is_finite());
         }
     }
 

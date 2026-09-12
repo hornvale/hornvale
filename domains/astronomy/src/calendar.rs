@@ -427,6 +427,16 @@ mod tests {
         assert!(cal.months_per_year(0).is_none());
     }
 
+    #[test]
+    fn synodic_month_rejects_nonpositive_and_nonfinite_periods() {
+        for sidereal in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            let mut cal = calendar_with_moon(1.0, 365.25);
+            cal.moon_orbits[0].1 = StdDays(sidereal);
+            assert!(cal.synodic_month(0).is_none());
+            assert!(cal.moon_phase(StdInstant(1.0), 0).is_none());
+        }
+    }
+
     /// The exact solar position agrees with the shipped small-angle declination
     /// at the equinoxes and solstices, and its RA advances a full turn per year.
     #[test]
@@ -917,12 +927,16 @@ impl Calendar {
     /// type-audit: bare-ok(index)
     pub fn synodic_month(&self, index: usize) -> Option<StdDays> {
         let (_, sidereal) = self.moon_orbits.get(index)?;
-        if sidereal.0 >= self.year.0 {
+        if !sidereal.0.is_finite()
+            || sidereal.0 <= 0.0
+            || !self.year.0.is_finite()
+            || self.year.0 <= 0.0
+            || sidereal.0 >= self.year.0
+        {
             return None;
         }
-        Some(StdDays(
-            sidereal.0 * self.year.0 / (self.year.0 - sidereal.0),
-        ))
+        let synodic = sidereal.0 * self.year.0 / (self.year.0 - sidereal.0);
+        synodic.is_finite().then_some(StdDays(synodic))
     }
     /// Illumination phase of moon `index` at `t` (0 = new, 0.5 = full),
     /// cycling on the synodic month (SKY-20) and shifted by the genesis phase

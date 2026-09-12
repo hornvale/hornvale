@@ -473,9 +473,17 @@ pub fn stellar_illumination_at(system: &StarSystem, instant: StdInstant) -> Stel
             };
             StellarLight {
                 star: index,
-                distance: Au(squared.sqrt()),
+                distance: Au(if squared.is_finite() && squared > 0.0 {
+                    squared.sqrt()
+                } else {
+                    0.0
+                }),
                 longitude: longitude(relative),
-                flux_rel: crate::luminosity_at(star, instant).get() / squared,
+                flux_rel: if squared.is_finite() && squared > 0.0 {
+                    crate::luminosity_at(star, instant).get() / squared
+                } else {
+                    0.0
+                },
             }
         })
         .collect();
