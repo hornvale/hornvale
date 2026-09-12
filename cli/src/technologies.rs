@@ -403,6 +403,71 @@ pub fn derived_demands(c: &Corpus, id: &str) -> BTreeSet<String> {
     demands
 }
 
+/// The items in `id`'s `presupposes` closure, **excluding `id` itself** —
+/// that is, its prerequisites, however deep.
+///
+/// Distinct from [`derived_demands`] and deliberately not built on it:
+/// `derived_demands` returns `introduces` TOKENS and includes the item's
+/// own, which is right for a demand set and wrong for the chosen/inherited
+/// cut ([`is_chosen`]), which has to read each prerequisite's VERDICT and
+/// therefore needs item ids. Nothing guarantees an `introduces` token is
+/// recoverable to the item that introduced it, so deriving ids back out of
+/// a token set would be a second, weaker lattice walk.
+///
+/// Assumes the corpus passed [`parse`]'s lattice validation, for the same
+/// reason [`derived_demands`] does.
+fn prerequisite_items(c: &Corpus, id: &str) -> BTreeSet<String> {
+    let by_id: BTreeMap<&str, &Item> = c.items.iter().map(|i| (i.id.as_str(), i)).collect();
+    let mut out: BTreeSet<String> = BTreeSet::new();
+    let mut seen: BTreeSet<&str> = BTreeSet::new();
+    let mut stack: Vec<&str> = vec![id];
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        if current != id {
+            out.insert(current.to_string());
+        }
+        if let Some(item) = by_id.get(current) {
+            for p in &item.presupposes {
+                stack.push(p.as_str());
+            }
+        }
+    }
+    out
+}
+
+/// Whether item `id`'s verdict is **chosen** rather than **inherited**
+/// (`technologies/CLAUDE.md`'s chosen/inherited cut; campaign ledger #13).
+///
+/// Chosen means **no prerequisite anywhere in `id`'s closure is `absent`**,
+/// so nothing upstream forces the verdict and it rests on a search of the
+/// repository by a session that had read the model. Inherited means at
+/// least one is, and the weakest-demand rule reads the verdict off that
+/// prerequisite rather than off any Hornvale fact.
+///
+/// **Not "is a root".** Roots (items with no `presupposes` at all) are a
+/// STRICT SUBSET of the chosen items, so a root-keyed check under-covers by
+/// exactly the items whose prerequisites are all non-`absent` — which can be
+/// true from a corpus's first authoring and needs no trigger. That proxy is
+/// what ledger #13 found, twice, and what family law names as the thing this
+/// function must not be: `inv-parchment` is chosen, is not a root, and was
+/// chosen at the freeze.
+///
+/// An unknown `id` has no prerequisites and therefore reads chosen — an
+/// honest answer for a question about an item that is not in the corpus,
+/// and unreachable from [`disclosure_gaps`], which only ever asks about
+/// items it iterated out of `c`.
+/// type-audit: bare-ok(identifier-text: id), bare-ok(flag: return)
+pub fn is_chosen(c: &Corpus, id: &str) -> bool {
+    let by_id: BTreeMap<&str, &Item> = c.items.iter().map(|i| (i.id.as_str(), i)).collect();
+    !prerequisite_items(c, id).iter().any(|p| {
+        by_id
+            .get(p.as_str())
+            .is_some_and(|i| i.verdict == Verdict::Absent)
+    })
+}
+
 /// Read a corpus file from `path` and delegate to [`parse`].
 ///
 /// Fails loudly on a missing or unreadable file too, naming the path and the
@@ -472,7 +537,7 @@ impl Anchor {
 /// `systems::Finding` and `regularities::Finding` carry): this family's two
 /// inputs are edited by sessions with no reason to know a resolver reads
 /// them.
-/// type-audit: bare-ok(identifier-text: Unjustified.id), bare-ok(prose: Unjustified.why), bare-ok(identifier-text: Dangling.id), bare-ok(identifier-text: Dangling.anchor), bare-ok(prose: Dangling.why), bare-ok(identifier-text: StaleDeferred.id), bare-ok(identifier-text: StaleDeferred.row), bare-ok(prose: StaleDeferred.why), bare-ok(identifier-text: Regressed.id), bare-ok(prose: Regressed.why), bare-ok(identifier-text: Novelty.corpus), bare-ok(count: Novelty.baseline), bare-ok(count: Novelty.found)
+/// type-audit: bare-ok(identifier-text: Unjustified.id), bare-ok(prose: Unjustified.why), bare-ok(identifier-text: Dangling.id), bare-ok(identifier-text: Dangling.anchor), bare-ok(prose: Dangling.why), bare-ok(identifier-text: StaleDeferred.id), bare-ok(identifier-text: StaleDeferred.row), bare-ok(prose: StaleDeferred.why), bare-ok(identifier-text: Regressed.id), bare-ok(prose: Regressed.why), bare-ok(identifier-text: Disclosure.id), bare-ok(flag: Disclosure.chosen), bare-ok(prose: Disclosure.why), bare-ok(identifier-text: Novelty.corpus), bare-ok(count: Novelty.baseline), bare-ok(count: Novelty.found)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Finding {
     /// A verdict with no anchor, the wrong kind of anchor, an anchor into
@@ -518,6 +583,33 @@ pub enum Finding {
         /// What [`meets`] computes against fresh values today.
         computed: Verdict,
         /// What to do about it.
+        why: String,
+    },
+    /// The chosen/inherited disclosure rule is violated, in either
+    /// direction (`technologies/CLAUDE.md`, "Task 4's resolver must enforce
+    /// the chosen rule, two-directionally"; campaign ledger #13's second
+    /// ruling; `henrich-2004-extended`'s `provenance` states it as a MUST).
+    ///
+    /// A **separate variant rather than an `Unjustified`**, for three
+    /// reasons. (1) The two directions want opposite repairs and the
+    /// direction must be machine-readable, not only buried in prose — hence
+    /// `chosen`, which a caller can branch on. (2) `Unjustified`'s own `id`
+    /// field already carries two meanings (an item id, or a registry row id
+    /// for the cross-corpus finding); a third would make the field
+    /// unreadable. (3) Adding a variant makes every exhaustive `match` over
+    /// `Finding` fail to COMPILE until it handles this case — the CLI's
+    /// `technologies check` arm included — so the rule cannot be enforced
+    /// by the resolver and silently dropped by its one reporting surface.
+    /// That is the compiler doing the enumeration, which this project
+    /// prefers to a reviewer doing it.
+    Disclosure {
+        /// The item's corpus-local id.
+        id: String,
+        /// Which direction: `true` when the item's verdict is CHOSEN (no
+        /// prerequisite anywhere in its closure is `absent`) and it carries
+        /// no `disclosure`; `false` when it is INHERITED and carries one.
+        chosen: bool,
+        /// What is wrong and what to do about it.
         why: String,
     },
     /// The `absent` count rose above its baseline — 0136's one
@@ -747,21 +839,31 @@ pub fn audit(c: &Corpus, root: &Path) -> Vec<Finding> {
     findings
 }
 
-/// Both halves together: [`audit`]'s per-item anchor resolution and NOVELTY
-/// ratchet, concatenated with [`cross_corpus_ruling_gaps`]'s family-law
-/// check. `audit` and `cross_corpus_ruling_gaps` stay separate functions
-/// (see the latter's doc comment for why folding them would break every
-/// isolated fixture in this crate's own tests), but a caller auditing a
-/// REAL corpus almost always wants both — a future report generator (Task
-/// 7's) that called only `audit` would silently never enforce the
-/// cross-corpus rule at all, which is exactly the shape of gap this family
-/// exists to catch in everyone else's instruments. This function is that
-/// one entry point, so skipping family law would have to be a deliberate
-/// choice to call `audit` alone, not an accident of not knowing the second
-/// function exists.
+/// All of it together: [`audit`]'s per-item anchor resolution and NOVELTY
+/// ratchet, concatenated with [`cross_corpus_ruling_gaps`]'s and
+/// [`disclosure_gaps`]'s family-law checks. The three stay separate
+/// functions (see the latter two's doc comments for why folding them into
+/// `audit` would break every isolated fixture in this crate's own tests),
+/// but a caller auditing a REAL corpus almost always wants all of them — a
+/// report generator that called only `audit` would silently never enforce
+/// family law at all, which is exactly the shape of gap this family exists
+/// to catch in everyone else's instruments. This function is that one entry
+/// point, so skipping family law would have to be a deliberate choice to
+/// call `audit` alone, not an accident of not knowing the other functions
+/// exist.
+///
+/// **`disclosure_gaps` joined this list in the pre-merge fix wave, and the
+/// reason is worth keeping**: the rule it enforces was ratified (ledger
+/// #13), written into family law, and published as a MUST in a frozen
+/// corpus's `provenance` — which is printed verbatim into the committed
+/// report — and then never built. It held in the data by coincidence the
+/// whole time, so nothing was ever wrong and nothing ever noticed (ledger
+/// #38). A rule with a prose home, a report that quotes it, and no
+/// contradictor is the shape this family exists to find.
 pub fn audit_family(c: &Corpus, root: &Path) -> Vec<Finding> {
     let mut findings = audit(c, root);
     findings.extend(cross_corpus_ruling_gaps(c, root));
+    findings.extend(disclosure_gaps(c));
     findings
 }
 
@@ -1201,6 +1303,89 @@ pub fn cross_corpus_ruling_gaps(c: &Corpus, root: &Path) -> Vec<Finding> {
     gaps
 }
 
+/// Every violation of the chosen/inherited **disclosure** rule in `c`, in
+/// both directions (`technologies/CLAUDE.md`: "Task 4's resolver must
+/// enforce the chosen rule, two-directionally: every chosen item carries a
+/// `disclosure`, and no inherited item does").
+///
+/// **Two-directional, and the second direction is not symmetry for its own
+/// sake.** A chosen item with no `disclosure` leaves that column empty in
+/// the committed report, which reads as *authored blind* for a verdict that was
+/// in fact reached by a session that had read the model — precisely the
+/// thing `disclosure` exists to expose, inverted. An inherited item WITH a
+/// `disclosure` is the over-coverage defect (ledger #13): a refusal that
+/// could not have changed the verdict is evidence for a `note`, not a
+/// choice in a verdict, so a disclosure there is noise that makes the real
+/// ones harder to find. Family law states both halves; a one-directional
+/// check would be the same half-built guard decision 0936 refuses for the
+/// trajectory axis one family over.
+///
+/// **Deliberately a separate function from [`audit`]**, on exactly the
+/// precedent [`cross_corpus_ruling_gaps`] set and for a near-identical
+/// reason: almost every fixture this crate's own tests build is a one-item
+/// corpus with no `presupposes` and no `disclosure`, which is CHOSEN by
+/// construction, so folding this into `audit` would make every isolated
+/// anchor-resolution fixture also carry a disclosure finding it has nothing
+/// to do with. [`audit_family`] is the entry point that runs all of family
+/// law, and it is what `hornvale technologies check` calls.
+///
+/// Takes no `root`: unlike its two neighbours this rule is entirely
+/// intra-corpus — it reads the lattice and the verdicts and resolves
+/// nothing against the repository.
+pub fn disclosure_gaps(c: &Corpus) -> Vec<Finding> {
+    c.items
+        .iter()
+        .filter_map(|item| {
+            let chosen = is_chosen(c, &item.id);
+            let disclosed = item
+                .disclosure
+                .as_deref()
+                .is_some_and(|d| !d.trim().is_empty());
+            match (chosen, disclosed) {
+                (true, false) => Some(Finding::Disclosure {
+                    id: item.id.clone(),
+                    chosen: true,
+                    why: format!(
+                        "{} is CHOSEN — no prerequisite anywhere in its `presupposes` \
+                         closure is `absent`, so nothing upstream forces its verdict \
+                         `{}` — but it carries no `disclosure`. An empty `disclosure` \
+                         column in the report reads as \"authored blind\", which is false for a \
+                         verdict reached by searching this repository, and it is the one \
+                         thing `disclosure` exists to prevent. Two legitimate repairs: \
+                         state in a `disclosure` what the author knew about the model \
+                         when this verdict was chosen, or — if the verdict really is \
+                         forced — re-check the closure, because an `absent` prerequisite \
+                         would make this item inherited and the disclosure unnecessary.",
+                        item.id,
+                        verdict_name(item.verdict)
+                    ),
+                }),
+                (false, true) => Some(Finding::Disclosure {
+                    id: item.id.clone(),
+                    chosen: false,
+                    why: format!(
+                        "{} is INHERITED — at least one prerequisite in its \
+                         `presupposes` closure is `absent`, so the weakest-demand rule \
+                         reads its verdict `{}` off that prerequisite rather than off \
+                         any Hornvale fact — yet it carries a `disclosure`. A refusal \
+                         that could not have changed the verdict is evidence, not a \
+                         choice, and a disclosure on a forced verdict is noise that \
+                         makes the real ones harder to find (campaign ledger #13). Two \
+                         legitimate repairs: move the argument into this item's `note`, \
+                         where model-derived reasoning belongs, or — if the verdict was \
+                         genuinely chosen — re-check the closure, because then the \
+                         `absent` prerequisite this item inherits from is the thing that \
+                         is wrong.",
+                        item.id,
+                        verdict_name(item.verdict)
+                    ),
+                }),
+                _ => None,
+            }
+        })
+        .collect()
+}
+
 // --- Rendering (Task 7) -------------------------------------------------
 //
 // `wrap`/`percent` are the same shape as `systems::wrap`/`systems::percent`
@@ -1304,34 +1489,66 @@ fn coverage_total(corpus: &Corpus) -> usize {
     corpus.items.len() - unmeasured_count(corpus)
 }
 
-/// The two counts that make this family's per-corpus finding sayable
-/// (Task 7's brief): `reach` is how many items Hornvale's mechanism reaches
-/// AT ALL — `present` plus `unmeasured`, since both have passed the reach
-/// half of the pipeline (`technologies/CLAUDE.md`'s verdict table: an
-/// `unmeasured` item's reach is "exactly as checkable as a `present`
-/// verdict's") — and `lost` is how many of those `reach` items this corpus
-/// currently scores `lost`. For `asimov-1989`, `reach` is the individual-
-/// invention column's own answer (typically 0, since that corpus's items
-/// are `absent`/`deferred`); for `henrich-2004-extended`, `reach` is the
-/// number of documented losses Hornvale's history model can represent at
-/// all, and `lost` — always 0 today — is how many of those it can show were
-/// actually given up, which decision 0936's sibling scope note explains:
-/// `tech_for` (`windows/worldgen/src/history_bake.rs`) is monotone in
-/// `year`, so no world can yet exhibit a measured loss.
-/// type-audit: bare-ok(count: return)
-fn reach_and_loss(corpus: &Corpus) -> (usize, usize) {
-    let present = corpus
-        .items
-        .iter()
-        .filter(|i| i.verdict == Verdict::Present)
-        .count();
-    let reach = present + unmeasured_count(corpus);
-    let lost = corpus
-        .items
-        .iter()
-        .filter(|i| i.verdict == Verdict::Lost)
-        .count();
-    (reach, lost)
+/// The counts that make this family's per-corpus finding sayable (Task 7's
+/// brief), one field per verdict that has PASSED REACH under the ratified
+/// pipeline (campaign ledger #6 and #16), plus [`Reach::total`] over them.
+///
+/// For `asimov-1989`, the total is the individual-invention column's own
+/// answer (0 today, since that corpus's items are `absent`/`deferred`); for
+/// `henrich-2004-extended` it is the number of documented losses Hornvale's
+/// history model can represent at all, and `lost` — 0 today — is how many of
+/// those it can show were actually given up, which decision 0936's sibling
+/// scope note explains: `tech_for`
+/// (`windows/worldgen/src/history_bake.rs`) is monotone in `year`, so no
+/// world can yet exhibit a measured loss.
+/// type-audit: bare-ok(count: present), bare-ok(count: unmeasured), bare-ok(count: grown), bare-ok(count: flat), bare-ok(count: lost)
+struct Reach {
+    /// Reach passed, mechanism cited, trajectory not the question.
+    present: usize,
+    /// Reach passed, trajectory not yet scored.
+    unmeasured: usize,
+    /// Measured: acquired and kept.
+    grown: usize,
+    /// Measured: never acquired.
+    flat: usize,
+    /// Measured: acquired, then given up.
+    lost: usize,
+}
+
+impl Reach {
+    /// How many items Hornvale's mechanism reaches AT ALL.
+    ///
+    /// **Every verdict above is in this sum, not only `present` and
+    /// `unmeasured`.** The ratified vocabulary is an implicit PIPELINE
+    /// (ledger #6): a measured value is only reachable if reach already
+    /// succeeded, so `grown`, `flat` and `lost` have each passed reach by
+    /// definition. Until the pre-merge fix wave this function's predecessor
+    /// summed only the first two, which is correct for today's data (both
+    /// corpora score every measured verdict at 0) and **arithmetically
+    /// impossible the moment a successor campaign scores one item `lost`**:
+    /// the report would then read "reaches 0 of them at all … and of those
+    /// 0, it can currently represent the LOSS of exactly 1." A definition
+    /// that only holds while a count is zero is not a definition; the
+    /// invariant it must satisfy is `lost <= total()`, which
+    /// `technology_coverage::the_loss_count_never_exceeds_the_reach_count`
+    /// holds against a constructed corpus, since no committed one can
+    /// exercise it (ledger #27).
+    /// type-audit: bare-ok(count: return)
+    fn total(&self) -> usize {
+        self.present + self.unmeasured + self.grown + self.flat + self.lost
+    }
+}
+
+/// Tally [`Reach`] over `corpus`.
+fn reach_and_loss(corpus: &Corpus) -> Reach {
+    let count = |v: Verdict| corpus.items.iter().filter(|i| i.verdict == v).count();
+    Reach {
+        present: count(Verdict::Present),
+        unmeasured: count(Verdict::Unmeasured),
+        grown: count(Verdict::Grown),
+        flat: count(Verdict::Flat),
+        lost: count(Verdict::Lost),
+    }
 }
 
 /// The derived demand set (decision 0386) for every item this corpus has not
@@ -1414,8 +1631,10 @@ pub fn render(corpus: &Corpus, corpus_id: &str) -> String {
     s.push_str(&format!("- **coverage total:** {total}\n"));
 
     let unmeasured = unmeasured_count(corpus);
-    let (reach, lost) = reach_and_loss(corpus);
-    let present = reach - unmeasured;
+    let r = reach_and_loss(corpus);
+    let reach = r.total();
+    let lost = r.lost;
+    let present = r.present;
     s.push_str("\n## Unmeasured\n\n");
     if unmeasured == 0 {
         s.push_str("None — every item carries a coverage verdict.\n\n");
@@ -1456,9 +1675,28 @@ pub fn render(corpus: &Corpus, corpus_id: &str) -> String {
     // `present` rather than `unmeasured` makes the identical claim, and a
     // `reach` of 0 (true of `asimov-1989` today) is itself part of the
     // finding, not a case to suppress.
+    //
+    // THE BREAKDOWN NAMES EVERY COMPONENT OF `reach` THAT IS NON-ZERO, so
+    // the parenthetical always sums to the number in front of it. The three
+    // measured verdicts are appended only when at least one of them is
+    // non-zero — which is never, for either committed corpus, so this
+    // renders byte-identically to the pre-fix-wave text today and the
+    // committed reports do not drift. `present` and `unmeasured` are printed
+    // unconditionally even at 0, because a 0 there is part of the finding
+    // (see above); a measured verdict at 0 is not, it is the ordinary state
+    // of an axis no world can exhibit yet.
+    let measured_breakdown = if r.grown + r.flat + r.lost == 0 {
+        String::new()
+    } else {
+        format!(
+            ", {} `grown`, {} `flat`, {} `lost`",
+            r.grown, r.flat, r.lost
+        )
+    };
     s.push_str(&wrap(&format!(
         "THE FINDING THIS CORPUS MAKES SAYABLE: of the {} item(s) here, Hornvale's mechanism \
-         reaches {reach} of them at all ({present} `present`, {unmeasured} `unmeasured`) — \
+         reaches {reach} of them at all ({present} `present`, {unmeasured} \
+         `unmeasured`{measured_breakdown}) — \
          and of those {reach}, it can currently represent the LOSS of exactly {lost}. A \
          single tally has no way to say this; it takes both counts together.",
         corpus.items.len(),

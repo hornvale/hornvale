@@ -1642,6 +1642,7 @@ fn cmd_technologies(args: &[String]) -> Result<(), String> {
                         technologies::Finding::Dangling { why, .. } => why.clone(),
                         technologies::Finding::StaleDeferred { why, .. } => why.clone(),
                         technologies::Finding::Regressed { why, .. } => why.clone(),
+                        technologies::Finding::Disclosure { why, .. } => why.clone(),
                         technologies::Finding::Novelty {
                             corpus: c,
                             baseline,

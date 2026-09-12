@@ -285,8 +285,32 @@ with an `absent` prerequisite scores `absent` whether or not a candidate anchor
 is accepted, so recording "considered and refused" in its note is evidence, not
 non-blindness. Put the argument in the `note`; leave the `disclosure` off.
 
-**Task 4's resolver must enforce the chosen rule**, two-directionally: every chosen
-item carries a `disclosure`, and no inherited item does.
+**The resolver enforces the chosen rule**, two-directionally: every chosen item
+carries a `disclosure`, and no inherited item does.
+`technologies::disclosure_gaps` (`cli/src/technologies.rs`) is the check, reached
+through `audit_family` — which is what `hornvale technologies check` calls — and
+its four constructed fixtures are in `cli/tests/suite/technology_coverage.rs`.
+The check computes "chosen" from the closure, never from roots, and
+`a_chosen_non_root_is_a_finding_where_a_root_keyed_check_would_pass` is the test
+that holds that distinction: a root-keyed implementation passes every other test
+in the file and fails that one.
+
+**This paragraph read "Task 4's resolver MUST enforce" for the whole campaign,
+and for the whole campaign nothing did** (ledger #38, found by the final
+whole-branch review; built in the pre-merge fix wave). The rule was ratified at
+ledger #13, written here, and published as a **MUST** in
+`henrich-2004-extended`'s `provenance`, which the committed report prints
+verbatim — and `grep -c disclosure` over both test files returned 0 and 0. It
+held in the data by coincidence the entire time (16 of 41 chosen and 16
+disclosed in one corpus, 32 and 32 in the other, zero violations), so nothing was
+ever wrong and nothing ever noticed. **The failure mode was the one this section
+predicts:** a successor moves one item off `absent`, items downstream become
+chosen, the report prints their empty `disclosure` cells — which read as
+*authored blind* — and no test reds, because the regenerated report matches the
+edited corpus. The durable lesson is narrower than "implement your rules": a
+capture action routed to a later task is a promise recorded in a document that
+does not execute, so **it must be verified at that task's review, not at the
+moment it is written.**
 
 ## Do not claim an enforcement the tree does not hold
 

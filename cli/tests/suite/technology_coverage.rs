@@ -11,7 +11,7 @@
 
 use hornvale::technologies::{
     Anchor, Corpus, Criterion, Finding, Verdict, audit, audit_family, cross_corpus_ruling_gaps,
-    load, meets, render, two_way,
+    disclosure_gaps, is_chosen, load, meets, render, two_way,
 };
 use std::path::PathBuf;
 
@@ -1171,4 +1171,294 @@ fn no_heading_reads_like_a_missing_capabilities_backlog() {
              queue: {headings:?}"
         );
     }
+}
+
+// --- The chosen/inherited disclosure rule (pre-merge fix wave, F1) --------
+//
+// The rule was ratified by campaign ledger #13's second ruling, written into
+// `technologies/CLAUDE.md` ("Task 4's resolver must enforce the chosen rule,
+// two-directionally"), and published as a MUST in
+// `henrich-2004-extended`'s `provenance` — which the report prints verbatim.
+// It was never built (ledger #38). It holds exactly in both committed
+// corpora, so `the_real_corpora_satisfy_the_chosen_disclosure_rule` below is
+// GREEN ON ARRIVAL and proves nothing on its own; the four constructed
+// fixtures here are what actually exercise it, per ledger #27's rule that a
+// guard validated only against corpora containing no violation is vacuously
+// green.
+
+/// A corpus whose `items` array body is given verbatim, so a test can build
+/// a real `presupposes` lattice rather than the one-item shape
+/// [`corpus_with`] produces. Parsed through the real parser, so the lattice
+/// validation applies here too.
+fn lattice_corpus(items: &str) -> Corpus {
+    let json = format!(
+        r#"{{ "corpus": "fixture", "unit": "technology", "ordered": false,
+              "provenance": "fixture", "frozen": "fixture",
+              "items": [ {items} ] }}"#
+    );
+    hornvale::technologies::parse(&json)
+}
+
+/// Direction one: a CHOSEN item — no prerequisite anywhere in its closure is
+/// `absent` — carrying no `disclosure` must red. An empty `disclosure` column
+/// in the report reads as "authored blind", which is false for a verdict
+/// reached by searching the repository and is the inversion of the one thing
+/// `disclosure` exists to expose.
+#[test]
+fn a_chosen_item_without_a_disclosure_is_a_finding() {
+    let c = lattice_corpus(
+        r#"{ "id": "a", "title": "A", "introduces": "tok-a", "presupposes": [],
+              "verdict": "deferred", "anchor": "registry:MEM-8" }"#,
+    );
+    match disclosure_gaps(&c).as_slice() {
+        [Finding::Disclosure { id, chosen, why }] => {
+            assert_eq!(id, "a");
+            assert!(*chosen, "the finding must report the CHOSEN direction");
+            assert!(
+                why.contains("CHOSEN") && why.contains("no `disclosure`"),
+                "the finding must name the direction and the missing field: {why}"
+            );
+        }
+        other => panic!("expected one chosen-without-disclosure finding, got {other:?}"),
+    }
+}
+
+/// Direction two: an INHERITED item — at least one `absent` prerequisite in
+/// its closure — carrying a `disclosure` must red. Over-coverage is a defect
+/// too (ledger #13): a refusal that could not have changed the verdict is
+/// evidence for a `note`, and a disclosure on a forced verdict is noise that
+/// makes the real ones harder to find.
+///
+/// A one-directional implementation would pass this test while having built
+/// half a guard — the same half-built shape decision 0936 refuses for the
+/// trajectory axis one family over.
+#[test]
+fn an_inherited_item_with_a_disclosure_is_a_finding() {
+    let c = lattice_corpus(
+        r#"{ "id": "a", "title": "A", "introduces": "tok-a", "presupposes": [],
+              "verdict": "absent", "anchor": "", "disclosure": "a had read the model" },
+            { "id": "b", "title": "B", "introduces": "tok-b", "presupposes": ["a"],
+              "verdict": "absent", "anchor": "", "disclosure": "so had b" }"#,
+    );
+    match disclosure_gaps(&c).as_slice() {
+        [Finding::Disclosure { id, chosen, why }] => {
+            assert_eq!(id, "b", "only the inherited item may be reported");
+            assert!(!*chosen, "the finding must report the INHERITED direction");
+            assert!(
+                why.contains("INHERITED") && why.contains("`note`"),
+                "the finding must name the direction and the repair: {why}"
+            );
+        }
+        other => panic!("expected one inherited-with-disclosure finding, got {other:?}"),
+    }
+}
+
+/// The compliant shape is clean, in both directions at once — the positive
+/// control without which the two tests above could both be satisfied by a
+/// function that reports every item. `a` is chosen and discloses; `b`
+/// inherits `a`'s `absent` and does not.
+#[test]
+fn a_compliant_corpus_has_no_disclosure_gaps() {
+    let c = lattice_corpus(
+        r#"{ "id": "a", "title": "A", "introduces": "tok-a", "presupposes": [],
+              "verdict": "absent", "anchor": "", "disclosure": "a had read the model" },
+            { "id": "b", "title": "B", "introduces": "tok-b", "presupposes": ["a"],
+              "verdict": "absent", "anchor": "" }"#,
+    );
+    assert!(
+        disclosure_gaps(&c).is_empty(),
+        "a corpus satisfying the rule in both directions must be clean: {:?}",
+        disclosure_gaps(&c)
+    );
+}
+
+/// **The test that distinguishes the ratified rule from the proxy that cost
+/// two fix rounds.** `b` has a prerequisite, so it is NOT a root; that
+/// prerequisite is `deferred`, not `absent`, so nothing upstream forces
+/// `b`'s verdict and `b` IS chosen. It owes a `disclosure` and has none.
+///
+/// A **root-keyed** check — `presupposes.is_empty()`, the proxy ledger #13
+/// found twice and family law names as the thing this must not be — reports
+/// nothing here and passes. `inv-parchment` is this exact shape in the real
+/// corpus, and it was this shape at the freeze: roots are a strict subset of
+/// the chosen items, so the proxy under-covers from a corpus's first
+/// authoring and needs no trigger to do it.
+#[test]
+fn a_chosen_non_root_is_a_finding_where_a_root_keyed_check_would_pass() {
+    let c = lattice_corpus(
+        r#"{ "id": "a", "title": "A", "introduces": "tok-a", "presupposes": [],
+              "verdict": "deferred", "anchor": "registry:MEM-8",
+              "disclosure": "a had read the model" },
+            { "id": "b", "title": "B", "introduces": "tok-b", "presupposes": ["a"],
+              "verdict": "absent", "anchor": "" }"#,
+    );
+    assert!(
+        is_chosen(&c, "a") && is_chosen(&c, "b"),
+        "sanity: both items are chosen — `a` is a root and `b`'s only \
+         prerequisite is `deferred`, not `absent`"
+    );
+    match disclosure_gaps(&c).as_slice() {
+        [Finding::Disclosure { id, chosen, .. }] => {
+            assert_eq!(id, "b", "the chosen NON-ROOT is the item that owes one");
+            assert!(*chosen);
+        }
+        other => panic!(
+            "expected the chosen non-root `b` to be reported; a root-keyed \
+             check reports nothing here, which is the defect this test \
+             exists for. Got {other:?}"
+        ),
+    }
+}
+
+/// `absent`-ness is read from the whole CLOSURE, not only from the immediate
+/// `presupposes` edges. `c` presupposes `b`, whose verdict is `deferred`;
+/// the `absent` sits one rung further up, at `a`. A one-level check would
+/// call `c` chosen and demand a disclosure it does not owe.
+#[test]
+fn an_absent_prerequisite_two_rungs_up_still_makes_an_item_inherited() {
+    let c = lattice_corpus(
+        r#"{ "id": "a", "title": "A", "introduces": "tok-a", "presupposes": [],
+              "verdict": "absent", "anchor": "", "disclosure": "a had read the model" },
+            { "id": "b", "title": "B", "introduces": "tok-b", "presupposes": ["a"],
+              "verdict": "deferred", "anchor": "registry:MEM-8" },
+            { "id": "c", "title": "C", "introduces": "tok-c", "presupposes": ["b"],
+              "verdict": "absent", "anchor": "" }"#,
+    );
+    assert!(
+        !is_chosen(&c, "c"),
+        "`c` inherits `a`'s absent two rungs up"
+    );
+    assert!(
+        disclosure_gaps(&c).is_empty(),
+        "neither `b` nor `c` owes a disclosure: {:?}",
+        disclosure_gaps(&c)
+    );
+}
+
+/// The rule must be reachable from the entry point the CLI's `technologies
+/// check` actually calls. `audit` alone deliberately skips it (every
+/// one-item anchor fixture in this file is chosen-without-disclosure by
+/// construction, and would otherwise carry a finding about a field it has
+/// nothing to do with), so a check that lived only in `audit` would be
+/// enforced by nothing a caller runs — which is the shape of ledger #38's
+/// defect reintroduced one layer down.
+#[test]
+fn audit_family_includes_disclosure_gaps() {
+    let c = lattice_corpus(
+        r#"{ "id": "a", "title": "A", "introduces": "tok-a", "presupposes": [],
+              "verdict": "deferred", "anchor": "registry:MEM-8" }"#,
+    );
+    let per_item = audit(&c, &workspace_root());
+    assert!(
+        !per_item
+            .iter()
+            .any(|f| matches!(f, Finding::Disclosure { .. })),
+        "`audit` alone must not carry a disclosure finding, or every \
+         single-item fixture in this file gains one: {per_item:?}"
+    );
+    assert!(
+        audit_family(&c, &workspace_root())
+            .iter()
+            .any(|f| matches!(f, Finding::Disclosure { .. })),
+        "the family entry point — what `hornvale technologies check` calls — \
+         must enforce the rule"
+    );
+}
+
+/// The committed corpora satisfy the rule, with a POSITIVE CONTROL so the
+/// green is not vacuous: both corpora must contain at least one chosen and
+/// at least one inherited item, or "no gaps" would be a statement about an
+/// empty population rather than about the rule.
+///
+/// Asserts the RELATIONSHIP, never the counts. The chosen and disclosed sets
+/// move with any re-verdict, and a test literal pinning today's numbers
+/// would have to be edited by exactly the campaign whose change it is
+/// supposed to scrutinise.
+#[test]
+fn the_real_corpora_satisfy_the_chosen_disclosure_rule() {
+    for corpus in [load_asimov(), load_henrich()] {
+        let chosen = corpus
+            .items
+            .iter()
+            .filter(|i| is_chosen(&corpus, &i.id))
+            .count();
+        assert!(
+            chosen > 0 && chosen < corpus.items.len(),
+            "{}: the rule must have something to bite on in BOTH directions \
+             — {chosen} chosen of {} items",
+            corpus.corpus,
+            corpus.items.len()
+        );
+        let gaps = disclosure_gaps(&corpus);
+        assert!(
+            gaps.is_empty(),
+            "{} violates the chosen/inherited disclosure rule:\n{gaps:#?}",
+            corpus.corpus
+        );
+    }
+}
+
+// --- `reach` counts every verdict that passed reach (fix wave, F2) --------
+
+/// THE INVARIANT THE OLD DEFINITION VIOLATED: a corpus cannot represent the
+/// loss of more items than its mechanism reaches. `reach` was `present +
+/// unmeasured`, and under the ratified pipeline (ledger #6, #16) a `grown`,
+/// `flat` or `lost` item has passed reach BY DEFINITION — so one `lost` item
+/// made the report read "reaches 0 of them at all … and of those 0, it can
+/// currently represent the LOSS of exactly 1."
+///
+/// Asserted over the RENDERED STRING and on a CONSTRUCTED corpus, both
+/// deliberately. Neither committed corpus scores a measured verdict (ledger
+/// #27: the corpora were frozen against a monotone clock and cannot exercise
+/// this), so the sibling test
+/// [`the_reach_and_loss_finding_states_both_counts_together`] ranges over
+/// data where the bug is invisible — and it recomputes `reach` with
+/// production's own formula, so it asserts that the renderer printed the
+/// function's output rather than that the definition is right. This one
+/// names the invariant instead of the formula.
+#[test]
+fn the_loss_count_never_exceeds_the_reach_count() {
+    let c = lattice_corpus(
+        r#"{ "id": "a", "title": "A", "introduces": "tok-a", "presupposes": [],
+              "verdict": "lost", "anchor": "doc:book/src/domesday/settlement.md",
+              "disclosure": "a had read the model" },
+            { "id": "b", "title": "B", "introduces": "tok-b", "presupposes": [],
+              "verdict": "grown", "anchor": "doc:book/src/domesday/settlement.md",
+              "disclosure": "b had read the model" }"#,
+    );
+    let flat = flatten(&render(&c, "fixture"));
+    let reach = number_after(&flat, "mechanism reaches ");
+    let lost = number_after(&flat, "represent the LOSS of exactly ");
+    assert!(
+        lost <= reach,
+        "a corpus cannot represent the loss of more items than it reaches: \
+         reach={reach}, lost={lost} in: {flat}"
+    );
+    assert_eq!(
+        reach, 2,
+        "both measured items have passed reach: one `lost`, one `grown`"
+    );
+    assert_eq!(lost, 1);
+    assert!(
+        flat.contains("(0 `present`, 0 `unmeasured`, 1 `grown`, 0 `flat`, 1 `lost`)"),
+        "the breakdown must name every non-zero component, so it sums to the \
+         reach figure in front of it: {flat}"
+    );
+}
+
+/// The first run of ASCII digits immediately following `marker` in `s`,
+/// parsed. Panics when the marker is absent or is not followed by a digit —
+/// either means the report no longer says what the caller is asserting
+/// about, which is a failure and not a zero.
+fn number_after(s: &str, marker: &str) -> usize {
+    let at = s
+        .find(marker)
+        .unwrap_or_else(|| panic!("marker {marker:?} not in report: {s}"))
+        + marker.len();
+    let digits: String = s[at..].chars().take_while(|c| c.is_ascii_digit()).collect();
+    assert!(
+        !digits.is_empty(),
+        "no number follows {marker:?} in report: {s}"
+    );
+    digits.parse().expect("digits parse")
 }
