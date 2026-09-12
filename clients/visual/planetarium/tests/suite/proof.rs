@@ -8,7 +8,7 @@ fn proof_region_contains_required_cases() {
     let metrics = run_surface_proof(42).unwrap();
     assert_eq!(metrics.seed, 42);
     assert_eq!(metrics.refinement_levels, vec![0, 1]);
-    assert!(metrics.patch_count >= 5);
+    assert_eq!(metrics.patch_count, 13);
 }
 
 #[test]
@@ -46,6 +46,31 @@ fn before_after_review_checks_required_features() {
     assert!(review.coast_is_continuous);
     assert!(review.mountain_direction_reads);
     assert!(review.biome_transitions_are_blended);
+}
+
+#[test]
+fn before_capture_must_differ_from_after_capture() {
+    let after = CapturedFrames {
+        required_features: BTreeSet::from([
+            "confluence".into(),
+            "terminal_basin".into(),
+            "coast_crossing".into(),
+            "face_corner".into(),
+            "unequal_lod".into(),
+        ]),
+        seams_coherent: true,
+        rivers_reach_declared_ends: true,
+        coast_is_continuous: true,
+        mountain_direction_reads: true,
+        biome_transitions_are_blended: true,
+    };
+    let review = compare_surface_review(&after, &after);
+    assert!(!review.required_features_visible);
+    assert!(!review.seams_coherent);
+    assert!(!review.rivers_reach_declared_ends);
+    assert!(!review.coast_is_continuous);
+    assert!(!review.mountain_direction_reads);
+    assert!(!review.biome_transitions_are_blended);
 }
 
 #[test]

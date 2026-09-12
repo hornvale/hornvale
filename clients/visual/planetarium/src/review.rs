@@ -8,13 +8,18 @@ use crate::{
     live::positions,
     shots::{FilmDefinition, sample_caption, sample_shot},
 };
-use hornvale_bevy_view::{ObservationMirror, Renderer};
+use hornvale_bevy_view::{
+    ObservationMirror, Renderer,
+    documents::{self, SurfacePatchCacheKey},
+    lifecycle,
+};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeSet,
     error::Error,
     path::PathBuf,
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
     time::Instant,
 };
 
@@ -25,13 +30,16 @@ const PROOF_CASES: [&str; 5] = [
     "face_corner",
     "unequal_lod",
 ];
+static NEXT_PROOF_REQUEST_ID: AtomicU64 = AtomicU64::new(1 << 32);
 
 /// Measurements from the small, repeatable coherent-ground proof slice.
 ///
 /// These values are observations for review, not performance acceptance
 /// thresholds. Generation measures source patch production, memory is the
-/// process resident set after each patch, and frame time covers decoding and
-/// validating the proof frame that a renderer would consume.
+/// sampled maximum process resident set across each proof operation, and frame
+/// time covers the serialized-reply validation plus Bevy mesh/material
+/// application path. The memory value is a bounded RSS proxy, not a GPU
+/// allocation measurement.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceProofMetrics {
     pub seed: u64,
@@ -66,21 +74,27 @@ pub struct SurfaceReview {
 }
 
 /// Compare visible before/after facts without deriving semantic terrain in the
-/// renderer. The `after` capture carries the evidence; `before` establishes the
-/// comparison baseline for callers recording the review.
+/// renderer. Each result is a transition claim: the after capture must carry
+/// the fact and the before capture must not already carry it.
 pub fn compare_surface_review(
-    _before: &CapturedFrames,
+    before: &CapturedFrames,
     after: &CapturedFrames,
 ) -> SurfaceReview {
     SurfaceReview {
         required_features_visible: PROOF_CASES
             .iter()
-            .all(|feature| after.required_features.contains(*feature)),
-        seams_coherent: after.seams_coherent,
-        rivers_reach_declared_ends: after.rivers_reach_declared_ends,
-        coast_is_continuous: after.coast_is_continuous,
-        mountain_direction_reads: after.mountain_direction_reads,
-        biome_transitions_are_blended: after.biome_transitions_are_blended,
+            .all(|feature| after.required_features.contains(*feature))
+            && PROOF_CASES
+                .iter()
+                .any(|feature| !before.required_features.contains(*feature)),
+        seams_coherent: !before.seams_coherent && after.seams_coherent,
+        rivers_reach_declared_ends: !before.rivers_reach_declared_ends
+            && after.rivers_reach_declared_ends,
+        coast_is_continuous: !before.coast_is_continuous && after.coast_is_continuous,
+        mountain_direction_reads: !before.mountain_direction_reads
+            && after.mountain_direction_reads,
+        biome_transitions_are_blended: !before.biome_transitions_are_blended
+            && after.biome_transitions_are_blended,
     }
 }
 
@@ -130,50 +144,49 @@ pub fn run_surface_proof(seed: u64) -> Result<SurfaceProofMetrics, String> {
     let mut peak_memory_bytes = Vec::new();
     let mut frame_time_ms = Vec::new();
     let mut refinement_levels = BTreeSet::new();
-    let mut request_id = 0u64;
+    let mut request_id = NEXT_PROOF_REQUEST_ID.fetch_add(32, Ordering::Relaxed);
 
     for case_name in PROOF_CASES {
         let case = &fixture["cases"][case_name];
         let address = if case_name == "unequal_lod" {
-            case["coarse"]["address"].clone()
+            &case["coarse"]["address"]
         } else {
-            case["patch"]["address"].clone()
+            &case["patch"]["address"]
         };
-        let transition = (case_name == "unequal_lod")
-            .then(|| case["fine_addresses"][0].clone());
         let child_path = address["child_path"].clone();
-        let (patch, generation, frame) = observe_proof_patch(
+        let (patch, generation, frame, memory) = observe_proof_patch(
             &mut source,
             binding,
             revision,
-            &address,
+            address,
             &child_path,
-            transition.as_ref(),
+            None,
             request_id,
         )?;
         request_id += 1;
         validate_observed_patch(
             case_name,
             &patch,
-            &address,
+            address,
             &child_path,
-            transition.as_ref(),
+            None,
         )?;
+        validate_live_pathology(case_name, &patch)?;
         refinement_levels.insert(child_path_level(&child_path)?);
         generation_latency_ms.push(generation);
-        peak_memory_bytes.push(process_memory_bytes().unwrap_or(patch.to_string().len() as u64));
+        peak_memory_bytes.push(memory);
         frame_time_ms.push(frame);
     }
 
     // The confluence's immediate child is the second local proof level.
     let case = &fixture["cases"]["confluence"];
-    let address = case["patch"]["address"].clone();
+    let address = &case["patch"]["address"];
     let child_path = serde_json::json!([0]);
-    let (patch, generation, frame) = observe_proof_patch(
+    let (patch, generation, frame, memory) = observe_proof_patch(
         &mut source,
         binding,
         revision,
-        &address,
+        address,
         &child_path,
         None,
         request_id,
@@ -181,14 +194,105 @@ pub fn run_surface_proof(seed: u64) -> Result<SurfaceProofMetrics, String> {
     validate_observed_patch(
         "confluence refinement",
         &patch,
-        &address,
+        address,
         &child_path,
         None,
     )?;
     refinement_levels.insert(child_path_level(&child_path)?);
     generation_latency_ms.push(generation);
-    peak_memory_bytes.push(process_memory_bytes().unwrap_or(patch.to_string().len() as u64));
+    peak_memory_bytes.push(memory);
     frame_time_ms.push(frame);
+
+    // The face-corner witness is a three-patch comparison. All three addresses
+    // must cross the same cube-sphere corner in the live source.
+    let case = &fixture["cases"]["face_corner"];
+    let mut corner_patches = Vec::new();
+    for (index, address) in std::iter::once(&case["patch"]["address"])
+        .chain(case["neighbor_addresses"].as_array().into_iter().flatten())
+        .enumerate()
+    {
+        let child_path = address["child_path"].clone();
+        let (patch, generation, frame, memory) = observe_proof_patch(
+            &mut source,
+            binding,
+            revision,
+            address,
+            &child_path,
+            None,
+            request_id,
+        )?;
+        request_id += 1;
+        validate_observed_patch(
+            &format!("face corner {index}"),
+            &patch,
+            address,
+            &child_path,
+            None,
+        )?;
+        corner_patches.push(patch);
+        refinement_levels.insert(child_path_level(&child_path)?);
+        generation_latency_ms.push(generation);
+        peak_memory_bytes.push(memory);
+        frame_time_ms.push(frame);
+    }
+    validate_face_corner(&corner_patches)?;
+
+    // Query both fine addresses directly and also ask the coarse patch to
+    // carry each source-owned transition. The fixture's two fine addresses are
+    // therefore exercised by the live source, not merely counted as metadata.
+    let case = &fixture["cases"]["unequal_lod"];
+    let coarse_address = &case["coarse"]["address"];
+    let fine_addresses = case["fine_addresses"]
+        .as_array()
+        .ok_or("unequal-LOD fixture has no fine addresses")?;
+    for (index, fine_address) in fine_addresses.iter().enumerate() {
+        let fine_child_path = fine_address["child_path"].clone();
+        let (fine_patch, generation, frame, memory) = observe_proof_patch(
+            &mut source,
+            binding,
+            revision,
+            fine_address,
+            &fine_child_path,
+            None,
+            request_id,
+        )?;
+        request_id += 1;
+        validate_observed_patch(
+            &format!("unequal-LOD fine {index}"),
+            &fine_patch,
+            fine_address,
+            &fine_child_path,
+            None,
+        )?;
+        refinement_levels.insert(child_path_level(&fine_child_path)?);
+        generation_latency_ms.push(generation);
+        peak_memory_bytes.push(memory);
+        frame_time_ms.push(frame);
+
+        let coarse_child_path = coarse_address["child_path"].clone();
+        let (transition_patch, generation, frame, memory) = observe_proof_patch(
+            &mut source,
+            binding,
+            revision,
+            coarse_address,
+            &coarse_child_path,
+            Some(fine_address),
+            request_id,
+        )?;
+        request_id += 1;
+        validate_observed_patch(
+            &format!("unequal-LOD transition {index}"),
+            &transition_patch,
+            coarse_address,
+            &coarse_child_path,
+            Some(fine_address),
+        )?;
+        validate_live_pathology("unequal_lod transition", &transition_patch)?;
+        refinement_levels.insert(child_path_level(&coarse_child_path)?);
+        generation_latency_ms.push(generation);
+        peak_memory_bytes.push(memory);
+        frame_time_ms.push(frame);
+    }
 
     Ok(SurfaceProofMetrics {
         seed,
@@ -208,7 +312,13 @@ fn observe_proof_patch(
     child_path: &serde_json::Value,
     transition: Option<&serde_json::Value>,
     request_id: u64,
-) -> Result<(serde_json::Value, u64, f64), String> {
+) -> Result<(serde_json::Value, u64, f64, u64), String> {
+    let macro_face = packed_macro_face(address)?;
+    let child_path: Vec<u8> = serde_json::from_value(child_path.clone())
+        .map_err(|error| format!("surface proof child path is invalid: {error}"))?;
+    let revision_document: documents::SurfacePatchRevision =
+        serde_json::from_value(revision.clone())
+            .map_err(|error| format!("surface proof revision is invalid: {error}"))?;
     let transition_address = transition
         .map(|value| {
             Ok::<_, String>(serde_json::json!({
@@ -221,25 +331,41 @@ fn observe_proof_patch(
         "schema": "visual/surface-request/v1",
         "binding": binding,
         "request_id": request_id,
-        "generation": 0,
-        "address": {"macro_face": packed_macro_face(address)?, "child_path": child_path},
+        "generation": lifecycle::surface_patch_generation(),
+        "address": {"macro_face": macro_face, "child_path": child_path},
         "transition_address": transition_address,
         "expected_revision": revision,
     });
+    lifecycle::schedule_surface_patch(
+        SurfacePatchCacheKey {
+            revision: revision_document.source_revision.clone(),
+            macro_face,
+            child_path: child_path.clone(),
+        },
+        request.to_string(),
+    )
+    .map_err(|error| format!("schedule surface proof request {request_id}: {error}"))?;
+    let memory_before = process_memory_bytes()?;
     let generation_start = Instant::now();
-    let reply = source
+    let reply_json = source
         .observe_surface(&request.to_string())
         .map_err(|error| format!("surface proof source query {request_id}: {error}"))?;
     let generation_latency_ms = generation_start.elapsed().as_millis().max(1) as u64;
     let frame_start = Instant::now();
-    let reply: serde_json::Value = serde_json::from_str(&reply)
+    let reply = documents::surface_reply(&reply_json)
         .map_err(|error| format!("surface proof reply {request_id} is invalid: {error}"))?;
-    let patch = reply
-        .get("patch")
-        .cloned()
-        .ok_or_else(|| format!("surface proof reply {request_id} has no patch"))?;
+    let patch = serde_json::to_value(&reply.patch)
+        .map_err(|error| format!("surface proof patch {request_id} is not serializable: {error}"))?;
+    lifecycle::apply_surface_reply(&reply_json)
+        .map_err(|error| format!("apply surface proof reply {request_id}: {error}"))?;
     let frame_time_ms = (frame_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
-    Ok((patch, generation_latency_ms, frame_time_ms))
+    let memory_after = process_memory_bytes()?;
+    Ok((
+        patch,
+        generation_latency_ms,
+        frame_time_ms,
+        memory_before.max(memory_after),
+    ))
 }
 
 fn validate_proof_fixture(fixture: &serde_json::Value) -> Result<(), String> {
@@ -366,21 +492,118 @@ fn validate_observed_patch(
     Ok(())
 }
 
-fn process_memory_bytes() -> Option<u64> {
+fn validate_live_pathology(case_name: &str, patch: &serde_json::Value) -> Result<(), String> {
+    let features = patch["curves"]
+        .as_array()
+        .ok_or_else(|| format!("{case_name} live patch has no curves"))?;
+    let terminals = features
+        .iter()
+        .flat_map(|feature| feature["endpoints"].as_array().into_iter().flatten())
+        .filter_map(|endpoint| endpoint["terminal"].as_str());
+    match case_name {
+        "confluence" => {
+            if !terminals.clone().any(|terminal| terminal == "confluence") {
+                return Err("live confluence patch has no confluence terminal".into());
+            }
+        }
+        "terminal_basin" => {
+            if !terminals.clone().any(|terminal| terminal == "lake") {
+                return Err("live terminal basin patch has no lake terminal".into());
+            }
+        }
+        "coast_crossing" => {
+            let samples = patch["samples"]
+                .as_array()
+                .ok_or("live coast crossing patch has no samples")?;
+            let has_land = samples.iter().any(|sample| {
+                sample["water_depth_m"] == 0.0
+                    && sample["shoreline_distance_m"]
+                        .as_f64()
+                        .is_some_and(|distance| distance > 0.)
+            });
+            let has_water = samples.iter().any(|sample| {
+                sample["water_depth_m"]
+                    .as_f64()
+                    .is_some_and(|depth| depth > 0.)
+                    && sample["shoreline_distance_m"]
+                        .as_f64()
+                        .is_some_and(|distance| distance < 0.)
+            });
+            if !has_land || !has_water {
+                return Err("live coast crossing patch does not cross the shoreline".into());
+            }
+        }
+        "unequal_lod transition" => {
+            if patch["transition_triangles"]
+                .as_array()
+                .is_none_or(Vec::is_empty)
+            {
+                return Err("live unequal-LOD patch has no transition triangles".into());
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn validate_face_corner(patches: &[serde_json::Value]) -> Result<(), String> {
+    if patches.len() != 3 {
+        return Err(format!(
+            "face corner proof observed {} patches instead of 3",
+            patches.len()
+        ));
+    }
+    let corner = [
+        1.0 / 3.0_f64.sqrt(),
+        -1.0 / 3.0_f64.sqrt(),
+        -1.0 / 3.0_f64.sqrt(),
+    ];
+    for (index, patch) in patches.iter().enumerate() {
+        let samples = patch["samples"]
+            .as_array()
+            .ok_or_else(|| format!("face corner patch {index} has no samples"))?;
+        let has_corner = samples.iter().any(|sample| {
+            sample["fields"]["position"]
+                .as_array()
+                .or_else(|| sample["position"].as_array())
+                .is_some_and(|position| {
+                    position
+                        .iter()
+                        .zip(corner)
+                        .all(|(actual, expected)| {
+                            actual
+                                .as_f64()
+                                .is_some_and(|actual| (actual - expected).abs() < 1e-5)
+                        })
+                })
+        });
+        if !has_corner {
+            return Err(format!(
+                "face corner live patch {index} does not contain the shared corner"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn process_memory_bytes() -> Result<u64, String> {
     let pid = std::process::id().to_string();
     let output = Command::new("ps")
         .args(["-o", "rss=", "-p", &pid])
         .output()
-        .ok()?;
+        .map_err(|error| format!("read proof process memory: {error}"))?;
     if !output.status.success() {
-        return None;
+        return Err(format!(
+            "read proof process memory: ps exited with {}",
+            output.status
+        ));
     }
     let kib = String::from_utf8(output.stdout)
-        .ok()?
+        .map_err(|error| format!("read proof process memory: {error}"))?
         .trim()
         .parse::<u64>()
-        .ok()?;
-    Some(kib.saturating_mul(1024))
+        .map_err(|error| format!("parse proof process memory: {error}"))?;
+    Ok(kib.saturating_mul(1024))
 }
 pub fn run(
     world: PathBuf,
