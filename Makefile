@@ -277,7 +277,8 @@ gate-run:
 # failure rather than as success. A gate that reports green when it does not
 # know is worse than one that reports red when it is unsure.
 	@rm -f target/nextest/ci/nextest.rc
-# `--no-fail-fast` IS LOAD-BEARING HERE AND IS NOT A STYLE CHOICE. Without it
+# `--profile ci` IS LOAD-BEARING HERE AND IS NOT A STYLE CHOICE. It carries
+# `fail-fast = false` (.config/nextest.toml), and without that
 # nextest CANCELS PENDING TESTS at the first failure — those already in flight
 # finish and report, everything not yet started never runs. So a red chamber
 # reports the failures it happened to have running and leaves the rest of the
@@ -308,7 +309,7 @@ gate-run:
 # `--no-fail-fast` for the whole failure list in one pass. The chamber was the
 # one place that most needed it and the one place not doing it.
 	@{ NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
-	    --no-fail-fast \
+	    --profile ci \
 	    --message-format libtest-json-plus \
 	    2>&1 1>target/nextest/ci/run.json; \
 	   echo $$? > target/nextest/ci/nextest.rc; \
