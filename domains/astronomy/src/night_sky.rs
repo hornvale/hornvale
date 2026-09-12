@@ -163,11 +163,11 @@ pub fn species_sky_at(
     perception: SkyPerception,
 ) -> SpeciesSkyObservation {
     let band = calendar.sky_band(t, observer.latitude);
-    let limiting_magnitude = species_limiting_magnitude(&observer, &perception, band);
+    let limiting_magnitude = species_limiting_magnitude(&observer, &perception, calendar, t, band);
     let active = activity_admits(perception.activity, band);
     let visible = if active {
         let zenith = EquatorialCoord {
-            ra_deg: calendar.solar_equatorial(t).ra_deg,
+            ra_deg: local_meridian_ra(calendar, t),
             dec_deg: observer.latitude,
         };
         catalog_stars_at(
@@ -193,6 +193,8 @@ pub fn species_sky_at(
 fn species_limiting_magnitude(
     observer: &SpeciesSkyObserver,
     perception: &SkyPerception,
+    calendar: &Calendar,
+    t: StdInstant,
     band: Option<SkyBand>,
 ) -> f64 {
     let night_vision = perception.acuity.clamp(0.0, 1.0);
@@ -211,14 +213,30 @@ fn species_limiting_magnitude(
     } else {
         1.0
     };
-    let twilight_penalty = matches!(band, Some(SkyBand::Twilight))
-        .then_some(2.0)
-        .unwrap_or(0.0);
+    let twilight_penalty = if matches!(band, Some(SkyBand::Twilight)) {
+        calendar
+            .solar_altitude_at(t, observer.latitude)
+            .map(|altitude| {
+                let depth = (-altitude / crate::calendar::TWILIGHT_DEPTH_DEG).clamp(0.0, 1.0);
+                2.0 * (1.0 - depth)
+            })
+            .unwrap_or(2.0)
+    } else {
+        0.0
+    };
     (2.5 + 2.0 * night_vision + 1.5 * sky_attention
         - 2.0 * atmosphere
         - moonlight
         - twilight_penalty)
         .clamp(0.0, NAKED_EYE_MAGNITUDE_LIMIT)
+}
+
+fn local_meridian_ra(calendar: &Calendar, t: StdInstant) -> f64 {
+    let Some((_, fraction)) = calendar.local_day(t) else {
+        return 0.0;
+    };
+    let direction = if calendar.is_retrograde() { -1.0 } else { 1.0 };
+    (calendar.solar_equatorial(t).ra_deg + 360.0 * (fraction - 0.5) * direction).rem_euclid(360.0)
 }
 
 fn activity_admits(activity: SkyActivity, band: Option<SkyBand>) -> bool {
@@ -588,6 +606,58 @@ mod tests {
         let second = species_sky_at(&system, &calendar, StdInstant(0.0), observer, perception);
         assert_eq!(first, second);
         assert_eq!(system, before);
+    }
+
+    #[test]
+    fn local_meridian_advances_with_the_day_but_is_static_when_locked() {
+        let spinning = spinning_system();
+        let spinning_calendar = calendar_of(&spinning);
+        let day = spinning_calendar.day_length().unwrap().0;
+        assert_ne!(
+            local_meridian_ra(&spinning_calendar, StdInstant(0.0)),
+            local_meridian_ra(&spinning_calendar, StdInstant(day * 0.25))
+        );
+
+        let locked = locked_system();
+        let locked_calendar = calendar_of(&locked);
+        assert_eq!(
+            local_meridian_ra(&locked_calendar, StdInstant(0.0)),
+            local_meridian_ra(&locked_calendar, StdInstant(5000.0))
+        );
+    }
+
+    #[test]
+    fn twilight_threshold_changes_continuously_with_solar_depth() {
+        let system = spinning_system();
+        let calendar = calendar_of(&system);
+        let day = calendar.day_length().unwrap().0;
+        let near_horizon = (0..1000)
+            .map(|i| StdInstant(day * f64::from(i) / 1000.0))
+            .find(|&t| {
+                calendar
+                    .solar_altitude_at(t, 0.0)
+                    .is_some_and(|alt| (-4.0..=-2.0).contains(&alt))
+            })
+            .expect("a sample near the horizon");
+        let deep_twilight = (0..1000)
+            .map(|i| StdInstant(day * f64::from(i) / 1000.0))
+            .find(|&t| {
+                calendar
+                    .solar_altitude_at(t, 0.0)
+                    .is_some_and(|alt| (-10.0..=-8.0).contains(&alt))
+            })
+            .expect("a sample deep in twilight");
+        let observer = SpeciesSkyObserver::at_latitude(0.0);
+        let perception = SkyPerception::crepuscular();
+        let near = species_sky_at(&system, &calendar, near_horizon, observer, perception);
+        let deep = species_sky_at(&system, &calendar, deep_twilight, observer, perception);
+        assert!(
+            near.limiting_magnitude < deep.limiting_magnitude,
+            "near={:?} deep={:?}",
+            near,
+            deep
+        );
+        assert_ne!(near.limiting_magnitude, deep.limiting_magnitude);
     }
 
     #[test]
