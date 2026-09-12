@@ -7,7 +7,7 @@ and cannot express loss, and one reading whose headline needs two numbers —
 of forty-one documented technology losses Hornvale reaches two of the
 technologies and can represent the loss of none. This document is about how
 that was built, and it is unusually long because the campaign produced an
-unusual amount of process material: thirty-six ledger entries, of which a
+unusual amount of process material: thirty-nine ledger entries, of which a
 majority record a defect rather than a choice.
 
 The campaign's defining property is that **almost none of its defects were in
@@ -104,32 +104,58 @@ This is *starting over when the conclusion is already established*. The
 question to ask before verifying is not "can I check this?" but **"what would
 my check add to what already holds it?"**
 
-## 3. Seven of them were mine, and saying so is the point
+## 3. Twelve of them were mine, and this is the one place that number is stated
 
 A retrospective that launders the controller's rate is worth less than one that
-states it. The ledger's own running tally, kept because the pattern was worth
-counting rather than to be decorous, attributes **seven instances of section
-1's shape to me**: a causal "now" that implied a re-score created a
-counterexample it did not create; a two-row sweep read as a swept column; a
-capture action that listed the consumers of a new rule and none of its
-contradictors; a "0 of the 31" that contradicted the clause it attached to; the
-known-bad checker of section 2; a signature in my own plan text that made a
-required field impossible; and reading a decision-number ceiling off a branch.
-Two further defects rode in with the last of those and are not of that shape at
-all: I cited two task briefs as required reading that had never been generated,
-and I asserted a date difference of eight days that is nine — in the very entry
-whose subject was an uncomputed ordinal.
+states it. **This section is the single site for the count.** Every other
+mention of it on this branch points here rather than restating it, which is
+itself a correction: this heading read *seven* while its own body reasoned about
+*nine* and ledger #37 said *eight*, three numbers on one branch with no two
+agreeing — in a campaign whose signature lesson is that a count stated inside
+its own document is self-falsifying. So the number is derived below from the
+ledger's own running enumeration, item by item, and nowhere else.
+
+| # | ledger | the defect |
+|---|---|---|
+| 1 | #13 | a causal "now" implying a re-score created a counterexample it did not create |
+| 2 | #17 | a two-row sweep read as a swept column |
+| 3 | #19 | a capture action listing a new rule's consumers and none of its contradictors |
+| 4 | #20 | a "0 of the 31" contradicting the clause it attached to |
+| 5 | #25 | building the known-bad checker of section 2 |
+| 6 | #30 | a signature in my own plan text that made a required field impossible |
+| 7 | #36 | reading a decision-number ceiling off a branch 145 commits stale |
+| 8 | #36 | citing two task briefs as required reading that had never been generated |
+| 9 | #36 | asserting a date difference of eight days that is nine |
+| 10 | #37 | ordering the merge at a plan step that runs *before* the stop gating it (section 19) |
+| 11 | #37 | a gradient grep I reported as three hits, which is four |
+| 12 | #38 | a capture action routed to a later task that nothing ever checked was discharged |
+
+Entries 1 through 7 are the enumeration the ledger kept as it went — #30's
+standing note counts six, #36 calls itself "my seventh instance" — and they are
+all section 1's shape. 8 and 9 rode in with 7 and are not that shape at all.
+10, 11 and 12 were found after #36, by Task 10's implementer and by the final
+whole-branch review.
+
+**One borderline case is excluded, named so the count is auditable rather than
+merely asserted.** Spec finding F4's measured tally went stale inside this
+campaign, under its own 145-commit absorption (#37's second defect, section 20).
+That is a claim that decayed rather than an error made at authoring, so it is
+not counted here; a reader who counts it gets thirteen, and the lesson it
+carries is recorded either way.
 
 Three things about that list are worth more than the number.
 
-**The plan text is where defects originate, again.** Most of the nine live in
-documents nobody executes directly — three in ledger entries, one in a
-dispatch, one in a plan's type signature. **None of those would have been
-caught by running anything**, which is the whole of why they needed a reader
-rather than a gate.
+**The plan text is where defects originate, again.** Most of them live in
+documents nobody executes directly — four in ledger entries, one in a dispatch,
+one in a plan's type signature, two in plan step ordering and a capture action.
+**None of those would have been caught by running anything**, which is the whole
+of why they needed a reader rather than a gate.
 
-**Implementers caught four of them**, in every case by declining to proceed
-rather than by reviewing after the fact. See section 4.
+**Implementers caught five of them**, in every case by declining to proceed
+rather than by reviewing after the fact. See section 4. A sixth — the last row
+in the table — was caught by the final whole-branch review, and it is the one
+nobody was in a position to decline, because the task that should have built it
+was never told it owed anything.
 
 **Two of them are instances of lessons this project had already written down**,
 in this repository, before this campaign started. The known-bad checker was
@@ -141,11 +167,11 @@ myself.
 
 ## 4. The highest-yield behaviour in the campaign was an implementer declining to build something and saying so
 
-Four requirement defects in my plan text were found this way — more than any
+**Five** requirement defects in my plan text were found this way — more than any
 review stage produced, and in every case the gap was structurally invisible to
 review because the plan was internally consistent:
 
-The four are summarised rather than quoted; the implementers' own wording is in
+The five are summarised rather than quoted; the implementers' own wording is in
 the ledger entries named beside each.
 
 | what was reported, in substance | the defect it exposed |
@@ -154,8 +180,9 @@ the ledger entries named beside each.
 | the brief fixes this function's signature as two verdicts and no identity, so an item id cannot be attached (#30) | the finding that fires when **a capability was lost** — the one event the campaign exists to make visible — could not name the item that lost it |
 | the brief specifies this statistic through a worked test rather than defining it; here are both readings, and here is the assertion that rules one out (#31) | the statistic's semantics existed only as a solution to a test, and the sibling family's own test name points at the *wrong* reading |
 | there is no render-level test file here, unlike the two sibling families, which do test their own render (#33) | the report's five compliance properties — ordering, caveat placement, separately reported unscored tally, both headline counts, no backlog heading — were asserted by nothing |
+| the brief lists a sluice submission at this step and also makes G6 a hard stop, and a submission merges and pushes `main`, which would remove that stop (#37) | **the plan ordered the merge before the stop that gates the merge.** Section 19; the only one of the five where compliance would have bypassed a human gate rather than merely shipped a weaker artifact |
 
-The pattern is identical in all four: **an implementer neither silently built
+The pattern is identical in all five: **an implementer neither silently built
 the missing thing nor silently skipped it.** It reported the gap. The
 distinction between *another task owns this* and *no task owns this* is one only
 the controller can resolve, and only if somebody surfaces it — and in the first
@@ -163,9 +190,9 @@ case the honest report was followed by a check that found the answer was "no
 task owns this", which is the half that actually closed the hole.
 
 This is worth naming as a practice rather than praised as diligence, because it
-has a cost the process must be willing to pay: each of those four reports
+has a cost the process must be willing to pay: each of those five reports
 *delayed a task* and *overruled its own brief*. The campaign's output is better
-in four measurable ways because a brief was treated as fallible. The
+in five measurable ways because a brief was treated as fallible. The
 instruction that follows is for the dispatcher as much as the implementer:
 **a brief that cannot be questioned produces a plan's defects verbatim in the
 artifact.** When I widened the signature in case two I said so explicitly —
@@ -605,7 +632,98 @@ written before the collapsing ruling had been applied to that task's data, so no
 amount of plan-time review could have found this. Checking one task's claims one
 task ahead found it in minutes.
 
-## 19. What held up
+## 19. A plan ordered the merge before the stop that gates the merge
+
+This is the campaign's most consequential requirement defect and the only one
+where compliance would have **bypassed a human gate** rather than merely shipped
+a weaker artifact. Every other defect in this document cost an artifact some
+quality. This one would have cost Nathan his review.
+
+Plan Task 10 Step 5 read *"Final gate, then submit to the sluice"* and carried
+the submission command outright. A sluice submission merges the branch and
+pushes `main`. G6 — the merge stop — is a constitutionally manual gate whose
+entire purpose is to sit in front of exactly that. So the plan instructed a task
+to perform the merge *before* the stop that gates it, and the plan was
+internally consistent while doing it: the same document declared G6 a hard stop
+three sections earlier. Nothing compares a plan's step ordering against its own
+declared gates.
+
+**Task 10's implementer refused.** It named both halves — the step and the stop —
+observed that a submission merges and pushes, and stopped after pushing the
+branch so the SHA would be ready for whoever held the gate. It did not ask for
+permission to skip the step; it reported why the step could not be obeyed as
+written.
+
+Three things generalise from it.
+
+**The hazard is not "the plan said something wrong" but "the plan said something
+executable."** A defect in prose produces a worse document. A defect in an
+instruction that carries a runnable command produces an *action*, and this one's
+action was irreversible in the only way that matters — a merged `main` cannot be
+un-reviewed. The class worth watching for is narrow and checkable: **a plan step
+that invokes a gated operation, anywhere in a plan that also declares the gate.**
+That comparison is mechanical and nobody ran it, here or anywhere.
+
+**An autopilot makes this more likely, not less.** Routine gates auto-resolve
+against standing policy, which is the point; the two that do not are named as
+hard stops precisely because no policy can stand in for them. A plan written
+under autopilot is written in a register where gates are things that resolve
+themselves, and the two exceptions have to survive in prose alone.
+
+**The refusal is the control, and it is a person's judgement, not a mechanism.**
+Nothing in the substrate would have stopped this: the implementer held the
+branch, the command was valid, and the pre-push hook's one rule is about who
+holds the canonical box's claim, not about whether a human has reviewed. Had the
+task complied, the merge would have been correct by every gate the project owns.
+The only thing between the plan and the bypass was an implementer reading two
+parts of its own brief against each other and believing the stop over the step.
+
+## 20. A figure went stale inside the campaign that measured it
+
+Spec finding F4 recorded a measurement of the committed gallery — a count of
+occupation layers by tech horizon — as evidence that the tech ladder's whole
+observable variance is buried in ruin strata. Then this branch absorbed 145
+commits of `main`, and the same command returned different numbers. The
+conclusion survived and in fact strengthened: the extra layers are all *dead*
+strata, which is what "the horizon dates the dead" asserts. But the stated tally
+was a **claim with a date, and the date passed inside the campaign that wrote
+it** — the shortest shelf life this project has recorded for a committed figure.
+
+**The implementer drew the durable lesson before the controller did.** Asked to
+write the chronicle, it led with the *arithmetic* rather than the tally: offsets
+drawn on `[0, 300]`, a bake ending at year 2000, the top rung opening at 1400,
+therefore every living community is above the last threshold under any
+aggregation rule. That sentence cannot go stale, because it is a derivation over
+three committed constants rather than a count of what happens to be in a
+generated file today.
+
+So: **prefer the derivation to the measurement when both say the same thing.
+Only one of them rots.** A measurement is still worth stating — it is the
+evidence the derivation is about the real code — but it belongs beside the
+derivation and subordinate to it, not in the position where a reader takes the
+claim from.
+
+## 21. Two smaller ones, recorded rather than repaired
+
+**A grep of mine undercounted, again, in the gradient sweep.** Checking whether
+any Confidence Gradient bet moved, I reported three incidental hits in the tier
+sections. The implementer re-ran it rather than inheriting the number and found
+four. The conclusion is unchanged — the gradient's technology-adjacent term
+appears nowhere in the tier sections, so no bet moves — but it is a fourth
+uncomputed number of mine in a campaign whose subject is uncomputed numbers, and
+the mechanism is always the same: a number that came out of a command *looks*
+like a measurement even when nobody re-ran the command.
+
+**One controller edit skipped review, and is declared rather than discovered.**
+Family law for this family cited every decision it rests on except the one that
+opens the family. Task 10's implementer flagged it as outside its brief; I made
+the edit myself instead of spending a dispatch-and-review cycle on a
+cross-reference. Controller fixes skipping review is normally forbidden, and the
+reason to accept it here is that the alternative was shipping family law that
+does not cite its own founding decision, while the edit adds a pointer and
+changes no rule. It is recorded so the trade can be judged rather than found.
+
+## 22. What held up
 
 **The freeze, made structural rather than promised.** Both corpora were
 authored and committed before a line of evaluation code existed. There was
@@ -669,10 +787,14 @@ Carried as registry rows and ledger follow-ups rather than folded in:
   is wrong for ours. Our doc comment warns in one direction; the sibling cannot
   warn about a family that postdates it. A one-line pointer belongs to whoever
   next has reason to touch that file.
-- **A criterion's JSON tag is derived from its Rust variant name in both
-  families**, so renaming a variant would silently change the wire tag and break
-  parsing of frozen corpora with nothing catching it. Correct today, invisible
-  until a rename lands.
+- **A criterion's JSON tag is derived from its Rust variant name in
+  `cli/src/regularities.rs`**, so renaming a variant there would silently change
+  the wire tag and break parsing of that family's frozen corpus with nothing
+  catching it. Correct today, invisible until a rename lands. **This family's own
+  exposure is closed** — Task 6 pinned both of `technologies::Criterion`'s tags
+  with an explicit `#[serde(rename = …)]`, so only the sibling still carries the
+  latent shape, and the pointer here names that file rather than "both families"
+  so the next reader opens the one that still has it.
 - **A vocabulary gap rather than an absence**: raiding strength is computed as
   population times a tech weight, so a standing army is indistinguishable from
   its people *in principle*, and the ratified vocabulary has no value for "the

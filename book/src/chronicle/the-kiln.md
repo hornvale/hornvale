@@ -57,15 +57,33 @@ the last threshold the ladder has. **Every survivor is classical, on every
 seed, necessarily.**
 
 The committed gallery shows both halves of that. The biographical readout for
-seed 42 carries ten community sketches at world-year 1699, and all ten of them
-say the same sentence: *They had classical statecraft and engineering.* Ten of
-ten, with no second phrasing anywhere in the file. Meanwhile the ruin
-stratigraphy for the same seed carries seventeen occupation layers whose
-horizons, read from the deepest upward, run one neolithic, six
-bronze-working, one classical, three iron-working, and then seven classical to
-the surface. **The ladder dates the dead. It does not describe the living** —
-the whole of its observable variance is buried, and it is buried in the
-literal sense that it only appears in strata.
+seed 42 carries ten community sketches, and all ten of them say the same
+sentence: *They had classical statecraft and engineering.* Ten of ten, with no
+second phrasing anywhere in the file. Meanwhile the ruin stratigraphy for the
+same seed carries seventeen occupation layers whose horizons, read from the
+deepest upward, run one neolithic, six bronze-working, one classical, three
+iron-working, and then six classical to the surface — seven classical in all.
+**The ladder dates the dead. It does not describe the living** — the whole of
+its observable variance is buried, and it is buried in the literal sense that
+it only appears in strata.
+
+There is a sharper version of that inside the ten sketches, and it is not the
+one the readout appears to make. Those ten lives are not contemporaries: their
+birth years are 1699, 1765, 1593, 479, 1214, 1794, 1925, 1879, 1482 and 400.
+The one born in year 400 and dead in 476 is narrated with classical statecraft,
+and `tech_for` cannot return that for year 400 under any offset the model draws
+— `400 + 300` is still short of the 900 rung, let alone 1400. The cause is a
+ratchet: `touch` raises a community's horizon and never lowers it (`if tech >
+c.tech { c.tech = tech; }`), so the committed `occ-tech` is the community's
+*terminal* rung, and the readout cites that fact (`occ-tech`) for any year of
+the life it is narrating. **So the horizon is not even the horizon as of the
+narrated moment.** The earliest year any community can stand at the top rung is
+1100 — the 1400 threshold less the largest offset the model draws — so this
+life, over in 476, is described with a capability its own community could not
+have held for another six centuries at least. That is a second, independent
+statement of the same finding, reached from the other end: the ladder does not
+describe the living, and what it describes about the dead is where they
+finished, not where they were.
 
 ## The one term that could have diverged, and does not
 

@@ -778,10 +778,10 @@ too, and the argument for uniformity across all 41 items is stated so that
 it can be attacked directly. WHAT IS NOT FROZEN, AND SHOULD NOT BE READ AS
 IF IT WERE: the 16 `contested` marks are claims about a historical
 literature rather than about this repository, and a historiography can move.
-A later reader who finds that one of the eight is settled, in either
-direction, should say so in a campaign record rather than editing this file --
-the mark's job is to tell a reader which rows would move if the history
-moved, and an un-marked row is not a claim that the history is closed.
+A later reader who finds that one of the 16 is settled, in either direction,
+should say so in a campaign record rather than editing this file -- the
+mark's job is to tell a reader which rows would move if the history moved,
+and an un-marked row is not a claim that the history is closed.
 
 ## Reading this report
 
