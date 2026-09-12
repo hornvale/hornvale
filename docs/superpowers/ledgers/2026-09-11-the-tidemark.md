@@ -959,23 +959,37 @@ instinct in each case:
 
 `founder_collision`'s 0–2999 positive-set sweep budgets **~800 s** in its own
 `#[ignore]` reason (prior sweeps: 692.89 / 744.21 / 768.72 / 798.87 s). At
-this roster it ran **past 4,620 s and had not finished** — a ≥5.8x rise, and
-nobody predicted it. Cause: the sweep builds 3,000 worlds through the
-deep-history bake, and the settling roster went 15 → 20, so every world pays
-for five more peoples' placement and promotion. Worth knowing before any
-future campaign widens the roster again; the instrument is offline-only, so
-the cost is invisible until someone runs it.
+this roster it ran **8,160 s without finishing and was stopped** — a **≥10.2x**
+rise. Cause: it builds 3,000 worlds through the deep-history bake on ten
+threads, and the settling roster went 15 → 20, so every world pays for five
+more peoples' placement and promotion.
+
+**Consequence, stated plainly because it is the one thing this task did not
+finish:** the three `founder_collision` tests pin a positive set taken from
+that sweep, and re-taking it is now an hours-long job rather than a
+thirteen-minute one. They are RED and un-re-pinned. The instrument is
+offline-only and `#[ignore]`d, so this cost was invisible until someone ran
+it — and the next campaign to widen the roster should budget for it before
+starting, not discover it at the end.
 
 ### The whole-workspace figure, with its date
 
-**6,089 tests, 1,326.787 s** (`cargo nextest run --workspace
---no-fail-fast`, MacBookPro, 2026-09-11, at the Task 3 fix round). The first
+**6,089 tests, 1,315.696 s** (`cargo nextest run --workspace
+--no-fail-fast`, MacBookPro, 2026-09-11, at the close of the Task 3 fix
+round; an earlier run the same evening read 1,326.787 s for the same test
+count, so ~1,320 s is the figure and ~11 s is its noise). The first
 whole-workspace number this campaign has taken, recorded because the campaign
 has just taken the roster from 39 kinds to 45 and Task 4 adds nine more: if
 that moves materially, the next reader deserves two numbers rather than an
 anecdote.
 
 ### Known-red at the close of this task, and why
+
+**Five tests, in two groups, neither of them unfinished re-pinning.**
+
+The three `founder_collision` tests are blocked on the sweep above, which is
+now an hours-long instrument. The two census ones are blocked on the canonical
+box:
 
 `census_sentinel::the_first_three_census_worlds_match_the_committed_rows` and
 `tripwire::the_committed_census_agrees_with_a_live_rebuild_of_the_tripwire_seeds`

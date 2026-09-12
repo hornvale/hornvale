@@ -136,15 +136,24 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
     // world's deterministic history, which re-draws the lexicons this arm
     // assignment reads. A readout, not a target.
     //
-    // THE TIDEMARK re-pin: (10, 5) -> (9, 11), over a roster of 20 rather
-    // than 15. Six marine peoples enter the settling roster, so both the
-    // POPULATION and the lexicons re-draw; the denominator below moves with
-    // the arm counts and the two are re-pinned together, because an arm count
-    // without its denominator is not interpretable. A readout, not a target.
-    assert_eq!((god, spirit), (9, 11), "frozen arm counts over 20 peoples");
+    // THE TIDEMARK re-pin: (10, 5) -> (9, 11), over a roster of **21**
+    // rather than 15. Six marine peoples arrive, so both the POPULATION and
+    // the lexicons re-draw; the denominator below moves with the arm counts
+    // and the two are re-pinned together, because an arm count without its
+    // denominator is not interpretable. A readout, not a target.
+    //
+    // **21, not 20, and the difference is `merfolk`.** This loop ranges over
+    // the peoples `society_registry` holds — decision 0068's `minded ∧
+    // social` gate — not over the `Settled` ones. Those two sets were
+    // extensionally equal until The Tidemark authored a `Gregarious` people,
+    // and 20 was my first re-pin here: the settling roster's size, reached by
+    // assuming the equality still held rather than by reading what the loop
+    // iterates. It does not settle, it does improvise a name, and it belongs
+    // in this denominator.
+    assert_eq!((god, spirit), (9, 11), "frozen arm counts over 21 peoples");
     assert_eq!(
         god + spirit + wordless,
-        20,
+        21,
         "every people resolves to exactly one arm"
     );
 }
