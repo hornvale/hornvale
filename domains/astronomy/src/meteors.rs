@@ -19,19 +19,64 @@ fn angle_difference(angle: f64, target: f64) -> f64 {
     (angle - target + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI
 }
 
+fn body_frame_altitude(
+    system: &StarSystem,
+    instant: StdInstant,
+    coord: crate::sky_position::EquatorialCoord,
+    observer: MeteorObservation,
+) -> f64 {
+    let frame = anchor_body_to_frame_at(system, instant);
+    let (lat, lon) = (
+        observer.latitude.get().to_radians(),
+        observer.longitude.get().to_radians(),
+    );
+    let (dec, ra) = (coord.dec_deg.to_radians(), coord.ra_deg.to_radians());
+    let inertial = [
+        math::cos(dec) * math::cos(ra),
+        math::cos(dec) * math::sin(ra),
+        math::sin(dec),
+    ];
+    let body = [
+        frame[0][0] * inertial[0] + frame[1][0] * inertial[1] + frame[2][0] * inertial[2],
+        frame[0][1] * inertial[0] + frame[1][1] * inertial[1] + frame[2][1] * inertial[2],
+        frame[0][2] * inertial[0] + frame[1][2] * inertial[1] + frame[2][2] * inertial[2],
+    ];
+    math::asin(
+        (math::cos(lat) * math::cos(lon) * body[0]
+            + math::cos(lat) * math::sin(lon) * body[1]
+            + math::sin(lat) * body[2])
+            .clamp(-1.0, 1.0),
+    )
+    .to_degrees()
+}
+
 fn comet_nodes(
     comet: &Comet,
     from: f64,
     to: f64,
+    anchor_radius: f64,
 ) -> Option<Vec<(f64, crate::ephemeris::OrbitalState, [f64; 3])>> {
     let elements = comet.orbital_elements();
+    let coplanar = math::sin(comet.inclination_deg.to_radians()).abs() < 1e-10;
     let z = |t: f64| {
         let state = orbital_state_at(&elements, StdInstant(t))?;
-        Some(comet.orient_vector(state.position)[2])
+        let position = comet.orient_vector(state.position);
+        Some(if coplanar {
+            state.radius - anchor_radius
+        } else {
+            position[2]
+        })
     };
     let mut left = from;
     let mut left_z = z(left)?;
     let mut nodes = Vec::new();
+    if coplanar && left_z.abs() < 1e-10 {
+        let state = orbital_state_at(&elements, StdInstant(from))?;
+        let position = comet.orient_vector(state.position);
+        nodes.push((math::atan2(position[1], position[0]), state, position));
+        left = from + (to - from) / CROSSING_SAMPLES as f64;
+        left_z = z(left)?;
+    }
     for index in 1..=CROSSING_SAMPLES {
         let right = from + (to - from) * index as f64 / CROSSING_SAMPLES as f64;
         let right_z = z(right)?;
@@ -238,8 +283,13 @@ pub fn debris_stream_from_comet(
         return Err(MeteorAbsence::InvalidOrbit);
     }
     let comet_epoch = comet.perihelion_epoch.get();
-    let nodes = comet_nodes(comet, comet_epoch, comet_epoch + comet.period.get())
-        .ok_or(MeteorAbsence::NoCrossing)?;
+    let nodes = comet_nodes(
+        comet,
+        comet_epoch,
+        comet_epoch + comet.period.get(),
+        system.anchor.orbit.get(),
+    )
+    .ok_or(MeteorAbsence::NoCrossing)?;
     let (crossing_epoch, anchor_state, comet_state) = nodes
         .into_iter()
         .filter_map(|(node_longitude, comet_state, node_position)| {
@@ -334,18 +384,32 @@ pub fn meteor_shower_at(
         return Err(MeteorAbsence::InvalidOrbit);
     }
     let duration = 2.0 * stream.width.get()
-        / (stream.relative_velocity_au_per_day[0].powi(2)
-            + stream.relative_velocity_au_per_day[1].powi(2))
+        / stream
+            .relative_velocity_au_per_day
+            .iter()
+            .map(|component| component * component)
+            .sum::<f64>()
+            .sqrt();
+    let planar_speed = (stream.relative_velocity_au_per_day[0]
+        * stream.relative_velocity_au_per_day[0]
+        + stream.relative_velocity_au_per_day[1] * stream.relative_velocity_au_per_day[1])
         .sqrt();
-    if !duration.is_finite() || duration <= 0.0 {
+    if !planar_speed.is_finite() || planar_speed <= 0.0 || !duration.is_finite() || duration <= 0.0
+    {
         return Err(MeteorAbsence::InvalidStream);
     }
     let phase = ((instant.get() - stream.epoch.get()).rem_euclid(year)) / year;
+    if !phase.is_finite() {
+        return Err(MeteorAbsence::InvalidStream);
+    }
     let signed = if phase <= 0.5 {
         phase * year
     } else {
         (phase - 1.0) * year
     };
+    if !signed.is_finite() || !(instant.get() - signed).is_finite() {
+        return Err(MeteorAbsence::InvalidStream);
+    }
     let peak = StdInstant(instant.get() - signed);
     let ecliptic = EclipticCoord {
         lon_deg: stream.radiant.lon_deg,
@@ -354,11 +418,13 @@ pub fn meteor_shower_at(
     let equatorial = equatorial_at(&ecliptic, system.forcing.obliquity_at(instant.get()), 0.0);
     let calendar = calendar_of(system);
     let altitude = if let Some((_, fraction)) = calendar.local_day(instant) {
+        let solar_ra = calendar.solar_equatorial(instant).ra_deg;
         let hour = (std::f64::consts::TAU
             * (fraction - 0.5)
             * if calendar.is_retrograde() { -1.0 } else { 1.0 }
-            + (observer.longitude.get() - equatorial.ra_deg).to_radians())
-        .rem_euclid(std::f64::consts::TAU);
+            + (solar_ra - equatorial.ra_deg + observer.longitude.get()).to_radians()
+            + std::f64::consts::PI)
+            .rem_euclid(std::f64::consts::TAU);
         math::asin(
             (math::sin(observer.latitude.get().to_radians())
                 * math::sin(equatorial.dec_deg.to_radians())
@@ -369,30 +435,7 @@ pub fn meteor_shower_at(
         )
         .to_degrees()
     } else {
-        let frame = anchor_body_to_frame_at(system, instant);
-        let (lat, lon) = (
-            observer.latitude.get().to_radians(),
-            observer.longitude.get().to_radians(),
-        );
-        let dec = equatorial.dec_deg.to_radians();
-        let ra = equatorial.ra_deg.to_radians();
-        let inertial = [
-            math::cos(dec) * math::cos(ra),
-            math::cos(dec) * math::sin(ra),
-            math::sin(dec),
-        ];
-        let body = [
-            frame[0][0] * inertial[0] + frame[1][0] * inertial[1] + frame[2][0] * inertial[2],
-            frame[0][1] * inertial[0] + frame[1][1] * inertial[1] + frame[2][1] * inertial[2],
-            frame[0][2] * inertial[0] + frame[1][2] * inertial[1] + frame[2][2] * inertial[2],
-        ];
-        math::asin(
-            (math::cos(lat) * math::cos(lon) * body[0]
-                + math::cos(lat) * math::sin(lon) * body[1]
-                + math::sin(lat) * body[2])
-                .clamp(-1.0, 1.0),
-        )
-        .to_degrees()
+        body_frame_altitude(system, instant, equatorial, observer)
     };
     let attenuation = (1.0 - observer.atmospheric_attenuation.clamp(0.0, 1.0))
         * (1.0 - observer.moonlight.clamp(0.0, 1.0));
@@ -415,22 +458,28 @@ pub fn meteor_shower_at(
     if signed.abs() > duration / 2.0 {
         return Err(MeteorAbsence::OutsideSeason);
     }
-    let solar_altitude = calendar.local_day(instant).map_or(0.0, |(_, fraction)| {
-        let sun = calendar.solar_equatorial(instant);
-        let hour = (std::f64::consts::TAU
-            * (fraction - 0.5)
-            * if calendar.is_retrograde() { -1.0 } else { 1.0 }
-            + (observer.longitude.get() - sun.ra_deg).to_radians())
-        .rem_euclid(std::f64::consts::TAU);
-        math::asin(
-            (math::sin(observer.latitude.get().to_radians()) * math::sin(sun.dec_deg.to_radians())
-                + math::cos(observer.latitude.get().to_radians())
-                    * math::cos(sun.dec_deg.to_radians())
-                    * math::cos(hour))
-            .clamp(-1.0, 1.0),
-        )
-        .to_degrees()
-    });
+    let sun = calendar.solar_equatorial(instant);
+    let solar_altitude = calendar.local_day(instant).map_or_else(
+        || body_frame_altitude(system, instant, sun, observer),
+        |(_, fraction)| {
+            let hour = (std::f64::consts::TAU
+                * (fraction - 0.5)
+                * if calendar.is_retrograde() { -1.0 } else { 1.0 }
+                + (calendar.solar_equatorial(instant).ra_deg - sun.ra_deg
+                    + observer.longitude.get())
+                .to_radians())
+            .rem_euclid(std::f64::consts::TAU);
+            math::asin(
+                (math::sin(observer.latitude.get().to_radians())
+                    * math::sin(sun.dec_deg.to_radians())
+                    + math::cos(observer.latitude.get().to_radians())
+                        * math::cos(sun.dec_deg.to_radians())
+                        * math::cos(hour))
+                .clamp(-1.0, 1.0),
+            )
+            .to_degrees()
+        },
+    );
     let reason = if observer.daylight >= 1.0 || solar_altitude > 1e-12 {
         Some(MeteorAbsence::Daylight)
     } else if observer.atmospheric_attenuation >= 1.0 {
@@ -560,6 +609,16 @@ mod tests {
     }
 
     #[test]
+    fn coplanar_stream_uses_radial_intersections_instead_of_every_sample() {
+        let (system, mut comet) = fixture();
+        comet.inclination_deg = 0.0;
+        comet.semi_major_axis = Au(4.0 / 3.0);
+        let stream = stream(&system, &comet);
+        assert!(stream.epoch.get().is_finite());
+        assert!(stream.radiant.lat_deg.abs() < 1e-10);
+    }
+
+    #[test]
     fn eccentric_anchor_crossing_uses_actual_radius_not_semimajor_axis() {
         let (mut system, mut comet) = fixture();
         system.forcing.ecc_mean = 0.5;
@@ -615,8 +674,11 @@ mod tests {
         );
         assert!((result.radiant.lon_deg - 90.0).abs() < 1e-10);
         assert!((result.radiant.lat_deg - 40.893394649130904).abs() < 1e-10);
-        // A diameter of 0.04 AU crossed at tau/400 AU/day.
-        assert!((result.duration.get() - 16.0 / std::f64::consts::TAU).abs() < 1e-10);
+        // A diameter of 0.04 AU crossed at the full relative speed.
+        let speed = ((std::f64::consts::TAU / 400.0).powi(2)
+            + (std::f64::consts::TAU * 3.0_f64.sqrt() / 800.0).powi(2))
+        .sqrt();
+        assert!((result.duration.get() - 0.04 / speed).abs() < 1e-10);
     }
 
     #[test]
