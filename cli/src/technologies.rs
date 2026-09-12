@@ -1,13 +1,14 @@
 //! The `technologies/` corpus loader: does a *people* acquire, hold, and
 //! lose this capability?
 //!
-//! Sixth corpus family (decision 0135's basis test; see `technologies/
-//! CLAUDE.md` for the family's own law). Closest to `regularities/`
-//! (`cli/src/regularities.rs`, the sibling this module's shape mirrors) and
-//! distinguished from it by a per-people capability trajectory rather than a
-//! macro-statistic over a population, by demands **derived** by transitive
-//! closure over `presupposes` (decision 0386) rather than declared, and by
-//! the one new verdict `lost`.
+//! Sixth corpus family, opened by decision 0986 (which applies decision
+//! 0135's basis test and states this family's anchor rules; see
+//! `technologies/CLAUDE.md` for the family's own law). Closest to
+//! `regularities/` (`cli/src/regularities.rs`, the sibling this module's
+//! shape mirrors) and distinguished from it by a per-people capability
+//! trajectory rather than a macro-statistic over a population, by demands
+//! **derived** by transitive closure over `presupposes` (decision 0386)
+//! rather than declared, and by the one new verdict `lost`.
 //!
 //! **The loader, the freeze, and the prerequisite lattice** (Tasks 3-4 of
 //! The Kiln). It parses a corpus and fails loudly on malformed input — an
