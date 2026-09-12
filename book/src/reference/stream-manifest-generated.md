@@ -32,6 +32,12 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/stellar-topology` | stellar-root topology draw |
 | `astronomy/binary-parameters` | binary companion and orbit parameter draws |
 | `astronomy/wanderer-phases` | per-wanderer circular orbital phases at genesis |
+| `astronomy/comet-count` | persistent comet count |
+| `astronomy/comet-identities` | stable persistent comet identities |
+| `astronomy/comet-orbits` | persistent comet orbital elements |
+| `astronomy/comet-epochs` | persistent comet perihelion epochs |
+| `astronomy/comet-activity` | persistent comet activity parameters |
+| `astronomy/comet-visibility` | persistent comet visibility parameters |
 
 ### hornvale-chronicle
 

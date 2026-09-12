@@ -1,6 +1,7 @@
 //! Sky genesis assembly: world seed in, complete star system out.
 
 use crate::anchor::{Anchor, generate_anchor_for_stellar};
+use crate::comets::{Comet, generate_comets};
 use crate::moons::{Moon, generate_moons};
 use crate::neighborhood::{Neighbor, generate_neighbors};
 use crate::pins::{GenesisError, SkyPins};
@@ -27,6 +28,8 @@ pub struct StarSystem {
     pub forcing: crate::forcing::OrbitalForcing,
     /// Wandering sibling planets, innermost first (observational: no physical effect on the anchor — declared approximation).
     pub wanderers: Vec<Wanderer>,
+    /// Small bounded roster of persistent comet identities.
+    pub comets: Vec<Comet>,
 }
 
 pub use hornvale_kernel::genesis::GenesisOutcome;
@@ -48,6 +51,7 @@ pub fn generate(
     let forcing = crate::forcing::generate_forcing(astronomy_seed, &anchor, &moons, pins);
     let wanderers =
         generate_wanderers_with_mass(astronomy_seed, stellar.gravity_mass(&star), &anchor, pins);
+    let comets = generate_comets(astronomy_seed, stellar.gravity_mass(&star), &anchor);
     Ok(GenesisOutcome {
         value: StarSystem {
             star,
@@ -57,6 +61,7 @@ pub fn generate(
             neighbors,
             forcing,
             wanderers,
+            comets,
         },
         notes,
     })
@@ -75,6 +80,7 @@ mod tests {
         assert!(system.moons.len() <= 3);
         assert!(!system.neighbors.is_empty());
         assert!(system.wanderers.len() <= 4);
+        assert!(system.comets.len() <= crate::comets::MAX_COMETS);
     }
 
     #[test]

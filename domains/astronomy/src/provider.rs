@@ -569,6 +569,7 @@ mod tests {
                 moon_phase_offsets: vec![0.0],
             },
             wanderers: vec![],
+            comets: vec![],
         };
         let sky = GeneratedSky::new(GenesisOutcome {
             value: system,
@@ -638,6 +639,7 @@ mod tests {
                 moon_phase_offsets,
             },
             wanderers: vec![],
+            comets: vec![],
         };
         GeneratedSky::new(GenesisOutcome {
             value: system,

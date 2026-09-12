@@ -68,5 +68,40 @@ hornvale_kernel::stream_labels! {
         BINARY_PARAMETERS = "binary-parameters" => "binary companion and orbit parameter draws";
         /// Per-wanderer genesis phases, isolated from orbit/class/albedo draws.
         WANDERER_PHASES = "wanderer-phases" => "per-wanderer circular orbital phases at genesis";
+        /// Number of persistent comets generated with the system.
+        COMET_COUNT = "comet-count" => "persistent comet count";
+        /// Stable comet identity draws, isolated from every physical parameter.
+        COMET_IDENTITIES = "comet-identities" => "stable persistent comet identities";
+        /// Per-comet Keplerian shape and orientation draws.
+        COMET_ORBITS = "comet-orbits" => "persistent comet orbital elements";
+        /// Per-comet perihelion epoch draws.
+        COMET_EPOCHS = "comet-epochs" => "persistent comet perihelion epochs";
+        /// Per-comet baseline activity and apparition-variation draws.
+        COMET_ACTIVITY = "comet-activity" => "persistent comet activity parameters";
+        /// Per-comet nucleus, albedo, and brightness draws.
+        COMET_VISIBILITY = "comet-visibility" => "persistent comet visibility parameters";
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stream_labels;
+
+    #[test]
+    fn comet_genesis_has_dedicated_streams() {
+        let labels: Vec<_> = stream_labels()
+            .into_iter()
+            .map(|(label, _)| label)
+            .collect();
+        for expected in [
+            "astronomy/comet-count",
+            "astronomy/comet-identities",
+            "astronomy/comet-orbits",
+            "astronomy/comet-epochs",
+            "astronomy/comet-activity",
+            "astronomy/comet-visibility",
+        ] {
+            assert!(labels.contains(&expected), "missing stream {expected}");
+        }
     }
 }

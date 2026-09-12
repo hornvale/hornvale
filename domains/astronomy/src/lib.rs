@@ -4,6 +4,7 @@
 pub mod anchor;
 pub mod anchor_radius;
 pub mod calendar;
+pub mod comets;
 pub mod eclipses;
 pub mod ephemeris;
 pub mod facts;
@@ -33,6 +34,10 @@ pub use anchor_radius::anchor_radius;
 pub use calendar::{
     Calendar, SkyBand, TWILIGHT_DEPTH_DEG, WandererCalendarMark, calendar_of,
     wanderer_calendar_marks,
+};
+pub use comets::{
+    Comet, CometId, CometObservation, CometReturn, CometVisibility, MAX_COMETS,
+    comet_appearance_at, generate_comets, visibility_tier,
 };
 pub use eclipses::{
     EclipseBody, EclipseCycle, EclipseEvent, EclipseKind, EclipseObserverResult, EclipseRecurrence,
