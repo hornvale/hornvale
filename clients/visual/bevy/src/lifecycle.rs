@@ -73,6 +73,7 @@ pub struct SceneCatalog {
     surface: CatalogSurfaceState,
     fallback_surface: Option<Entity>,
     surface_radius_km: Option<f64>,
+    surface_sea_level_m: Option<f64>,
 }
 /// Application camera/viewport; source geometry always comes from the mirror.
 pub struct SceneTarget {
@@ -465,6 +466,9 @@ impl SceneCatalog {
         let radius_km = self
             .surface_radius_km
             .ok_or_else(|| ViewError::Binding("catalog has no anchor surface radius".into()))?;
+        let sea_level_m = self
+            .surface_sea_level_m
+            .ok_or_else(|| ViewError::Binding("catalog has no source sea level".into()))?;
         let mut mesh = surface::surface_mesh(&reply.patch, None);
         let positions = reply
             .patch
@@ -472,17 +476,18 @@ impl SceneCatalog {
             .iter()
             .map(|vertex| {
                 let direction = Vec3::from_array(vertex.position.map(|value| value as f32));
-                let radius = (radius_km + vertex.height_m / 1000.0) / KM_PER_UNIT;
+                let height_above_sea_km = (vertex.height_m - sea_level_m) / 1000.0;
+                let radius = (radius_km + height_above_sea_km) / KM_PER_UNIT;
                 (direction * radius as f32).to_array()
             })
             .collect::<Vec<_>>();
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
         let mesh = world.resource_mut::<Assets<Mesh>>().add(mesh);
         let mut surface_material = surface::surface_material(&reply.patch);
-        // The fallback is one monolithic globe, so its covered region cannot be
-        // hidden independently. Keep it for uncovered pixels and give the ready
-        // patch deterministic depth precedence instead of drawing coplanar faces.
-        surface_material.depth_bias = -1.0;
+        // Keep the monolithic globe for uncovered pixels. The ready patch itself
+        // is the region-specific suppression mask: positive Bevy depth bias pulls
+        // only its triangles ahead of the fallback instead of drawing coplanar.
+        surface_material.depth_bias = 1.0;
         let material = world
             .resource_mut::<Assets<StandardMaterial>>()
             .add(surface_material);
@@ -703,6 +708,7 @@ impl SceneCatalog {
         self.surface = CatalogSurfaceState::default();
         self.fallback_surface = None;
         self.surface_radius_km = None;
+        self.surface_sea_level_m = None;
         self.binding = Some(mirror.initial().binding.clone());
         self.generation = mirror.generation();
         world.insert_resource(CaptureResult::default());
@@ -740,6 +746,7 @@ impl SceneCatalog {
             .and_then(|b| b.radius_km)
             .ok_or_else(|| ViewError::Document("missing anchor radius".into()))?;
         self.surface_radius_km = Some(radius);
+        self.surface_sea_level_m = Some(mirror.initial().tiles.sea_level_m);
         let medium = world
             .resource_mut::<Assets<ScatteringMedium>>()
             .add(ScatteringMedium::earth(256, 256).with_density_multiplier(0.18));

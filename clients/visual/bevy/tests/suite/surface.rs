@@ -541,8 +541,8 @@ fn catalog_reply(mirror: &ObservationMirror, request_id: u64, patch: &str) -> St
 }
 
 #[test]
-fn catalog_reply_moves_pending_to_ready_and_owns_bevy_assets() {
-    // Catches returning transient Mesh/Material values without catalog insertion.
+fn ready_patch_suppresses_its_fallback_region_without_hiding_uncovered_globe() {
+    // Catches a global fallback hide or a patch biased behind its covered region.
     let (mut world, mirror, mut catalog) = scene_catalog();
     let revision = mirror.initial().binding.source_revision.clone();
     let key = documents::surface_patch(&patch_json(&revision))
@@ -574,6 +574,18 @@ fn catalog_reply_moves_pending_to_ready_and_owns_bevy_assets() {
     );
     assert!(catalog.fallback_surface_visible(&world));
     assert_eq!(world.get::<Visibility>(entity), Some(&Visibility::Visible));
+    let mesh = world.get::<Mesh3d>(entity).unwrap();
+    assert_eq!(
+        world
+            .resource::<Assets<Mesh>>()
+            .get(&mesh.0)
+            .unwrap()
+            .indices()
+            .unwrap()
+            .len(),
+        6,
+        "suppression must be bounded to the ready patch's two triangles"
+    );
     let material = world
         .get::<MeshMaterial3d<StandardMaterial>>(entity)
         .unwrap();
@@ -583,8 +595,8 @@ fn catalog_reply_moves_pending_to_ready_and_owns_bevy_assets() {
             .get(&material.0)
             .unwrap()
             .depth_bias,
-        -1.0,
-        "the ready patch must have distinct raster depth without hiding uncovered fallback"
+        1.0,
+        "positive Bevy depth bias must pull only the ready patch ahead of covered fallback"
     );
 }
 
@@ -627,9 +639,10 @@ fn stale_catalog_reply_is_rejected_before_asset_insertion() {
 }
 
 #[test]
-fn patch_spawn_uses_body_radius_and_preserves_metric_relief() {
-    // Catches publishing the source's unit sphere without physical scene scale.
+fn patch_spawn_uses_body_radius_and_source_sea_level_datum() {
+    // Catches treating reference-datum elevation as height above sea level.
     let (mut world, mirror, mut catalog) = scene_catalog();
+    assert_ne!(mirror.initial().tiles.sea_level_m, 0.0);
     let revision = mirror.initial().binding.source_revision.clone();
     let mut patch: serde_json::Value = serde_json::from_str(&patch_json(&revision)).unwrap();
     patch["samples"][0]["height_m"] = serde_json::json!(1000.0);
@@ -673,7 +686,8 @@ fn patch_spawn_uses_body_radius_and_preserves_metric_relief() {
         .unwrap()
         .radius_km
         .unwrap();
-    let expected = ((anchor_radius_km + 1.0) / lifecycle::KM_PER_UNIT) as f32;
+    let height_above_sea_km = (1000.0 - mirror.initial().tiles.sea_level_m) / 1000.0;
+    let expected = ((anchor_radius_km + height_above_sea_km) / lifecycle::KM_PER_UNIT) as f32;
     assert!((Vec3::from(points[0]).length() - expected).abs() < 1e-5);
 }
 
