@@ -4,7 +4,7 @@
     clippy::disallowed_methods,
     reason = "client mesh and material math must not import the simulation kernel"
 )]
-use crate::documents::{Moon, Tiles};
+use crate::documents::{Moon, SurfacePatchDocument, SurfacePatchFeature, Tiles};
 use bevy::{
     asset::RenderAssetUsages,
     mesh::{Indices, PrimitiveTopology},
@@ -234,6 +234,154 @@ pub fn globe_mesh(t: &Tiles, radius_km: f64, km_per_unit: f64) -> Mesh {
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uv)
         .with_inserted_indices(Indices::U32(indices))
+}
+
+/// Convert a source-owned facet document into a render mesh. Heights and
+/// normals come from the document; the small unit scale keeps this helper
+/// independent of the body's physical radius, which is applied by the caller.
+pub fn surface_mesh(
+    patch: &SurfacePatchDocument,
+    transition: Option<&SurfacePatchDocument>,
+) -> Mesh {
+    let mut positions = patch
+        .vertices
+        .iter()
+        .map(render_position)
+        .collect::<Vec<_>>();
+    let mut normals = patch
+        .vertices
+        .iter()
+        .map(|vertex| vertex.normal.map(|value| value as f32))
+        .collect::<Vec<_>>();
+    let mut uv = patch.vertices.iter().map(render_uv).collect::<Vec<_>>();
+    let mut colors = patch
+        .vertices
+        .iter()
+        .map(|vertex| material_color(vertex.material_weights))
+        .collect::<Vec<_>>();
+    let mut indices = patch.triangles.iter().flatten().copied().collect::<Vec<_>>();
+    if let Some(document) = transition {
+        let candidate = if document.transition_triangles.is_empty() {
+            &document.triangles
+        } else {
+            &document.transition_triangles
+        };
+        let mut remapped = Vec::with_capacity(candidate.len() * 3);
+        for triangle in candidate {
+            for index in triangle {
+                let vertex = &document.vertices[*index as usize];
+                let mapped = patch
+                    .vertices
+                    .iter()
+                    .position(|candidate| candidate.position == vertex.position)
+                    .unwrap_or_else(|| {
+                        positions.push(render_position(vertex));
+                        normals.push(vertex.normal.map(|value| value as f32));
+                        uv.push(render_uv(vertex));
+                        colors.push(material_color(vertex.material_weights));
+                        positions.len() - 1
+                    });
+                remapped.push(mapped as u32);
+            }
+        }
+        if !remapped.is_empty() {
+            indices = remapped;
+        }
+    }
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uv)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colors)
+        .with_inserted_indices(Indices::U32(indices))
+}
+
+fn render_position(vertex: &crate::documents::SurfacePatchVertex) -> [f32; 3] {
+    let position = Vec3::from_array(vertex.position.map(|value| value as f32));
+    let height = (1.0 + vertex.height_m as f32 * 1e-6).max(0.001);
+    (position * height).to_array()
+}
+
+fn render_uv(vertex: &crate::documents::SurfacePatchVertex) -> [f32; 2] {
+    let p = vertex.position;
+    [
+        (p[1].atan2(p[0]) / std::f64::consts::TAU + 0.5) as f32,
+        (0.5 - p[2].clamp(-1.0, 1.0).asin() / std::f64::consts::PI) as f32,
+    ]
+}
+
+/// Consume the continuous source material weights as one presentation material.
+/// No biome category or semantic feature is inferred in the client.
+pub fn surface_material(patch: &SurfacePatchDocument) -> StandardMaterial {
+    let mut weights = [0.0_f64; 8];
+    let mut water = 0.0;
+    for vertex in &patch.vertices {
+        for (sum, value) in weights.iter_mut().zip(vertex.material_weights) {
+            *sum += value;
+        }
+        water += vertex.water_depth_m.max(0.0);
+    }
+    let count = patch.vertices.len().max(1) as f64;
+    let color = material_color(weights.map(|value| value / count));
+    StandardMaterial {
+        base_color: Color::linear_rgba(color[0], color[1], color[2], color[3]),
+        perceptual_roughness: (0.92 - (water / count / 500.0).clamp(0.0, 0.55)) as f32,
+        reflectance: 0.04,
+        ..default()
+    }
+}
+
+fn material_color(weights: [f64; 8]) -> [f32; 4] {
+    let palette = [
+        [0.36, 0.28, 0.16],
+        [0.18, 0.38, 0.16],
+        [0.50, 0.46, 0.25],
+        [0.63, 0.58, 0.48],
+        [0.03, 0.22, 0.38],
+        [0.26, 0.56, 0.58],
+        [0.58, 0.48, 0.28],
+        [0.72, 0.74, 0.70],
+    ];
+    let total = weights.iter().copied().sum::<f64>().max(1e-12);
+    let color: [f32; 3] = std::array::from_fn(|channel| {
+        (weights
+            .iter()
+            .zip(palette)
+            .map(|(weight, color)| weight.max(0.0) * color[channel])
+            .sum::<f64>()
+            / total) as f32
+    });
+    [color[0], color[1], color[2], 1.0]
+}
+
+/// Return a bounded source-owned curve footprint at a render position.
+/// Distance is measured against every curve segment, so a feature remains
+/// visible even when no sampled patch vertex lies on its centerline.
+pub fn narrow_feature_mask(
+    patch: &SurfacePatchDocument,
+    feature: &SurfacePatchFeature,
+    position: [f32; 3],
+) -> f32 {
+    if !patch.features.iter().any(|candidate| candidate == feature) {
+        return 0.0;
+    }
+    let position = Vec3::from_array(position);
+    let mut best = 0.0_f32;
+    for (index, segment) in feature.points.windows(2).enumerate() {
+        let start = Vec3::from_array(segment[0].map(|value| value as f32));
+        let end = Vec3::from_array(segment[1].map(|value| value as f32));
+        let delta = end - start;
+        let denominator = delta.length_squared();
+        let along = if denominator > f32::EPSILON {
+            ((position - start).dot(delta) / denominator).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let distance = position.distance(start + delta * along);
+        let width = feature.width_rad[index].max(1e-6) as f32;
+        best = best.max((1.0 - distance / width).clamp(0.0, 1.0));
+    }
+    best
 }
 /// Smooth, seeded presentation noise. Never used for physical positions or relief.
 fn noise(p: [f64; 3], seed: u32) -> f64 {

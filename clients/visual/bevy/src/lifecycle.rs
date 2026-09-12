@@ -1,5 +1,9 @@
 //! GPU-independent scene ownership, asset lifetime and atomic ECS application.
-use crate::{Binding, CameraPose, ObservationMirror, ViewError, astronomy::surface};
+use crate::{
+    Binding, CameraPose, ObservationMirror, ViewError,
+    astronomy::surface,
+    documents::{self, SurfacePatchCacheKey, SurfacePatchDocument},
+};
 use bevy::{
     camera::visibility::RenderLayers,
     light::{Atmosphere, atmosphere::ScatteringMedium},
@@ -62,6 +66,103 @@ pub struct SceneTarget {
     pub camera: Entity,
     pub width: u32,
     pub height: u32,
+}
+
+/// Mesh and material data prepared from one revision-qualified patch.
+pub struct SurfaceMeshHandles {
+    pub key: SurfacePatchCacheKey,
+    pub mesh: Mesh,
+    pub material: StandardMaterial,
+}
+
+thread_local! {
+    static ACTIVE_SURFACE_PATCH: std::sync::Mutex<Option<SurfacePatchCacheKey>> =
+        const { std::sync::Mutex::new(None) };
+}
+
+/// Register a source request as the active patch generation.
+///
+/// The request body is intentionally opaque here: source-side schema validation
+/// remains the source's responsibility. The renderer records only the cache
+/// identity needed to reject a late document from another observation.
+pub fn schedule_surface_patch(
+    mut key: SurfacePatchCacheKey,
+    request: String,
+) -> Result<(), ViewError> {
+    if key.revision.is_empty() || request.trim().is_empty() {
+        return Err(ViewError::Document(
+            "surface request requires a revision and body".into(),
+        ));
+    }
+    if key.child_path.iter().any(|digit| *digit > 3) {
+        return Err(ViewError::Document(
+            "surface cache key contains an invalid child path".into(),
+        ));
+    }
+    let request_value = serde_json::from_str::<serde_json::Value>(&request)
+        .map_err(|error| ViewError::Document(format!("invalid surface request: {error}")))?;
+    if let Some(revision) = request_value
+        .get("expected_revision")
+        .or_else(|| request_value.get("revision"))
+    {
+        let source_revision = revision
+            .get("source_revision")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| ViewError::Document("surface request has no source revision".into()))?;
+        let algorithm_version = revision
+            .get("algorithm_version")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| ViewError::Document("surface request has no algorithm version".into()))?;
+        let configuration_hash_hex = revision
+            .get("configuration_hash_hex")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| {
+                ViewError::Document("surface request has no configuration hash".into())
+            })?;
+        let full_revision = format!(
+            "{}\u{1f}{}\u{1f}{}",
+            source_revision, algorithm_version, configuration_hash_hex
+        );
+        if key.revision == source_revision {
+            key.revision = full_revision;
+        } else if key.revision != full_revision {
+            return Err(ViewError::Binding(
+                "surface request revision does not match its cache key".into(),
+            ));
+        }
+    }
+    ACTIVE_SURFACE_PATCH.with(|active| {
+        *active.lock().expect("surface schedule state is not poisoned") = Some(key)
+    });
+    Ok(())
+}
+
+/// Apply a source-owned patch only if it belongs to the currently scheduled
+/// observation. Asset creation is pure until the caller inserts the returned
+/// handles into Bevy's asset collections.
+pub fn apply_surface_patch(
+    document: &SurfacePatchDocument,
+) -> Result<SurfaceMeshHandles, ViewError> {
+    documents::validate_surface_patch(document)?;
+    let key = document.cache_key();
+    ACTIVE_SURFACE_PATCH.with(|active| match active
+        .lock()
+        .expect("surface schedule state is not poisoned")
+        .as_ref()
+    {
+        Some(scheduled) if scheduled == &key => Ok(()),
+        Some(_) => Err(ViewError::Binding(
+            "surface patch belongs to a stale scheduled revision".into(),
+        )),
+        None => Err(ViewError::Binding(
+            "surface patch has no active scheduled request".into(),
+        )),
+    })?;
+    Ok(SurfaceMeshHandles {
+        key,
+        mesh: surface::surface_mesh(document, None),
+        material: surface::surface_material(document),
+    })
 }
 impl SceneCatalog {
     /// Prepare the entire snapshot first, then queue one atomic ECS application.

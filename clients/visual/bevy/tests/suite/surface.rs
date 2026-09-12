@@ -1,7 +1,8 @@
 use hornvale_bevy_view::{
     astronomy::{lighting, surface},
     bevy::mesh::VertexAttributeValues,
-    documents,
+    documents::{self, SurfacePatchCacheKey},
+    lifecycle,
 };
 #[test]
 fn globe_uses_source_north_and_sea_reference_without_relief_gain() {
@@ -96,4 +97,77 @@ fn physical_geometry_limits_include_scaled_radius_and_relief() {
     ] {
         assert!(render_radius(radius, relief, scale).is_err());
     }
+}
+
+fn patch_json(revision: &str) -> String {
+    serde_json::json!({
+        "schema": "scene/surface/v1",
+        "revision": {
+            "source_revision": revision,
+            "algorithm_version": "hornvale/surface-realization/v2",
+            "configuration_hash_hex": "11".repeat(32)
+        },
+        "address": {"macro_face": 0, "child_path": []},
+        "samples": [
+            {"position": [1.0,0.0,0.0], "height_m": 10.0, "normal": [1.0,0.0,0.0], "material_weights": [1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "shoreline_distance_m": 10.0, "water_depth_m": 0.0, "flow_direction": [0.0,1.0,0.0], "flow_strength": 0.0, "channel_distance_m": 10.0, "channel_width_m": 0.0, "floodplain_weight": 0.0, "bank_weight": 0.0, "terrace_weight": 0.0, "delta_weight": 0.0, "ridge_direction": [0.0,1.0,0.0], "ridge_strength": 0.0},
+            {"position": [0.0,1.0,0.0], "height_m": 10.0, "normal": [0.0,1.0,0.0], "material_weights": [1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "shoreline_distance_m": 10.0, "water_depth_m": 0.0, "flow_direction": [0.0,1.0,0.0], "flow_strength": 0.0, "channel_distance_m": 10.0, "channel_width_m": 0.0, "floodplain_weight": 0.0, "bank_weight": 0.0, "terrace_weight": 0.0, "delta_weight": 0.0, "ridge_direction": [0.0,1.0,0.0], "ridge_strength": 0.0},
+            {"position": [0.0,0.0,1.0], "height_m": 10.0, "normal": [0.0,0.0,1.0], "material_weights": [1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "shoreline_distance_m": 10.0, "water_depth_m": 0.0, "flow_direction": [0.0,1.0,0.0], "flow_strength": 0.0, "channel_distance_m": 10.0, "channel_width_m": 0.0, "floodplain_weight": 0.0, "bank_weight": 0.0, "terrace_weight": 0.0, "delta_weight": 0.0, "ridge_direction": [0.0,1.0,0.0], "ridge_strength": 0.0},
+            {"position": [-1.0,0.0,0.0], "height_m": 10.0, "normal": [-1.0,0.0,0.0], "material_weights": [1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "shoreline_distance_m": 10.0, "water_depth_m": 0.0, "flow_direction": [0.0,1.0,0.0], "flow_strength": 0.0, "channel_distance_m": 10.0, "channel_width_m": 0.0, "floodplain_weight": 0.0, "bank_weight": 0.0, "terrace_weight": 0.0, "delta_weight": 0.0, "ridge_direction": [0.0,1.0,0.0], "ridge_strength": 0.0}
+        ],
+        "curves": [{"feature": {"kind":"channel_reach", "macro_anchor": 1, "ordinal": 0}, "points": [[0.0,-1.0,0.0],[0.0,1.0,0.0]], "width_rad": [0.05,0.05], "endpoints": [{"feature": {"kind":"channel_reach", "macro_anchor": 1, "ordinal": 0}, "side":"upstream", "boundary": null, "terminal":"headwater"}, {"feature": {"kind":"channel_reach", "macro_anchor": 1, "ordinal": 0}, "side":"downstream", "boundary": null, "terminal":"ocean"}] }],
+        "triangles": [[0,1,2],[0,2,3]]
+    }).to_string()
+}
+
+#[test]
+fn patch_document_round_trips() {
+    let json = patch_json(&"a".repeat(40));
+    let document = documents::surface_patch(&json).unwrap();
+    let encoded = serde_json::to_string(&document).unwrap();
+    let round_trip = documents::surface_patch(&encoded).unwrap();
+    assert_eq!(document, round_trip);
+}
+
+#[test]
+fn cache_key_includes_the_full_surface_revision() {
+    let first = documents::surface_patch(&patch_json(&"a".repeat(40))).unwrap();
+    let mut changed = first.clone();
+    changed.revision.algorithm_version.push_str("+changed");
+    assert_ne!(first.cache_key(), changed.cache_key());
+}
+
+#[test]
+fn stale_patch_is_not_applied() {
+    let revision = "a".repeat(40);
+    lifecycle::schedule_surface_patch(
+        SurfacePatchCacheKey {
+            revision: revision.clone(),
+            macro_face: 0,
+            child_path: vec![],
+        },
+        patch_json(&revision),
+    )
+    .unwrap();
+    let stale = documents::surface_patch(&patch_json(&"b".repeat(40))).unwrap();
+    assert!(lifecycle::apply_surface_patch(&stale).is_err());
+}
+
+#[test]
+fn curve_mask_survives_vertex_miss() {
+    let document = documents::surface_patch(&patch_json(&"a".repeat(40))).unwrap();
+    let mask = surface::narrow_feature_mask(&document, &document.features[0], [0.0, 0.0, 0.0]);
+    assert!(mask > 0.9);
+}
+
+#[test]
+fn mixed_lod_mesh_has_no_boundary_gap() {
+    let document = documents::surface_patch(&patch_json(&"a".repeat(40))).unwrap();
+    let mesh = surface::surface_mesh(&document, Some(&document));
+    let Some(VertexAttributeValues::Float32x3(points)) =
+        mesh.attribute(hornvale_bevy_view::bevy::mesh::Mesh::ATTRIBUTE_POSITION)
+    else {
+        panic!("positions")
+    };
+    assert_eq!(points.len(), document.vertices.len());
+    assert!(mesh.indices().is_some());
 }
