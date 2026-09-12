@@ -12,6 +12,7 @@ pub mod figures;
 pub mod forcing;
 pub mod heliacal;
 pub mod illuminant;
+pub mod meteors;
 pub mod moons;
 pub mod neighborhood;
 pub mod night_sky;

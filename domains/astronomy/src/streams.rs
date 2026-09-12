@@ -80,6 +80,8 @@ hornvale_kernel::stream_labels! {
         COMET_ACTIVITY = "comet-activity" => "persistent comet activity parameters";
         /// Per-comet nucleus, albedo, and brightness draws.
         COMET_VISIBILITY = "comet-visibility" => "persistent comet visibility parameters";
+        /// Derived debris-stream parameters; does not redraw comet identities.
+        COMET_DEBRIS_STREAMS = "comet-debris-streams" => "derived persistent comet debris streams";
     }
 }
 
@@ -100,6 +102,7 @@ mod tests {
             "astronomy/comet-epochs",
             "astronomy/comet-activity",
             "astronomy/comet-visibility",
+            "astronomy/comet-debris-streams",
         ] {
             assert!(labels.contains(&expected), "missing stream {expected}");
         }

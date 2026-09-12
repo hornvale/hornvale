@@ -26,6 +26,26 @@ mod tests {
             .expect("bounded seed sweep should contain a comet-bearing system")
     }
 
+    fn geometry_fixture() -> (StarSystem, Comet) {
+        let (_, mut system) = system_with_comets();
+        system.anchor.orbit = Au(1.0);
+        system.anchor.year = StdDays(400.0);
+        system.forcing.ecc_mean = 0.0;
+        system.forcing.ecc_amp = 0.0;
+        system.forcing.year_phase_offset = 0.25;
+        let mut comet = system.comets[0].clone();
+        comet.semi_major_axis = Au(4.0);
+        comet.eccentricity = 0.5;
+        comet.period = StdDays(100.0);
+        comet.perihelion_epoch = StdInstant(0.0);
+        comet.periapsis_longitude_deg = 90.0;
+        comet.ascending_node_deg = 0.0;
+        comet.inclination_deg = 0.0;
+        comet.baseline_activity = 1.0;
+        comet.return_variation = 0.0;
+        (system, comet)
+    }
+
     #[test]
     fn comet_identities_are_deterministic_bounded_and_use_the_identity_stream() {
         let (astronomy_seed, system) = system_with_comets();
@@ -75,10 +95,250 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(before.return_index, -1);
+        assert_eq!(before.return_index, 0);
         assert_eq!(at_epoch.return_index, 0);
+        assert_eq!(before.activity_multiplier, at_epoch.activity_multiplier);
         assert_eq!(third.return_index, 2);
         assert_ne!(at_epoch.activity_multiplier, third.activity_multiplier);
+    }
+
+    #[test]
+    fn apparition_boundaries_choose_nearest_perihelion_with_later_midpoint_ties() {
+        let (system, mut comet) = geometry_fixture();
+        comet.perihelion_epoch = StdInstant(1234.0);
+        comet.return_variation = 0.35;
+        for (cycles, expected) in [
+            (-1.5001, -2),
+            (-1.5, -1),
+            (-1.4999, -1),
+            (-0.75, -1),
+            (-0.5001, -1),
+            (-0.5, 0),
+            (-0.4999, 0),
+            (-0.25, 0),
+            (0.0, 0),
+            (0.25, 0),
+            (0.4999, 0),
+            (0.5, 1),
+            (0.5001, 1),
+            (1.5, 2),
+        ] {
+            let instant = StdInstant(comet.perihelion_epoch.get() + cycles * comet.period.get());
+            let appearance =
+                comet_appearance_at(&system, &comet, instant, CometObservation::dark_clear())
+                    .unwrap();
+            assert_eq!(appearance.return_index, expected, "cycles={cycles}");
+            let perihelion =
+                StdInstant(comet.perihelion_epoch.get() + expected as f64 * comet.period.get());
+            let passage =
+                comet_appearance_at(&system, &comet, perihelion, CometObservation::dark_clear())
+                    .unwrap();
+            assert_eq!(appearance.activity_multiplier, passage.activity_multiplier);
+            assert_eq!(
+                Some(appearance),
+                comet_appearance_at(&system, &comet, instant, CometObservation::dark_clear())
+            );
+        }
+    }
+
+    #[test]
+    fn inclination_and_node_change_observer_geometry() {
+        let (system, mut comet) = geometry_fixture();
+        let planar = comet_appearance_at(
+            &system,
+            &comet,
+            StdInstant(0.0),
+            CometObservation::dark_clear(),
+        )
+        .unwrap();
+        // Observer (0, 1, 0), perihelion (0, 2, 0).
+        assert!((planar.observer_distance.get() - 1.0).abs() < 1e-12);
+        comet.inclination_deg = 90.0;
+        let polar = comet_appearance_at(
+            &system,
+            &comet,
+            StdInstant(0.0),
+            CometObservation::dark_clear(),
+        )
+        .unwrap();
+        // Rotation about the x-axis puts perihelion at (0, 0, 2).
+        assert!((polar.observer_distance.get() - 5.0_f64.sqrt()).abs() < 1e-12);
+        assert!((polar.z_au - 2.0).abs() < 1e-12);
+        assert!(polar.position.y_au.abs() < 1e-12);
+        assert!((polar.solar_elongation_deg - 63.43494882292201).abs() < 1e-10);
+        assert!(polar.apparent_magnitude > planar.apparent_magnitude);
+        assert_eq!(polar.heliocentric_distance, planar.heliocentric_distance);
+        comet.ascending_node_deg = 90.0;
+        let on_node = comet_appearance_at(
+            &system,
+            &comet,
+            StdInstant(0.0),
+            CometObservation::dark_clear(),
+        )
+        .unwrap();
+        assert!((on_node.observer_distance.get() - 1.0).abs() < 1e-12);
+        assert!(on_node.z_au.abs() < 1e-12);
+    }
+
+    #[test]
+    fn retrograde_orientation_reverses_motion_and_preserves_radius() {
+        let (system, mut comet) = geometry_fixture();
+        comet.eccentricity = 0.0;
+        comet.periapsis_longitude_deg = 0.0;
+        comet.inclination_deg = 180.0;
+        let appearance = comet_appearance_at(
+            &system,
+            &comet,
+            StdInstant(25.0),
+            CometObservation::dark_clear(),
+        )
+        .unwrap();
+        assert!(appearance.position.x_au.abs() < 1e-12);
+        assert!((appearance.position.y_au + 4.0).abs() < 1e-12);
+        assert!(appearance.z_au.abs() < 1e-12);
+        assert_eq!(appearance.heliocentric_distance, Au(4.0));
+    }
+
+    #[test]
+    fn tail_strength_increases_with_activity_and_decreases_with_distance() {
+        let (system, mut comet) = geometry_fixture();
+        let near = comet_appearance_at(
+            &system,
+            &comet,
+            StdInstant(0.0),
+            CometObservation::dark_clear(),
+        )
+        .unwrap();
+        let far = comet_appearance_at(
+            &system,
+            &comet,
+            StdInstant(50.0),
+            CometObservation::dark_clear(),
+        )
+        .unwrap();
+        assert!(near.tail_strength > far.tail_strength);
+        comet.baseline_activity = 2.0;
+        let active = comet_appearance_at(
+            &system,
+            &comet,
+            StdInstant(0.0),
+            CometObservation::dark_clear(),
+        )
+        .unwrap();
+        assert!(active.tail_strength > near.tail_strength);
+        assert!(active.apparent_magnitude < near.apparent_magnitude);
+        // Observing conditions affect detection, not physical tail activity.
+        let daylight = comet_appearance_at(
+            &system,
+            &comet,
+            StdInstant(0.0),
+            CometObservation {
+                darkness: 0.0,
+                atmospheric_suppression: 100.0,
+            },
+        )
+        .unwrap();
+        assert_eq!(daylight.tail_strength, active.tail_strength);
+        assert_eq!(daylight.visibility, CometVisibility::Latent);
+    }
+
+    #[test]
+    fn tail_is_finite_at_high_eccentricity_and_extreme_finite_activity() {
+        let (system, mut comet) = geometry_fixture();
+        comet.eccentricity = 0.999;
+        for activity in [f64::MIN_POSITIVE, 1.0, f64::MAX] {
+            comet.baseline_activity = activity;
+            for days in [-50.0, -0.01, 0.0, 0.01, 50.0] {
+                let appearance = comet_appearance_at(
+                    &system,
+                    &comet,
+                    StdInstant(days),
+                    CometObservation::dark_clear(),
+                )
+                .unwrap();
+                assert!(appearance.tail_strength.is_finite());
+                assert!((0.0..=1.0).contains(&appearance.tail_strength));
+                assert!(appearance.apparent_magnitude.is_finite());
+            }
+        }
+    }
+
+    #[test]
+    fn invalid_orientation_and_periods_are_absent() {
+        let (system, comet) = geometry_fixture();
+        for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let mut bad = comet.clone();
+            bad.inclination_deg = invalid;
+            assert!(
+                comet_appearance_at(
+                    &system,
+                    &bad,
+                    StdInstant(0.0),
+                    CometObservation::dark_clear()
+                )
+                .is_none()
+            );
+            bad = comet.clone();
+            bad.ascending_node_deg = invalid;
+            assert!(
+                comet_appearance_at(
+                    &system,
+                    &bad,
+                    StdInstant(0.0),
+                    CometObservation::dark_clear()
+                )
+                .is_none()
+            );
+        }
+        for period in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            let mut bad = comet.clone();
+            bad.period = StdDays(period);
+            assert!(
+                comet_appearance_at(
+                    &system,
+                    &bad,
+                    StdInstant(0.0),
+                    CometObservation::dark_clear()
+                )
+                .is_none()
+            );
+        }
+    }
+
+    #[test]
+    fn validity_is_inclusive_and_centered_on_each_perihelion_epoch() {
+        let (system, mut comet) = geometry_fixture();
+        for epoch in [-2.0 * COMET_VALIDITY_DAYS, 2.0 * COMET_VALIDITY_DAYS] {
+            comet.perihelion_epoch = StdInstant(epoch);
+            for (offset, valid) in [
+                (-COMET_VALIDITY_DAYS - 1.0, false),
+                (-COMET_VALIDITY_DAYS, true),
+                (0.0, true),
+                (COMET_VALIDITY_DAYS, true),
+                (COMET_VALIDITY_DAYS + 1.0, false),
+            ] {
+                assert_eq!(
+                    comet_appearance_at(
+                        &system,
+                        &comet,
+                        StdInstant(epoch + offset),
+                        CometObservation::dark_clear()
+                    )
+                    .is_some(),
+                    valid,
+                    "epoch={epoch}, offset={offset}"
+                );
+            }
+            assert!(
+                comet_appearance_at(
+                    &system,
+                    &comet,
+                    StdInstant(0.0),
+                    CometObservation::dark_clear()
+                )
+                .is_none()
+            );
+        }
     }
 
     #[test]
@@ -162,7 +422,7 @@ pub const MAX_COMETS: usize = 5;
 
 /// Half-width of the comet evaluator's human-history validity window.
 /// plumb: pending(wave-1)
-const COMET_VALIDITY_DAYS: f64 = 3_652_500.0;
+pub(crate) const COMET_VALIDITY_DAYS: f64 = 3_652_500.0;
 
 /// Stable identity of a persistent comet.
 /// type-audit: bare-ok(constructor-edge)
@@ -203,6 +463,40 @@ pub struct Comet {
     pub activity_distance_exponent: f64,
 }
 
+impl Comet {
+    pub(crate) fn orbital_elements(&self) -> OrbitalElements {
+        OrbitalElements {
+            frame: OrbitalFrame::SystemPlaneAu,
+            epoch: self.perihelion_epoch,
+            period: self.period,
+            semi_major_axis: self.semi_major_axis.get(),
+            eccentricity: self.eccentricity,
+            mean_longitude_at_epoch_turns: self.periapsis_longitude_deg / 360.0,
+            periapsis_longitude_turns: self.periapsis_longitude_deg / 360.0,
+            validity: OrbitalValidity {
+                from: StdInstant(self.perihelion_epoch.get() - COMET_VALIDITY_DAYS),
+                until: StdInstant(self.perihelion_epoch.get() + COMET_VALIDITY_DAYS),
+            },
+        }
+    }
+
+    // The shared evaluator's longitude of periapsis = node + argument of
+    // periapsis. Rz(node) Rx(inclination) Rz(-node) tilts both state vectors.
+    pub(crate) fn orient_vector(&self, vector: [f64; 2]) -> [f64; 3] {
+        let node = self.ascending_node_deg.rem_euclid(360.0).to_radians();
+        let inclination = self.inclination_deg.rem_euclid(360.0).to_radians();
+        let (cos_node, sin_node) = (math::cos(node), math::sin(node));
+        let node_x = vector[0] * cos_node + vector[1] * sin_node;
+        let node_y = -vector[0] * sin_node + vector[1] * cos_node;
+        let tilted_y = node_y * math::cos(inclination);
+        [
+            node_x * cos_node - tilted_y * sin_node,
+            node_x * sin_node + tilted_y * cos_node,
+            node_y * math::sin(inclination),
+        ]
+    }
+}
+
 /// Observer conditions that attenuate a comet without changing it.
 /// type-audit: bare-ok(ratio: darkness), pending(wave-1: atmospheric_suppression)
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -235,21 +529,27 @@ pub enum CometVisibility {
 }
 
 /// One immutable comet identity evaluated at an explicit instant.
-/// type-audit: pending(wave-1: return_index), bare-ok(ratio: activity_multiplier), pending(wave-1: apparent_magnitude), pending(wave-1: solar_elongation_deg)
+/// type-audit: pending(wave-1: return_index), pending(wave-1: z_au), bare-ok(ratio: activity_multiplier), bare-ok(ratio: tail_strength), pending(wave-1: apparent_magnitude), pending(wave-1: solar_elongation_deg)
 #[derive(Debug, Clone, PartialEq)]
 pub struct CometReturn {
     /// Persistent identity shared by every return.
     pub comet_id: CometId,
-    /// Floor-indexed orbit relative to the perihelion epoch.
+    /// Nearest perihelion relative to the epoch; midpoint ties choose the later one.
     pub return_index: i64,
-    /// Heliocentric planar position from the shared orbital evaluator.
+    /// Heliocentric position projected onto the system plane, after orientation.
     pub position: OrbitalPosition,
+    /// Signed height above the system plane in AU.
+    pub z_au: f64,
     /// Distance from the stellar center.
     pub heliocentric_distance: Au,
-    /// Distance from the anchor observer.
+    /// Three-dimensional distance from the anchor observer.
     pub observer_distance: Au,
     /// Deterministic activity multiplier for this identity and return.
     pub activity_multiplier: f64,
+    /// Intrinsic tail prominence in `[0, 1]`, a bounded activity/heating proxy.
+    /// Equal to activity / (activity + heliocentric distance in AU squared).
+    /// This is neither an angular length nor an observer visibility threshold.
+    pub tail_strength: f64,
     /// Unattenuated apparent magnitude before local observing conditions.
     pub apparent_magnitude: f64,
     /// Angular separation from the stellar center in the anchor sky.
@@ -317,10 +617,12 @@ pub fn generate_comets(
 
 fn return_index(comet: &Comet, instant: StdInstant) -> Option<i64> {
     let cycles = (instant.get() - comet.perihelion_epoch.get()) / comet.period.get();
-    if !cycles.is_finite() || cycles < i64::MIN as f64 || cycles > i64::MAX as f64 {
+    let nearest = (cycles + 0.5).floor();
+    // i64::MAX rounds up to 2^63 as f64, so the upper bound is exclusive.
+    if !nearest.is_finite() || nearest < i64::MIN as f64 || nearest >= i64::MAX as f64 {
         return None;
     }
-    Some(cycles.floor() as i64)
+    Some(nearest as i64)
 }
 
 fn activity_at_return(comet: &Comet, index: i64) -> Option<f64> {
@@ -347,33 +649,25 @@ pub fn comet_appearance_at(
     instant: StdInstant,
     observation: CometObservation,
 ) -> Option<CometReturn> {
-    let state = orbital_state_at(
-        &OrbitalElements {
-            frame: OrbitalFrame::SystemPlaneAu,
-            epoch: comet.perihelion_epoch,
-            period: comet.period,
-            semi_major_axis: comet.semi_major_axis.get(),
-            eccentricity: comet.eccentricity,
-            mean_longitude_at_epoch_turns: comet.periapsis_longitude_deg / 360.0,
-            periapsis_longitude_turns: comet.periapsis_longitude_deg / 360.0,
-            validity: OrbitalValidity {
-                from: StdInstant(-COMET_VALIDITY_DAYS),
-                until: StdInstant(COMET_VALIDITY_DAYS),
-            },
-        },
-        instant,
-    )?;
+    if !comet.inclination_deg.is_finite() || !comet.ascending_node_deg.is_finite() {
+        return None;
+    }
+    let state = orbital_state_at(&comet.orbital_elements(), instant)?;
     let anchor = anchor_orbital_state_at(
         system.anchor.orbit,
         system.anchor.year,
         &system.forcing,
         instant,
     )?;
+    let [x_au, y_au, z_au] = comet.orient_vector(state.position);
+    let position = OrbitalPosition { x_au, y_au };
     let relative = [
-        state.position[0] - anchor.position[0],
-        state.position[1] - anchor.position[1],
+        position.x_au - anchor.position[0],
+        position.y_au - anchor.position[1],
+        z_au,
     ];
-    let observer_distance = (relative[0] * relative[0] + relative[1] * relative[1]).sqrt();
+    let observer_distance =
+        (relative[0] * relative[0] + relative[1] * relative[1] + relative[2] * relative[2]).sqrt();
     let star_distance =
         (anchor.position[0] * anchor.position[0] + anchor.position[1] * anchor.position[1]).sqrt();
     if !observer_distance.is_finite()
@@ -390,6 +684,10 @@ pub fn comet_appearance_at(
     let solar_elongation_deg = math::acos(elongation_cos).to_degrees();
     let index = return_index(comet, instant)?;
     let activity_multiplier = activity_at_return(comet, index)?;
+    // Saturating inverse-square heating proxy; this form avoids overflow in
+    // activity + radius^2 even for finite extreme inputs.
+    let scaled_distance = state.radius / activity_multiplier.sqrt();
+    let tail_strength = 1.0 / (1.0 + scaled_distance * scaled_distance);
     if !comet.absolute_magnitude.is_finite()
         || !comet.activity_distance_exponent.is_finite()
         || comet.activity_distance_exponent < 0.0
@@ -408,13 +706,12 @@ pub fn comet_appearance_at(
     Some(CometReturn {
         comet_id: comet.id,
         return_index: index,
-        position: OrbitalPosition {
-            x_au: state.position[0],
-            y_au: state.position[1],
-        },
+        position,
+        z_au,
         heliocentric_distance: Au(state.radius),
         observer_distance: Au(observer_distance),
         activity_multiplier,
+        tail_strength,
         apparent_magnitude,
         solar_elongation_deg,
         visibility: visibility_tier(

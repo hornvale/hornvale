@@ -38,6 +38,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/comet-epochs` | persistent comet perihelion epochs |
 | `astronomy/comet-activity` | persistent comet activity parameters |
 | `astronomy/comet-visibility` | persistent comet visibility parameters |
+| `astronomy/comet-debris-streams` | derived persistent comet debris streams |
 
 ### hornvale-chronicle
 
