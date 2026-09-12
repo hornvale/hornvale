@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 819 |
-| … file-level | 776 |
-| … associated (impl/trait) | 9 |
+| Quantity consts judged (the denominator) | 821 |
+| … file-level | 777 |
+| … associated (impl/trait) | 10 |
 | … inside a fn body | 34 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
 | Excluded: declared non-quantity type | 555 |
-| **Every `const` the walk touched** | **1547** |
+| **Every `const` the walk touched** | **1549** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **742**: file-level
+nor the whole `file-level` row — it is **743**: file-level
 constants of those five types. The `file-level` row itself is
-**776**, and the denominator is **819**; the difference is
+**777**, and the denominator is **821**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -63,12 +63,12 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `Hazards` | 1 |
 | `LifeSchedule` | 1 |
 | `Locomotion` | 3 |
-| `Self` | 5 |
+| `Self` | 6 |
 | `Snowpack` | 1 |
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 607 |
+| `f64` | 608 |
 | `i32` | 7 |
 | `i64` | 8 |
 | `u16` | 1 |
@@ -156,17 +156,17 @@ bare count would hide a quantity someone had wrongly denied.
 
 | Verdict | Count |
 |---------|------:|
-| pending(wave-1) | 627 |
+| pending(wave-1) | 628 |
 | per-individual | 2 |
 | per-people | 1 |
 | per-species | 32 |
 | per-world | 6 |
-| universal | 151 |
+| universal | 152 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 819 |
+| _total_ | 821 |
 
-Declared: **819 of 819**. Undeclared is backlog; a malformed
+Declared: **821 of 821**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -224,10 +224,10 @@ counts are already the Coverage table above. 41 finding(s).
 
 ## The contested middle
 
-384 of the 819 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 146 of the 358 files parsed —
+372 of the 821 constants sit in a file mentioning one of
+the kind-adjacency markers above, across 145 of the 358 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
-where `FATIGUE_RISE` lived. 384 of them are declared.
+where `FATIGUE_RISE` lived. 372 of them are declared.
 
 **This is a reading aid, not a gate.** The markers are substrings, and
 `Body` is shared with astronomy's celestial bodies, so the set is loose
@@ -257,4 +257,4 @@ in the inclusive direction on purpose.
 | species | 39 | 0 | 0 | 39 |
 | terrain | 152 | 0 | 0 | 152 |
 | vessel | 110 | 0 | 0 | 110 |
-| worldgen | 205 | 0 | 0 | 205 |
+| worldgen | 207 | 0 | 0 | 207 |

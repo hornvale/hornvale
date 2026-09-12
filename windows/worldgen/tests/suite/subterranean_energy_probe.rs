@@ -324,6 +324,38 @@ fn energy_field_with_fixed_moisture(
 /// `Substrate::moisture`'s indirect one via `chamber_moisture` — the
 /// opposite of what would make this a moisture-field artifact.
 ///
+/// ## Re-measured 2026-09-11 (The Trencher, Task 4) — same shape, 6-7x scale
+///
+/// `subterranean_energy` is no longer the mean of the seven sources: it is the
+/// `CHEMOSYNTHATE` aggregate of [`hornvale_worldgen::energy::chemical_supply`]
+/// — the four metabolite axes, each the SUM of the reactions yielding it,
+/// times `Geothermal`'s `[1, 2]` modifier, with `DetritalImport` routed out to
+/// `DETRITUS`. Same three seeds, same `BuildDepth::Terrain`:
+///
+/// | `Undercroft` | `Shallows` | `Deeps` | `Underdeep` | `Nadir` |
+/// |---|---|---|---|---|
+/// | 1.004527 | 1.316387 | 1.993109 | 2.094758 | 2.094758 |
+///
+/// **Still strictly non-decreasing, so the 2026-08-26 finding stands**: the
+/// derived field is monotone, not a trough, and this test's assertion is
+/// unchanged and still green. What moved is the SCALE (5.96x / 6.56x / 7.51x
+/// / 7.44x / 7.44x rung by rung) and the STEEPNESS: `Nadir`/`Undercroft` was
+/// 1.67x under the mean and is 2.085x under the sum, because the shallow
+/// detrital arm left the chemical aggregate. That was the predicted
+/// direction, and it is the whole subject of The Trencher's Task 5.
+///
+/// **The aggregate now exceeds the corpus's `[0,1]` `ENERGY` ruler at the
+/// MEDIAN of every rung** (`E_TEEMING` is `1.0`), which is a calibration
+/// finding, not a bug to clamp: each individual metabolite stays small
+/// (medians, `Undercroft`..`Nadir` — hydrogen 0.312/0.351/0.399/0.416/0.423,
+/// reduced iron 0.292/0.324/0.375/0.401/0.415, reduced sulphur
+/// 0.053/0.242/0.556/0.556/0.556, methane 0.025 flat), so nothing saturates
+/// at the metabolite level; it is the four-way sum that leaves the ruler.
+/// Hold-moisture-constant diagnostic, same run: 1.087337 / 1.359940 /
+/// 2.004707 / 2.094758 / 2.094758 — again the same shape as the real-moisture
+/// reading, so the depth-shape is still the sources' own and not a moisture
+/// artifact.
+///
 /// See `.superpowers/sdd/2026-08-26-the-sources/task-5-report.md` for the
 /// full readout (histogram, mutation control, red/green transcript).
 ///

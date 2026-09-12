@@ -1,8 +1,25 @@
 //! Named subterranean energy sources — the underworld's supply, factored into
 //! the terms a chamber can actually eat (Task 4, The Sources, rung 2 of the
-//! Underworld Larder). Nothing here sums them into a field yet: Task 5
-//! consumes [`EnergySource::ALL`] for that, and Task 9 feeds the result to
-//! species.
+//! Underworld Larder). [`chemical_supply`] reduces them to the food
+//! vocabulary a diet names, and [`chemical_supply_field_per_rung`] evaluates
+//! that over the globe; the capacity loops in [`crate`] read it.
+//!
+//! # Reactions are not foods (The Trencher, spec §4.2)
+//!
+//! The seven members of [`EnergySource::ALL`] are **reactions**; a diet names
+//! **metabolites**. The two are not in bijection and never were, so the
+//! reduction is a routing table ([`EnergySource::route`]) rather than an
+//! identity:
+//!
+//! - two reactions yield H₂ (serpentinization and radiolysis) and feed **one**
+//!   axis, summed;
+//! - one term is not food at all ([`EnergySource::Geothermal`] — a thermal
+//!   gradient), and becomes a **modifier** on the chemical supplies;
+//! - one term is not *chemical* food ([`EnergySource::DetritalImport`] —
+//!   surface detritus), and routes to the existing `DETRITUS` axis.
+//!
+//! Each mapping is argued at its own [`SupplyRoute`] variant and at
+//! [`chemical_supply`], because each is a judgment rather than a lookup.
 //!
 //! # The accounting (metaplan §3.2)
 //!
@@ -31,6 +48,22 @@
 //! this module ships that seventh, admittedly extra-registry, term rather
 //! than silently leaving the shallow half of underworld.rs's own claim
 //! unmodelled.
+//!
+//! **The U that justified it does not exist, and the term survives anyway
+//! (The Trencher, Task 4, 2026-09-11).** The paragraph above is kept as the
+//! record of why this term was added, but its prediction was falsified by the
+//! very measurement it was added to enable: `derived_energy_is_monotone_not_a
+//! _trough` measured per-rung `ENERGY` medians of 0.168609 / 0.200822 /
+//! 0.265342 / 0.281421 / 0.281449 (`Undercroft` → `Nadir`, 2026-08-26) —
+//! strictly non-decreasing, the opposite of a trough. So "could not produce
+//! the U" was never the reason to keep it; what *is* the reason is the
+//! sentence before it, that underworld.rs names detrital import as one of the
+//! two real halves of underworld supply. The Trencher therefore does not
+//! delete the term — it **reclassifies** it. `DetritalImport` is surface
+//! organic matter, so its yield now routes to the existing
+//! `hornvale_kernel::DETRITUS` axis ([`SupplyRoute::Detritus`]) instead of
+//! being averaged into chemical food, and nothing here was contorted to
+//! preserve a shape that measurement says is not there.
 //!
 //! `DetritalImport` reads a real `drainage: f64` parameter — the caller
 //! supplies `GeneratedTerrain::drainage_at(vertex)` — rather than a
@@ -247,6 +280,15 @@ const SULPHIDE_OXIDATION_MOISTURE_SATURATE: f64 = 0.4;
 /// plumb: pending(wave-1)
 const GEOTHERMAL_MOISTURE_SATURATE: f64 = 0.2;
 
+/// How much a fully-realized geothermal gradient multiplies the chemical
+/// metabolite supplies — the one knob of [`EnergySource::Geothermal`]'s
+/// modifier form (spec §4.2, ledger #2). `1.0` means the modifier spans
+/// `[1, 2]`: no thermal help at the surface datum, a doubling where the
+/// gradient term saturates. See [`chemical_supply`] for why the form is
+/// `1 + gain * g` and not one of the three alternatives.
+/// plumb: pending(wave-1)
+const GEOTHERMAL_MODIFIER_GAIN: f64 = 1.0;
+
 /// Depth (m) at which [`EnergySource::DetritalImport`] falls to half its
 /// surface value — the shallow reach of gravity/water-borne surface material
 /// before it thins out with distance from the entrance.
@@ -337,6 +379,112 @@ pub enum EnergySource {
     DetritalImport,
 }
 
+/// Where one [`EnergySource`]'s yield lands in the food vocabulary — the
+/// codomain of [`EnergySource::route`] (The Trencher, spec §4.2, ledger #2).
+///
+/// **Four metabolites, one correction and one non-food.** The four
+/// metabolite variants name the `hornvale_kernel` axes The Trencher's Task 3
+/// registered; [`SupplyRoute::Detritus`] is a *correction* rather than an
+/// addition (its source was never one of the registry row's six chemical
+/// mechanisms and its own doc already said so); [`SupplyRoute::Modifier`] is
+/// the one route that supplies no axis at all.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SupplyRoute {
+    /// Feeds `hornvale_kernel::HYDROGEN`. Two reactions route here and their
+    /// yields are **summed**: two sources of the same molecule add, which is
+    /// the whole of spec §4.3's argument at its smallest scale.
+    Hydrogen,
+    /// Feeds `hornvale_kernel::REDUCED_IRON`.
+    ReducedIron,
+    /// Feeds `hornvale_kernel::REDUCED_SULPHUR`.
+    ReducedSulphur,
+    /// Feeds `hornvale_kernel::METHANE`.
+    Methane,
+    /// Feeds the existing `hornvale_kernel::DETRITUS` axis — surface organic
+    /// and mineral material percolating in, which is what `DETRITUS` already
+    /// means at the surface. Routing it here is not a new axis and not a new
+    /// meaning; it is the removal of a category error, since a pile of
+    /// surface detritus was previously averaged into chemical food.
+    Detritus,
+    /// **Not food.** A thermal gradient is a condition that accelerates
+    /// chemistry, not a substance an organism assimilates, so this route
+    /// supplies no axis: its yield becomes a multiplier on the chemical
+    /// metabolites instead (see [`chemical_supply`] for the form and the
+    /// argument). Keeping the variant — rather than dropping the source from
+    /// [`EnergySource::ALL`] — is deliberate: `dominant_source` still reports
+    /// `Geothermal` as the term dominating a chamber, which is a true and
+    /// useful readout even though nothing eats it.
+    Modifier,
+}
+
+/// The lightless half of one point's supply vector: the `CHEMOSYNTHATE`
+/// aggregate, the four metabolite axes it disaggregates into, and the
+/// detrital import that routes to `DETRITUS`. Built by [`chemical_supply`],
+/// consumed by the two per-vertex capacity loops in [`crate`].
+///
+/// **Why one struct rather than five returns.** The five numbers are derived
+/// from one pass over [`EnergySource::ALL`] and are only meaningful together
+/// — `chemosynthate` is the sum of the other four chemical fields, so
+/// returning them separately would invite a caller to pair a fresh aggregate
+/// with a stale breakdown. There is one derivation, not five that must be
+/// kept in step.
+/// type-audit: bare-ok(ratio: chemosynthate), bare-ok(ratio: hydrogen), bare-ok(ratio: reduced_iron), bare-ok(ratio: reduced_sulphur), bare-ok(ratio: methane), bare-ok(ratio: detritus)
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct ChemicalSupply {
+    /// The `CHEMOSYNTHATE` aggregate — "chemical food", generically, for a
+    /// generalist that names no metabolite. See [`chemical_supply`] for the
+    /// aggregate rule and the double-counting consequence it carries.
+    pub chemosynthate: f64,
+    /// The `HYDROGEN` axis: serpentinization plus radiolysis.
+    pub hydrogen: f64,
+    /// The `REDUCED_IRON` axis: microbial/abiotic Fe(III) reduction.
+    pub reduced_iron: f64,
+    /// The `REDUCED_SULPHUR` axis: the sulphide-oxidation redox front.
+    pub reduced_sulphur: f64,
+    /// The `METHANE` axis: methanogenesis in porous carbonate.
+    pub methane: f64,
+    /// The `DETRITUS` contribution of [`EnergySource::DetritalImport`] — what
+    /// this rung gets from *above*, **added to** (never replacing) the
+    /// surface `DETRITUS` supply field the capacity loops already read.
+    pub detritus: f64,
+}
+
+impl ChemicalSupply {
+    /// Nothing supplied on any lightless axis — the reading for a vertex with
+    /// no chamber at all, and the second argument of the capacity loops'
+    /// cave-less fallback.
+    ///
+    /// plumb: universal(the additive identity of a supply reading rather than a tunable quantity -- every field is 0.0 by definition, and any other value would mean a vertex with no chamber supplied food)
+    pub const NONE: Self = Self {
+        chemosynthate: 0.0,
+        hydrogen: 0.0,
+        reduced_iron: 0.0,
+        reduced_sulphur: 0.0,
+        methane: 0.0,
+        detritus: 0.0,
+    };
+
+    /// An aggregate with no breakdown: `CHEMOSYNTHATE` supplied, every
+    /// metabolite axis zero.
+    ///
+    /// **This is the honest shape of a hydrothermal vent's surface supply**
+    /// ([`crate::marine_chemosynthate_supply_field`]), and stating it as its
+    /// own constructor is the point. The metabolite axes are an *underworld*
+    /// disaggregation; nothing has yet measured which molecules a vent's
+    /// plume actually carries, and a live peer campaign (The Tidemark) owns
+    /// the marine half. A vent therefore supplies the aggregate and zero on
+    /// every metabolite — not because its chemistry is undifferentiated, but
+    /// because this campaign has not differentiated it.
+    /// type-audit: bare-ok(ratio: chemosynthate)
+    #[must_use]
+    pub fn aggregate_only(chemosynthate: f64) -> Self {
+        Self {
+            chemosynthate,
+            ..Self::NONE
+        }
+    }
+}
+
 impl EnergySource {
     /// All seven sources — the row's six plus [`EnergySource::DetritalImport`].
     pub const ALL: [EnergySource; 7] = [
@@ -348,6 +496,28 @@ impl EnergySource {
         EnergySource::Geothermal,
         EnergySource::DetritalImport,
     ];
+
+    /// Where this reaction's yield goes in the food vocabulary (spec §4.2,
+    /// ledger #2) — the routing table the module doc calls a judgment rather
+    /// than a lookup. Total by construction: every variant routes somewhere,
+    /// so adding an eighth source is a compile error here until its
+    /// classification is made, which is the point.
+    #[must_use]
+    pub fn route(&self) -> SupplyRoute {
+        match self {
+            // Peridotite + water -> serpentine + H2.
+            EnergySource::Serpentinization => SupplyRoute::Hydrogen,
+            EnergySource::IronReduction => SupplyRoute::ReducedIron,
+            // Radiolysis also yields H2. Two reactions, one molecule, one
+            // axis — the spec's own worked example of why the table is not a
+            // bijection.
+            EnergySource::Radiolysis => SupplyRoute::Hydrogen,
+            EnergySource::SulphideOxidation => SupplyRoute::ReducedSulphur,
+            EnergySource::Methanogenesis => SupplyRoute::Methane,
+            EnergySource::Geothermal => SupplyRoute::Modifier,
+            EnergySource::DetritalImport => SupplyRoute::Detritus,
+        }
+    }
 
     /// This source's yield, `[0,1]`, given the chamber's material buffer,
     /// geothermal gradient, depth below the surface (m), a rung's moisture
@@ -424,27 +594,157 @@ impl EnergySource {
     }
 }
 
-/// The `ENERGY` ruler, `[0,1]`: every named source's yield
-/// ([`EnergySource::yield_at`]) at one point, combined by their **mean**.
+/// The whole lightless supply at one point: every named source's yield
+/// ([`EnergySource::yield_at`]) routed through [`EnergySource::route`] and
+/// summed **within** its metabolite, with [`EnergySource::Geothermal`]
+/// applied as a multiplier rather than as food.
 ///
-/// **Mean, not a clamped sum — found empirically, not designed in.** A first
-/// cut summed the seven sources and clamped the total to `[0,1]`
-/// (`EnvironmentVector::new` rejects a value outside that ruler). Measured
-/// over the frozen seed set, that clamp pinned **every rung's median to
-/// exactly `1.0`**: with moisture near-saturated at most chambers, four to
-/// six of the seven sources (the depth/gradient/drainage-gated ones, largely
-/// independent of which silica band a vertex's rock falls in) are
+/// # Why the seven-way mean is gone, and why this sum is not the sum that
+/// failed
+///
+/// **The old rule, preserved because it is the record of why the naive fix
+/// failed.** A first cut summed all seven sources and clamped the total to
+/// `[0,1]` (`EnvironmentVector::new` rejects a value outside that ruler).
+/// Measured over the frozen seed set, that clamp pinned **every rung's
+/// median to exactly `1.0`**: with moisture near-saturated at most chambers,
+/// four to six of the seven sources (the depth/gradient/drainage-gated ones,
+/// largely independent of which silica band a vertex's rock falls in) are
 /// simultaneously non-trivial often enough that the raw sum blows past `1.0`
 /// at the *median*, not just the tail. A clamp that fires at the median
-/// erases whatever depth-shape the seven sources have — a flat ceiling at
-/// every rung cannot trough anywhere, so that combination rule would have
-/// been shaping the answer away, not measuring it (the module doc's "nothing
-/// here was shaped to produce a U" claim scopes each *source*; a clamped sum
-/// that saturates everywhere breaks that claim one level up, at the
-/// combination). The mean is a convex combination of seven `[0,1]` values,
-/// so it lands in `[0,1]` **without ever needing to clamp** — nothing here
-/// is truncated at any point, in the tail or at the median, and the U this
-/// module's tests measure is whatever the seven sources' own shapes produce.
+/// erases whatever depth-shape the seven sources have, so that combination
+/// rule would have been shaping the answer away, not measuring it. The mean
+/// replaced it because a convex combination of seven `[0,1]` values lands in
+/// `[0,1]` without ever needing to clamp.
+///
+/// **The mean was never wrong about saturation; it was wrong about
+/// categories** (The Trencher, spec §2 and §4.2). Averaging five chemical
+/// foods, one thermal gradient and one pile of surface detritus produces a
+/// number whose units are nothing, and divides the answer by seven whatever
+/// a chamber's chemistry actually is — a ceiling imposed by the combination
+/// rule, which is what Task 5 measures.
+///
+/// **This sum is a narrower sum, and that is the whole reason it need not
+/// saturate.** The failed sum ran across all seven sources. This one sums
+/// **within a metabolite** — at most **two** reactions, and only for
+/// `HYDROGEN` — and the two hydrogen reactions peak at *opposite* ends of
+/// the felsic index (serpentinization at silica 0.05, radiolysis at 0.9,
+/// half-width 0.35 each: disjoint bands), so even that pair is in practice
+/// one term, not two. The two sources that made the old sum blow past `1.0`
+/// at the median are exactly the two that leave the food vocabulary here:
+/// `Geothermal` (near its own ceiling at every deep rung) and
+/// `DetritalImport`. Nothing is clamped or truncated at any point.
+///
+/// **What is traded away, and it is MEASURED rather than hedged.** The mean
+/// *guaranteed* `[0,1]`; this does not, and the overshoot is not hypothetical:
+/// measured 2026-09-11 over seeds 42/7/1234 at `BuildDepth::Terrain`, the
+/// per-rung medians of [`ChemicalSupply::chemosynthate`] are **1.004527 /
+/// 1.316387 / 1.993109 / 2.094758 / 2.094758** (`Undercroft` → `Nadir`), so
+/// the aggregate sits *above* the corpus's `E_TEEMING = 1.0` at the median of
+/// every rung. An earlier draft of this paragraph said "can in principle
+/// exceed"; that was true and useless, and the number replaces it.
+///
+/// **This is not the old saturation returning, and the distinction is the
+/// measurement's own.** Each individual metabolite stays small at the median
+/// (hydrogen 0.312→0.423, reduced iron 0.292→0.415, reduced sulphur
+/// 0.053→0.556, methane 0.025 flat, same run), so the "at most two reactions"
+/// argument above holds exactly where it was made — at the metabolite. What
+/// leaves the ruler is the four-way AGGREGATE, which is arithmetic rather than
+/// clamping: four terms near 0.4 sum to 1.6 however narrow each is. Whether
+/// the `ENERGY` ruler should be rescaled, or `GEOTHERMAL_MODIFIER_GAIN`
+/// lowered, or the aggregate rule changed, is The Trencher's Task 5 to decide
+/// from its own corpus-band occupancy table — not something to retune here to
+/// make a number look like a ruler it no longer shares units with.
+///
+/// Nothing in this tree constructs an `EnvironmentVector` from this value, so
+/// the overshoot panics nothing: `crate::inhabitant_fit` clamps at its own
+/// boundary (and therefore now saturates at essentially every chamber, worth
+/// knowing before reading a chemotroph's fit), and
+/// `subterranean_energy_probe.rs` already reports a realized max above `1.0`
+/// as a finding rather than treating it as impossible.
+///
+/// # `Geothermal`'s modifier form: `1 + gain * g`
+///
+/// A gradient is a *rate* condition — hotter rock runs the same chemistry
+/// faster (Arrhenius) — so the form is multiplicative on the chemical
+/// metabolites, and applies to them only. Three alternatives were considered
+/// and each fails on a stated ground:
+///
+/// - **A bare multiply (`* g`)** deletes all shallow chemistry: `g` is near
+///   zero at the surface datum, and serpentinization runs at ambient
+///   temperature. That over-corrects a category error into a physical
+///   falsehood.
+/// - **An additive term (`+ g`)** supplies food where there is no reaction to
+///   modify: a hot, chemically barren chamber would feed a hydrogen eater.
+///   That is the *same* category error this campaign removes, wearing a
+///   different sign. Multiplicative is exactly zero where the chemistry is
+///   zero.
+/// - **An unbounded multiplier** would let the modifier become the dominant
+///   signal and re-impose a depth-only shape on a field whose point is
+///   lithological variation. `[1, 2]` is strong but bounded.
+///
+/// It does **not** multiply `DetritalImport`: detritus falls in from above
+/// and the rock's heat does not make more of it.
+///
+/// # The `CHEMOSYNTHATE` aggregate rule
+///
+/// [`ChemicalSupply::chemosynthate`] is the **sum of the four metabolites**.
+/// `CHEMOSYNTHATE` survives as an aggregate (ledger #1) and the kernel's own
+/// `HYDROGEN` doc settles what the aggregate *is*: the metabolite axes are
+/// "a disaggregation of `CHEMOSYNTHATE` itself". A generalist eating chemical
+/// food indiscriminately therefore receives exactly what four specialists
+/// would collectively receive — which is the only rule under which the
+/// aggregate and the breakdown describe one world rather than two.
+///
+/// **The consequence, stated because it is an authoring rule and not an
+/// arithmetic error:** a niche weighting *both* `CHEMOSYNTHATE` and a
+/// metabolite double-counts that metabolite. Author one or the other. The
+/// alternative rules were worse: a *mean* of the four would make the
+/// generalist strictly poorer than any specialist for no physical reason,
+/// and a *max* would make it exactly as rich as the best specialist while
+/// eating everything, which is richer than the sum only when one metabolite
+/// dominates and poorer otherwise — an incoherent creature either way.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(ratio: moisture), bare-ok(diagnostic-value: drainage)
+pub fn chemical_supply(
+    material: &MaterialBuffer,
+    gradient: GeothermalGradient,
+    depth_m: f64,
+    moisture: f64,
+    drainage: f64,
+) -> ChemicalSupply {
+    let mut out = ChemicalSupply::NONE;
+    let mut gradient_yield = 0.0;
+    // `EnergySource::ALL`'s order is the summation order, so the float
+    // accumulation is fixed by a constant rather than by iteration luck.
+    for source in EnergySource::ALL {
+        let y = source.yield_at(material, gradient, depth_m, moisture, drainage);
+        match source.route() {
+            SupplyRoute::Hydrogen => out.hydrogen += y,
+            SupplyRoute::ReducedIron => out.reduced_iron += y,
+            SupplyRoute::ReducedSulphur => out.reduced_sulphur += y,
+            SupplyRoute::Methane => out.methane += y,
+            SupplyRoute::Detritus => out.detritus += y,
+            SupplyRoute::Modifier => gradient_yield += y,
+        }
+    }
+    let modifier = 1.0 + GEOTHERMAL_MODIFIER_GAIN * gradient_yield;
+    out.hydrogen *= modifier;
+    out.reduced_iron *= modifier;
+    out.reduced_sulphur *= modifier;
+    out.methane *= modifier;
+    out.chemosynthate = out.hydrogen + out.reduced_iron + out.reduced_sulphur + out.methane;
+    out
+}
+
+/// The `ENERGY` reading at one point: [`chemical_supply`]'s `CHEMOSYNTHATE`
+/// aggregate.
+///
+/// Kept as a named scalar because that is what every readout consumer wants
+/// (`crate::marine_chemosynthate_supply_field`, the vessel's chamber
+/// conditions, and the calibration probes that compare this field against
+/// `domains/climate/src/underworld.rs`'s authored `E_INERT`..`E_TEEMING`
+/// ladder). It is a *projection* of [`chemical_supply`], never a second
+/// derivation: change the combination rule there and every reader of this
+/// moves with it.
 /// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(ratio: moisture), bare-ok(diagnostic-value: drainage), bare-ok(ratio: return)
 pub fn subterranean_energy(
     material: &MaterialBuffer,
@@ -453,11 +753,7 @@ pub fn subterranean_energy(
     moisture: f64,
     drainage: f64,
 ) -> f64 {
-    let total: f64 = EnergySource::ALL
-        .iter()
-        .map(|source| source.yield_at(material, gradient, depth_m, moisture, drainage))
-        .sum();
-    total / EnergySource::ALL.len() as f64
+    chemical_supply(material, gradient, depth_m, moisture, drainage).chemosynthate
 }
 
 /// Which source contributes the most yield at one point — the scalar this
@@ -543,6 +839,53 @@ pub fn subterranean_energy_field_per_rung(
                 continue;
             };
             out[rung as usize] = Some(subterranean_energy(
+                &material,
+                gradient,
+                depth_m,
+                sub.moisture,
+                drainage,
+            ));
+        }
+        out
+    })
+}
+
+/// [`chemical_supply`] over every band of the ladder and every vertex of the
+/// globe — the field the two per-vertex capacity loops in [`crate`] read, and
+/// the per-rung sibling of [`subterranean_energy_field_per_rung`].
+///
+/// Same shape, same gate and same derivation discipline as
+/// [`subterranean_energy_field_per_rung`]: see that function's doc for why
+/// `subterranean_per_rung` is read rather than re-derived, why a cave-less
+/// vertex is `[None; 6]`, why the `Surface` slot is always `None`, and why
+/// `drainage` is read once per vertex. The two are deliberately *parallel*
+/// rather than one calling the other per rung: the capacity loops want the
+/// whole [`ChemicalSupply`] and the probes want the scalar, and
+/// [`subterranean_energy`] is already a projection of [`chemical_supply`], so
+/// neither field can disagree with the other about any point.
+/// type-audit: bare-ok(ratio: return)
+pub fn chemical_supply_field_per_rung(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    subterranean_per_rung: &VertexMap<[Option<crate::Substrate>; 6]>,
+) -> VertexMap<[Option<ChemicalSupply>; 6]> {
+    VertexMap::from_fn(geo, |vertex| {
+        let mut out = [None; 6];
+        let Some(cave) = terrain.cave_at(vertex) else {
+            return out;
+        };
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        let material = terrain.material_at(vertex);
+        let drainage = terrain.drainage_at(vertex);
+        let sub_per_rung = subterranean_per_rung.get(vertex);
+        for &rung in Band::all() {
+            let Some(depth_m) = rung_evaluation_depth_m(rung, gradient, cave.depth_reach_m) else {
+                continue;
+            };
+            let Some(sub) = sub_per_rung[rung as usize] else {
+                continue;
+            };
+            out[rung as usize] = Some(chemical_supply(
                 &material,
                 gradient,
                 depth_m,
@@ -799,5 +1142,147 @@ mod tests {
                  E_INERT, the trough)"
             );
         }
+    }
+
+    /// claim: invariant — every reaction routes, and the two hydrogen
+    /// reactions share one axis.
+    ///
+    /// The routing table is the campaign's judgment (spec §4.2), so it is
+    /// pinned rather than left to the reader of a `match`. The load-bearing
+    /// row is `Hydrogen`'s **two** members: a table that is a bijection with
+    /// `EnergySource::ALL` would be the reaction vocabulary wearing a
+    /// metabolite's name.
+    #[test]
+    fn the_routing_table_is_not_a_bijection() {
+        let routed = |r: SupplyRoute| EnergySource::ALL.iter().filter(|s| s.route() == r).count();
+        assert_eq!(
+            routed(SupplyRoute::Hydrogen),
+            2,
+            "serpentinization and radiolysis both yield H2 and must share one axis"
+        );
+        for route in [
+            SupplyRoute::ReducedIron,
+            SupplyRoute::ReducedSulphur,
+            SupplyRoute::Methane,
+            SupplyRoute::Detritus,
+            SupplyRoute::Modifier,
+        ] {
+            assert_eq!(routed(route), 1, "{route:?} must have exactly one source");
+        }
+    }
+
+    /// claim: invariant — `chemical_supply` is the routed, per-metabolite sum
+    /// of `yield_at`, to the bit.
+    ///
+    /// Recomputed from the public `yield_at` in the routing table's own order
+    /// rather than from `chemical_supply`'s internals, so a mis-routed source
+    /// or a metabolite summed with the wrong partner fails here.
+    #[test]
+    fn chemical_supply_sums_within_a_metabolite() {
+        let m = buffer(0.5, 0.4, 0.3, 0.6);
+        let g = GeothermalGradient::new(25.0);
+        let (depth, moisture, drainage) = (900.0, 0.6, 12.0);
+        let y = |s: EnergySource| s.yield_at(&m, g, depth, moisture, drainage);
+        let modifier = 1.0 + GEOTHERMAL_MODIFIER_GAIN * y(EnergySource::Geothermal);
+        let cs = chemical_supply(&m, g, depth, moisture, drainage);
+
+        assert_eq!(
+            cs.hydrogen.to_bits(),
+            ((y(EnergySource::Serpentinization) + y(EnergySource::Radiolysis)) * modifier)
+                .to_bits(),
+            "HYDROGEN is serpentinization + radiolysis, modified"
+        );
+        assert_eq!(
+            cs.reduced_iron.to_bits(),
+            (y(EnergySource::IronReduction) * modifier).to_bits()
+        );
+        assert_eq!(
+            cs.reduced_sulphur.to_bits(),
+            (y(EnergySource::SulphideOxidation) * modifier).to_bits()
+        );
+        assert_eq!(
+            cs.methane.to_bits(),
+            (y(EnergySource::Methanogenesis) * modifier).to_bits()
+        );
+        // Detritus is NOT modified: surface matter falls in from above and the
+        // rock's heat does not make more of it.
+        assert_eq!(
+            cs.detritus.to_bits(),
+            y(EnergySource::DetritalImport).to_bits(),
+            "DetritalImport routes to DETRITUS unmodified"
+        );
+        assert_eq!(
+            cs.chemosynthate.to_bits(),
+            (cs.hydrogen + cs.reduced_iron + cs.reduced_sulphur + cs.methane).to_bits(),
+            "the CHEMOSYNTHATE aggregate is the sum of the four metabolites"
+        );
+        assert_eq!(
+            subterranean_energy(&m, g, depth, moisture, drainage).to_bits(),
+            cs.chemosynthate.to_bits(),
+            "the ENERGY scalar must be a projection of chemical_supply, never a \
+             second derivation"
+        );
+    }
+
+    /// claim: invariant — the gradient MULTIPLIES live chemistry and never
+    /// CREATES a metabolite.
+    ///
+    /// This is the test that discriminates `Geothermal`'s chosen modifier form
+    /// (`1 + gain * g`) from the two alternatives `chemical_supply`'s doc
+    /// rejects. Silica `0.5` sits outside **both** hydrogen bands
+    /// (serpentinization centres at 0.05, radiolysis at 0.9, half-width 0.35
+    /// each) and inside iron reduction's (centre 0.45), so this one fixture
+    /// carries a dead axis and a live one at the same point: an ADDITIVE
+    /// modifier would feed a hydrogen eater out of bare heat, and NO modifier
+    /// would leave the iron term unmoved.
+    #[test]
+    fn the_gradient_multiplies_chemistry_and_never_creates_it() {
+        let m = buffer(0.5, 0.0, 0.0, 0.0);
+        let g = GeothermalGradient::new(25.0);
+        let (depth, moisture, drainage) = (2000.0, 0.9, 0.0);
+        let gradient_yield = EnergySource::Geothermal.yield_at(&m, g, depth, moisture, drainage);
+        assert!(
+            gradient_yield > 0.3,
+            "fixture is vacuous: the gradient term reads {gradient_yield}, too small \
+             to tell the three candidate forms apart"
+        );
+        let raw_iron = EnergySource::IronReduction.yield_at(&m, g, depth, moisture, drainage);
+        assert!(
+            raw_iron > 0.0,
+            "fixture is vacuous: no live reaction to modify"
+        );
+
+        let cs = chemical_supply(&m, g, depth, moisture, drainage);
+        assert_eq!(
+            cs.hydrogen, 0.0,
+            "heat must not CREATE hydrogen where neither hydrogen reaction runs"
+        );
+        assert!(
+            cs.reduced_iron > raw_iron,
+            "the gradient must multiply a live reaction: {} is not above {raw_iron}",
+            cs.reduced_iron
+        );
+        assert_eq!(
+            cs.reduced_iron.to_bits(),
+            (raw_iron * (1.0 + GEOTHERMAL_MODIFIER_GAIN * gradient_yield)).to_bits()
+        );
+    }
+
+    /// claim: invariant — `ChemicalSupply::aggregate_only` supplies the
+    /// aggregate and nothing else.
+    ///
+    /// A hydrothermal vent's surface supply takes this shape, and the zeros
+    /// are the assertion: this campaign disaggregates the UNDERWORLD, and
+    /// silently handing a vent a metabolite breakdown it has not measured
+    /// would be an invented fact.
+    #[test]
+    fn an_aggregate_only_reading_supplies_no_metabolite() {
+        let cs = ChemicalSupply::aggregate_only(0.75);
+        assert_eq!(cs.chemosynthate, 0.75);
+        assert_eq!(cs.hydrogen, 0.0);
+        assert_eq!(cs.reduced_iron, 0.0);
+        assert_eq!(cs.reduced_sulphur, 0.0);
+        assert_eq!(cs.methane, 0.0);
+        assert_eq!(cs.detritus, 0.0);
     }
 }

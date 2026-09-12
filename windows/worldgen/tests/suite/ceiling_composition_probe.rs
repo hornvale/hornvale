@@ -117,7 +117,15 @@ fn iqr(sorted: &[f64]) -> f64 {
 /// proposed as a replacement.**
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CombinationRule {
-    /// `subterranean_energy`'s own rule: the mean of all seven yields.
+    /// The mean of all seven yields — `subterranean_energy`'s rule at the
+    /// time this file was written, and **no longer the shipped rule**: The
+    /// Trencher (Task 4, 2026-09-11) replaced it with a per-metabolite sum
+    /// (`energy::chemical_supply`). This file re-implements the mean locally
+    /// rather than calling the shipped function, so M2's positive control
+    /// still reproduces its published `0.145249` — but the number now
+    /// describes a retired rule, not the world. Read M2's conclusions as a
+    /// record of why the mean was replaced, not as a description of today's
+    /// field.
     MeanOfSeven,
     /// The largest single yield.
     ///

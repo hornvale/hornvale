@@ -1534,7 +1534,12 @@ pub fn axis_supply(
 /// resolved in. A single constant so the two cannot drift apart silently;
 /// `the_supply_axis_order_matches_both_capacity_loops` asserts the loops
 /// really do use it.
-pub const SUPPLY_AXIS_ORDER: [hornvale_kernel::ResourceAxis; 7] = [
+/// The four metabolite axes (The Trencher, spec §4.2) are **appended**, after
+/// `CHEMOSYNTHATE` — the same discipline `hornvale_kernel::v1_basis` states
+/// for itself. This order is not that basis and need not agree with it; it is
+/// only the order the two loops build their arrays in, and appending keeps
+/// every existing entry at the index its hoisted weight already sat at.
+pub const SUPPLY_AXIS_ORDER: [hornvale_kernel::ResourceAxis; 11] = [
     hornvale_kernel::PHOTOSYNTHATE,
     hornvale_kernel::PLANT_FORAGE,
     hornvale_kernel::MINERAL,
@@ -1542,6 +1547,10 @@ pub const SUPPLY_AXIS_ORDER: [hornvale_kernel::ResourceAxis; 7] = [
     hornvale_kernel::ANIMAL_PREY,
     hornvale_kernel::MARINE_FORAGE,
     hornvale_kernel::CHEMOSYNTHATE,
+    hornvale_kernel::HYDROGEN,
+    hornvale_kernel::REDUCED_IRON,
+    hornvale_kernel::REDUCED_SULPHUR,
+    hornvale_kernel::METHANE,
 ];
 
 /// [`axis_supply`] with the niche's weights already resolved — the same dot
@@ -1917,8 +1926,11 @@ pub fn per_species_suitability_masked(
     // replaced: a cave-less vertex's `Subterranean` reading still falls back
     // to it below, multiplied by `availability = 0.0`, exactly as before.
     let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, terrain, &substrate);
-    let chemosynthate_per_rung =
-        energy::subterranean_energy_field_per_rung(geo, terrain, &subterranean_per_rung);
+    // The Trencher, Task 4: the per-metabolite reading, replacing the single
+    // mean-of-seven scalar this call used to return. Same gate, same rungs —
+    // see `energy::chemical_supply_field_per_rung`.
+    let chemical_per_rung =
+        energy::chemical_supply_field_per_rung(geo, terrain, &subterranean_per_rung);
     // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
@@ -1955,8 +1967,8 @@ pub fn per_species_suitability_masked(
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE);
             let k = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
                 use hornvale_kernel::{
-                    ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
-                    PLANT_FORAGE,
+                    ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, HYDROGEN, MARINE_FORAGE, METHANE,
+                    MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, REDUCED_IRON, REDUCED_SULPHUR,
                 };
                 // `score_at`: the axis dot product plus Liebig tolerance at
                 // ONE place — the single surface reading (`Surface` kinds)
@@ -1971,15 +1983,19 @@ pub fn per_species_suitability_masked(
                 // ORDER IS LOAD-BEARING: it must equal `SUPPLY_AXIS_ORDER`,
                 // so that entry i's weight is the hoisted `niche_weights[i]`.
                 // `the_supply_axis_order_matches_both_capacity_loops` pins it.
-                let score_at = |s: &Substrate, chemosynthate: f64| -> f64 {
+                let score_at = |s: &Substrate, chem: &energy::ChemicalSupply| -> f64 {
                     let per_axis = [
                         (PHOTOSYNTHATE, base_carrying.at(vertex)),
                         (PLANT_FORAGE, *forage.get(vertex)),
                         (MINERAL, *mineral.get(vertex)),
-                        (DETRITUS, *detritus.get(vertex)),
+                        (DETRITUS, *detritus.get(vertex) + chem.detritus),
                         (ANIMAL_PREY, *prey.get(vertex)),
                         (MARINE_FORAGE, *marine.get(vertex)),
-                        (CHEMOSYNTHATE, chemosynthate),
+                        (CHEMOSYNTHATE, chem.chemosynthate),
+                        (HYDROGEN, chem.hydrogen),
+                        (REDUCED_IRON, chem.reduced_iron),
+                        (REDUCED_SULPHUR, chem.reduced_sulphur),
+                        (METHANE, chem.methane),
                     ];
                     let supply = axis_supply_with(&niche_weights, &per_axis);
                     // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103
@@ -2006,8 +2022,20 @@ pub fn per_species_suitability_masked(
                 // an IEEE-754 no-op (verified over the roster's real values,
                 // bit-difference 0).
                 let (best, availability) = match realm {
+                    // THE TRENCHER, Task 4: a vent's surface supply is the
+                    // CHEMOSYNTHATE aggregate with no metabolite breakdown —
+                    // `aggregate_only`'s own doc says why the zeros are the
+                    // honest reading and not an omission. Every metabolite
+                    // entry contributes an exact `weight * 0.0` here, and
+                    // the added `chem.detritus` is an exact `+ 0.0`, so a
+                    // `Surface` kind's arithmetic is unmoved to the bit.
                     hornvale_species::HabitatRealm::Surface => (
-                        score_at(substrate.get(vertex), *marine_chemosynthate.get(vertex)),
+                        score_at(
+                            substrate.get(vertex),
+                            &energy::ChemicalSupply::aggregate_only(
+                                *marine_chemosynthate.get(vertex),
+                            ),
+                        ),
                         1.0,
                     ),
                     hornvale_species::HabitatRealm::Subterranean => {
@@ -2020,22 +2048,25 @@ pub fn per_species_suitability_masked(
                         // reading, multiplied by `availability = 0.0` exactly
                         // as before.
                         let substrate_here = subterranean_per_rung.get(vertex);
-                        let chemosynthate_here = chemosynthate_per_rung.get(vertex);
+                        let chemical_here = chemical_per_rung.get(vertex);
                         let mut rung_best: Option<f64> = None;
                         for &rung in hornvale_kernel::Band::habitation() {
                             let idx = rung as usize;
                             let Some(s_r) = substrate_here[idx] else {
                                 continue;
                             };
-                            let Some(chem_r) = chemosynthate_here[idx] else {
+                            let Some(chem_r) = chemical_here[idx] else {
                                 continue;
                             };
-                            let score = score_at(&s_r, chem_r);
+                            let score = score_at(&s_r, &chem_r);
                             rung_best = Some(rung_best.map_or(score, |b: f64| b.max(score)));
                         }
                         match rung_best {
                             Some(best) => (best, 1.0),
-                            None => (score_at(subterranean.get(vertex), 0.0), 0.0),
+                            None => (
+                                score_at(subterranean.get(vertex), &energy::ChemicalSupply::NONE),
+                                0.0,
+                            ),
                         }
                     }
                 };
@@ -2345,8 +2376,10 @@ fn per_species_capacity_at_with_invariant(
     // hoist for the full rationale. `subterranean` above is KEPT as the
     // cave-less fallback, exactly as there.
     let subterranean_per_rung = subterranean_substrate_field_per_rung(geo, terrain, &substrate);
-    let chemosynthate_per_rung =
-        energy::subterranean_energy_field_per_rung(geo, terrain, &subterranean_per_rung);
+    // The Trencher, Task 4, carried to the capacity path exactly as
+    // `per_species_suitability` carries it.
+    let chemical_per_rung =
+        energy::chemical_supply_field_per_rung(geo, terrain, &subterranean_per_rung);
     let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let prey = prey_supply_field(geo, &forage);
     // The Range, carried to the capacity path: the biome at every vertex,
@@ -2379,23 +2412,27 @@ fn per_species_capacity_at_with_invariant(
             let niche_weights = SUPPLY_AXIS_ORDER.map(|axis| bio.niche.weight(axis));
             let raw = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
                 use hornvale_kernel::{
-                    ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
-                    PLANT_FORAGE,
+                    ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, HYDROGEN, MARINE_FORAGE, METHANE,
+                    MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, REDUCED_IRON, REDUCED_SULPHUR,
                 };
                 // `score_at`: see the sibling loop's matching closure for the
                 // full rationale — same shape, dimensional counterpart
                 // (`headcount` in place of `saturated`).
                 //
                 // ORDER IS LOAD-BEARING — see the sibling loop.
-                let score_at = |s: &Substrate, chemosynthate: f64| -> f64 {
+                let score_at = |s: &Substrate, chem: &energy::ChemicalSupply| -> f64 {
                     let per_axis = [
                         (PHOTOSYNTHATE, base_carrying.at(vertex)),
                         (PLANT_FORAGE, *forage.get(vertex)),
                         (MINERAL, *hoisted.mineral.get(vertex)),
-                        (DETRITUS, *hoisted.detritus.get(vertex)),
+                        (DETRITUS, *hoisted.detritus.get(vertex) + chem.detritus),
                         (ANIMAL_PREY, *prey.get(vertex)),
                         (MARINE_FORAGE, *hoisted.marine.get(vertex)),
-                        (CHEMOSYNTHATE, chemosynthate),
+                        (CHEMOSYNTHATE, chem.chemosynthate),
+                        (HYDROGEN, chem.hydrogen),
+                        (REDUCED_IRON, chem.reduced_iron),
+                        (REDUCED_SULPHUR, chem.reduced_sulphur),
+                        (METHANE, chem.methane),
                     ];
                     let supply = axis_supply_with(&niche_weights, &per_axis);
                     let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
@@ -2418,28 +2455,33 @@ fn per_species_capacity_at_with_invariant(
                     hornvale_species::HabitatRealm::Surface => (
                         score_at(
                             substrate.get(vertex),
-                            *hoisted.marine_chemosynthate.get(vertex),
+                            &energy::ChemicalSupply::aggregate_only(
+                                *hoisted.marine_chemosynthate.get(vertex),
+                            ),
                         ),
                         1.0,
                     ),
                     hornvale_species::HabitatRealm::Subterranean => {
                         let substrate_here = subterranean_per_rung.get(vertex);
-                        let chemosynthate_here = chemosynthate_per_rung.get(vertex);
+                        let chemical_here = chemical_per_rung.get(vertex);
                         let mut rung_best: Option<f64> = None;
                         for &rung in hornvale_kernel::Band::habitation() {
                             let idx = rung as usize;
                             let Some(s_r) = substrate_here[idx] else {
                                 continue;
                             };
-                            let Some(chem_r) = chemosynthate_here[idx] else {
+                            let Some(chem_r) = chemical_here[idx] else {
                                 continue;
                             };
-                            let score = score_at(&s_r, chem_r);
+                            let score = score_at(&s_r, &chem_r);
                             rung_best = Some(rung_best.map_or(score, |b: f64| b.max(score)));
                         }
                         match rung_best {
                             Some(best) => (best, 1.0),
-                            None => (score_at(subterranean.get(vertex), 0.0), 0.0),
+                            None => (
+                                score_at(subterranean.get(vertex), &energy::ChemicalSupply::NONE),
+                                0.0,
+                            ),
                         }
                     }
                 };
@@ -10572,6 +10614,37 @@ pub fn rendered_beliefs(
 /// by vertex, so only the first claimant wears its label; a later co-tenant
 /// keeps its own name below.
 ///
+/// **THE CO-TENANT IS INVISIBLE TO QUALIFICATION, AND THIS DOC USED TO CLAIM
+/// OTHERWISE** (The Trencher, Task 4, 2026-09-11). The sentence removed from
+/// here read: a co-tenant "keeps its own name, *which differs by construction
+/// of the naming draw*, or the Land list would print one place under the
+/// other's name." The premise is false. A settlement name is a draw salted by
+/// its own VERTEX, so two settlements on ONE vertex indeed cannot share a
+/// name — but a co-tenant's name can collide with a settlement on a
+/// *different* vertex, and that is the case the qualifier cannot reach:
+/// `qualify::site_facts` keeps only the first settlement per vertex, so the
+/// colliding group it builds has one visible member, finds no ambiguity, and
+/// leaves it bare — while the invisible co-tenant falls back to the same bare
+/// name here. Two identical Land lines.
+///
+/// **Observed, not theorised.** At seed 42 under this campaign's supply
+/// change: vertex 10632 holds `Poo` and `Teatxaofoo`, vertex 10325 holds a
+/// second `Teatxaofoo`, and both render `- **Teatxaofoo** — temperate-forest`.
+/// The two would be separated by the coordinate rung the instant the
+/// qualifier could see them, so this is a reachability defect in a
+/// vertex-keyed label map, not a limit of decision 0024's remedy.
+///
+/// **Deliberately not fixed here.** The repair is to key
+/// `hornvale_almanac::qualify` by `EntityId` rather than `Vertex`, which
+/// changes a public API shared with the REPL's `settlements` listing (whose
+/// own co-tenant handling is worse — it prints `labels.label(vertex)` for
+/// both, so one place appears under the other's name) and moves the
+/// `connections` artifact. That is its own campaign; this one records the
+/// defect and bounds it. `land_list_lines_are_all_distinct_at_seed_42` now
+/// asserts exactly what this code guarantees — every FIRST-CLAIMANT line is
+/// distinct — and, in the other direction, that no duplicate arises from
+/// anything but co-tenancy.
+///
 /// A place with no committed `cell-id` cannot be qualified and keeps its
 /// bare name.
 /// type-audit: bare-ok(prose: return)
@@ -10605,7 +10678,12 @@ fn land_list_labels(world: &World) -> Vec<String> {
                 // first claimant can wear it — a later co-tenant keeps its
                 // own name, which differs by construction of the naming
                 // draw, or the Land list would print one place under the
-                // other's name.
+                // other's name. (That last clause was FALSE — see this
+                // function's own doc comment, "THE CO-TENANT IS INVISIBLE TO
+                // QUALIFICATION": the collision is with a settlement on a
+                // DIFFERENT vertex, which the vertex-keyed label map cannot
+                // see. The fallback below is kept because it is still the
+                // least-wrong thing this function can do on its own.)
                 if labelled.insert(*vertex) {
                     labels.label(*vertex)
                 } else {
@@ -11239,18 +11317,22 @@ mod tests {
     #[test]
     fn axis_supply_agrees_with_the_hoisted_form() {
         use hornvale_kernel::{
-            ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE,
-            PLANT_FORAGE, ResourceVector,
+            ANIMAL_PREY, CHEMOSYNTHATE, DETRITUS, HYDROGEN, MARINE_FORAGE, METHANE, MINERAL,
+            PHOTOSYNTHATE, PLANT_FORAGE, REDUCED_IRON, REDUCED_SULPHUR, ResourceVector,
         };
-        // A niche that is SPARSE on purpose: `MINERAL`, `MARINE_FORAGE` and
-        // `CHEMOSYNTHATE` are absent, so `weight` returns its 0.0 default for
-        // them and the hoisted array has to reproduce that, not just the
-        // recorded entries.
+        // A niche that is SPARSE on purpose: `MINERAL`, `MARINE_FORAGE`,
+        // `CHEMOSYNTHATE` and three of the four metabolites are absent, so
+        // `weight` returns its 0.0 default for them and the hoisted array has
+        // to reproduce that, not just the recorded entries. `REDUCED_SULPHUR`
+        // is present precisely so the sparse block is not the whole tail —
+        // a hoist that dropped the appended metabolites entirely would still
+        // pass if every one of them were zero.
         let niche = ResourceVector::new(&[
             (PHOTOSYNTHATE, 0.7),
             (PLANT_FORAGE, 0.25),
             (DETRITUS, 0.05),
             (ANIMAL_PREY, 1.0 / 3.0),
+            (REDUCED_SULPHUR, 0.4),
         ])
         .expect("finite non-negative weights");
         let per_axis = [
@@ -11261,6 +11343,10 @@ mod tests {
             (ANIMAL_PREY, 1.0 / 7.0),
             (MARINE_FORAGE, 4.25),
             (CHEMOSYNTHATE, 9.0),
+            (HYDROGEN, 0.5),
+            (REDUCED_IRON, 1.0 / 3.0),
+            (REDUCED_SULPHUR, 2.75),
+            (METHANE, 1e-3),
         ];
         let weights = SUPPLY_AXIS_ORDER.map(|axis| niche.weight(axis));
         assert_eq!(
@@ -11303,6 +11389,14 @@ mod tests {
                     "ANIMAL_PREY" => "animal prey",
                     "MARINE_FORAGE" => "marine forage",
                     "CHEMOSYNTHATE" => "chemosynthate",
+                    // The Trencher, Task 4's four metabolite axes. An
+                    // unmapped identifier falls through `other => other` and
+                    // fails the compare against the label list, which is what
+                    // makes forgetting an arm here loud.
+                    "HYDROGEN" => "hydrogen",
+                    "REDUCED_IRON" => "reduced iron",
+                    "REDUCED_SULPHUR" => "reduced sulphur",
+                    "METHANE" => "methane",
                     other => other,
                 })
                 .collect();
@@ -11411,18 +11505,47 @@ mod tests {
     /// committed gallery page would otherwise publish twenty-one
     /// indistinguishable `- **Xoxa** — temperate-forest` lines.
     ///
-    /// Three claims, each of which can fail on its own:
+    /// **THE SCOPE OF CLAIMS 2 AND 3 WAS CORRECTED 2026-09-11 (The Trencher,
+    /// Task 4), AND THE CORRECTION IS THE INTERESTING PART.** Both used to run
+    /// over EVERY place and to assert, in effect, that the Land list can never
+    /// print two identical lines. `land_list_labels` does not guarantee that
+    /// and never did: [`hornvale_almanac::qualify::SiteLabels`] is keyed by
+    /// VERTEX, so a second settlement on one vertex is invisible to
+    /// qualification and falls back to its bare name — which can collide with
+    /// a settlement on a *different* vertex. This test passed for its whole
+    /// life on the luck of one world, and the first supply change that moved
+    /// seed 42's occupation skeleton broke it: vertex 10632 holds `Poo` and
+    /// `Teatxaofoo`, vertex 10325 holds a second `Teatxaofoo`, and both render
+    /// `- **Teatxaofoo** — temperate-forest`. See `land_list_labels`'s own doc
+    /// comment for the full mechanism and for why the repair (re-keying
+    /// `qualify` by `EntityId`) is a separate campaign.
+    ///
+    /// So the claims are now scoped to what the code actually guarantees, and
+    /// the blind spot is bounded in BOTH directions rather than excused:
     /// 1. `place_labels` is exactly as long as `places` — the parallel-vector
     ///    invariant `AlmanacContext::place_labels` documents, and the reason
     ///    the render can fall back silently without hiding a bug here.
-    /// 2. No two rendered lines repeat.
-    /// 3. The qualification is spent lazily: exactly the entries whose *line*
-    ///    (name and biome together) would have repeated are qualified, and no
-    ///    others — so the 9 seed-42 settlements whose name collides but whose
-    ///    biome already separates them stay bare.
+    /// 2. No two lines repeat **among the places the qualifier can see** (the
+    ///    first claimant on each vertex, plus any place with no committed
+    ///    vertex). This is the original claim on the original population minus
+    ///    exactly the structural blind spot.
+    /// 3. **The converse**, which is what keeps (2) from being a loophole: a
+    ///    line that DOES repeat must have an invisible co-tenant among its
+    ///    holders. A duplicate arising any other way — a qualifier that failed
+    ///    to separate two visible sites — is still a failure here.
+    /// 4. The qualification is spent lazily: exactly the visible entries whose
+    ///    *line* (name and biome together) would have repeated are qualified,
+    ///    and no others — so a settlement whose name collides but whose biome
+    ///    already separates it stays bare.
     ///
     /// Claim 2 alone would pass on a world with no colliding names at all, so
     /// the bare-line duplicate count is asserted non-zero first.
+    ///
+    /// Claim 3 additionally assumes the first claimant in
+    /// `hornvale_terrain::places` order is the same settlement
+    /// `qualify::site_facts` keeps for that vertex (it scans
+    /// `all_settlements` order). The two agree at seed 42 — if this assertion
+    /// ever fails on a co-tenanted world, check that before the qualifier.
     #[test]
     fn land_list_lines_are_all_distinct_at_seed_42() {
         let world = vigil_world();
@@ -11432,6 +11555,25 @@ mod tests {
             ctx.places.len(),
             "one label per place"
         );
+
+        // Which places the vertex-keyed qualifier can actually see. A place
+        // with no committed vertex counts as visible: it keeps its bare name
+        // by design and is not a co-tenancy artifact.
+        let mut claimed: std::collections::BTreeSet<hornvale_kernel::Vertex> =
+            std::collections::BTreeSet::new();
+        let visible: Vec<bool> = ctx
+            .places
+            .iter()
+            .map(
+                |p| match world.ledger.value_of(p.id, hornvale_settlement::VERTEX_ID) {
+                    Some(hornvale_kernel::Value::Number(n)) => {
+                        claimed.insert(hornvale_kernel::Vertex(*n as u32))
+                    }
+                    _ => true,
+                },
+            )
+            .collect();
+        let co_tenants = visible.iter().filter(|v| !**v).count();
 
         let bare: Vec<(String, String)> = ctx
             .places
@@ -11453,27 +11595,65 @@ mod tests {
             .zip(&ctx.place_labels)
             .map(|(p, label)| format!("- **{label}** — {}", p.biome))
             .collect();
-        let distinct: std::collections::BTreeSet<&String> = rendered.iter().collect();
+
+        // CLAIM 2, on the visible population.
+        let visible_lines: Vec<&String> = rendered
+            .iter()
+            .zip(&visible)
+            .filter(|(_, v)| **v)
+            .map(|(line, _)| line)
+            .collect();
+        let distinct_visible: std::collections::BTreeSet<&&String> = visible_lines.iter().collect();
         assert_eq!(
-            distinct.len(),
-            rendered.len(),
-            "every Land line is distinct; {} would have repeated bare",
+            distinct_visible.len(),
+            visible_lines.len(),
+            "every Land line of a place the qualifier can SEE is distinct; \
+             {} would have repeated bare, {co_tenants} place(s) are invisible \
+             co-tenants",
             bare.len() - distinct_bare.len()
         );
 
+        // CLAIM 3: a repeat must be a co-tenant's, never a qualifier miss.
+        for line in &distinct_visible {
+            let holders: Vec<bool> = rendered
+                .iter()
+                .zip(&visible)
+                .filter(|(other, _)| *other == **line)
+                .map(|(_, v)| *v)
+                .collect();
+            if holders.len() > 1 {
+                assert!(
+                    holders.iter().any(|v| !*v),
+                    "line {line:?} repeats {} times with no invisible co-tenant \
+                     among its holders — the qualifier failed to separate two \
+                     sites it could see, which is the defect claim 2 exists for",
+                    holders.len()
+                );
+            }
+        }
+
+        // CLAIM 4, on the visible population.
         let qualified = ctx
             .places
             .iter()
             .zip(&ctx.place_labels)
-            .filter(|(p, label)| **label != p.name)
+            .zip(&visible)
+            .filter(|((p, label), v)| **v && **label != p.name)
             .count();
-        let in_a_repeating_group = bare
+        let visible_bare: Vec<&(String, String)> = bare
             .iter()
-            .filter(|row| bare.iter().filter(|other| other == row).count() > 1)
+            .zip(&visible)
+            .filter(|(_, v)| **v)
+            .map(|(row, _)| row)
+            .collect();
+        let in_a_repeating_group = visible_bare
+            .iter()
+            .filter(|row| visible_bare.iter().filter(|other| other == row).count() > 1)
             .count();
         assert_eq!(
             qualified, in_a_repeating_group,
-            "qualified exactly the entries whose line would have repeated, no more"
+            "qualified exactly the visible entries whose line would have \
+             repeated, no more"
         );
     }
 

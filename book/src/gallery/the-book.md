@@ -921,6 +921,32 @@ The moon crosses because it is Rob's kin.
 
 *In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
+##### As the priesthood of the Saoza teach it
+
+Boodoa Za Srob Bo. ("Boodoa is the earth — as it is taught.")
+
+The Koodzhoo are bugbears — rivals.
+The Takaz are desert dwarfs — rivals.
+The Boba are desert elfs — rivals.
+The Saoza are drows — ourselves.
+The Ratra are gnolls — rivals.
+The Peerzhoe are goblins — rivals.
+The Bapa are gully dwarfs — rivals.
+The Moma are high elfs — rivals.
+The Papan are hill dwarfs — rivals.
+The Geerjoe are hobgoblins — rivals.
+The Leoglo are humans — rivals.
+The Gnga are kobolds — rivals.
+The Muma are sea elfs — rivals.
+The Nona are snow elfs — rivals.
+The Ṅuṅa are wood elfs — rivals.
+Boodoa is the earth with one moon.
+The moon crosses because Rob strides the sky, slowly.
+
+— though the folk say The moon crosses because it is Rob's kin.
+
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+
 #### As the Ratra tell it
 
 The Koodzhoo are bugbears — neighbors.
@@ -1418,6 +1444,9 @@ The Koodzhoo's own priesthood taught wrongly, and could be shown wrong by any wh
 Among the Takaz, the sky has darkened, now and again.
 Among the Boba, the sky has darkened, now and again.
 Among the Saoza, the sky has darkened, now and again.
+The priesthood of the Saoza numbers the darkenings: 81.
+The next darkening, it teaches, comes on day 36337.
+The Saoza's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Ratra, the sky has darkened, now and again.
 Among the Peerzhoe, the sky has darkened, now and again.
 The priesthood of the Peerzhoe numbers the darkenings: 49.
@@ -1458,6 +1487,7 @@ The next darkening, it teaches, comes on day 36337.
 The Ṅuṅa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
 *In truth, the Koodzhoo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Saoza's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Peerzhoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Bapa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Moma's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*

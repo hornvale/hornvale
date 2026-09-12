@@ -70,12 +70,12 @@ patterns by class and span (report only):
   ShortLong SameFloor the-sump: 3169
   ShortShort SameFloor patrol-path: 805
 
-the Made population: 5 occupied columns, seated {"Shallows": 3, "Undercroft": 2}; tenancy: inhabited 5 abandoned 0
-heart decile <= 5: 4 of 5 = 0.8000 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
-doors on Made rungs: 3 of 5 = 0.6000 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
-nested realms smaller than their parent: 3627 of 6213 = 0.5838 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
-landings on Made levels 1 of 5; sanctums holding a thing at genesis 0 of 5 (report only)
-within-level components per level, every plan: {1: 1820, 2: 1802, 3: 699, 4: 49} (report only)
+the Made population: 8 occupied columns, seated {"Shallows": 3, "Undercroft": 5}; tenancy: inhabited 7 abandoned 1
+heart decile <= 5: 7 of 8 = 0.8750 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
+doors on Made rungs: 8 of 8 = 1.0000 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
+nested realms smaller than their parent: 3628 of 6216 = 0.5837 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
+landings on Made levels 1 of 8; sanctums holding a thing at genesis 0 of 8 (report only)
+within-level components per level, every plan: {1: 1812, 2: 1811, 3: 698, 4: 49} (report only)
 
 seed 7: 1681 descents
 
@@ -115,12 +115,12 @@ patterns by class and span (report only):
   ShortLong SameFloor the-sump: 5753
   ShortShort SameFloor patrol-path: 1538
 
-the Made population: 14 occupied columns, seated {"Shallows": 12, "Undercroft": 2}; tenancy: inhabited 13 abandoned 1
-heart decile <= 5: 12 of 14 = 0.8571 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
-doors on Made rungs: 11 of 14 = 0.7857 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
-nested realms smaller than their parent: 6109 of 10534 = 0.5799 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
-landings on Made levels 5 of 14; sanctums holding a thing at genesis 1 of 14 (report only)
-within-level components per level, every plan: {1: 3952, 2: 3366, 3: 1018, 4: 69} (report only)
+the Made population: 13 occupied columns, seated {"Shallows": 11, "Undercroft": 2}; tenancy: inhabited 11 abandoned 2
+heart decile <= 5: 10 of 13 = 0.7692 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
+doors on Made rungs: 12 of 13 = 0.9231 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
+nested realms smaller than their parent: 6102 of 10521 = 0.5800 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
+landings on Made levels 8 of 13; sanctums holding a thing at genesis 1 of 13 (report only)
+within-level components per level, every plan: {1: 3955, 2: 3368, 3: 1012, 4: 70} (report only)
 
 seed 1234: 1266 descents
 
@@ -160,10 +160,10 @@ patterns by class and span (report only):
   ShortLong SameFloor the-sump: 4223
   ShortShort SameFloor patrol-path: 1078
 
-the Made population: 11 occupied columns, seated {"Shallows": 9, "Undercroft": 2}; tenancy: inhabited 11 abandoned 0
-heart decile <= 5: 8 of 11 = 0.7273 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
-doors on Made rungs: 7 of 11 = 0.6364 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
-nested realms smaller than their parent: 4494 of 7863 = 0.5715 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
-landings on Made levels 6 of 11; sanctums holding a thing at genesis 0 of 11 (report only)
-within-level components per level, every plan: {1: 2954, 2: 2524, 3: 789, 4: 63} (report only)
+the Made population: 15 occupied columns, seated {"Shallows": 13, "Undercroft": 2}; tenancy: inhabited 15 abandoned 0
+heart decile <= 5: 9 of 15 = 0.6000 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> FALSIFIED
+doors on Made rungs: 8 of 15 = 0.5333 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
+nested realms smaller than their parent: 4480 of 7857 = 0.5702 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
+landings on Made levels 11 of 15; sanctums holding a thing at genesis 3 of 15 (report only)
+within-level components per level, every plan: {1: 2958, 2: 2526, 3: 782, 4: 64} (report only)
 ```

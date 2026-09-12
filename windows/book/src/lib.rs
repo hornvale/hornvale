@@ -5930,6 +5930,52 @@ mod tests {
         // scaffold rather than from this one. A single fact reaching two
         // instruments that agree without consulting each other is the check
         // this comment has been building across two campaigns.
+        //
+        // THE TRENCHER (Task 4, 2026-09-11): ELEVEN organized again — **the
+        // Saoza gain a priesthood**, and the Saoza are the drow, for the third
+        // time in three campaigns and by the same lever. Nothing else at this
+        // seed moves: every other people's lines are byte-identical, and the
+        // witnessed counts (81 and 49) and the taught day (36337) are
+        // unchanged for the SEVENTH consecutive re-pin, so the reckoning
+        // arithmetic is untouched once more and only the caste threshold
+        // moved.
+        //
+        // **The chain, traced and measured rather than asserted** (it is not a
+        // population threshold, which is the wrong guess this paragraph exists
+        // to forestall — drow's flagship population went DOWN, 32 -> 29):
+        //
+        //   supply -> `per_species_capacity_at` (drow is the only
+        //   `HabitatRealm::Subterranean` PEOPLE, and Task 4 routes
+        //   `EnergySource::DetritalImport` onto the `DETRITUS` axis, on which
+        //   drow carries 0.50 — the largest share of any people)
+        //   -> the deep-history bake's occupation skeleton
+        //   -> WHICH VERTEX is the drow's chief settlement
+        //   -> that vertex's `climate.moisture_at`
+        //   -> `surplus = fertility(biome_class) * moisture`
+        //      (`windows/worldgen/src/lib.rs`, the culture+religion stage)
+        //   -> `culture::structure`'s `env.surplus > 0.4` shaman rung
+        //   -> `SocietySummary::has_priesthood`
+        //   -> `religion::genesis`'s `cult-form = "organized"`
+        //   -> `chorus::doctrine_from`'s SOC-1 gate
+        //   -> `LadderRung::Numbered`/`Predictive` instead of `Counted`
+        //   -> these three lines.
+        //
+        // Measured at seed 2, before and after, with everything else held:
+        // the drow flagship moves from vertex **27215** (moisture 0.437847,
+        // Forest, surplus **0.394063** — under the 0.4 rung, castes
+        // `["delver", "matron"]`, `cult-form` `folk`) to vertex **26015**
+        // (moisture 0.542484, Forest, surplus **0.488236** — over it, castes
+        // `["delver", "blademaster", "dark-speaker", "matron"]`, `cult-form`
+        // `organized`). `dark-speaker` is the drow's own shaman-rung word, so
+        // the priesthood check fires on it exactly as goblin's `shaman` does.
+        //
+        // Surface peoples' flagships move at this seed too (bugbear
+        // 33224 -> 21217, gnoll 40507 -> 3143, hill-dwarf 30124 -> 21438,
+        // kobold 30657 -> 12951) even though SURFACE scoring is bit-identical
+        // under this change — because the bake is one competition for
+        // vertices across all peoples, the same mechanism Underworld Tasks 8
+        // and 9 moved from the other side. None of them crosses a caste
+        // threshold, which is why only the Saoza's block changes here.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -5941,6 +5987,9 @@ mod tests {
                 "Among the Takaz, the sky has darkened, now and again.".to_string(),
                 "Among the Boba, the sky has darkened, now and again.".to_string(),
                 "Among the Saoza, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Saoza numbers the darkenings: 81.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Saoza's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Ratra, the sky has darkened, now and again.".to_string(),
                 "Among the Peerzhoe, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Peerzhoe numbers the darkenings: 49.".to_string(),
@@ -5985,6 +6034,14 @@ mod tests {
             seed2.reckoning[1].margin,
             vec![
                 "In truth, the Koodzhoo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                // The Trencher (Task 4, 2026-09-11): the Saoza — the drow —
+                // gained a priesthood, so they now have a teaching to be wrong
+                // about. The paired half of the block above, and its inverse:
+                // Underworld Task 9's note that "a people with no priesthood
+                // teaches nothing to be wrong about" removed this same row.
+                // Same predicted and actual days as every other people, so the
+                // crisis arithmetic is untouched — only the membership moved.
+                "In truth, the Saoza's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Peerzhoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Bapa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Moma's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
