@@ -13828,7 +13828,7 @@ mod tests {
     /// A generated sky renders a figures line with its actual nonzero count;
     /// it never falls back to the old zero-figure placeholder.
     #[test]
-    fn seed_1_generated_default_has_a_figures_summary_line() {
+    fn a_sky_with_zero_figures_renders_no_figures_line() {
         let world = generated(1);
         let lines = night_sky_lines(&world).unwrap().unwrap();
         assert_eq!(lines.figures.len(), 1);
