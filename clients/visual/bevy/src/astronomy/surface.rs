@@ -256,7 +256,12 @@ pub fn surface_mesh(
         .map(|vertex| (vertex, patch.features.as_slice()))
         .collect::<Vec<_>>();
     let indices = if !patch.transition_triangles.is_empty() {
-        patch.transition_triangles.iter().flatten().copied().collect()
+        patch
+            .transition_triangles
+            .iter()
+            .flatten()
+            .copied()
+            .collect()
     } else if let Some(document) = transition {
         let candidate = if document.transition_triangles.is_empty() {
             &document.triangles
@@ -365,10 +370,9 @@ pub fn surface_material(patch: &SurfacePatchDocument) -> StandardMaterial {
     let color = material_color(weights.map(|value| value / count));
     StandardMaterial {
         base_color: Color::linear_rgba(color[0], color[1], color[2], color[3]),
-        perceptual_roughness: (0.92
-            - (water / count / 500.0).clamp(0.0, 0.55)
+        perceptual_roughness: (0.92 - (water / count / 500.0).clamp(0.0, 0.55)
             + (semantic_roughness / count * 0.01).clamp(0.0, 0.04))
-            .clamp(0.0, 1.0) as f32,
+        .clamp(0.0, 1.0) as f32,
         reflectance: 0.04,
         ..default()
     }
@@ -386,9 +390,8 @@ fn source_material_weights(
     };
     weights[2] += f64::from(vertex.floodplain_weight + vertex.delta_weight) * 0.25;
     weights[3] += f64::from(vertex.terrace_weight) * 0.15;
-    weights[4] += f64::from(
-        (feature_mask + channel as f32 * vertex.flow_strength as f32).clamp(0.0, 1.0),
-    );
+    weights[4] +=
+        f64::from((feature_mask + channel as f32 * vertex.flow_strength as f32).clamp(0.0, 1.0));
     weights[5] += (vertex.water_depth_m / 500.0).clamp(0.0, 1.0);
     weights[6] += f64::from(vertex.ridge_strength) * 0.2;
     weights[7] += f64::from(vertex.bank_weight) * 0.1;

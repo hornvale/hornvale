@@ -186,12 +186,19 @@ const WEIGHT_TOLERANCE: f64 = 1.0e-5;
 fn valid_revision_component(value: &str, max_len: usize) -> bool {
     !value.is_empty()
         && value.len() <= max_len
-        && value.bytes().all(|byte| byte.is_ascii_graphic() && byte != b':')
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_graphic() && byte != b':')
 }
 
 fn valid_unit_vector(value: [f64; 3], allow_zero: bool) -> bool {
-    let length = value.into_iter().map(|component| component * component).sum::<f64>().sqrt();
-    length.is_finite() && ((allow_zero && length <= UNIT_TOLERANCE) || (length - 1.0).abs() <= UNIT_TOLERANCE)
+    let length = value
+        .into_iter()
+        .map(|component| component * component)
+        .sum::<f64>()
+        .sqrt();
+    length.is_finite()
+        && ((allow_zero && length <= UNIT_TOLERANCE) || (length - 1.0).abs() <= UNIT_TOLERANCE)
 }
 
 fn valid_weight(value: f64) -> bool {
@@ -199,14 +206,24 @@ fn valid_weight(value: f64) -> bool {
 }
 
 fn valid_feature_kind(kind: &str) -> bool {
-    matches!(kind, "channel_reach" | "confluence" | "shoreline" | "ridge" | "material_transition")
+    matches!(
+        kind,
+        "channel_reach" | "confluence" | "shoreline" | "ridge" | "material_transition"
+    )
 }
 
 fn valid_terminal(terminal: &str) -> bool {
-    matches!(terminal, "headwater" | "confluence" | "lake" | "ocean" | "continuation")
+    matches!(
+        terminal,
+        "headwater" | "confluence" | "lake" | "ocean" | "continuation"
+    )
 }
 
-fn valid_endpoint(endpoint: &SurfacePatchEndpoint, feature: &SurfaceFeatureId, expected_side: &str) -> bool {
+fn valid_endpoint(
+    endpoint: &SurfacePatchEndpoint,
+    feature: &SurfaceFeatureId,
+    expected_side: &str,
+) -> bool {
     endpoint.feature == *feature
         && endpoint.side == expected_side
         && valid_terminal(&endpoint.terminal)
@@ -287,7 +304,10 @@ pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<
         valid_macro_face(document.address.macro_face),
         "surface macro face is not a packed Level-6 facet",
     )?;
-    check(!document.vertices.is_empty(), "surface patch has no samples")?;
+    check(
+        !document.vertices.is_empty(),
+        "surface patch has no samples",
+    )?;
     check(
         document.vertices.iter().all(|vertex| {
             valid_unit_vector(vertex.position, false)
@@ -310,10 +330,7 @@ pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<
                 ]
                 .into_iter()
                 .all(valid_weight)
-                && vertex
-                .position
-                .into_iter()
-                .all(valid_surface_number)
+                && vertex.position.into_iter().all(valid_surface_number)
                 && [
                     vertex.height_m,
                     vertex.shoreline_distance_m,

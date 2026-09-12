@@ -146,7 +146,7 @@ impl Source {
                         &self.binding.source_revision
                     )
                 )
-                    .map_err(|e| SourceError::Observation(e.to_string()))?,
+                .map_err(|e| SourceError::Observation(e.to_string()))?,
             );
         }
         let surface_revision = surface_revision_wire(
@@ -250,7 +250,7 @@ impl Source {
                         &self.binding.source_revision
                     )
                 )
-                    .map_err(|e| SourceError::Observation(e.to_string()))?,
+                .map_err(|e| SourceError::Observation(e.to_string()))?,
             );
         }
         let context = self.terrain.as_ref().expect("terrain initialized");
@@ -341,7 +341,9 @@ mod tests {
         });
 
         let error = source.observe_surface(&request.to_string()).unwrap_err();
-        assert!(matches!(error, SourceError::InvalidRequest(message) if message.contains("revision")));
+        assert!(
+            matches!(error, SourceError::InvalidRequest(message) if message.contains("revision"))
+        );
         assert_eq!(CONSTRUCTIONS.get(), [1, 1, 1, 0, 0]);
     }
 }

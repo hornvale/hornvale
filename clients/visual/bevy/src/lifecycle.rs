@@ -153,7 +153,11 @@ pub fn schedule_surface_patch(
             "surface request belongs to a stale source generation".into(),
         ));
     }
-    let identity = (request.binding.clone(), request.request_id, request.generation);
+    let identity = (
+        request.binding.clone(),
+        request.request_id,
+        request.generation,
+    );
     if state.pending.contains_key(&identity) {
         return Err(ViewError::Binding(
             "surface request ID is already scheduled for this binding".into(),
@@ -181,12 +185,14 @@ pub fn apply_surface_patch(
         .map(|(identity, _)| identity.clone())
         .collect();
     let [identity] = matches.as_slice() else {
-        return Err(ViewError::Binding(if matches.is_empty() {
-            "surface patch has no active scheduled request"
-        } else {
-            "surface patch is ambiguous across concurrent requests"
-        }
-        .into()));
+        return Err(ViewError::Binding(
+            if matches.is_empty() {
+                "surface patch has no active scheduled request"
+            } else {
+                "surface patch is ambiguous across concurrent requests"
+            }
+            .into(),
+        ));
     };
     state.pending.remove(identity);
     Ok(SurfaceMeshHandles {

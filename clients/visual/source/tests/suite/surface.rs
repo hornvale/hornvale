@@ -107,8 +107,14 @@ fn initial_bootstraps_surface_revision_matching_binding() {
     );
     assert_eq!(initial["schema"], "visual/initial/v1");
     assert_eq!(revision["source_revision"], binding["source_revision"]);
-    assert_eq!(revision["algorithm_version"], "hornvale/surface-realization/v2");
-    assert_eq!(revision["configuration_hash_hex"].as_str().unwrap().len(), 64);
+    assert_eq!(
+        revision["algorithm_version"],
+        "hornvale/surface-realization/v2"
+    );
+    assert_eq!(
+        revision["configuration_hash_hex"].as_str().unwrap().len(),
+        64
+    );
 
     let reply: Value = serde_json::from_str(
         &source
@@ -126,12 +132,7 @@ fn surface_rejects_wrong_binding() {
     let mut binding = initial["binding"].clone();
     binding["scope_id"] = json!("wrong-scope");
     let error = source
-        .observe_surface(&request(
-            &binding,
-            &initial["surface_revision"],
-            18,
-            &[1],
-        ))
+        .observe_surface(&request(&binding, &initial["surface_revision"], 18, &[1]))
         .unwrap_err();
     assert!(matches!(error, SourceError::InvalidRequest(message) if message.contains("binding")));
 }
@@ -178,7 +179,10 @@ fn surface_contains_no_weather_hooks() {
         ))
         .unwrap();
     for hook in ["weather", "cloud", "precip", "roughness"] {
-        assert!(!document.contains(hook), "surface transport contains {hook}");
+        assert!(
+            !document.contains(hook),
+            "surface transport contains {hook}"
+        );
     }
 }
 
@@ -207,7 +211,10 @@ fn independent_sources_and_request_orders_return_identical_patch_bytes() {
 #[test]
 fn surface_reply_carries_source_owned_transition_triangles() {
     let (mut source, initial) = source_and_initial();
-    let coarse = Facet { face: 0, path: vec![0; 6] };
+    let coarse = Facet {
+        face: 0,
+        path: vec![0; 6],
+    };
     let mut request_id = 1000;
     let mut transition = None;
     'faces: for neighbor in coarse.neighbors() {
@@ -236,8 +243,10 @@ fn surface_reply_carries_source_owned_transition_triangles() {
     }
     let reply = transition.expect("source must carry a real mixed-LOD transition");
     assert_eq!(reply["schema"], "visual/surface-reply/v1");
-    assert!(!reply["patch"]["transition_triangles"]
-        .as_array()
-        .unwrap()
-        .is_empty());
+    assert!(
+        !reply["patch"]["transition_triangles"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
 }

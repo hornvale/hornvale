@@ -76,10 +76,7 @@ pub struct SurfaceReview {
 /// Compare visible before/after facts without deriving semantic terrain in the
 /// renderer. Each result is a transition claim: the after capture must carry
 /// the fact and the before capture must not already carry it.
-pub fn compare_surface_review(
-    before: &CapturedFrames,
-    after: &CapturedFrames,
-) -> SurfaceReview {
+pub fn compare_surface_review(before: &CapturedFrames, after: &CapturedFrames) -> SurfaceReview {
     SurfaceReview {
         required_features_visible: PROOF_CASES
             .iter()
@@ -164,13 +161,7 @@ pub fn run_surface_proof(seed: u64) -> Result<SurfaceProofMetrics, String> {
             request_id,
         )?;
         request_id += 1;
-        validate_observed_patch(
-            case_name,
-            &patch,
-            address,
-            &child_path,
-            None,
-        )?;
+        validate_observed_patch(case_name, &patch, address, &child_path, None)?;
         validate_live_pathology(case_name, &patch)?;
         refinement_levels.insert(child_path_level(&child_path)?);
         generation_latency_ms.push(generation);
@@ -191,13 +182,7 @@ pub fn run_surface_proof(seed: u64) -> Result<SurfaceProofMetrics, String> {
         None,
         request_id,
     )?;
-    validate_observed_patch(
-        "confluence refinement",
-        &patch,
-        address,
-        &child_path,
-        None,
-    )?;
+    validate_observed_patch("confluence refinement", &patch, address, &child_path, None)?;
     refinement_levels.insert(child_path_level(&child_path)?);
     generation_latency_ms.push(generation);
     peak_memory_bytes.push(memory);
@@ -354,8 +339,9 @@ fn observe_proof_patch(
     let frame_start = Instant::now();
     let reply = documents::surface_reply(&reply_json)
         .map_err(|error| format!("surface proof reply {request_id} is invalid: {error}"))?;
-    let patch = serde_json::to_value(&reply.patch)
-        .map_err(|error| format!("surface proof patch {request_id} is not serializable: {error}"))?;
+    let patch = serde_json::to_value(&reply.patch).map_err(|error| {
+        format!("surface proof patch {request_id} is not serializable: {error}")
+    })?;
     lifecycle::apply_surface_reply(&reply_json)
         .map_err(|error| format!("apply surface proof reply {request_id}: {error}"))?;
     let frame_time_ms = (frame_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
@@ -396,11 +382,17 @@ fn validate_proof_fixture(fixture: &serde_json::Value) -> Result<(), String> {
         .ok_or("coast crossing fixture has no samples")?;
     let has_land = coast_samples.iter().any(|sample| {
         sample["fields"]["water_depth_m"] == 0.0
-            && sample["fields"]["shoreline_distance_m"].as_f64().is_some_and(|v| v > 0.)
+            && sample["fields"]["shoreline_distance_m"]
+                .as_f64()
+                .is_some_and(|v| v > 0.)
     });
     let has_water = coast_samples.iter().any(|sample| {
-        sample["fields"]["water_depth_m"].as_f64().is_some_and(|v| v > 0.)
-            && sample["fields"]["shoreline_distance_m"].as_f64().is_some_and(|v| v < 0.)
+        sample["fields"]["water_depth_m"]
+            .as_f64()
+            .is_some_and(|v| v > 0.)
+            && sample["fields"]["shoreline_distance_m"]
+                .as_f64()
+                .is_some_and(|v| v < 0.)
     });
     if !has_land || !has_water {
         return Err("coast crossing fixture does not cross the shoreline".into());
@@ -439,7 +431,9 @@ fn packed_macro_face(address: &serde_json::Value) -> Result<u32, String> {
             .as_u64()
             .ok_or("surface proof macro path contains a non-integer")?;
         if digit >= 4 {
-            return Err(format!("surface proof macro path has invalid digit {digit}"));
+            return Err(format!(
+                "surface proof macro path has invalid digit {digit}"
+            ));
         }
         pathword = (pathword << 2) | digit;
     }
@@ -479,7 +473,9 @@ fn validate_observed_patch(
     }
     for hook in ["weather", "cloud", "precip"] {
         if patch.to_string().contains(hook) {
-            return Err(format!("{case_name} proof patch contains deferred hook {hook}"));
+            return Err(format!(
+                "{case_name} proof patch contains deferred hook {hook}"
+            ));
         }
     }
     if transition.is_some()
@@ -487,7 +483,9 @@ fn validate_observed_patch(
             .as_array()
             .is_none_or(Vec::is_empty)
     {
-        return Err(format!("{case_name} proof patch has no mixed-LOD transition"));
+        return Err(format!(
+            "{case_name} proof patch has no mixed-LOD transition"
+        ));
     }
     Ok(())
 }
@@ -567,14 +565,11 @@ fn validate_face_corner(patches: &[serde_json::Value]) -> Result<(), String> {
                 .as_array()
                 .or_else(|| sample["position"].as_array())
                 .is_some_and(|position| {
-                    position
-                        .iter()
-                        .zip(corner)
-                        .all(|(actual, expected)| {
-                            actual
-                                .as_f64()
-                                .is_some_and(|actual| (actual - expected).abs() < 1e-5)
-                        })
+                    position.iter().zip(corner).all(|(actual, expected)| {
+                        actual
+                            .as_f64()
+                            .is_some_and(|actual| (actual - expected).abs() < 1e-5)
+                    })
                 })
         });
         if !has_corner {

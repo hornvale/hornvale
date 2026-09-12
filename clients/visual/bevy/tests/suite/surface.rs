@@ -179,7 +179,10 @@ fn surface_reply_requires_complete_validated_envelope() {
     assert!(documents::surface_reply(&missing_binding.to_string()).is_err());
 
     let mut missing_request_id: serde_json::Value = serde_json::from_str(&reply).unwrap();
-    missing_request_id.as_object_mut().unwrap().remove("request_id");
+    missing_request_id
+        .as_object_mut()
+        .unwrap()
+        .remove("request_id");
     assert!(documents::surface_reply(&missing_request_id.to_string()).is_err());
 }
 
@@ -214,7 +217,8 @@ fn surface_validation_accepts_signed_channel_distance_but_rejects_non_finite_val
 
 #[test]
 fn signed_channel_distance_has_symmetric_channel_material_influence() {
-    let mut positive: serde_json::Value = serde_json::from_str(&patch_json(&"a".repeat(40))).unwrap();
+    let mut positive: serde_json::Value =
+        serde_json::from_str(&patch_json(&"a".repeat(40))).unwrap();
     positive["samples"][0]["channel_distance_m"] = serde_json::json!(10.0);
     positive["samples"][0]["channel_width_m"] = serde_json::json!(100.0);
     positive["samples"][0]["flow_strength"] = serde_json::json!(1.0);
@@ -277,20 +281,35 @@ fn concurrent_surface_replies_require_binding_request_and_generation_identity() 
     let a = patch_json(&revision);
     let b = patch_json(&revision);
     lifecycle::schedule_surface_patch(
-        SurfacePatchCacheKey { revision: revision.clone(), macro_face: MACRO_FACE, child_path: vec![] },
+        SurfacePatchCacheKey {
+            revision: revision.clone(),
+            macro_face: MACRO_FACE,
+            child_path: vec![],
+        },
         surface_request(&revision, 21, &[]),
-    ).unwrap();
+    )
+    .unwrap();
     lifecycle::schedule_surface_patch(
-        SurfacePatchCacheKey { revision: revision.clone(), macro_face: MACRO_FACE, child_path: vec![] },
+        SurfacePatchCacheKey {
+            revision: revision.clone(),
+            macro_face: MACRO_FACE,
+            child_path: vec![],
+        },
         surface_request(&revision, 22, &[]),
-    ).unwrap();
+    )
+    .unwrap();
     assert!(lifecycle::apply_surface_reply(&surface_reply(21, &a)).is_ok());
     assert!(lifecycle::apply_surface_reply(&surface_reply(22, &b)).is_ok());
 
     lifecycle::schedule_surface_patch(
-        SurfacePatchCacheKey { revision: revision.clone(), macro_face: MACRO_FACE, child_path: vec![] },
+        SurfacePatchCacheKey {
+            revision: revision.clone(),
+            macro_face: MACRO_FACE,
+            child_path: vec![],
+        },
         surface_request(&revision, 23, &[]),
-    ).unwrap();
+    )
+    .unwrap();
     lifecycle::reset_surface_patches();
     assert!(lifecycle::apply_surface_reply(&surface_reply(23, &a)).is_err());
 }
@@ -319,7 +338,10 @@ fn mixed_lod_mesh_has_no_boundary_gap() {
         panic!("positions")
     };
     assert_eq!(points.len(), coarse.vertices.len());
-    assert_eq!(mesh.indices().unwrap().iter().collect::<Vec<_>>(), vec![0, 1, 3]);
+    assert_eq!(
+        mesh.indices().unwrap().iter().collect::<Vec<_>>(),
+        vec![0, 1, 3]
+    );
 }
 
 #[test]
