@@ -1,4 +1,5 @@
 use hornvale_kernel::{Facet, quantize};
+use hornvale_scene::{SceneContext, SurfacePatchQuery, surface_patch_json, surface_patch_scene};
 use hornvale_terrain::{
     FacetAddress, FacetFieldSample, FeatureId, FeatureKind, RealizedCurve, TerminalKind,
     TerrainFacetInputs, WaterKind,
@@ -263,4 +264,33 @@ fn proof_fixture_contains_required_surface_fields() {
     // Compare canonical emit values, including the complete key set: deleting
     // fields or adding presentation-only fields cannot silently pass.
     assert_eq!(fixture, actual);
+}
+
+#[test]
+fn surface_document_is_canonical_and_contains_no_weather_hooks() {
+    let world = seed_42_world();
+    let context = SceneContext::build(&world).unwrap();
+    let address = FacetAddress::new(
+        Facet {
+            face: 0,
+            path: vec![0; 6],
+        },
+        vec![1],
+    )
+    .unwrap();
+    let query = SurfacePatchQuery {
+        address,
+        expected_revision: context.surface_revision().clone(),
+    };
+    let first = surface_patch_json(&surface_patch_scene(&context, &query).unwrap());
+    let second = surface_patch_json(&surface_patch_scene(&context, &query).unwrap());
+    assert_eq!(first, second);
+    let value: Value = serde_json::from_str(&first).unwrap();
+    assert_eq!(value["schema"], "scene/surface/v1");
+    assert!(value["revision"]["configuration_hash_hex"].is_string());
+    assert!(value["samples"].is_array());
+    assert!(value["triangles"].is_array());
+    for hook in ["weather", "cloud", "precip", "roughness"] {
+        assert!(!first.contains(hook), "surface document contains {hook}");
+    }
 }

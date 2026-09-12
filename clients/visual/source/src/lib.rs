@@ -3,7 +3,7 @@
 mod protocol;
 use hornvale_kernel::{World, WorldTime};
 use hornvale_scene::{AstronomyContext, SceneContext};
-use protocol::{Binding, Initial, Reply, Request};
+use protocol::{Binding, Initial, Reply, Request, SurfaceReply, SurfaceRequest};
 use serde_json::value::RawValue;
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, path::Path};
@@ -177,6 +177,64 @@ impl Source {
             request_id: request.request_id,
             ticks: request.ticks,
             astronomy: &astronomy,
+        })
+        .map_err(|e| SourceError::Serialize(e.to_string()))
+    }
+
+    /// Validate and observe one canonical source-owned coherent surface patch.
+    /// Binding and revision mismatches are rejected before patch realization.
+    pub fn observe_surface(&mut self, request_json: &str) -> Result<String, SourceError> {
+        let request: SurfaceRequest = serde_json::from_str(request_json)
+            .map_err(|e| SourceError::InvalidRequest(e.to_string()))?;
+        if request.schema != "visual/surface-request/v1" {
+            return Err(SourceError::InvalidRequest(format!(
+                "unsupported surface schema {:?}",
+                request.schema
+            )));
+        }
+        if request.binding != self.binding {
+            return Err(SourceError::InvalidRequest(
+                "binding does not belong to this source (source/scope/world/revision must all match)".into(),
+            ));
+        }
+        if self.terrain.is_none() {
+            self.terrain = Some(
+                native_build!(3, SceneContext::build(&self.world))
+                    .map_err(|e| SourceError::Observation(e.to_string()))?,
+            );
+        }
+        let context = self.terrain.as_ref().expect("terrain initialized");
+        let revision = context.surface_revision();
+        let expected_hash = revision
+            .configuration_hash
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        if request.expected_revision.source_revision != revision.source_revision
+            || request.expected_revision.algorithm_version != revision.algorithm_version
+            || request.expected_revision.configuration_hash_hex != expected_hash
+        {
+            return Err(SourceError::InvalidRequest(
+                "expected surface revision does not match the active source".into(),
+            ));
+        }
+        let query = hornvale_scene::surface_patch_query_from_packed(
+            request.address.macro_face,
+            request.address.child_path,
+            revision.clone(),
+        )
+        .map_err(|e| SourceError::InvalidRequest(e.to_string()))?;
+        let patch = hornvale_scene::surface_patch_scene(
+            context,
+            &query,
+        )
+        .map_err(|e| SourceError::Observation(e.to_string()))?;
+        let patch = raw(hornvale_scene::surface_patch_json(&patch))?;
+        serde_json::to_string(&SurfaceReply {
+            schema: "visual/surface-reply/v1",
+            binding: &self.binding,
+            request_id: request.request_id,
+            patch: &patch,
         })
         .map_err(|e| SourceError::Serialize(e.to_string()))
     }
