@@ -151,7 +151,7 @@ one in a plan's type signature, two in plan step ordering and a capture action.
 **None of those would have been caught by running anything**, which is the whole
 of why they needed a reader rather than a gate.
 
-**Implementers caught five of them**, in every case by declining to proceed
+**Five plan-text requirement defects were caught this way, two of them rows in the table above (#30 and #37) — the other three (#26, #31, #33) are defects in the plan rather than in this list**, in every case by declining to proceed
 rather than by reviewing after the fact. See section 4. A sixth — the last row
 in the table — was caught by the final whole-branch review, and it is the one
 nobody was in a position to decline, because the task that should have built it
