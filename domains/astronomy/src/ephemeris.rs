@@ -1,4 +1,4 @@
-//! Circular, coplanar stellar and planetary ephemerides.
+//! Analytic, coplanar stellar and planetary ephemerides.
 //!
 //! Positions share the scene's planetary plane: anchor angle is tau times
 //! `year_phase`. The calendar's solar longitude uses that same phase, so
@@ -21,26 +21,178 @@ pub struct OrbitalPosition {
     pub y_au: f64,
 }
 
-fn circular(radius: f64, phase: f64) -> OrbitalPosition {
-    OrbitalPosition {
-        x_au: radius * math::cos(TAU * phase),
-        y_au: radius * math::sin(TAU * phase),
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OrbitalFrame {
+    SystemPlaneAu,
+    AnchorPlaneMegameters,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct OrbitalValidity {
+    pub(crate) from: StdInstant,
+    pub(crate) until: StdInstant,
+}
+
+impl OrbitalValidity {
+    /// type-audit: pending(wave-1)
+    /// plumb: pending(wave-1)
+    pub(crate) const UNBOUNDED: Self = Self {
+        from: StdInstant(f64::NEG_INFINITY),
+        until: StdInstant(f64::INFINITY),
+    };
+
+    fn contains(self, instant: StdInstant) -> bool {
+        instant >= self.from && instant <= self.until
     }
 }
 
-fn phase_at(period: StdDays, offset: f64, t: StdInstant) -> f64 {
-    let phase = (t.get() / period.get() + offset).rem_euclid(1.0);
+/// Internal osculating elements. Distances use the unit named by `frame`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct OrbitalElements {
+    pub(crate) frame: OrbitalFrame,
+    pub(crate) epoch: StdInstant,
+    pub(crate) period: StdDays,
+    pub(crate) semi_major_axis: f64,
+    pub(crate) eccentricity: f64,
+    pub(crate) mean_longitude_at_epoch_turns: f64,
+    pub(crate) periapsis_longitude_turns: f64,
+    pub(crate) validity: OrbitalValidity,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct OrbitalState {
+    pub(crate) frame: OrbitalFrame,
+    pub(crate) position: [f64; 2],
+    pub(crate) velocity_per_day: [f64; 2],
+    pub(crate) radius: f64,
+    pub(crate) mean_anomaly_turns: f64,
+    pub(crate) true_anomaly_rad: f64,
+    pub(crate) eccentric_anomaly_rad: f64,
+    pub(crate) true_longitude_turns: f64,
+}
+
+fn normalize_turns(turns: f64) -> f64 {
+    let phase = turns.rem_euclid(1.0);
     // A tiny negative remainder can round up to exactly one during Euclidean
     // normalization. Zero is the equivalent angle inside the promised interval.
     if phase == 1.0 { 0.0 } else { phase }
 }
 
+pub(crate) fn orbital_phase_at(
+    period: StdDays,
+    epoch: StdInstant,
+    phase_at_epoch: f64,
+    instant: StdInstant,
+) -> f64 {
+    normalize_turns((instant.get() - epoch.get()) / period.get() + phase_at_epoch)
+}
+
+pub(crate) fn orbital_state_at(
+    elements: &OrbitalElements,
+    instant: StdInstant,
+) -> Option<OrbitalState> {
+    if !elements.validity.contains(instant)
+        || !instant.get().is_finite()
+        || !elements.epoch.get().is_finite()
+        || !elements.period.get().is_finite()
+        || elements.period.get() <= 0.0
+        || !elements.semi_major_axis.is_finite()
+        || elements.semi_major_axis <= 0.0
+        || !(0.0..1.0).contains(&elements.eccentricity)
+        || !elements.mean_longitude_at_epoch_turns.is_finite()
+        || !elements.periapsis_longitude_turns.is_finite()
+    {
+        return None;
+    }
+
+    let mean_longitude_turns = orbital_phase_at(
+        elements.period,
+        elements.epoch,
+        elements.mean_longitude_at_epoch_turns,
+        instant,
+    );
+    let mean_anomaly_turns =
+        normalize_turns(mean_longitude_turns - elements.periapsis_longitude_turns);
+    let mean_anomaly = TAU * mean_anomaly_turns;
+    let eccentricity = elements.eccentricity;
+    let mut eccentric_anomaly = mean_anomaly;
+    for _ in 0..16 {
+        eccentric_anomaly -=
+            (eccentric_anomaly - eccentricity * math::sin(eccentric_anomaly) - mean_anomaly)
+                / (1.0 - eccentricity * math::cos(eccentric_anomaly));
+    }
+
+    let cos_e = math::cos(eccentric_anomaly);
+    let sin_e = math::sin(eccentric_anomaly);
+    let minor_ratio = (1.0 - eccentricity * eccentricity).sqrt();
+    let orbital_x = elements.semi_major_axis * (cos_e - eccentricity);
+    let orbital_y = elements.semi_major_axis * minor_ratio * sin_e;
+    let denominator = 1.0 - eccentricity * cos_e;
+    let true_anomaly = math::atan2(minor_ratio * sin_e, cos_e - eccentricity);
+    let orientation = TAU * elements.periapsis_longitude_turns;
+    let (cos_o, sin_o) = (math::cos(orientation), math::sin(orientation));
+    let position = [
+        orbital_x * cos_o - orbital_y * sin_o,
+        orbital_x * sin_o + orbital_y * cos_o,
+    ];
+    let speed_scale = TAU * elements.semi_major_axis / elements.period.get() / denominator;
+    let velocity_x = -speed_scale * sin_e;
+    let velocity_y = speed_scale * minor_ratio * cos_e;
+
+    Some(OrbitalState {
+        frame: elements.frame,
+        position,
+        velocity_per_day: [
+            velocity_x * cos_o - velocity_y * sin_o,
+            velocity_x * sin_o + velocity_y * cos_o,
+        ],
+        radius: elements.semi_major_axis * denominator,
+        mean_anomaly_turns,
+        true_anomaly_rad: true_anomaly,
+        eccentric_anomaly_rad: eccentric_anomaly,
+        true_longitude_turns: normalize_turns(
+            true_anomaly / TAU + elements.periapsis_longitude_turns,
+        ),
+    })
+}
+
+fn circular_state(
+    frame: OrbitalFrame,
+    semi_major_axis: f64,
+    period: StdDays,
+    phase_at_epoch: f64,
+    instant: StdInstant,
+) -> OrbitalState {
+    orbital_state_at(
+        &OrbitalElements {
+            frame,
+            epoch: StdInstant(0.0),
+            period,
+            semi_major_axis,
+            eccentricity: 0.0,
+            mean_longitude_at_epoch_turns: phase_at_epoch,
+            periapsis_longitude_turns: 0.0,
+            validity: OrbitalValidity::UNBOUNDED,
+        },
+        instant,
+    )
+    .expect("generated circular orbit has valid elements")
+}
+
 /// Anchor in the native circumprimary or barycentric orbital plane, in AU.
 pub fn anchor_position_at(system: &StarSystem, t: StdInstant) -> OrbitalPosition {
-    circular(
+    let state = circular_state(
+        OrbitalFrame::SystemPlaneAu,
         system.anchor.orbit.get(),
-        phase_at(system.anchor.year, system.forcing.year_phase_offset, t),
-    )
+        system.anchor.year,
+        system.forcing.year_phase_offset,
+        t,
+    );
+    debug_assert_eq!(state.frame, OrbitalFrame::SystemPlaneAu);
+    OrbitalPosition {
+        x_au: state.position[0],
+        y_au: state.position[1],
+    }
 }
 
 /// Anchor surface orientation, as columns (longitude zero, longitude 90, north).
@@ -78,7 +230,9 @@ pub fn moon_position_at(
 ) -> Option<[f64; 3]> {
     let moon = system.moons.get(index)?;
     let calendar = calendar_of(system);
-    let longitude = crate::moon_ecliptic_longitude_deg(&calendar, index, instant)?;
+    let state = calendar.moon_orbital_state_at(index, instant)?;
+    debug_assert_eq!(state.frame, OrbitalFrame::AnchorPlaneMegameters);
+    let longitude = 360.0 * state.true_longitude_turns;
     let latitude = crate::moon_ecliptic_latitude_deg(&calendar, moon, index, instant)?;
     let direction = math::unit_sphere_from_lat_lon(latitude, longitude);
     let radius = moon.distance.get();
@@ -92,7 +246,12 @@ pub fn moon_position_at(
 /// Circular orbital phase in turns, normalized for pre-genesis instants too.
 /// type-audit: bare-ok(ratio: return)
 pub fn wanderer_phase_at(wanderer: &Wanderer, instant: StdInstant) -> f64 {
-    phase_at(wanderer.period, wanderer.phase_offset, instant)
+    orbital_phase_at(
+        wanderer.period,
+        StdInstant(0.0),
+        wanderer.phase_offset,
+        instant,
+    )
 }
 
 /// Primary then companion, in the circumprimary or barycentric planetary frame.
@@ -109,15 +268,47 @@ pub fn stellar_positions_at(system: &StarSystem, instant: StdInstant) -> Vec<Orb
         .companion
         .as_ref()
         .expect("binary topology requires a companion");
-    let phase = phase_at(companion.orbit.period, companion.orbit.phase, instant);
     let separation = companion.orbit.semi_major_axis.get();
     if system.stellar.topology == StellarTopology::WideBinary {
-        vec![origin, circular(separation, phase)]
+        let state = circular_state(
+            OrbitalFrame::SystemPlaneAu,
+            separation,
+            companion.orbit.period,
+            companion.orbit.phase,
+            instant,
+        );
+        vec![
+            origin,
+            OrbitalPosition {
+                x_au: state.position[0],
+                y_au: state.position[1],
+            },
+        ]
     } else {
         let total = system.star.mass.get() + companion.star.mass.get();
+        let primary = circular_state(
+            OrbitalFrame::SystemPlaneAu,
+            separation * companion.star.mass.get() / total,
+            companion.orbit.period,
+            companion.orbit.phase,
+            instant,
+        );
+        let secondary = circular_state(
+            OrbitalFrame::SystemPlaneAu,
+            separation * system.star.mass.get() / total,
+            companion.orbit.period,
+            companion.orbit.phase,
+            instant,
+        );
         vec![
-            circular(-separation * companion.star.mass.get() / total, phase),
-            circular(separation * system.star.mass.get() / total, phase),
+            OrbitalPosition {
+                x_au: -primary.position[0],
+                y_au: -primary.position[1],
+            },
+            OrbitalPosition {
+                x_au: secondary.position[0],
+                y_au: secondary.position[1],
+            },
         ]
     }
 }
@@ -130,7 +321,17 @@ pub fn wanderer_position_at(
     instant: StdInstant,
 ) -> Option<OrbitalPosition> {
     let w = system.wanderers.get(index)?;
-    Some(circular(w.orbit.get(), wanderer_phase_at(w, instant)))
+    let state = circular_state(
+        OrbitalFrame::SystemPlaneAu,
+        w.orbit.get(),
+        w.period,
+        w.phase_offset,
+        instant,
+    );
+    Some(OrbitalPosition {
+        x_au: state.position[0],
+        y_au: state.position[1],
+    })
 }
 
 fn relative_position(position: OrbitalPosition, anchor: OrbitalPosition) -> OrbitalPosition {
@@ -502,6 +703,66 @@ mod tests {
         }
     }
 
+    fn elements(epoch: f64, eccentricity: f64) -> OrbitalElements {
+        OrbitalElements {
+            frame: OrbitalFrame::SystemPlaneAu,
+            epoch: StdInstant(epoch),
+            period: StdDays(8.0),
+            semi_major_axis: 2.0,
+            eccentricity,
+            mean_longitude_at_epoch_turns: 0.25,
+            periapsis_longitude_turns: 0.0,
+            validity: OrbitalValidity {
+                from: StdInstant(-100.0),
+                until: StdInstant(100.0),
+            },
+        }
+    }
+
+    #[test]
+    fn orbital_evaluator_anchors_mean_longitude_at_the_declared_epoch() {
+        let orbit = elements(10.0, 0.0);
+        let at_epoch = orbital_state_at(&orbit, StdInstant(10.0)).unwrap();
+        let quarter_later = orbital_state_at(&orbit, StdInstant(12.0)).unwrap();
+
+        assert!(at_epoch.position[0].abs() < 1e-12);
+        assert!((at_epoch.position[1] - 2.0).abs() < 1e-12);
+        assert_eq!(at_epoch.frame, OrbitalFrame::SystemPlaneAu);
+        assert!((at_epoch.velocity_per_day[0] + std::f64::consts::PI / 2.0).abs() < 1e-12);
+        assert!(at_epoch.velocity_per_day[1].abs() < 1e-12);
+        assert!((quarter_later.position[0] + 2.0).abs() < 1e-12);
+        assert!(quarter_later.position[1].abs() < 1e-12);
+        assert!(orbital_state_at(&orbit, StdInstant(101.0)).is_none());
+    }
+
+    #[test]
+    fn orbital_evaluator_wraps_negative_instants_before_the_epoch() {
+        let orbit = elements(0.0, 0.0);
+        let state = orbital_state_at(&orbit, StdInstant(-2.0)).unwrap();
+
+        assert!((state.mean_anomaly_turns - 0.0).abs() < 1e-12);
+        assert!((state.position[0] - 2.0).abs() < 1e-12);
+        assert!(state.position[1].abs() < 1e-12);
+    }
+
+    #[test]
+    fn eccentric_and_true_anomaly_describe_the_same_position() {
+        let orbit = elements(-3.0, 0.4);
+        let state = orbital_state_at(&orbit, StdInstant(-2.0)).unwrap();
+        let mean = std::f64::consts::TAU * state.mean_anomaly_turns;
+        let eccentric = state.eccentric_anomaly_rad;
+        let true_anomaly = state.true_anomaly_rad;
+
+        assert!((eccentric - orbit.eccentricity * math::sin(eccentric) - mean).abs() < 1e-12);
+        let denominator = 1.0 - orbit.eccentricity * math::cos(eccentric);
+        let expected_cos = (math::cos(eccentric) - orbit.eccentricity) / denominator;
+        let expected_sin = (1.0 - orbit.eccentricity * orbit.eccentricity).sqrt()
+            * math::sin(eccentric)
+            / denominator;
+        assert!((math::cos(true_anomaly) - expected_cos).abs() < 1e-12);
+        assert!((math::sin(true_anomaly) - expected_sin).abs() < 1e-12);
+    }
+
     #[test]
     fn phase_normalizes_zero_negative_and_large_days() {
         let w = body(0.5, 4.0, 0.25);
@@ -548,6 +809,66 @@ mod tests {
             .get();
         assert!((lon - 116.565051177).abs() < 1e-8);
         assert!(wanderer_position_at(&s, 1, StdInstant(0.0)).is_none());
+    }
+
+    #[test]
+    fn zero_eccentricity_positions_preserve_the_legacy_circular_results() {
+        fn legacy_circular(
+            radius: f64,
+            period: StdDays,
+            offset: f64,
+            t: StdInstant,
+        ) -> OrbitalPosition {
+            let phase = (t.get() / period.get() + offset).rem_euclid(1.0);
+            OrbitalPosition {
+                x_au: radius * math::cos(TAU * phase),
+                y_au: radius * math::sin(TAU * phase),
+            }
+        }
+
+        let instant = StdInstant(-123.4);
+        let mut single = system();
+        single.wanderers.push(body(2.0, 16.0, 0.37));
+        assert_eq!(
+            anchor_position_at(&single, instant),
+            legacy_circular(
+                single.anchor.orbit.get(),
+                single.anchor.year,
+                single.forcing.year_phase_offset,
+                instant,
+            )
+        );
+        assert_eq!(
+            wanderer_position_at(&single, 0, instant).unwrap(),
+            legacy_circular(2.0, StdDays(16.0), 0.37, instant)
+        );
+
+        let binary = generate(
+            Seed(43),
+            &SkyPins {
+                topology: Some(StellarTopology::CloseBinary),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap()
+        .value;
+        let companion = binary.stellar.companion.as_ref().unwrap();
+        let total_mass = binary.star.mass.get() + companion.star.mass.get();
+        let expected = [
+            legacy_circular(
+                -companion.orbit.semi_major_axis.get() * companion.star.mass.get() / total_mass,
+                companion.orbit.period,
+                companion.orbit.phase,
+                instant,
+            ),
+            legacy_circular(
+                companion.orbit.semi_major_axis.get() * binary.star.mass.get() / total_mass,
+                companion.orbit.period,
+                companion.orbit.phase,
+                instant,
+            ),
+        ];
+        assert_eq!(stellar_positions_at(&binary, instant), expected);
     }
 
     #[test]

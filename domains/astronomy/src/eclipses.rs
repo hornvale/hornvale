@@ -131,9 +131,7 @@ pub fn moon_ecliptic_latitude_deg(
     index: usize,
     t: StdInstant,
 ) -> Option<f64> {
-    let phase = calendar.moon_phase(t, index)?;
-    let l_sun = 360.0 * calendar.year_phase(t);
-    let l_moon = l_sun + 360.0 * phase;
+    let l_moon = moon_ecliptic_longitude_deg(calendar, index, t)?;
     let omega = node_longitude_at(moon, calendar.year_length(), t);
     let sin_i = math::sin(moon.inclination_deg.to_radians());
     let sin_u = math::sin((l_moon - omega).to_radians());
@@ -141,16 +139,16 @@ pub fn moon_ecliptic_latitude_deg(
 }
 
 /// The sun's apparent angular diameter (Luna-units) at `t`: the mean
-/// orbital value scaled by the instantaneous star distance from the live
-/// eccentricity. First-order: r/a = 1 − e·sin(2π·year-phase) — the same
-/// perihelion convention the apsidal daylight term already uses
-/// (insolation peaks at year phase 0.25). Declared approximation (model
-/// card); evaluated at the event, never cached (the tidal-braking seam).
+/// orbital value scaled by the shared orbital state's instantaneous radius.
+/// The apsidal convention keeps perihelion at year phase 0.25. Evaluated at
+/// the event, never cached (the tidal-braking seam).
 /// type-audit: pending(wave-1)
 pub fn sun_angular_rel_at(system: &StarSystem, calendar: &Calendar, t: StdInstant) -> f64 {
     let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
-    let e = system.forcing.eccentricity_at(t.0);
-    mean / (1.0 - e * math::sin(std::f64::consts::TAU * calendar.year_phase(t)))
+    let state = calendar
+        .anchor_orbital_state_at(t)
+        .expect("generated anchor orbit is valid at every compatibility instant");
+    mean * system.anchor.orbit.get() / state.radius
 }
 
 /// Which body is darkened.
@@ -271,8 +269,12 @@ pub fn moon_ecliptic_longitude_deg(
     index: usize,
     t: StdInstant,
 ) -> Option<f64> {
-    let phase = calendar.moon_phase(t, index)?;
-    Some((360.0 * calendar.year_phase(t) + 360.0 * phase).rem_euclid(360.0))
+    Some(
+        360.0
+            * calendar
+                .moon_orbital_state_at(index, t)?
+                .true_longitude_turns,
+    )
 }
 
 /// The sub-solar longitude at `t`, degrees in [−180, 180): local noon of
@@ -997,6 +999,22 @@ mod tests {
             "min ratio {}",
             min / mean
         );
+    }
+
+    #[test]
+    fn calendar_and_eclipses_consume_the_ephemeris_anchor_position() {
+        let (mut system, _) = super::luna_sol();
+        system.forcing.year_phase_offset = 0.0;
+        system.forcing.ecc_mean = 0.2;
+        system.forcing.ecc_amp = 0.0;
+        let calendar = crate::calendar::calendar_of(&system);
+        let instant = StdInstant(system.anchor.year.get() / 4.0);
+        let state = calendar.anchor_orbital_state_at(instant).unwrap();
+        let radius =
+            (state.position[0] * state.position[0] + state.position[1] * state.position[1]).sqrt();
+        let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
+
+        assert!((sun_angular_rel_at(&system, &calendar, instant) - mean / radius).abs() < 1e-12);
     }
 
     fn test_moon(inclination_deg: f64, node_longitude_deg: f64) -> Moon {
