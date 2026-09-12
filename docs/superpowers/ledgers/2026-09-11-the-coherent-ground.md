@@ -142,3 +142,23 @@ reconciliation row records the Astra revision review.
   currents, snow, water motion, and weather-qualified roughness.
 - Measure patch-generation cost on the first proof slice before considering
   broader refinement levels or any Level-8 macro experiment.
+
+## Task 7–8 proof evidence
+
+- Proof seed/region: seed 42, with five required live cases: confluence,
+  terminal basin, coast crossing, cube-sphere face corner, and unequal-LOD
+  adjacency. The proof exercised 13 live operations, including both fine
+  addresses, both coarse transitions, all three corner neighbors, and Bevy
+  mesh/material application.
+- Acceptance checks: source-owned coherent ground, continuous seams and
+  coasts, declared river terminals, directional ranges, blended material
+  transitions, and dynamic weather explicitly deferred. No cloud,
+  precipitation, save-format, epoch, or new-stream interface entered this
+  campaign.
+- Measurements: the proof records per-operation source generation latency,
+  Bevy mesh/material application time, and maximum before/after process RSS.
+  The focused proof suite took 110.036 s wall time (5 tests, 2 slow live
+  tests); no unsupported performance target is claimed. The evidence supports
+  retaining lazy refinement and deferring any Level-8 macro expansion until a
+  separate campaign supplies a broader measured region and an explicit visual
+  need.
