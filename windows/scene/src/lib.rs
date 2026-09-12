@@ -16,7 +16,9 @@ use hornvale_terrain::{
     EndpointSide, FacetAddress, FacetFieldSample, FeatureId, FeatureKind, GeneratedTerrain,
     RealizedCurve, TerminalKind,
 };
-use hornvale_worldgen::{SurfacePatch, SurfaceRealizationContext, SurfaceRevision};
+use hornvale_worldgen::{
+    SurfacePatch, SurfaceRealizationContext, SurfaceRevision, facet::stitch_transition,
+};
 use serde::Serialize;
 
 mod astronomy_at;
@@ -532,15 +534,34 @@ pub fn surface_patch_scene(
     context: &SceneContext,
     query: &SurfacePatchQuery,
 ) -> Result<SurfacePatch, SceneError> {
+    surface_patch_scene_with_transition(context, query, None)
+}
+
+/// Query a patch and, when requested, attach source-computed replacement
+/// triangles for its coarse edge beside an immediate finer neighbor.
+pub fn surface_patch_scene_with_transition(
+    context: &SceneContext,
+    query: &SurfacePatchQuery,
+    transition_address: Option<&FacetAddress>,
+) -> Result<SurfacePatch, SceneError> {
     if query.expected_revision != context.surface.revision {
         return Err(SceneError::Surface(
             "expected surface revision does not match the scene context".into(),
         ));
     }
-    context
+    let mut patch = context
         .surface
         .realize(&query.address)
-        .map_err(|error| SceneError::Surface(error.to_string()))
+        .map_err(|error| SceneError::Surface(error.to_string()))?;
+    if let Some(transition_address) = transition_address {
+        let fine = context
+            .surface
+            .realize(transition_address)
+            .map_err(|error| SceneError::Surface(error.to_string()))?;
+        patch.transition_triangles = stitch_transition(&patch, &fine)
+            .map_err(|error| SceneError::Surface(error.to_string()))?;
+    }
+    Ok(patch)
 }
 
 #[derive(Serialize)]
@@ -551,6 +572,8 @@ struct SurfacePatchDocument {
     samples: Vec<SurfaceSampleDocument>,
     curves: Vec<SurfaceCurveDocument>,
     triangles: Vec<[u32; 3]>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    transition_triangles: Vec<[u32; 3]>,
 }
 
 #[derive(Serialize)]
@@ -748,6 +771,7 @@ pub fn surface_patch_json(patch: &SurfacePatch) -> String {
             .collect(),
         curves: patch.curves.iter().map(surface_curve_document).collect(),
         triangles: patch.triangles.clone(),
+        transition_triangles: patch.transition_triangles.clone(),
     };
     serde_json::to_string(&document).expect("surface patch document always serializes")
 }

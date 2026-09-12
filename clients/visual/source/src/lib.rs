@@ -257,12 +257,25 @@ impl Source {
         let query = hornvale_scene::surface_patch_query_from_packed(
             request.address.macro_face,
             request.address.child_path,
-            revision,
+            revision.clone(),
         )
         .map_err(|e| SourceError::InvalidRequest(e.to_string()))?;
-        let patch = hornvale_scene::surface_patch_scene(
+        let transition_address = request
+            .transition_address
+            .map(|address| {
+                hornvale_scene::surface_patch_query_from_packed(
+                    address.macro_face,
+                    address.child_path,
+                    revision.clone(),
+                )
+                .map(|query| query.address)
+                .map_err(|e| SourceError::InvalidRequest(e.to_string()))
+            })
+            .transpose()?;
+        let patch = hornvale_scene::surface_patch_scene_with_transition(
             context,
             &query,
+            transition_address.as_ref(),
         )
         .map_err(|e| SourceError::Observation(e.to_string()))?;
         let patch = raw(hornvale_scene::surface_patch_json(&patch))?;
@@ -270,6 +283,7 @@ impl Source {
             schema: "visual/surface-reply/v1",
             binding: &self.binding,
             request_id: request.request_id,
+            generation: request.generation,
             patch: &patch,
         })
         .map_err(|e| SourceError::Serialize(e.to_string()))
@@ -317,6 +331,7 @@ mod tests {
             "schema": "visual/surface-request/v1",
             "binding": source.binding,
             "request_id": 1,
+            "generation": 0,
             "address": {"macro_face": 0, "child_path": [1]},
             "expected_revision": {
                 "source_revision": "0",

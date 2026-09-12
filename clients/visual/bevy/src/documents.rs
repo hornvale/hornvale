@@ -138,6 +138,30 @@ pub struct SurfacePatchDocument {
     pub transition_triangles: Vec<[u32; 3]>,
 }
 
+/// The complete source envelope for one surface observation.
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfaceReplyDocument {
+    pub schema: String,
+    pub binding: Binding,
+    pub request_id: u64,
+    pub generation: u64,
+    pub patch: SurfacePatchDocument,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SurfaceRequestDocument {
+    pub schema: String,
+    pub binding: Binding,
+    pub request_id: u64,
+    pub generation: u64,
+    pub address: SurfacePatchAddress,
+    #[serde(default)]
+    pub transition_address: Option<SurfacePatchAddress>,
+    pub expected_revision: SurfacePatchRevision,
+}
+
 /// Full revision-qualified cache identity for a surface patch.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -151,6 +175,83 @@ fn valid_surface_number(value: f64) -> bool {
     value.is_finite()
 }
 
+const MAX_SURFACE_CHILD_DEPTH: usize = 23;
+const UNIT_TOLERANCE: f64 = 1.0e-5;
+const WEIGHT_TOLERANCE: f64 = 1.0e-5;
+
+fn valid_revision_component(value: &str, max_len: usize) -> bool {
+    !value.is_empty()
+        && value.len() <= max_len
+        && value.bytes().all(|byte| byte.is_ascii_graphic() && byte != b':')
+}
+
+fn valid_unit_vector(value: [f64; 3], allow_zero: bool) -> bool {
+    let length = value.into_iter().map(|component| component * component).sum::<f64>().sqrt();
+    length.is_finite() && ((allow_zero && length <= UNIT_TOLERANCE) || (length - 1.0).abs() <= UNIT_TOLERANCE)
+}
+
+fn valid_weight(value: f64) -> bool {
+    value.is_finite() && (0.0..=1.0).contains(&value)
+}
+
+fn valid_feature_kind(kind: &str) -> bool {
+    matches!(kind, "channel_reach" | "confluence" | "shoreline" | "ridge" | "material_transition")
+}
+
+fn valid_terminal(terminal: &str) -> bool {
+    matches!(terminal, "headwater" | "confluence" | "lake" | "ocean" | "continuation")
+}
+
+fn valid_endpoint(endpoint: &SurfacePatchEndpoint, feature: &SurfaceFeatureId, expected_side: &str) -> bool {
+    endpoint.feature == *feature
+        && endpoint.side == expected_side
+        && valid_terminal(&endpoint.terminal)
+        && endpoint.boundary.as_ref().is_none_or(|boundary| {
+            valid_macro_face(boundary.address.macro_face)
+                && boundary.edge < 4
+                && (0.0..=1.0).contains(&boundary.t)
+                && boundary.address.child_path.len() <= MAX_SURFACE_CHILD_DEPTH
+                && boundary.address.child_path.iter().all(|digit| *digit <= 3)
+        })
+        && (endpoint.terminal == "continuation") == endpoint.boundary.is_some()
+}
+
+fn valid_macro_face(value: u32) -> bool {
+    let face = value & 0x1f;
+    let pathword = value >> 5;
+    face < 6 && (0x1000..0x2000).contains(&pathword)
+}
+
+pub(crate) fn validate_surface_patch_revision(
+    revision: &SurfacePatchRevision,
+) -> Result<(), ViewError> {
+    check(
+        revision.source_revision.len() == 40
+            && revision
+                .source_revision
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+            && valid_revision_component(&revision.algorithm_version, 128)
+            && revision.configuration_hash_hex.len() == 64
+            && revision
+                .configuration_hash_hex
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase()),
+        "invalid surface patch revision",
+    )
+}
+
+pub(crate) fn validate_surface_patch_address(
+    address: &SurfacePatchAddress,
+) -> Result<(), ViewError> {
+    check(
+        valid_macro_face(address.macro_face)
+            && address.child_path.len() <= MAX_SURFACE_CHILD_DEPTH
+            && address.child_path.iter().all(|digit| *digit <= 3),
+        "invalid surface patch address",
+    )
+}
+
 pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<(), ViewError> {
     check(
         document.schema == "scene/surface/v1",
@@ -158,46 +259,71 @@ pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<
     )?;
     check(
         !document.revision.source_revision.is_empty()
-            && !document.revision.algorithm_version.is_empty()
+            && document.revision.source_revision.len() == 40
+            && document
+                .revision
+                .source_revision
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+            && valid_revision_component(&document.revision.algorithm_version, 128)
             && document.revision.configuration_hash_hex.len() == 64
             && document
                 .revision
                 .configuration_hash_hex
                 .bytes()
-                .all(|byte| byte.is_ascii_hexdigit()),
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase()),
         "invalid surface patch revision",
     )?;
     check(
-        document.address.child_path.iter().all(|digit| *digit <= 3),
+        document.address.child_path.len() <= MAX_SURFACE_CHILD_DEPTH
+            && document.address.child_path.iter().all(|digit| *digit <= 3),
         "surface child path digit is outside 0..=3",
+    )?;
+    check(
+        valid_macro_face(document.address.macro_face),
+        "surface macro face is not a packed Level-6 facet",
     )?;
     check(!document.vertices.is_empty(), "surface patch has no samples")?;
     check(
         document.vertices.iter().all(|vertex| {
-            vertex
+            valid_unit_vector(vertex.position, false)
+                && valid_unit_vector(vertex.normal, false)
+                && vertex.material_weights.iter().copied().all(valid_weight)
+                && (vertex.material_weights.iter().sum::<f64>() - 1.0).abs() <= WEIGHT_TOLERANCE
+                && vertex.water_depth_m >= 0.0
+                && vertex.channel_distance_m >= 0.0
+                && vertex.channel_width_m >= 0.0
+                && vertex.flow_strength >= 0.0
+                && vertex.flow_strength <= 1.0
+                && valid_unit_vector(vertex.flow_direction, true)
+                && valid_unit_vector(vertex.ridge_direction, true)
+                && [
+                    vertex.floodplain_weight,
+                    vertex.bank_weight,
+                    vertex.terrace_weight,
+                    vertex.delta_weight,
+                    vertex.ridge_strength,
+                ]
+                .into_iter()
+                .all(valid_weight)
+                && vertex
                 .position
-                .iter()
-                .chain(vertex.normal.iter())
-                .chain(vertex.material_weights.iter())
-                .chain(vertex.flow_direction.iter())
-                .chain(vertex.ridge_direction.iter())
-                .chain(
-                    [
-                        vertex.height_m,
-                        vertex.shoreline_distance_m,
-                        vertex.water_depth_m,
-                        vertex.flow_strength,
-                        vertex.channel_distance_m,
-                        vertex.channel_width_m,
-                        vertex.floodplain_weight,
-                        vertex.bank_weight,
-                        vertex.terrace_weight,
-                        vertex.delta_weight,
-                        vertex.ridge_strength,
-                    ]
-                    .iter(),
-                )
-                .copied()
+                .into_iter()
+                .all(valid_surface_number)
+                && [
+                    vertex.height_m,
+                    vertex.shoreline_distance_m,
+                    vertex.water_depth_m,
+                    vertex.flow_strength,
+                    vertex.channel_distance_m,
+                    vertex.channel_width_m,
+                    vertex.floodplain_weight,
+                    vertex.bank_weight,
+                    vertex.terrace_weight,
+                    vertex.delta_weight,
+                    vertex.ridge_strength,
+                ]
+                .into_iter()
                 .all(valid_surface_number)
         }),
         "surface patch contains a non-finite sample",
@@ -219,12 +345,19 @@ pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<
     )?;
     check(
         document.features.iter().all(|feature| {
-            feature.points.len() >= 2
+            valid_feature_kind(&feature.feature.kind)
+                && feature.points.len() >= 2
                 && feature.points.len() == feature.width_rad.len()
-                && feature.points.iter().flatten().copied().all(valid_surface_number)
+                && feature
+                    .points
+                    .iter()
+                    .copied()
+                    .all(|point| valid_unit_vector(point, false))
                 && feature.width_rad.iter().all(|width| {
-                    valid_surface_number(*width) && *width >= 0.0
+                    valid_surface_number(*width) && (0.0..=std::f64::consts::PI).contains(width)
                 })
+                && valid_endpoint(&feature.endpoints[0], &feature.feature, "upstream")
+                && valid_endpoint(&feature.endpoints[1], &feature.feature, "downstream")
         }),
         "surface feature curve is incomplete or non-finite",
     )?;
@@ -247,8 +380,12 @@ impl SurfacePatchRevision {
     /// so distinct revisions cannot collapse to one cache entry.
     pub fn cache_token(&self) -> String {
         format!(
-            "{}\u{1f}{}\u{1f}{}",
-            self.source_revision, self.algorithm_version, self.configuration_hash_hex
+            "{}:{}{}:{}{}",
+            self.source_revision.len(),
+            self.source_revision,
+            self.algorithm_version.len(),
+            self.algorithm_version,
+            self.configuration_hash_hex
         )
     }
 }
@@ -258,6 +395,22 @@ pub fn surface_patch(json: &str) -> Result<SurfacePatchDocument, ViewError> {
     let document: SurfacePatchDocument = serde_json::from_str(json)?;
     validate_surface_patch(&document)?;
     Ok(document)
+}
+
+/// Decode and validate the complete source-owned surface reply envelope.
+pub fn surface_reply(json: &str) -> Result<SurfaceReplyDocument, ViewError> {
+    let reply: SurfaceReplyDocument = serde_json::from_str(json)?;
+    check(
+        reply.schema == "visual/surface-reply/v1",
+        "unknown surface reply schema",
+    )?;
+    reply.binding.validate()?;
+    check(
+        reply.patch.revision.source_revision == reply.binding.source_revision,
+        "surface reply patch revision does not match its binding",
+    )?;
+    validate_surface_patch(&reply.patch)?;
+    Ok(reply)
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Body {

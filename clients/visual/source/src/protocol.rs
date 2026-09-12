@@ -41,7 +41,10 @@ pub(crate) struct SurfaceRequest {
     pub schema: String,
     pub binding: Binding,
     pub request_id: u64,
+    pub generation: u64,
     pub address: FacetAddressWire,
+    #[serde(default)]
+    pub transition_address: Option<FacetAddressWire>,
     pub expected_revision: SurfaceRevisionWire,
 }
 
@@ -50,6 +53,7 @@ pub(crate) struct SurfaceReply<'a> {
     pub schema: &'static str,
     pub binding: &'a Binding,
     pub request_id: u64,
+    pub generation: u64,
     pub patch: &'a RawValue,
 }
 

@@ -4,6 +4,8 @@ use hornvale_bevy_view::{
     documents::{self, SurfacePatchCacheKey},
     lifecycle,
 };
+
+const MACRO_FACE: u32 = 1 << 17;
 #[test]
 fn globe_uses_source_north_and_sea_reference_without_relief_gain() {
     let mut initial = documents::initial(include_str!("../fixtures/initial.json")).unwrap();
@@ -107,7 +109,7 @@ fn patch_json(revision: &str) -> String {
             "algorithm_version": "hornvale/surface-realization/v2",
             "configuration_hash_hex": "11".repeat(32)
         },
-        "address": {"macro_face": 0, "child_path": []},
+        "address": {"macro_face": MACRO_FACE, "child_path": []},
         "samples": [
             {"position": [1.0,0.0,0.0], "height_m": 10.0, "normal": [1.0,0.0,0.0], "material_weights": [1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "shoreline_distance_m": 10.0, "water_depth_m": 0.0, "flow_direction": [0.0,1.0,0.0], "flow_strength": 0.0, "channel_distance_m": 10.0, "channel_width_m": 0.0, "floodplain_weight": 0.0, "bank_weight": 0.0, "terrace_weight": 0.0, "delta_weight": 0.0, "ridge_direction": [0.0,1.0,0.0], "ridge_strength": 0.0},
             {"position": [0.0,1.0,0.0], "height_m": 10.0, "normal": [0.0,1.0,0.0], "material_weights": [1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], "shoreline_distance_m": 10.0, "water_depth_m": 0.0, "flow_direction": [0.0,1.0,0.0], "flow_strength": 0.0, "channel_distance_m": 10.0, "channel_width_m": 0.0, "floodplain_weight": 0.0, "bank_weight": 0.0, "terrace_weight": 0.0, "delta_weight": 0.0, "ridge_direction": [0.0,1.0,0.0], "ridge_strength": 0.0},
@@ -119,6 +121,42 @@ fn patch_json(revision: &str) -> String {
     }).to_string()
 }
 
+fn binding_value() -> serde_json::Value {
+    serde_json::json!({
+        "source_id": "surface-test",
+        "scope_id": "scientific:unrestricted",
+        "world_sha256": "b".repeat(64),
+        "source_revision": "a".repeat(40)
+    })
+}
+
+fn surface_request(revision: &str, request_id: u64, child_path: &[u8]) -> String {
+    serde_json::json!({
+        "schema": "visual/surface-request/v1",
+        "binding": binding_value(),
+        "request_id": request_id,
+        "generation": lifecycle::surface_patch_generation(),
+        "address": {"macro_face": MACRO_FACE, "child_path": child_path},
+        "expected_revision": {
+            "source_revision": revision,
+            "algorithm_version": "hornvale/surface-realization/v2",
+            "configuration_hash_hex": "11".repeat(32)
+        }
+    })
+    .to_string()
+}
+
+fn surface_reply(request_id: u64, patch: &str) -> String {
+    serde_json::json!({
+        "schema": "visual/surface-reply/v1",
+        "binding": binding_value(),
+        "request_id": request_id,
+        "generation": lifecycle::surface_patch_generation(),
+        "patch": serde_json::from_str::<serde_json::Value>(patch).unwrap()
+    })
+    .to_string()
+}
+
 #[test]
 fn patch_document_round_trips() {
     let json = patch_json(&"a".repeat(40));
@@ -126,6 +164,38 @@ fn patch_document_round_trips() {
     let encoded = serde_json::to_string(&document).unwrap();
     let round_trip = documents::surface_patch(&encoded).unwrap();
     assert_eq!(document, round_trip);
+}
+
+#[test]
+fn surface_reply_requires_complete_validated_envelope() {
+    let patch = patch_json(&"a".repeat(40));
+    let reply = surface_reply(7, &patch);
+    let decoded = documents::surface_reply(&reply).unwrap();
+    assert_eq!(decoded.request_id, 7);
+    assert_eq!(decoded.patch.address.child_path, Vec::<u8>::new());
+
+    let mut missing_binding: serde_json::Value = serde_json::from_str(&reply).unwrap();
+    missing_binding.as_object_mut().unwrap().remove("binding");
+    assert!(documents::surface_reply(&missing_binding.to_string()).is_err());
+
+    let mut missing_request_id: serde_json::Value = serde_json::from_str(&reply).unwrap();
+    missing_request_id.as_object_mut().unwrap().remove("request_id");
+    assert!(documents::surface_reply(&missing_request_id.to_string()).is_err());
+}
+
+#[test]
+fn surface_validation_rejects_unbounded_semantics_and_unknown_endpoints() {
+    let mut value: serde_json::Value = serde_json::from_str(&patch_json(&"a".repeat(40))).unwrap();
+    value["samples"][0]["material_weights"][0] = serde_json::json!(1.1);
+    assert!(documents::surface_patch(&value.to_string()).is_err());
+
+    let mut value: serde_json::Value = serde_json::from_str(&patch_json(&"a".repeat(40))).unwrap();
+    value["curves"][0]["endpoints"][0]["side"] = serde_json::json!("sideways");
+    assert!(documents::surface_patch(&value.to_string()).is_err());
+
+    let mut value: serde_json::Value = serde_json::from_str(&patch_json(&"a".repeat(40))).unwrap();
+    value["curves"][0]["endpoints"][1]["terminal"] = serde_json::json!("nowhere");
+    assert!(documents::surface_patch(&value.to_string()).is_err());
 }
 
 #[test]
@@ -139,17 +209,43 @@ fn cache_key_includes_the_full_surface_revision() {
 #[test]
 fn stale_patch_is_not_applied() {
     let revision = "a".repeat(40);
+    lifecycle::reset_surface_patches();
     lifecycle::schedule_surface_patch(
         SurfacePatchCacheKey {
             revision: revision.clone(),
-            macro_face: 0,
+            macro_face: MACRO_FACE,
             child_path: vec![],
         },
-        patch_json(&revision),
+        surface_request(&revision, 11, &[]),
     )
     .unwrap();
     let stale = documents::surface_patch(&patch_json(&"b".repeat(40))).unwrap();
     assert!(lifecycle::apply_surface_patch(&stale).is_err());
+}
+
+#[test]
+fn concurrent_surface_replies_require_binding_request_and_generation_identity() {
+    let revision = "a".repeat(40);
+    lifecycle::reset_surface_patches();
+    let a = patch_json(&revision);
+    let b = patch_json(&revision);
+    lifecycle::schedule_surface_patch(
+        SurfacePatchCacheKey { revision: revision.clone(), macro_face: MACRO_FACE, child_path: vec![] },
+        surface_request(&revision, 21, &[]),
+    ).unwrap();
+    lifecycle::schedule_surface_patch(
+        SurfacePatchCacheKey { revision: revision.clone(), macro_face: MACRO_FACE, child_path: vec![] },
+        surface_request(&revision, 22, &[]),
+    ).unwrap();
+    assert!(lifecycle::apply_surface_reply(&surface_reply(21, &a)).is_ok());
+    assert!(lifecycle::apply_surface_reply(&surface_reply(22, &b)).is_ok());
+
+    lifecycle::schedule_surface_patch(
+        SurfacePatchCacheKey { revision: revision.clone(), macro_face: MACRO_FACE, child_path: vec![] },
+        surface_request(&revision, 23, &[]),
+    ).unwrap();
+    lifecycle::reset_surface_patches();
+    assert!(lifecycle::apply_surface_reply(&surface_reply(23, &a)).is_err());
 }
 
 #[test]
@@ -161,13 +257,20 @@ fn curve_mask_survives_vertex_miss() {
 
 #[test]
 fn mixed_lod_mesh_has_no_boundary_gap() {
-    let document = documents::surface_patch(&patch_json(&"a".repeat(40))).unwrap();
-    let mesh = surface::surface_mesh(&document, Some(&document));
+    let revision = "a".repeat(40);
+    let mut coarse: serde_json::Value = serde_json::from_str(&patch_json(&revision)).unwrap();
+    coarse["transition_triangles"] = serde_json::json!([[0, 1, 3]]);
+    let mut fine: serde_json::Value = serde_json::from_str(&patch_json(&revision)).unwrap();
+    fine["address"]["child_path"] = serde_json::json!([1]);
+    fine["triangles"] = serde_json::json!([[0, 1, 2]]);
+    let coarse = documents::surface_patch(&coarse.to_string()).unwrap();
+    let fine = documents::surface_patch(&fine.to_string()).unwrap();
+    let mesh = surface::surface_mesh(&coarse, Some(&fine));
     let Some(VertexAttributeValues::Float32x3(points)) =
         mesh.attribute(hornvale_bevy_view::bevy::mesh::Mesh::ATTRIBUTE_POSITION)
     else {
         panic!("positions")
     };
-    assert_eq!(points.len(), document.vertices.len());
-    assert!(mesh.indices().is_some());
+    assert_eq!(points.len(), coarse.vertices.len());
+    assert_eq!(mesh.indices().unwrap().iter().collect::<Vec<_>>(), vec![0, 1, 3]);
 }

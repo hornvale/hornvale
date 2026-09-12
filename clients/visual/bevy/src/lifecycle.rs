@@ -9,6 +9,8 @@ use bevy::{
     light::{Atmosphere, atmosphere::ScatteringMedium},
     prelude::*,
 };
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 pub const KM_PER_UNIT: f64 = 1000.;
 #[derive(Component)]
 pub(crate) struct BodyVisual {
@@ -75,9 +77,36 @@ pub struct SurfaceMeshHandles {
     pub material: StandardMaterial,
 }
 
-thread_local! {
-    static ACTIVE_SURFACE_PATCH: std::sync::Mutex<Option<SurfacePatchCacheKey>> =
-        const { std::sync::Mutex::new(None) };
+#[derive(Default)]
+struct SurfacePatchState {
+    generation: u64,
+    pending: HashMap<(Binding, u64, u64), SurfacePatchCacheKey>,
+}
+
+static ACTIVE_SURFACE_PATCHES: OnceLock<Mutex<SurfacePatchState>> = OnceLock::new();
+
+fn surface_patch_state() -> &'static Mutex<SurfacePatchState> {
+    ACTIVE_SURFACE_PATCHES.get_or_init(|| Mutex::new(SurfacePatchState::default()))
+}
+
+/// Invalidate every outstanding surface request when the source mirror resets.
+pub fn reset_surface_patches() {
+    let mut state = surface_patch_state()
+        .lock()
+        .expect("surface schedule state is not poisoned");
+    state.generation = state
+        .generation
+        .checked_add(1)
+        .expect("surface generation overflow");
+    state.pending.clear();
+}
+
+/// Generation to put on a new source request.
+pub fn surface_patch_generation() -> u64 {
+    surface_patch_state()
+        .lock()
+        .expect("surface schedule state is not poisoned")
+        .generation
 }
 
 /// Register a source request as the active patch generation.
@@ -89,51 +118,48 @@ pub fn schedule_surface_patch(
     mut key: SurfacePatchCacheKey,
     request: String,
 ) -> Result<(), ViewError> {
-    if key.revision.is_empty() || request.trim().is_empty() {
-        return Err(ViewError::Document(
-            "surface request requires a revision and body".into(),
-        ));
-    }
-    if key.child_path.iter().any(|digit| *digit > 3) {
-        return Err(ViewError::Document(
-            "surface cache key contains an invalid child path".into(),
-        ));
-    }
-    let request_value = serde_json::from_str::<serde_json::Value>(&request)
+    let request: documents::SurfaceRequestDocument = serde_json::from_str(&request)
         .map_err(|error| ViewError::Document(format!("invalid surface request: {error}")))?;
-    if let Some(revision) = request_value
-        .get("expected_revision")
-        .or_else(|| request_value.get("revision"))
-    {
-        let source_revision = revision
-            .get("source_revision")
-            .and_then(serde_json::Value::as_str)
-            .ok_or_else(|| ViewError::Document("surface request has no source revision".into()))?;
-        let algorithm_version = revision
-            .get("algorithm_version")
-            .and_then(serde_json::Value::as_str)
-            .ok_or_else(|| ViewError::Document("surface request has no algorithm version".into()))?;
-        let configuration_hash_hex = revision
-            .get("configuration_hash_hex")
-            .and_then(serde_json::Value::as_str)
-            .ok_or_else(|| {
-                ViewError::Document("surface request has no configuration hash".into())
-            })?;
-        let full_revision = format!(
-            "{}\u{1f}{}\u{1f}{}",
-            source_revision, algorithm_version, configuration_hash_hex
-        );
-        if key.revision == source_revision {
-            key.revision = full_revision;
-        } else if key.revision != full_revision {
-            return Err(ViewError::Binding(
-                "surface request revision does not match its cache key".into(),
-            ));
-        }
+    if request.schema != "visual/surface-request/v1" {
+        return Err(ViewError::Document("unknown surface request schema".into()));
     }
-    ACTIVE_SURFACE_PATCH.with(|active| {
-        *active.lock().expect("surface schedule state is not poisoned") = Some(key)
-    });
+    request.binding.validate()?;
+    if request.expected_revision.source_revision != request.binding.source_revision {
+        return Err(ViewError::Binding(
+            "surface request revision does not match its binding".into(),
+        ));
+    }
+    documents::validate_surface_patch_revision(&request.expected_revision)?;
+    documents::validate_surface_patch_address(&request.address)?;
+    if let Some(transition_address) = &request.transition_address {
+        documents::validate_surface_patch_address(transition_address)?;
+    }
+    if key.revision == request.expected_revision.source_revision {
+        key.revision = request.expected_revision.cache_token();
+    }
+    if key.revision != request.expected_revision.cache_token()
+        || key.macro_face != request.address.macro_face
+        || key.child_path != request.address.child_path
+    {
+        return Err(ViewError::Binding(
+            "surface request does not match its cache key".into(),
+        ));
+    }
+    let mut state = surface_patch_state()
+        .lock()
+        .expect("surface schedule state is not poisoned");
+    if request.generation != state.generation {
+        return Err(ViewError::Binding(
+            "surface request belongs to a stale source generation".into(),
+        ));
+    }
+    let identity = (request.binding.clone(), request.request_id, request.generation);
+    if state.pending.contains_key(&identity) {
+        return Err(ViewError::Binding(
+            "surface request ID is already scheduled for this binding".into(),
+        ));
+    }
+    state.pending.insert(identity, key);
     Ok(())
 }
 
@@ -145,23 +171,55 @@ pub fn apply_surface_patch(
 ) -> Result<SurfaceMeshHandles, ViewError> {
     documents::validate_surface_patch(document)?;
     let key = document.cache_key();
-    ACTIVE_SURFACE_PATCH.with(|active| match active
+    let mut state = surface_patch_state()
         .lock()
-        .expect("surface schedule state is not poisoned")
-        .as_ref()
-    {
-        Some(scheduled) if scheduled == &key => Ok(()),
-        Some(_) => Err(ViewError::Binding(
-            "surface patch belongs to a stale scheduled revision".into(),
-        )),
-        None => Err(ViewError::Binding(
-            "surface patch has no active scheduled request".into(),
-        )),
-    })?;
+        .expect("surface schedule state is not poisoned");
+    let matches: Vec<_> = state
+        .pending
+        .iter()
+        .filter(|(_, scheduled)| *scheduled == &key)
+        .map(|(identity, _)| identity.clone())
+        .collect();
+    let [identity] = matches.as_slice() else {
+        return Err(ViewError::Binding(if matches.is_empty() {
+            "surface patch has no active scheduled request"
+        } else {
+            "surface patch is ambiguous across concurrent requests"
+        }
+        .into()));
+    };
+    state.pending.remove(identity);
     Ok(SurfaceMeshHandles {
         key,
         mesh: surface::surface_mesh(document, None),
         material: surface::surface_material(document),
+    })
+}
+
+/// Decode, identity-check and apply a complete source reply atomically.
+pub fn apply_surface_reply(json: &str) -> Result<SurfaceMeshHandles, ViewError> {
+    let reply = documents::surface_reply(json)?;
+    let key = reply.patch.cache_key();
+    let mut state = surface_patch_state()
+        .lock()
+        .expect("surface schedule state is not poisoned");
+    let identity = (reply.binding.clone(), reply.request_id, reply.generation);
+    if reply.generation != state.generation {
+        return Err(ViewError::Binding(
+            "surface reply belongs to a stale source generation".into(),
+        ));
+    }
+    if state.pending.get(&identity) != Some(&key) {
+        return Err(ViewError::Binding(
+            "surface reply belongs to a stale binding, request, generation, or patch".into(),
+        ));
+    }
+    state.pending.remove(&identity);
+    drop(state);
+    Ok(SurfaceMeshHandles {
+        key,
+        mesh: surface::surface_mesh(&reply.patch, None),
+        material: surface::surface_material(&reply.patch),
     })
 }
 impl SceneCatalog {
@@ -295,6 +353,7 @@ impl SceneCatalog {
                 "capture cannot span source reset".into(),
             ));
         }
+        reset_surface_patches();
         for entity in self.entities.drain(..) {
             world.despawn(entity);
         }

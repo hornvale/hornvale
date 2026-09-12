@@ -28,7 +28,31 @@ fn request(
         "schema": "visual/surface-request/v1",
         "binding": binding,
         "request_id": request_id,
+        "generation": 0,
         "address": {"macro_face": macro_face, "child_path": child_path},
+        "expected_revision": expected_revision
+    })
+    .to_string()
+}
+
+fn request_with_transition(
+    binding: &Value,
+    expected_revision: &Value,
+    request_id: u64,
+    address: &Facet,
+    child_path: &[u8],
+    transition: &Facet,
+    transition_child_path: &[u8],
+) -> String {
+    let macro_face = address.pack().unwrap().0 as u32;
+    let transition_macro_face = transition.pack().unwrap().0 as u32;
+    json!({
+        "schema": "visual/surface-request/v1",
+        "binding": binding,
+        "request_id": request_id,
+        "generation": 0,
+        "address": {"macro_face": macro_face, "child_path": child_path},
+        "transition_address": {"macro_face": transition_macro_face, "child_path": transition_child_path},
         "expected_revision": expected_revision
     })
     .to_string()
@@ -178,4 +202,42 @@ fn independent_sources_and_request_orders_return_identical_patch_bytes() {
 
     assert_eq!(first_a_reply, second_a_reply);
     assert_eq!(first_b_reply, second_b_reply);
+}
+
+#[test]
+fn surface_reply_carries_source_owned_transition_triangles() {
+    let (mut source, initial) = source_and_initial();
+    let coarse = Facet { face: 0, path: vec![0; 6] };
+    let mut request_id = 1000;
+    let mut transition = None;
+    'faces: for neighbor in coarse.neighbors() {
+        for digit in 0..4 {
+            let reply = source.observe_surface(&request_with_transition(
+                &initial["binding"],
+                &initial["surface_revision"],
+                request_id,
+                &coarse,
+                &[],
+                &neighbor,
+                &[digit],
+            ));
+            request_id += 1;
+            if let Ok(reply) = reply {
+                let value: Value = serde_json::from_str(&reply).unwrap();
+                if !value["patch"]["transition_triangles"]
+                    .as_array()
+                    .is_some_and(Vec::is_empty)
+                {
+                    transition = Some(value);
+                    break 'faces;
+                }
+            }
+        }
+    }
+    let reply = transition.expect("source must carry a real mixed-LOD transition");
+    assert_eq!(reply["schema"], "visual/surface-reply/v1");
+    assert!(!reply["patch"]["transition_triangles"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 }

@@ -243,51 +243,36 @@ pub fn surface_mesh(
     patch: &SurfacePatchDocument,
     transition: Option<&SurfacePatchDocument>,
 ) -> Mesh {
-    let mut positions = patch
+    let positions = patch
         .vertices
         .iter()
         .map(render_position)
         .collect::<Vec<_>>();
-    let mut normals = patch
+    let normals = patch
         .vertices
         .iter()
         .map(|vertex| vertex.normal.map(|value| value as f32))
         .collect::<Vec<_>>();
-    let mut uv = patch.vertices.iter().map(render_uv).collect::<Vec<_>>();
-    let mut colors = patch
+    let uv = patch.vertices.iter().map(render_uv).collect::<Vec<_>>();
+    let colors = patch
         .vertices
         .iter()
-        .map(|vertex| material_color(vertex.material_weights))
+        .map(|vertex| {
+            let feature_mask = patch
+                .features
+                .iter()
+                .map(|feature| narrow_feature_mask(patch, feature, vertex.position.map(|v| v as f32)))
+                .fold(0.0, f32::max);
+            material_color(source_material_weights(vertex, feature_mask))
+        })
         .collect::<Vec<_>>();
-    let mut indices = patch.triangles.iter().flatten().copied().collect::<Vec<_>>();
-    if let Some(document) = transition {
-        let candidate = if document.transition_triangles.is_empty() {
-            &document.triangles
-        } else {
-            &document.transition_triangles
-        };
-        let mut remapped = Vec::with_capacity(candidate.len() * 3);
-        for triangle in candidate {
-            for index in triangle {
-                let vertex = &document.vertices[*index as usize];
-                let mapped = patch
-                    .vertices
-                    .iter()
-                    .position(|candidate| candidate.position == vertex.position)
-                    .unwrap_or_else(|| {
-                        positions.push(render_position(vertex));
-                        normals.push(vertex.normal.map(|value| value as f32));
-                        uv.push(render_uv(vertex));
-                        colors.push(material_color(vertex.material_weights));
-                        positions.len() - 1
-                    });
-                remapped.push(mapped as u32);
-            }
-        }
-        if !remapped.is_empty() {
-            indices = remapped;
-        }
-    }
+    let indices = if !patch.transition_triangles.is_empty() {
+        patch.transition_triangles.iter().flatten().copied().collect()
+    } else if let Some(document) = transition {
+        document.triangles.iter().flatten().copied().collect()
+    } else {
+        patch.triangles.iter().flatten().copied().collect()
+    };
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all())
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
@@ -315,20 +300,57 @@ fn render_uv(vertex: &crate::documents::SurfacePatchVertex) -> [f32; 2] {
 pub fn surface_material(patch: &SurfacePatchDocument) -> StandardMaterial {
     let mut weights = [0.0_f64; 8];
     let mut water = 0.0;
+    let mut semantic_roughness = 0.0;
     for vertex in &patch.vertices {
-        for (sum, value) in weights.iter_mut().zip(vertex.material_weights) {
+        let feature_mask = patch
+            .features
+            .iter()
+            .map(|feature| narrow_feature_mask(patch, feature, vertex.position.map(|v| v as f32)))
+            .fold(0.0, f32::max) as f64;
+        for (sum, value) in weights
+            .iter_mut()
+            .zip(source_material_weights(vertex, feature_mask as f32))
+        {
             *sum += value;
         }
         water += vertex.water_depth_m.max(0.0);
+        semantic_roughness += vertex.bank_weight
+            + vertex.terrace_weight
+            + vertex.ridge_strength
+            + vertex.shoreline_distance_m.abs().min(1000.0) / 1000.0;
     }
     let count = patch.vertices.len().max(1) as f64;
     let color = material_color(weights.map(|value| value / count));
     StandardMaterial {
         base_color: Color::linear_rgba(color[0], color[1], color[2], color[3]),
-        perceptual_roughness: (0.92 - (water / count / 500.0).clamp(0.0, 0.55)) as f32,
+        perceptual_roughness: (0.92
+            - (water / count / 500.0).clamp(0.0, 0.55)
+            + (semantic_roughness / count * 0.01).clamp(0.0, 0.04))
+            .clamp(0.0, 1.0) as f32,
         reflectance: 0.04,
         ..default()
     }
+}
+
+fn source_material_weights(
+    vertex: &crate::documents::SurfacePatchVertex,
+    feature_mask: f32,
+) -> [f64; 8] {
+    let mut weights = vertex.material_weights;
+    let channel = if vertex.channel_width_m > 0.0 {
+        (1.0 - vertex.channel_distance_m / vertex.channel_width_m).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    weights[2] += f64::from(vertex.floodplain_weight + vertex.delta_weight) * 0.25;
+    weights[3] += f64::from(vertex.terrace_weight) * 0.15;
+    weights[4] += f64::from(
+        (feature_mask + channel as f32 * vertex.flow_strength as f32).clamp(0.0, 1.0),
+    );
+    weights[5] += (vertex.water_depth_m / 500.0).clamp(0.0, 1.0);
+    weights[6] += f64::from(vertex.ridge_strength) * 0.2;
+    weights[7] += f64::from(vertex.bank_weight) * 0.1;
+    weights
 }
 
 fn material_color(weights: [f64; 8]) -> [f32; 4] {

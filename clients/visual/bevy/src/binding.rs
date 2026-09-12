@@ -1,6 +1,6 @@
 use crate::ViewError;
 use serde::{Deserialize, Serialize};
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct Binding {
     pub source_id: String,
     pub scope_id: String,

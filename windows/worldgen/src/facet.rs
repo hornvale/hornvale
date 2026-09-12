@@ -23,7 +23,7 @@ pub struct SurfaceRevision {
 }
 
 /// One fully composed, addressed surface patch.
-/// type-audit: bare-ok(index: triangles)
+/// type-audit: bare-ok(index: triangles), bare-ok(index: transition_triangles)
 #[derive(Clone, Debug, PartialEq)]
 pub struct SurfacePatch {
     /// Macro-world and realization revision that produced the patch.
@@ -37,6 +37,10 @@ pub struct SurfacePatch {
     pub curves: Vec<RealizedCurve>,
     /// Sample indices forming the patch mesh.
     pub triangles: Vec<[u32; 3]>,
+    /// Source-computed replacement topology for one unequal-LOD boundary.
+    /// Indices address this patch's samples; an empty list means no seam was
+    /// requested for this realization.
+    pub transition_triangles: Vec<[u32; 3]>,
 }
 
 /// Why a surface context or patch could not be constructed.
@@ -299,6 +303,7 @@ impl SurfaceRealizationContext {
             samples,
             curves,
             triangles: vec![[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]],
+            transition_triangles: Vec::new(),
         })
     }
 
