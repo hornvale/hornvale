@@ -136,7 +136,7 @@ impl SurfaceConfiguration {
     const fn current() -> Self {
         Self {
             record_schema: "hornvale/surface-configuration/v4",
-            algorithm_version: "hornvale/surface-realization/v4",
+            algorithm_version: "hornvale/surface-realization/v5",
             globe_level: hornvale_terrain::GLOBE_LEVEL,
             sample_topology: "quad-corners-center-dyadic-ring/world-space-fan-v2",
             material_channels: "bedrock,soil,sediment,wetland,fresh-water,salt-water,snow-ice,vegetation/v1",
@@ -450,27 +450,25 @@ impl SurfaceRealizationContext {
         let channel_reading = self.terrain.channels().bank_reading(position);
         let channel_bed = channel_reading
             .map(|reading| channel_bed_height(&self.terrain, reading.line, position));
+        let trunk = channel_reading
+            .zip(channel_bed)
+            .map(|(reading, bed)| (reading.signed_distance, bed));
+        let channel = rill_bed_at(&self.terrain, position, trunk).or(trunk);
         let ambient_height = macro_height_m + relief_m;
-        let height_m = match (channel_reading, channel_bed) {
-            (Some(reading), Some(bed)) => channel_height_m(
-                ambient_height,
-                reading.signed_distance.abs(),
-                bed,
-                self.configuration,
-            ),
+        let height_m = match channel {
+            Some((distance, bed)) => {
+                channel_height_m(ambient_height, distance.abs(), bed, self.configuration)
+            }
             _ => ambient_height,
         };
         let height_asl_m = height_m - sea_level_m;
         let water_depth_m = (-height_asl_m).max(0.0);
 
         let (channel_distance_m, channel_width_m, bank_weight, floodplain_weight, terrace_weight) =
-            match channel_reading {
-                Some(reading) => {
-                    let distance = reading.signed_distance * self.planet_radius_m;
-                    let edges = channel_bed
-                        .expect("reading has a bed")
-                        .edges
-                        .map(|edge| edge * self.planet_radius_m);
+            match channel {
+                Some((distance, bed)) => {
+                    let distance = distance * self.planet_radius_m;
+                    let edges = bed.edges.map(|edge| edge * self.planet_radius_m);
                     (
                         distance,
                         self.configuration.channel_width_multiplier * edges[0],
@@ -1012,6 +1010,104 @@ struct ChannelBed {
     terminal_progress: f64,
 }
 
+/// Read uncut, source-owned rills before composing the surface. Candidate
+/// selection depends only on position, never the requesting patch or LOD.
+/// Trunk beds retain authority; outside them the nearer supported rill wins.
+fn rill_bed_at(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    position: [f64; 3],
+    trunk: Option<(f64, ChannelBed)>,
+) -> Option<(f64, ChannelBed)> {
+    use hornvale_terrain::{EndpointSide, FeatureEndpoint, FeatureId, FeatureKind, TerminalKind};
+
+    if trunk.is_some_and(|(distance, bed)| distance.abs() <= bed.edges[0]) {
+        return None;
+    }
+    let geo = terrain.geosphere();
+    let channels = terrain.channels();
+    let unit = hornvale_terrain::vertex_catchment(geo);
+    let square_radius = (unit / 2.0).sqrt();
+    let cut = hornvale_terrain::CatchmentCut::Drawn(terrain.globe().rill_partition_seed());
+    let mut nearest = trunk.map_or(f64::INFINITY, |(distance, _)| distance.abs());
+    let mut winner = None;
+    for vertex in geo.vertices() {
+        let Some((line, index)) = channels.trunk_vertex(vertex) else {
+            continue;
+        };
+        let origin = geo.position(vertex);
+        let points = &channels.polylines[line].points;
+        let reach = points[index.saturating_sub(1)..=index + 1]
+            .iter()
+            .map(|&point| angular_distance(origin, point))
+            .fold(square_radius, f64::max);
+        // A branch drains at most this vertex's unit catchment. Include its
+        // entire terrace in the cap, not just the centerline's support.
+        let neighbors = geo.neighbors(vertex);
+        let spacing = neighbors
+            .iter()
+            .map(|&neighbor| {
+                hornvale_kernel::math::acos(dot(origin, geo.position(neighbor)).clamp(-1.0, 1.0))
+            })
+            .sum::<f64>()
+            / neighbors.len() as f64;
+        let slope = hornvale_terrain::local_slope(terrain.globe(), geo, vertex);
+        let maximum_edges = hornvale_terrain::band_edges(1.0, slope, spacing);
+        if angular_distance(origin, position) > reach + maximum_edges[3] {
+            continue;
+        }
+        for (index, rill) in hornvale_terrain::rills_of(vertex, channels, geo, &cut)
+            .iter()
+            .enumerate()
+        {
+            let edges = hornvale_terrain::band_edges(rill.catchment / unit, slope, spacing);
+            let feature = FeatureId::new(
+                FeatureKind::ChannelReach,
+                vertex,
+                u32::try_from(index + 1).expect("rill ordinal exceeds feature identity"),
+            );
+            let curve = RealizedCurve {
+                feature,
+                points: vec![rill.head, rill.mouth],
+                width: vec![2.0 * edges[0]; 2],
+                endpoints: [
+                    FeatureEndpoint {
+                        feature,
+                        side: EndpointSide::Upstream,
+                        boundary: None,
+                        terminal: TerminalKind::Headwater,
+                    },
+                    FeatureEndpoint {
+                        feature,
+                        side: EndpointSide::Downstream,
+                        boundary: None,
+                        terminal: TerminalKind::Confluence,
+                    },
+                ],
+            };
+            let (distance, _) = hornvale_terrain::feature_sample(&curve, position);
+            if distance.abs() < nearest && distance.abs() < edges[3] {
+                nearest = distance.abs();
+                winner = Some((distance, curve, edges, slope));
+            }
+        }
+    }
+    winner.map(|(distance, mut curve, edges, slope)| {
+        // The terrain bed evaluator reconstructs this feature's parent chain
+        // and samples its settled bed at the query's projection onto the rill.
+        curve.points = vec![position; 2];
+        let height_m = hornvale_terrain::bed_height_profile(&curve, terrain)[0];
+        (
+            distance,
+            ChannelBed {
+                height_m,
+                grade_m_per_rad: slope,
+                edges,
+                terminal_progress: 0.0,
+            },
+        )
+    })
+}
+
 fn channel_bed_height(
     terrain: &hornvale_terrain::GeneratedTerrain,
     line: usize,
@@ -1324,6 +1420,151 @@ mod tests {
     fn fixture_context() -> SurfaceRealizationContext {
         let world = crate::seed_42_world();
         SurfaceRealizationContext::build(&world).unwrap()
+    }
+
+    fn fine_address(position: [f64; 3]) -> FacetAddress {
+        let fine = Facet::containing(position, 20);
+        FacetAddress::new(
+            Facet {
+                face: fine.face,
+                path: fine.path[..6].to_vec(),
+            },
+            fine.path[6..].to_vec(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn emitted_rill_outside_trunk_terrace_uses_inherited_bed() {
+        let mut context = fixture_context();
+        let inputs = TerrainFacetInputs {
+            globe: context.terrain.globe(),
+            geo: context.terrain.geosphere(),
+            channels: context.terrain.channels(),
+        };
+        let address = FacetAddress::new(
+            Facet::containing(inputs.channels.polylines[0].points[0], 6),
+            vec![],
+        )
+        .unwrap();
+        let curves = realize_channel_curves(inputs, &address);
+        for curve in curves.iter().filter(|curve| curve.feature.ordinal > 0) {
+            let position = normalized_or_zero(std::array::from_fn(|i| {
+                curve.points[0][i] + curve.points[1][i]
+            }));
+            let address = fine_address(position);
+            let before = context.realize(&address).unwrap();
+            let sample = before.samples[4];
+            let reading = context
+                .terrain
+                .channels()
+                .bank_reading(sample.position)
+                .unwrap();
+            let trunk_bed = channel_bed_height(&context.terrain, reading.line, sample.position);
+            let (distance, width) = hornvale_terrain::feature_sample(curve, sample.position);
+            if reading.signed_distance.abs() <= trunk_bed.edges[3] || distance.abs() >= width / 2.0
+            {
+                continue;
+            }
+            let mut at_sample = curve.clone();
+            at_sample.points = vec![sample.position; 2];
+            let inherited = hornvale_terrain::bed_height_profile(&at_sample, &context.terrain)[0];
+            assert!(
+                (sample.height_m - (inherited - context.configuration.channel_incision_m)).abs()
+                    < 1e-6,
+                "rill {:?} outside trunk terrace has height {}, inherited bed {inherited}",
+                curve.feature,
+                sample.height_m,
+            );
+            context.configuration.channel_incision_m += 1.0;
+            let after = context.realize(&address).unwrap();
+            assert!((sample.height_m - after.samples[4].height_m - 1.0).abs() < 1e-6);
+            return;
+        }
+        panic!("seed-42 fixture must emit a rill outside the trunk terrace");
+    }
+
+    #[test]
+    fn emitted_hydrology_obeys_and_reaches_configured_adjustment_bound() {
+        let mut context = fixture_context();
+        let address = fine_address(context.terrain.channels().polylines[0].points[0]);
+        context.configuration.hydrology_max_adjustment_m = 0.0;
+        let ambient = context.realize(&address).unwrap();
+        for bound in [0.5, 7.0, 2_000.0] {
+            context.configuration.hydrology_max_adjustment_m = bound;
+            let shaped = context.realize(&address).unwrap();
+            let mut maximum: f64 = 0.0;
+            for (a, b) in shaped.samples.iter().zip(&ambient.samples) {
+                let displacement = (a.height_m - b.height_m).abs();
+                assert!(
+                    displacement <= bound + 1e-9,
+                    "hydrology exceeds {bound} m: {displacement}"
+                );
+                maximum = maximum.max(displacement);
+            }
+            assert!(maximum > 0.0, "hydrology must be active");
+            if bound <= 7.0 {
+                assert!(
+                    (maximum - bound).abs() < 1e-9,
+                    "fixture must saturate {bound} m, got {maximum}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn emitted_beds_descend_through_actual_confluence_lake_and_ocean_terminals() {
+        use hornvale_terrain::TerminalKind;
+        let context = fixture_context();
+        let inputs = TerrainFacetInputs {
+            globe: context.terrain.globe(),
+            geo: context.terrain.geosphere(),
+            channels: context.terrain.channels(),
+        };
+        for kind in [
+            TerminalKind::Confluence,
+            TerminalKind::Lake,
+            TerminalKind::Ocean,
+        ] {
+            let line = inputs
+                .channels
+                .run_vertices
+                .iter()
+                .position(|vertices| {
+                    hornvale_terrain::channel_endpoint_kind(inputs, *vertices.last().unwrap(), true)
+                        == kind
+                })
+                .expect("seed-42 fixture must include each actual terminal kind");
+            let points = &inputs.channels.polylines[line].points;
+            let mut previous = f64::INFINITY;
+            for pair in points.windows(2) {
+                for t in [0.0, 0.25, 0.5, 0.75, 1.0] {
+                    let position = if t == 0.0 {
+                        pair[0]
+                    } else if t == 1.0 {
+                        pair[1]
+                    } else {
+                        normalized_or_zero(std::array::from_fn(|i| {
+                            pair[0][i] * (1.0 - t) + pair[1][i] * t
+                        }))
+                    };
+                    let sample = context.sample_at(position).unwrap();
+                    assert!(
+                        sample.height_m <= previous + 1e-8,
+                        "bed rises on run {line} to {kind:?}: {previous} -> {}",
+                        sample.height_m
+                    );
+                    previous = sample.height_m;
+                }
+            }
+            let terminal = *inputs.channels.run_vertices[line].last().unwrap();
+            let expected = context.terrain.elevation_at(terminal).get()
+                - context.configuration.channel_incision_m;
+            assert!(
+                (previous - expected).abs() < 1e-8,
+                "run {line} did not settle onto actual {kind:?} bed: {previous} vs {expected}"
+            );
+        }
     }
 
     #[test]

@@ -210,12 +210,24 @@ fn emitted_patch_centers_include_bounded_conditioned_relief() {
     let terrain = hornvale_worldgen::terrain_of(&source).expect("terrain builds");
     let context = SurfaceRealizationContext::build(&source).expect("context builds");
     let mut active = 0;
+    let mut checked = 0;
 
     for face in 0..6 {
         for digit in 0..4 {
             let address = address(face, digit);
             let patch = context.realize(&address).expect("patch realizes");
-            let relief = patch.samples[4].height_m - macro_center_height(&terrain, &address);
+            let sample = patch.samples[4];
+            // Hydrology has its own displacement budget. Rills now shape
+            // emitted height too, so these are not ambient-relief samples.
+            if sample.channel_distance_m.abs() <= sample.channel_width_m / 2.0
+                || sample.bank_weight > 0.0
+                || sample.floodplain_weight > 0.0
+                || sample.terrace_weight > 0.0
+            {
+                continue;
+            }
+            checked += 1;
+            let relief = sample.height_m - macro_center_height(&terrain, &address);
             assert!(
                 relief.abs() <= 160.0,
                 "facet relief exceeded its configured 160 m bound: {relief} m at {address:?}"
@@ -224,7 +236,11 @@ fn emitted_patch_centers_include_bounded_conditioned_relief() {
         }
     }
 
-    assert!(active > 0, "all emitted patch centers remained macro-only");
+    assert!(
+        checked > 0,
+        "fixture must exercise centers outside hydrology"
+    );
+    assert!(active > 0, "all dry patch centers remained macro-only");
 }
 
 #[test]
