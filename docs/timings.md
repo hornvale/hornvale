@@ -7413,3 +7413,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-12T03:11:57Z | gate-commit | 75.937 | 90.678 | 20.060 | 1.46 | 0 | 23371081a | campaign/the-kiln | MacBookPro | 10 |
 | 2026-09-12T03:13:15Z | gate-commit | 45.752 | 81.732 | 18.505 | 2.19 | 0 | 9b60a9265 | campaign/the-kiln | MacBookPro | 10 |
 | 2026-09-12T15:54:52Z | gate-commit | 51.731 | 83.170 | 19.141 | 1.98 | 0 | 15a27c455 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T16:15:46Z | census-tail-chorus | 62.858 | 829.239 | 22.993 | 13.56 | 0 | 928ba2d96 |  | lefford | 40 |
+| 2026-09-12T16:15:48Z | census-tail-domesday | 1.213 | 1.028 | 0.136 | 0.96 | 0 | 928ba2d96 |  | lefford | 40 |
+| 2026-09-12T16:15:48Z | census-tail-anomalies | 0.935 | 0.804 | 0.131 | 1.00 | 0 | 928ba2d96 |  | lefford | 40 |
+| 2026-09-12T16:16:16Z | sluice:artifacts | 315.486 | 2538.227 | 102.769 | 8.37 | 0 | 928ba2d96 |  | lefford | 40 |
