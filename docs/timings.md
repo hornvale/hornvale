@@ -7436,3 +7436,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-12T16:34:31Z | sluice:gate | 974.993 | 28176.401 | 951.899 | 29.88 | 0 | 6294531e5 |  | lefford | 40 |
 | 2026-09-12T16:39:49Z | sluice:clients | 317.159 | 4080.286 | 491.695 | 14.42 | 0 | 0ec9b0764 |  | lefford | 40 |
 | 2026-09-12T16:48:24Z | sluice:heavy | 514.638 | 14451.509 | 302.686 | 28.67 | 0 | f1720bfd9 |  | lefford | 40 |
+| 2026-09-12T21:40:16Z | census-tail-chorus | 68.324 | 938.945 | 24.109 | 14.10 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T21:56:14Z | census-study-the-census | 957.546 | 34308.840 | 166.834 | 36.00 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:02:08Z | census-study-the-meeting | 354.733 | 12856.783 | 143.599 | 36.65 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:02:10Z | census-tail-anomalies | 0.598 | 0.540 | 0.059 | 1.00 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:02:10Z | census-tail-domesday | 1.464 | 1.277 | 0.132 | 0.96 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:02:40Z | census | 1624.010 | 50209.542 | 430.353 | 31.18 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:10:41Z | gnomon-injection | 479.173 | 5806.803 | 164.433 | 12.46 | 0 | f0cc1965f |  | lefford | 40 |
