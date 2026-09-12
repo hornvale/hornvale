@@ -1038,6 +1038,115 @@ exactly the shape CLAUDE.md predicts when it keeps the heavy tier off the
 stage-gate list — a census-backed assertion "would red predictably for the
 whole middle of any world-touching campaign".
 
+## The absorb — execution record
+
+`origin/main` absorbed into `campaign/the-tidemark` on 2026-09-11/12. Merge
+commit `c78116d0f` (parents `2cf803c41` and `807e86ae9`), follow-up
+`5146e38a6`. 179 commits, 63 conflicts: 27 generated artifacts, 10 byte-golden
+fixtures, 26 source files. Full report:
+`.superpowers/sdd/2026-09-11-the-tidemark/absorb-report.md` (scratch — the
+durable half is below).
+
+`campaign/underworld-peoples` landed four `HabitatRealm::Subterranean` peoples
+— `kuo-toa`, `duergar`, `svirfneblin`, `mountain-dwarf` — while this campaign
+authored six obligate `Marine` ones.
+
+### The three reconciled counts
+
+Each RE-DERIVED from the merged data, never added from the two branches' pins.
+
+| registry | main | this branch | merged |
+| --- | --- | --- | --- |
+| `biosphere_registry` | 43 | 45 | **49** |
+| `EPOCH_COHORTS` | 24 | 24 | **25** |
+| `habitat_realm_registry` | 7 | 11 | **15** |
+
+`habitat_realm_registry` was 11 on this branch, not the 5 the absorb brief
+carried: 5 was the figure in the store's own doc comment, frozen at Task 1 and
+left stale when Task 3 added six `Marine` rows. **A count stated inside its own
+document is self-falsifying** — the doc comment now names all three groups
+(3 + 4 + 6 + 2 explicit `Surface`) so the arithmetic can be re-checked rather
+than trusted.
+
+The 49 is carried in a message that names both campaigns and keeps its
+arithmetic visible: thirty-nine before either, plus four Underworld peoples,
+plus six marine ones.
+
+### The cohort order, and its reason
+
+`domains/language/src/accession.rs`: **the Underworld Peoples' cohort takes the
+earlier index, ours the later.** The reason is principled and belongs in the
+comment, which now carries it: this module orders by **ARRIVAL**, and their
+cohort arrived on `main` first. Both are pure appends onto the same 23-cohort
+base, so neither ordering moves any pre-existing concept's proto-root; the
+order decides only the ten new kinds' own roots.
+
+The "arrival, not descent" paragraph — why `abyssal-elf-kind` is not folded
+into the elf family's cohort — survives verbatim, and so does the
+number-withheld paragraph that predicted this exact collision; it now records
+how the collision was resolved instead of being deleted.
+
+**Measured afterwards, because the prediction was worth checking:** the reorder
+moved no new kind's drawn name at all. What did move many names is settlement
+placement — `Dazha` is duergar's on the merged world and was gully-dwarf's on
+both branches — which is why the `windows/book` sentence goldens had to be
+re-pinned from measurement rather than unioned.
+
+### kuo-toa
+
+Left `Subterranean` WITH `SWIM`, with a comment at the row saying why:
+`MAP-11`, the registry parent of this campaign's own `WAT-sea-peoples`, names
+"sahuagin, merfolk, kuo-toa" as its aquatic-people examples, so a reader
+meeting the new `Marine` variant would reasonably "correct" it — and the
+`{0.0, 1.0}` mask has no middle value, so that correction would strip a settled
+people of its Underdark home outright. The ambiguity exists only because this
+campaign adds `Marine`, so resolving it is this campaign's.
+
+### Three tests needed more than a re-pin
+
+- **`genesis_observes_an_unoccluded_sky`** — the vantage divergence this
+  campaign documented has a SECOND direction. Task 3's filter covers a
+  committed belief the reconstruction cannot see; duergar's is the mirror (a
+  source the reconstruction sees but ranks below its own salience cut). Exact
+  equality becomes a bounded, reported, order-preserving subsequence: order,
+  multiplicity and every shared source stay exact.
+- **`land_list_lines_are_all_distinct_at_seed_42`** — `main` grew a SECOND way
+  for a group member to stay bare (`rendered_lines`'s `(site N)` dedup, which
+  qualifies the later member and leaves the first). The claim moves from
+  per-row to per-group: at most one bare member per group, and it must be the
+  first in place order.
+- **`history_emit::distinct_layers_tie_only_on_genuine_material_matches`** —
+  the {42, 7, 1000} panel stopped exhibiting any tie (0 over 6,545 pairs), so
+  its assertions ran on nothing and `ties > 0` caught it. Seed 1 joins the
+  panel, chosen by a new `#[ignore]`d `sweep_for_a_tying_seed` (seven of seeds
+  0..24 tie) rather than guessed.
+
+A fourth conflict was a genuine duplicate design, not a disagreement:
+`the_roll.rs`'s neighbour selection, where both campaigns independently
+replaced "the most populous other settlement" with a search. `main`'s form is
+kept because it scans the whole roster instead of the twelve most populous;
+this campaign's rationale paragraph is kept with it.
+
+### Final test state
+
+`cargo nextest run --workspace --no-fail-fast`: **6109 run, 6106 passed, 3
+failed, 248 skipped.** Doctests green. `make gate-commit` rc=0.
+
+- `census_sentinel`, `tripwire` — known red, left red (only lefford authors
+  census goldens).
+- **`founder_collision` is NO LONGER RED.** Both non-ignored tests pass on the
+  merged world. A result, not an accident.
+- **`survivorship_probe::the_separation_survives_conditioning_on_tenure` is a
+  NEW red, reported and not tuned.** Stratified z = **1.326** against
+  `Z_SUPPORTS` 1.96, pooled z 5.244 (previously stratified z 3.197, AUC
+  0.7160). The pair-weight direction still supports breached-deeper (429 vs
+  376); it is the stratified z alone that fell. The file is byte-identical on
+  both branches, so only the WORLD moved — under ten new peoples. Decision
+  0016 and the test's own message both say report rather than rescue, and spec
+  §5.2 forbids tuning `BREACH_FREE_PATH_M` to separate them again. **This one
+  is the controller's call.** Not verified, and it would cost a cold build of
+  each ref to verify: whether either branch alone was green here.
+
 ## Follow-ups
 
 - **The aerial realm is the empty fourth sibling.** `MAP-11`'s medium axis is
