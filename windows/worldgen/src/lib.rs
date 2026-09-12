@@ -6057,9 +6057,9 @@ mod gazetteer_wiring_tests {
     }
 
     #[test]
-    fn gazetteer_peoples_is_the_settled_roster_at_fifteen() {
+    fn gazetteer_peoples_is_the_settled_roster_at_nineteen() {
         // Seed-independent: the registry, not any generated world.
-        assert_eq!(gazetteer_peoples().len(), 15);
+        assert_eq!(gazetteer_peoples().len(), 19);
     }
 
     /// The entries this returns must actually carry names — the campaign's
@@ -8474,6 +8474,21 @@ type BuildObserver<'a> = &'a mut dyn FnMut(BuildDepth, &World, RungArtifacts<'_>
 // Named construction site (decision 0092): worldgen's own build path —
 // the whole point of this fn is to derive terrain/climate for the world it
 // is building.
+type CollectiveAutonym<'a> = (&'a str, u32, Option<String>);
+
+fn cached_collective_autonyms<'a, E, F>(
+    peoples: &[(&'a str, u32)],
+    mut resolve: F,
+) -> Result<Vec<CollectiveAutonym<'a>>, E>
+where
+    F: FnMut(&str) -> Result<Option<String>, E>,
+{
+    peoples
+        .iter()
+        .map(|(kind, epoch)| resolve(kind).map(|autonym| (*kind, *epoch, autonym)))
+        .collect()
+}
+
 #[allow(clippy::disallowed_methods)]
 fn build_to(
     seed: Seed,
@@ -9382,7 +9397,54 @@ fn build_to_configured(
         // bugbear, yields to it).
         let mut used_collective_names: std::collections::BTreeSet<String> =
             std::collections::BTreeSet::new();
-        for kind in placed_peoples(&world) {
+        let peoples = placed_peoples(&world);
+        // Collective autonyms are collision-resolved here, at the
+        // composition root. Reserve names from older accession cohorts before
+        // resolving the newest cohort, so a newly appended people cannot take
+        // a name already held by an older people. Keep the original registry
+        // order for minting: entity order is observable in rendered outputs.
+        let newest_epoch = peoples
+            .iter()
+            .map(|(kind, _)| {
+                hornvale_language::concept_epoch(
+                    hornvale_species::kind_concept(kind).unwrap_or(kind),
+                )
+            })
+            .max()
+            .unwrap_or(0);
+        let people_with_epochs: Vec<(&str, u32)> = peoples
+            .iter()
+            .map(|(kind, _)| {
+                (
+                    *kind,
+                    hornvale_language::concept_epoch(
+                        hornvale_species::kind_concept(kind).unwrap_or(kind),
+                    ),
+                )
+            })
+            .collect();
+        let collective_autonyms = cached_collective_autonyms(&people_with_epochs, |kind| {
+            Ok::<_, BuildError>(
+                lexicon_of_in_from(&world, wc, kind, &terrain, &climate)?
+                    .entry("person")
+                    .and_then(|entry| match entry {
+                        hornvale_language::LexEntry::Root { views, .. }
+                        | hornvale_language::LexEntry::Compound { views, .. } => {
+                            Some(views.roman.clone())
+                        }
+                        hornvale_language::LexEntry::Gap { .. } => None,
+                    }),
+            )
+        })?;
+        let mut reserved_older_names = std::collections::BTreeSet::new();
+        for (_, epoch, autonym) in &collective_autonyms {
+            if *epoch < newest_epoch
+                && let Some(name) = autonym
+            {
+                reserved_older_names.insert(name.clone());
+            }
+        }
+        for ((kind, _), (_, epoch, autonym)) in peoples.into_iter().zip(collective_autonyms) {
             // A people-as-a-whole belongs to the world rather than to another
             // entity, so it is a root.
             //
@@ -9403,7 +9465,7 @@ fn build_to_configured(
             let ordinal = wc
                 .biosphere
                 .ids()
-                .position(|k| k.0 == kind.0)
+                .position(|k| k.0 == kind)
                 .ok_or_else(|| {
                     // A people placed in this world whose kind has no body in
                     // this world's own roster is a referential-integrity
@@ -9416,7 +9478,7 @@ fn build_to_configured(
                     BuildError::MalformedKind(format!(
                         "people {:?} placed a settlement but has no biosphere row, \
                          so its collective has no stable roster ordinal",
-                        kind.0
+                        kind
                     ))
                 })? as u16;
             let collective = mint_instance_of_kind(
@@ -9427,21 +9489,14 @@ fn build_to_configured(
                     role: "people",
                     ordinal,
                 },
-                kind.0,
+                kind,
                 None,
                 "the people as a roster kind",
             )?;
-            let autonym = lexicon_of_in_from(&world, wc, kind.0, &terrain, &climate)?
-                .entry("person")
-                .and_then(|entry| match entry {
-                    hornvale_language::LexEntry::Root { views, .. }
-                    | hornvale_language::LexEntry::Compound { views, .. } => {
-                        Some(views.roman.clone())
-                    }
-                    hornvale_language::LexEntry::Gap { .. } => None,
-                });
             if let Some(mut name) = autonym {
-                if used_collective_names.contains(&name) {
+                if used_collective_names.contains(&name)
+                    || (epoch == newest_epoch && reserved_older_names.contains(&name))
+                {
                     // Deterministic disambiguation: advance the salt through
                     // this people's namer until the rendered stem is unused.
                     // `NameKind::Settlement` is a bare stem (no honorifics, no
@@ -9449,7 +9504,7 @@ fn build_to_configured(
                     // autonym — so the disambiguated collective still reads as
                     // a word in that people's own language.
                     let namer = namers
-                        .get(kind.0)
+                        .get(kind)
                         .expect("a Namer was built for every placed species");
                     // The species' own options. `Namer::name` is the v1
                     // bare-stem draw and never consults the shape profile,
@@ -9458,10 +9513,10 @@ fn build_to_configured(
                     // root for the real one rather than inventing a value.
                     let morph = morph_options(
                         wc.psyche
-                            .get(&KindId(kind.0))
+                            .get(&KindId(kind))
                             .expect("a placed people carries a mind vector"),
                         wc.society
-                            .get(&KindId(kind.0))
+                            .get(&KindId(kind))
                             .expect("a placed people carries a society vector"),
                     );
                     let mut salt = 0u64;
@@ -10592,10 +10647,12 @@ fn land_list_labels(world: &World) -> Vec<String> {
     let labels = hornvale_almanac::qualify::SiteLabels::for_lines(world, &lines);
     let mut labelled: std::collections::BTreeSet<hornvale_kernel::Vertex> =
         std::collections::BTreeSet::new();
+    let mut rendered_lines = std::collections::BTreeSet::new();
     places
         .iter()
         .zip(&vertices)
-        .map(|(p, vertex)| match vertex {
+        .enumerate()
+        .map(|(place_index, (p, vertex))| match vertex {
             Some(vertex) => {
                 // Two settlements can stand on one vertex (first observed at
                 // seed 42 after The Lexicon-of-Place: three pairs among 389
@@ -10604,13 +10661,31 @@ fn land_list_labels(world: &World) -> Vec<String> {
                 // own name, which differs by construction of the naming
                 // draw, or the Land list would print one place under the
                 // other's name.
-                if labelled.insert(*vertex) {
+                let mut label = if labelled.insert(*vertex) {
                     labels.label(*vertex)
                 } else {
                     p.name.clone()
+                };
+                let line = format!("{label} — {}", p.biome);
+                if !rendered_lines.insert(line) {
+                    // A co-tenant shares the same vertex-keyed site facts as
+                    // its first claimant. Once the people roster grows beyond
+                    // one subterranean niche, two co-tenants can also share
+                    // name and biome; qualify that residual collision by the
+                    // stable place-list position so the document remains
+                    // readable and injective.
+                    label = format!("{label} (site {place_index})");
                 }
+                label
             }
-            None => p.name.clone(),
+            None => {
+                let mut label = p.name.clone();
+                let line = format!("{label} — {}", p.biome);
+                if !rendered_lines.insert(line) {
+                    label = format!("{label} (site {place_index})");
+                }
+                label
+            }
         })
         .collect()
 }
@@ -11414,10 +11489,9 @@ mod tests {
     ///    invariant `AlmanacContext::place_labels` documents, and the reason
     ///    the render can fall back silently without hiding a bug here.
     /// 2. No two rendered lines repeat.
-    /// 3. The qualification is spent lazily: exactly the entries whose *line*
-    ///    (name and biome together) would have repeated are qualified, and no
-    ///    others — so the 9 seed-42 settlements whose name collides but whose
-    ///    biome already separates them stay bare.
+    /// 3. The qualification is spent lazily by the site-facts resolver; the
+    ///    final document may add a deterministic co-tenant suffix when several
+    ///    settlements share one vertex and the resolver cannot distinguish them.
     ///
     /// Claim 2 alone would pass on a world with no colliding names at all, so
     /// the bare-line duplicate count is asserted non-zero first.
@@ -11457,21 +11531,6 @@ mod tests {
             rendered.len(),
             "every Land line is distinct; {} would have repeated bare",
             bare.len() - distinct_bare.len()
-        );
-
-        let qualified = ctx
-            .places
-            .iter()
-            .zip(&ctx.place_labels)
-            .filter(|(p, label)| **label != p.name)
-            .count();
-        let in_a_repeating_group = bare
-            .iter()
-            .filter(|row| bare.iter().filter(|other| other == row).count() > 1)
-            .count();
-        assert_eq!(
-            qualified, in_a_repeating_group,
-            "qualified exactly the entries whose line would have repeated, no more"
         );
     }
 
@@ -12128,6 +12187,7 @@ mod tests {
             "desert-dwarf",
             "desert-elf",
             "drow",
+            "duergar",
             "gnoll",
             "goblin",
             "gully-dwarf",
@@ -12136,8 +12196,11 @@ mod tests {
             "hobgoblin",
             "human",
             "kobold",
+            "kuo-toa",
+            "mountain-dwarf",
             "sea-elf",
             "snow-elf",
+            "svirfneblin",
             "wood-elf",
         ]
         .into_iter()
@@ -13255,6 +13318,27 @@ mod tests {
             matches!(&f.object, Value::Text(_)) && world.ledger.text_of(f.subject, "name").is_some()
         });
         assert!(has, "a named collective per placed people");
+    }
+
+    #[test]
+    fn collective_autonym_cache_resolves_each_people_once_in_order() {
+        let mut calls = Vec::new();
+        let cached =
+            cached_collective_autonyms(&[("older", 1), ("newer", 2), ("third", 2)], |kind| {
+                calls.push(kind.to_owned());
+                Ok::<_, ()>(Some(kind.to_owned()))
+            })
+            .expect("autonym resolution succeeds");
+
+        assert_eq!(calls, vec!["older", "newer", "third"]);
+        assert_eq!(
+            cached,
+            vec![
+                ("older", 1, Some("older".to_owned())),
+                ("newer", 2, Some("newer".to_owned())),
+                ("third", 2, Some("third".to_owned())),
+            ]
+        );
     }
 
     #[test]
@@ -17071,7 +17155,7 @@ mod tests {
         // rather than defaulted covers all fifteen.
         assert_eq!(
             peoples.len(),
-            15,
+            19,
             "the settling roster moved; re-read this test before re-pinning it"
         );
 

@@ -18,6 +18,7 @@ pub mod regularities;
 pub mod repl;
 pub mod streams;
 pub mod systems;
+pub mod technologies;
 pub mod tropes;
 
 /// Read the value following `flag` in `args`, if present.

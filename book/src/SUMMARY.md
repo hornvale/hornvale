@@ -386,6 +386,7 @@
 - [The Rhumb](./chronicle/the-rhumb.md)
 - [The Palimpsest](./chronicle/the-palimpsest.md)
 - [The Underworld](./chronicle/the-underworld.md)
+- [The Underworld Peoples](./chronicle/the-underworld-peoples.md)
 - [The Parley](./chronicle/the-parley.md)
 - [The Illumination](./chronicle/the-illumination.md)
 - [The Gazetteer](./chronicle/the-gazetteer.md)
@@ -502,6 +503,7 @@
 - [The Planetarium](./chronicle/the-planetarium.md)
 - [The Living Vent](./chronicle/the-living-vent.md)
 - [Eclipse Rhythm and View](./chronicle/eclipse-rhythm-view.md)
+- [The Kiln](./chronicle/the-kiln.md)
 
 # Appendix: The Frontier
 

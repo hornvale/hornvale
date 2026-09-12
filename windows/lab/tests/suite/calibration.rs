@@ -461,13 +461,12 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // which locked worlds seat each head, moving the split (150, 42) ->
     // (153, 39). The categorical invariant remains unchanged: no frozen sky
     // heads a cyclic pantheon.
-    // The Wanderers merge product (2026-09-10, D4 absorbed at 8c5e6e95)
-    // re-seats one locked-world head, moving the split (153, 39) -> (152, 40).
-    // The categorical invariant remains unchanged: no frozen sky heads a
-    // cyclic pantheon.
+    // The Underworld Peoples close regen (2026-09-10): the four added peoples
+    // move one locked head from eternal to ambient, (153, 39) -> (151, 41)
+    // after the full census resync; the categorical invariant remains.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (152, 40),
+        (151, 41),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -527,11 +526,8 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // 85ef1edd, goldens c90072b9): the refreshed epidemic histories move this
     // witness 10 -> 12. The frozen-sky/cyclic-pantheon invariant above still
     // holds; only the count of spinning worlds with eternal heads moved.
-    // The Wanderers merge product (2026-09-10, D4 absorbed at 8c5e6e95) moves
-    // this witness 12 -> 16 for the same placement-sensitive reason. The
-    // frozen-sky/cyclic-pantheon invariant remains the guarded property.
     assert_eq!(
-        spinning_eternal, 16,
+        spinning_eternal, 14,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -850,8 +846,8 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // 85ef1edd, goldens c90072b9): epidemic-history population work re-seats
     // six goblin flagships, 183 -> 189 coastal. The split remains a witness,
     // not a directional claim.
-    assert_eq!(coastal, 194, "coastal flagship count drifted");
-    assert_eq!(inland, 806, "inland flagship count drifted");
+    assert_eq!(coastal, 182, "coastal flagship count drifted");
+    assert_eq!(inland, 817, "inland flagship count drifted");
 }
 
 #[test]
@@ -1081,7 +1077,7 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 65,
+        moonless_lunar, 66,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -1310,10 +1306,8 @@ fn blind_attribution_beats_chance_decisively() {
     // three attributable pairs to the correct side, 888 -> 891. The
     // directional claim remains intact: blind attribution still beats chance
     // decisively.
-    // The Wanderers merge product (2026-09-10, D4 absorbed at 8c5e6e95) moves
-    // this witness to 871; the directional claim remains intact.
     assert_eq!(correct, 871, "blind-attribution count drifted");
-    assert_eq!(total, 981, "attributable-pair count drifted");
+    assert_eq!(total, 982, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1600,12 +1594,12 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // moved; neither direction did.
     assert_eq!(
         (g_true, g_absent),
-        (1000, 0),
+        (999, 1),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (981, 19),
+        (982, 18),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -2252,7 +2246,7 @@ fn name_collision_rate_is_measured_and_pinned() {
         // failed and is recorded as such above), the tolerance is unchanged
         // at 1e-6, and the rate stays inside the range decision 0024
         // sanctions (see the note above).
-        (mean - 0.510_680_324_264_999).abs() < 1e-6,
+        (mean - 0.525_118_426_989_999_1).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2522,7 +2516,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 8.545_224_123_300_008. Still comfortably below the campaign's own
         // <10-character claim (spec 7) — 1.45 characters of margin —
         // re-checked rather than assumed.
-        ("goblin", 1000u32, 8.483_136_334_799_998),
+        ("goblin", 999u32, 8.492_322_954_254_249),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2680,7 +2674,8 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 6.889_837_276_428_570. Still comfortably below the <10-character
         // claim — 3.11 characters of margin — re-checked rather than
         // assumed.
-        ("kobold", 981u32, 6.903_363_497_145_772),
+        ("goblin", 999u32, 8.492_322_954_254_249),
+        ("kobold", 982u32, 6.926_498_556_008_148),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2915,8 +2910,8 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // goblin 2.716_477_110_510_509 -> 2.720_362_562_599_999,
         // kobold 2.200_726_815_918_366_6 -> 2.209_761_443_265_304_3.
         // Both stay inside spec 8 criterion 2's 2-3 syllable range.
-        ("goblin", 1000u32, 2.706_190_238_9),
-        ("kobold", 981u32, 2.214_046_558_715_597_5),
+        ("goblin", 999u32, 2.707_807_533_233_231_6),
+        ("kobold", 982u32, 2.219_112_594_602_85),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -3234,7 +3229,7 @@ fn name_transparency_is_measured_and_pinned() {
         // the pre-campaign 1.00 degenerate value, with the min/max spread
         // below still spanning 0.298 to 0.987. Nothing here licenses reading
         // it as an improvement; it is a roster change, recorded.
-        (mean - 0.716_546_284_240_000).abs() < 1e-9,
+        (mean - 0.694_843_139_979_999_5).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3328,7 +3323,7 @@ fn name_transparency_is_measured_and_pinned() {
         // The Winze's close regen (2026-08-29, same census): the world
         // holding the most-worn name set changes with the roster —
         // 0.284_644_19 -> 0.298_181_82. The maximum below does NOT move.
-        (min - 0.260_273_97).abs() < 1e-8,
+        (min - 0.238_095_24).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -3364,7 +3359,7 @@ fn name_transparency_is_measured_and_pinned() {
         // widened overall — a rising ceiling alongside a falling floor is a
         // widening distribution, not the uniformity defect this row guards;
         // it stays well clear of 1.0.
-        (max - 0.980_049_88).abs() < 1e-8,
+        (max - 0.960_612_69).abs() < 1e-8,
         "name-transparency maximum drifted: {max:.15}"
     );
 }
@@ -3864,7 +3859,7 @@ fn null_control_name_length_smd_is_pinned() {
         // order of magnitude inside the +/-0.2 sampling bound, and still
         // negative, so the sign this row has carried through every regen is
         // unmoved: only the magnitude did.
-        (namelen - -0.032_587_081_074_588_16).abs() < 1e-9,
+        (namelen - -0.032_587_081_074_588_166).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

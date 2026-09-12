@@ -253,6 +253,8 @@ mod underworld_conditions_probe;
 mod underworld_ladder_probe;
 #[path = "suite/underworld_lithology_probe.rs"]
 mod underworld_lithology_probe;
+#[path = "suite/underworld_peoples_probe.rs"]
+mod underworld_peoples_probe;
 #[path = "suite/underworld_per_rung_switch.rs"]
 mod underworld_per_rung_switch;
 #[path = "suite/underworld_separation.rs"]

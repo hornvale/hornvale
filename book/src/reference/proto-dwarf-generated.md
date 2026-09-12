@@ -2,7 +2,7 @@
 
 # Proto-dwarf
 
-The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v4` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. **Excepted:** a concept the registry itself records as objectively unnameable (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence) reserves no proto-root at all and is omitted from this table entirely — the ancestor cannot have spoken of a referent no culture here has ever had the concept to name (see `hornvale_language::GapReason::Unnameable`). The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
+The shared ancestral language desert-dwarf, duergar, gully-dwarf, hill-dwarf, and mountain-dwarf all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v4` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. **Excepted:** a concept the registry itself records as objectively unnameable (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence) reserves no proto-root at all and is omitted from this table entirely — the ancestor cannot have spoken of a referent no culture here has ever had the concept to name (see `hornvale_language::GapReason::Unnameable`). The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
 
 ## Inventory
 
@@ -79,6 +79,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `door` | a leaf hung in an opening, to be shut against what is beyond | *Badav | /badav/ |
 | `drink` | to swallow liquid | *Nangaj | /naŋaj/ |
 | `drow-kind` | a drow | *Shavaz | /ʃavaz/ |
+| `duergar-kind` | a duergar | *Baxaj | /baxaj/ |
 | `eager` | positive, high arousal: chasing a satisfiable need | *Zaxav | /zaxav/ |
 | `earth` | the ground underfoot | *Zavag | /zavag/ |
 | `east` | the direction of increasing longitude | *Gashagav | /gaʃagav/ |
@@ -142,6 +143,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `killer-whale-kind` | a killer whale | *Naqash | /naqaʃ/ |
 | `know` | to hold something in memory or understanding — `knows` | *Vavash | /vavaʃ/ |
 | `kobold-kind` | a kobold | *Satag | /satag/ |
+| `kuo-toa-kind` | a kuo-toa | *Dajag | /dajag/ |
 | `lake` | still water held in a hollow that has no outlet to the sea | *Dangas | /daŋas/ |
 | `ledge` | a broad shelf of exposed stone | *Shavas | /ʃavas/ |
 | `liana-forest` | Tropical forest tangled with climbing vines. | *Saxaz | /saxaz/ |
@@ -163,6 +165,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `moon` | a moon | *Vabat | /vabat/ |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Gadash | /gadaʃ/ |
 | `mountain` | high ground | *Dabab | /dabab/ |
+| `mountain-dwarf-kind` | a mountain dwarf | *Zazav | /zazav/ |
 | `mouth` | the organ of eating and speech | *Naqang | /naqaŋ/ |
 | `move` | to go from one place to another | *Sanash | /sanaʃ/ |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | *Gaqav | /gaqav/ |
@@ -236,6 +239,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `strongbox` | a locked chest built to keep valuables safe | *Daqang | /daqaŋ/ |
 | `sun` | the sun | *Qashax | /qaʃax/ |
 | `supports-rest` | a place a body may lie down and sleep | *Bashav | /baʃav/ |
+| `svirfneblin-kind` | a svirfneblin | *Vangas | /vaŋas/ |
 | `taiga` | a biome class | *Nangab | /naŋab/ |
 | `temperate-forest` | a biome class | *Nadash | /nadaʃ/ |
 | `temperate-grassland` | a biome class | *Qadaq | /qadaq/ |

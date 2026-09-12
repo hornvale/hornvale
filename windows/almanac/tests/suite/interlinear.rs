@@ -493,7 +493,9 @@ fn the_tongue_shares_no_word_with_common_but_the_autonym_and_the_numerals() {
     );
     for word in [&home_word, &people_word] {
         assert!(
-            !common_words.iter().any(|token| token.contains(word)),
+            !common_words
+                .iter()
+                .any(|token| token != &autonym.to_lowercase() && token.contains(word)),
             "{word} is a tongue word and leaked into the Common rendering {common:?}"
         );
     }
