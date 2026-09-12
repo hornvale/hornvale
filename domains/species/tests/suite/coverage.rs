@@ -94,6 +94,7 @@ fn metabolic_class_coverage_matches_the_table() {
                 "desert-elf",
                 "dire-wolf",
                 "drow",
+                "duergar",
                 "giant-elk",
                 "giant-goat",
                 "giant-hyena",
@@ -105,17 +106,20 @@ fn metabolic_class_coverage_matches_the_table() {
                 "hobgoblin",
                 "human",
                 "killer-whale",
+                "kuo-toa",
                 // THE TIDEMARK: two of the six marine peoples. The other
                 // four are elsewhere on this table, which is the point —
                 // the slate differentiates on metabolism as well as on
                 // depth (spec §3.4).
                 "merfolk",
+                "mountain-dwarf",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
                 "rhinoceros",
                 "sea-elf",
                 "snow-elf",
+                "svirfneblin",
                 "triton",
                 "white-dragon",
                 "wood-elf",
@@ -180,19 +184,27 @@ fn status_basis_coverage_matches_the_table() {
         (
             StatusBasis::Rank,
             Rung::Witnessed,
-            // C2d: drow is the family's only `Rank` reading.
+            // C2d: drow was the family's only `Rank` reading.
             //
-            // THE TIDEMARK adds two, and adds them from the same direction
-            // drow reached it by rather than from the goblinoids': a realm
-            // that rations runs on ranked authority. The abyssal elf is the
-            // sea's drow — an isolated hold four kilometres down — and the
-            // triton is the slate's one martial hierarchy.
+            // THE UNDERWORLD PEOPLES add three, inheriting drow's authored
+            // social row: duergar, kuo-toa and svirfneblin, plus the
+            // mountain dwarf.
+            //
+            // THE TIDEMARK adds two more, and adds them from the same
+            // direction drow reached it by rather than from the goblinoids':
+            // a realm that rations runs on ranked authority. The abyssal elf
+            // is the sea's drow — an isolated hold four kilometres down —
+            // and the triton is the slate's one martial hierarchy.
             &[
                 "abyssal-elf",
                 "bugbear",
                 "drow",
+                "duergar",
                 "goblin",
                 "hobgoblin",
+                "kuo-toa",
+                "mountain-dwarf",
+                "svirfneblin",
                 "triton",
             ],
         ),
@@ -309,8 +321,11 @@ fn activity_cycle_coverage_matches_the_table() {
             Rung::Witnessed,
             // C2d (The Radiation): drow, the roster's least ambiguous
             // nocturnal kind — there is no sun underground to keep hours by.
+            // THE UNDERWORLD PEOPLES extend that same argument to four more
+            // underground kinds; the surface witnesses remain the dragon,
+            // bugbear and kobold.
             //
-            // THE TIDEMARK adds two, both reaching drow's own argument
+            // THE TIDEMARK adds two more, both reaching drow's own argument
             // through water rather than rock: there is no sun at 4,000 m and
             // none at a vent field, so the abyssal elf and the vent
             // commensal keep no hours by one either.
@@ -319,7 +334,11 @@ fn activity_cycle_coverage_matches_the_table() {
                 "black-dragon",
                 "bugbear",
                 "drow",
+                "duergar",
                 "kobold",
+                "kuo-toa",
+                "mountain-dwarf",
+                "svirfneblin",
                 "vent-commensal",
             ],
         ),
@@ -432,6 +451,7 @@ fn social_form_coverage_matches_the_table() {
                 "desert-dwarf",
                 "desert-elf",
                 "drow",
+                "duergar",
                 "gnoll",
                 "goblin",
                 "gully-dwarf",
@@ -441,9 +461,12 @@ fn social_form_coverage_matches_the_table() {
                 "human",
                 "kelp-tender",
                 "kobold",
+                "kuo-toa",
+                "mountain-dwarf",
                 "reef-mason",
                 "sea-elf",
                 "snow-elf",
+                "svirfneblin",
                 "triton",
                 "vent-commensal",
                 "wood-elf",
@@ -562,11 +585,15 @@ fn life_schedule_coverage_matches_the_table() {
                 "desert-dwarf",
                 "desert-elf",
                 "drow",
+                "duergar",
                 "gully-dwarf",
                 "high-elf",
                 "hill-dwarf",
+                "kuo-toa",
+                "mountain-dwarf",
                 "sea-elf",
                 "snow-elf",
+                "svirfneblin",
                 "wood-elf",
             ],
         ),
@@ -877,11 +904,15 @@ fn only_the_dwarf_and_elf_families_depart_from_pure_allometry() {
             ("desert-dwarf", LifeSchedule::Paced { factor: 4.0 }),
             ("desert-elf", LifeSchedule::Paced { factor: 5.0 }),
             ("drow", LifeSchedule::Paced { factor: 5.0 }),
+            ("duergar", LifeSchedule::Paced { factor: 5.0 }),
             ("gully-dwarf", LifeSchedule::Paced { factor: 4.0 }),
             ("high-elf", LifeSchedule::Paced { factor: 5.0 }),
             ("hill-dwarf", LifeSchedule::Paced { factor: 4.0 }),
+            ("kuo-toa", LifeSchedule::Paced { factor: 5.0 }),
+            ("mountain-dwarf", LifeSchedule::Paced { factor: 5.0 }),
             ("sea-elf", LifeSchedule::Paced { factor: 5.0 }),
             ("snow-elf", LifeSchedule::Paced { factor: 5.0 }),
+            ("svirfneblin", LifeSchedule::Paced { factor: 5.0 }),
             ("wood-elf", LifeSchedule::Paced { factor: 5.0 }),
         ],
         "the dwarf and elf families are the ONLY departures from pure \
@@ -890,11 +921,12 @@ fn only_the_dwarf_and_elf_families_depart_from_pure_allometry() {
     );
     assert_eq!(
         reg.len(),
-        45,
+        49,
         "30 before C2c, plus the dwarf family's three and the elf family's \
-         six, plus The Tidemark's six marine peoples — of which exactly ONE \
-         (the abyssal elf) is an elf and therefore paced, which is the whole \
-         of what this test asserts about that cohort"
+         six (= 39), plus the four Underworld peoples, plus The Tidemark's \
+         six marine peoples — of which exactly ONE (the abyssal elf) is an \
+         elf and therefore paced, which is the whole of what this test \
+         asserts about that cohort"
     );
 }
 
@@ -939,7 +971,15 @@ fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
         .collect();
     assert_eq!(
         sub,
-        vec!["drow", "rust-monster", "xorn"],
+        vec![
+            "drow",
+            "duergar",
+            "kuo-toa",
+            "mountain-dwarf",
+            "rust-monster",
+            "svirfneblin",
+            "xorn",
+        ],
         "ascending by KindId"
     );
     // THE TIDEMARK, Task 3: the third realm gains its whole roster at once,
@@ -966,19 +1006,20 @@ fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
         "ascending by KindId"
     );
     // THE TIDEMARK, Task 1: the store gained two explicit `Surface` rows
-    // (sea-elf, giant-crocodile) alongside the three `Subterranean` ones
-    // above — absence still means `Surface` for everyone else, but these
-    // two are stated rather than left to the default now that a third
-    // realm exists for a reader to mistake them into (spec §3.6). The
-    // count moves from 3 to 5 for that reason, not because the store
-    // stopped being sparse.
+    // (sea-elf, giant-crocodile) alongside the `Subterranean` ones above —
+    // absence still means `Surface` for everyone else, but these two are
+    // stated rather than left to the default now that a third realm exists
+    // for a reader to mistake them into (spec §3.6). The count grew for
+    // that reason and because two campaigns added peoples, not because the
+    // store stopped being sparse.
     assert_eq!(
         reg.len(),
-        11,
-        "3 subterranean rows (drow, rust-monster, xorn), 2 explicit Surface \
-         rows (sea-elf, giant-crocodile) and — The Tidemark, Task 3 — 6 \
-         Marine ones; the store is still sparse: every OTHER kind is absent \
-         and still means Surface"
+        15,
+        "7 Subterranean rows (drow, rust-monster, xorn, and the four \
+         Underworld peoples duergar/kuo-toa/mountain-dwarf/svirfneblin), 2 \
+         explicit Surface rows (sea-elf, giant-crocodile) and — The \
+         Tidemark, Task 3 — 6 Marine ones; the store is still sparse: every \
+         OTHER kind is absent and still means Surface"
     );
 }
 

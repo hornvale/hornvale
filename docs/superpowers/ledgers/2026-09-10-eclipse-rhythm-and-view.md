@@ -177,3 +177,14 @@ four-chunk gate successfully in `121.152s`; that post-staging timing row is
 carried by the following documentation artifact commit.
 
 No census, Sluice submission, push, merge, or campaign close was performed.
+
+## Closeout
+
+The campaign close artifacts were added after the first merge request was
+held: `book/src/chronicle/eclipse-rhythm-view.md`,
+`docs/retrospectives/eclipse-rhythm-view.md`, and the Summary and
+reconciliation links. The canonical merge request then passed all merge
+phases and landed as `f22860af3`; the reconciliation, specification, and
+implementation plan now record the shipped state. The branch was ordered
+behind The Planetarium census because Eclipse Rhythm and View changes world
+derived output.

@@ -97,6 +97,13 @@ fn every_seed_42_occupation_reconstructs_to_its_committed_integral() {
         }
     }
     println!("clamped rectangles: {clamped_count} of {total} seed-42 occupations");
+    // The Underworld Peoples' re-seating introduced one clamped occupation in
+    // seed 42; absorbing The Tidemark's six marine peoples on top of it
+    // re-places seed 42 again and that occupation is gone — MEASURED on the
+    // merged world, back to zero. The reconstruction invariant above is
+    // unchanged either way; this count is a world-identity witness, and zero
+    // means the clamp arm is currently unexercised at this seed rather than
+    // that it was removed.
     assert_eq!(
         clamped_count, 0,
         "the ledger's own reading of seed 42 found 0 clamped occupations; if this moved, say so"

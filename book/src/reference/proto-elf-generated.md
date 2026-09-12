@@ -82,6 +82,7 @@ The shared ancestral language abyssal-elf, desert-elf, drow, high-elf, sea-elf, 
 | `door` | a leaf hung in an opening, to be shut against what is beyond | *Ngoangzreng | /ŋoaŋzreŋ/ |
 | `drink` | to swallow liquid | *Shrongngeng | /ʃroŋŋeŋ/ |
 | `drow-kind` | a drow | *Gong | /goŋ/ |
+| `duergar-kind` | a duergar | *Shrongtung | /ʃroŋtuŋ/ |
 | `eager` | positive, high arousal: chasing a satisfiable need | *Sraengngong | /sraeŋŋoŋ/ |
 | `earth` | the ground underfoot | *Shreangngaeng | /ʃreaŋŋaeŋ/ |
 | `east` | the direction of increasing longitude | *Peung | /peuŋ/ |
@@ -146,6 +147,7 @@ The shared ancestral language abyssal-elf, desert-elf, drow, high-elf, sea-elf, 
 | `killer-whale-kind` | a killer whale | *Nguangtang | /ŋuaŋtaŋ/ |
 | `know` | to hold something in memory or understanding — `knows` | *Shraung | /ʃrauŋ/ |
 | `kobold-kind` | a kobold | *Zhreeng | /ʒreeŋ/ |
+| `kuo-toa-kind` | a kuo-toa | *Sreangdaung | /sreaŋdauŋ/ |
 | `lake` | still water held in a hollow that has no outlet to the sea | *Boongngong | /booŋŋoŋ/ |
 | `ledge` | a broad shelf of exposed stone | *Dongngong | /doŋŋoŋ/ |
 | `liana-forest` | Tropical forest tangled with climbing vines. | *Shrunggung | /ʃruŋguŋ/ |
@@ -168,6 +170,7 @@ The shared ancestral language abyssal-elf, desert-elf, drow, high-elf, sea-elf, 
 | `moon` | a moon | *Taangzroeng | /taaŋzroeŋ/ |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Peeng | /peeŋ/ |
 | `mountain` | high ground | *Srengngeang | /sreŋŋeaŋ/ |
+| `mountain-dwarf-kind` | a mountain dwarf | *Zreang | /zreaŋ/ |
 | `mouth` | the organ of eating and speech | *Guanggung | /guaŋguŋ/ |
 | `move` | to go from one place to another | *Shrungteeng | /ʃruŋteeŋ/ |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | *Deungdong | /deuŋdoŋ/ |
@@ -242,6 +245,7 @@ The shared ancestral language abyssal-elf, desert-elf, drow, high-elf, sea-elf, 
 | `strongbox` | a locked chest built to keep valuables safe | *Bengbuong | /beŋbuoŋ/ |
 | `sun` | the sun | *Tungzhreong | /tuŋʒreoŋ/ |
 | `supports-rest` | a place a body may lie down and sleep | *Goeng | /goeŋ/ |
+| `svirfneblin-kind` | a svirfneblin | *Paang | /paaŋ/ |
 | `taiga` | a biome class | *Zhrengngong | /ʒreŋŋoŋ/ |
 | `temperate-forest` | a biome class | *Shrongdeeng | /ʃroŋdeeŋ/ |
 | `temperate-grassland` | a biome class | *Sruunggang | /sruuŋgaŋ/ |

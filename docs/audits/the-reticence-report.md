@@ -18,6 +18,7 @@ Computed once, at `Seed(42)` — see this function's own module doc for why a fu
 | desert-dwarf | folk | Spirit | Wary | 4 |
 | desert-elf | folk | Spirit | Wary | 4 |
 | drow | organized | God | Guarded | 2 |
+| duergar | organized | God | Guarded | 2 |
 | gnoll | folk | Spirit | Wary | 4 |
 | goblin | organized | God | Guarded | 2 |
 | gully-dwarf | organized | God | Guarded | 2 |
@@ -27,10 +28,13 @@ Computed once, at `Seed(42)` — see this function's own module doc for why a fu
 | human | organized | God | Guarded | 2 |
 | kelp-tender | folk | Spirit | Wary | 4 |
 | kobold | folk | Spirit | Wary | 4 |
+| kuo-toa | folk | Spirit | Wary | 4 |
 | merfolk | — | Wordless (gap (experiential): merfolk has no exposure to 'god') | Open | 8 |
+| mountain-dwarf | organized | God | Guarded | 2 |
 | reef-mason | folk | Spirit | Wary | 4 |
 | sea-elf | folk | Spirit | Wary | 4 |
 | snow-elf | folk | Spirit | Wary | 4 |
+| svirfneblin | folk | Spirit | Wary | 4 |
 | triton | folk | Spirit | Wary | 4 |
 | vent-commensal | folk | Spirit | Wary | 4 |
 | wood-elf | organized | God | Guarded | 2 |

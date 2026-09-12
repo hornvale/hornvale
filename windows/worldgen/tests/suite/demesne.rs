@@ -405,10 +405,12 @@ const BASELINE_DOMINANT_KINDS_42: usize = 2;
 /// which is a property of the deep-history bake (it seeds every Settled people
 /// its own proto-communities, which persist by lineage rather than by winning
 /// local dominance), not a claim that six new peoples all found good ground.
-// The Tidemark re-pin: 15 -> 20. Five of the six marine peoples settle and
-// all five people at least one seed-42 site; merfolk is `Gregarious` and
-// never enters this roster.
-const BASELINE_PEOPLED_KINDS_42: usize = 20;
+// Two campaigns re-pin this together, 15 -> 24: the Underworld Peoples' four
+// subterranean peoples and five of The Tidemark's six marine peoples (merfolk
+// is `Gregarious` and never enters this roster). MEASURED on the merged world,
+// not added from the two branches' separate pins (20 on one side, 19 on the
+// other).
+const BASELINE_PEOPLED_KINDS_42: usize = 24;
 /// BASELINE union (dominant ∪ peopled-by) distinct kind count at seed 42.
 const BASELINE_UNION_KINDS_42: usize = 4;
 
@@ -1008,14 +1010,15 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // `100 * trop_mean` in disguise — which is the failure mode this line
     // has to keep proving it is not. Post-unblinding re-measure, declared
     // per decision 0016.
-    // The Tidemark re-measure: 10.1472 -> 10.1483, inside the band's own
-    // width. The scalar path reads the base carrying field, which the six
-    // marine peoples do not touch — this is the ordinary seed-42 drift a
-    // roster change carries through settlement placement, not a latitudinal
-    // mechanism moving. Post-unblinding re-measure, declared per 0016.
+    // Re-measured on the merged world: 10.1472 -> 10.1533, inside the band's
+    // own width. The scalar path reads the base carrying field, which neither
+    // the six marine peoples nor the four Underworld ones touch — this is the
+    // ordinary seed-42 drift a roster change carries through settlement
+    // placement, not a latitudinal mechanism moving. Post-unblinding
+    // re-measure, declared per 0016.
     assert!(
-        (ratio - 10.1483).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~10.1483). Check the \
+        (ratio - 10.1533).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~10.1533). Check the \
          printed decomposition above before assuming anything latitudinal moved — and \
          note that since The Glasshouse the polar term is OFF its floor, so this is a \
          real tropics/poles ratio and no longer 100 * trop_mean."

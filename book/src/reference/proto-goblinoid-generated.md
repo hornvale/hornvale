@@ -81,6 +81,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `door` | a leaf hung in an opening, to be shut against what is beyond | *Nagoa | /nagoa/ |
 | `drink` | to swallow liquid | *Qeego | /qeego/ |
 | `drow-kind` | a drow | *Genoa | /genoa/ |
+| `duergar-kind` | a duergar | *Gena | /gena/ |
 | `eager` | positive, high arousal: chasing a satisfiable need | *Nene | /nene/ |
 | `earth` | the ground underfoot | *Pode | /pode/ |
 | `east` | the direction of increasing longitude | *Paenao | /paenao/ |
@@ -145,6 +146,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `killer-whale-kind` | a killer whale | *Gaqo | /gaqo/ |
 | `know` | to hold something in memory or understanding — `knows` | *Naena | /naena/ |
 | `kobold-kind` | a kobold | *Naeno | /naeno/ |
+| `kuo-toa-kind` | a kuo-toa | *Poqe | /poqe/ |
 | `lake` | still water held in a hollow that has no outlet to the sea | *Qao | /qao/ |
 | `ledge` | a broad shelf of exposed stone | *Notoe | /notoe/ |
 | `liana-forest` | Tropical forest tangled with climbing vines. | *Neene | /neene/ |
@@ -167,6 +169,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `moon` | a moon | *Koo | /koo/ |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Kae | /kae/ |
 | `mountain` | high ground | *Dotoo | /dotoo/ |
+| `mountain-dwarf-kind` | a mountain dwarf | *Pedee | /pedee/ |
 | `mouth` | the organ of eating and speech | *Noanaa | /noanaa/ |
 | `move` | to go from one place to another | *Goatee | /goatee/ |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | *Deoqa | /deoqa/ |
@@ -241,6 +244,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `strongbox` | a locked chest built to keep valuables safe | *Qonoa | /qonoa/ |
 | `sun` | the sun | *Pago | /pago/ |
 | `supports-rest` | a place a body may lie down and sleep | *Geno | /geno/ |
+| `svirfneblin-kind` | a svirfneblin | *Neana | /neana/ |
 | `taiga` | a biome class | *Qe | /qe/ |
 | `temperate-forest` | a biome class | *Na | /na/ |
 | `temperate-grassland` | a biome class | *Noo | /noo/ |

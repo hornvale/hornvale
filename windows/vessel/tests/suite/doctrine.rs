@@ -81,9 +81,12 @@ fn cult_form_is_uniform_within_every_people() {
         mixed.is_empty(),
         "cult-form must be uniform per SPECIES, mixed: {mixed:?}"
     );
+    // Two campaigns add belief-holding peoples to seed 42 at once: the
+    // Underworld Peoples' four and five of The Tidemark's six. MEASURED on
+    // the merged world, not added from the two branches' separate pins.
     assert_eq!(
         per_species.len(),
-        20,
-        "seed 42 has 20 species holding beliefs"
+        24,
+        "seed 42 has 24 species holding beliefs"
     );
 }

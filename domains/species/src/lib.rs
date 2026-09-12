@@ -28,6 +28,18 @@ use hornvale_kernel::{
 // internally.
 pub use hornvale_kernel::KindId;
 
+const UNDERWORLD_PEOPLE_IDS: [&str; 4] = ["mountain-dwarf", "duergar", "kuo-toa", "svirfneblin"];
+
+fn add_underworld_rows<C: Clone>(store: &mut ComponentStore<KindId, C>, source: &str) {
+    let value = store
+        .get_by_label(source)
+        .unwrap_or_else(|| panic!("underworld row source {source:?} is registered"))
+        .clone();
+    for id in UNDERWORLD_PEOPLE_IDS {
+        store.insert(KindId(id), value.clone());
+    }
+}
+
 mod allometry;
 pub use allometry::{
     LifeHistory, age_at_maturity, basal_metabolic_rate_w, life_history, lifespan,
@@ -3071,11 +3083,14 @@ impl Component for HabitatRealm {}
 /// isn't) but because a reader meeting `HabitatRealm::Marine` for the first
 /// time will reasonably assume a sea elf belongs to it (spec §3.6) — so
 /// their classification is stated rather than left to an absence a new
-/// variant makes ambiguous to read. Five rows today: three non-`Surface`
-/// (`rust-monster`/`xorn`/`drow`, all re-homed by The Deep Realm, whose
-/// niches have been authored for darkness and near-saturation since that
-/// campaign and scored against sunlit surface vertices until it landed) and
-/// two explicit `Surface` rows (see above).
+/// variant makes ambiguous to read. Fifteen rows today: two `Subterranean`
+/// beasts and one `Subterranean` people from The Deep Realm / The Radiation
+/// (`rust-monster`/`xorn`/`drow`, whose niches have been authored for
+/// darkness and near-saturation since that campaign and scored against
+/// sunlit surface vertices until it landed); four more `Subterranean`
+/// peoples from the Underworld Peoples campaign
+/// (`mountain-dwarf`/`duergar`/`kuo-toa`/`svirfneblin`); six `Marine`
+/// peoples from The Tidemark; and two explicit `Surface` rows (see above).
 ///
 /// Sparse rather than a `BiosphereTraits` field because this has a single
 /// consumer (`per_species_suitability`) which holds a slice, not a row —
@@ -3112,6 +3127,26 @@ pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
         // the surface, and the gate does that measurably. Drow's `elevation`
         // response is wood-elf's byte for byte, for exactly that reason.
         (KindId("drow"), HabitatRealm::Subterranean),
+        // THE UNDERWORLD PEOPLES: four more subterranean peoples on the drow's
+        // shape, landed on main while The Tidemark ran.
+        (KindId("mountain-dwarf"), HabitatRealm::Subterranean),
+        (KindId("duergar"), HabitatRealm::Subterranean),
+        // kuo-toa is `Subterranean` AND NOT `Marine`, and that is deliberate.
+        // It is the same shape as `sea-elf` below — residence in one realm,
+        // reach into another — read the other way round: it lives in the
+        // Underdark and carries `SWIM` (`locomotion_registry`) for the
+        // sunless water it hunts. The ambiguity only exists because The
+        // Tidemark adds the `Marine` variant, so resolving it is The
+        // Tidemark's job: `MAP-11` — the idea-registry parent of this
+        // campaign's own `WAT-sea-peoples` — names "sahuagin, merfolk,
+        // kuo-toa" as its aquatic-people examples, so a reader meeting
+        // `Marine` for the first time would reasonably "correct" this row.
+        // Do not. The availability mask is `{0.0, 1.0}` with no middle
+        // value, so that correction would strip a settled people of its
+        // Underdark home outright rather than softening it. `SWIM` is REACH,
+        // never residence (spec §3.8).
+        (KindId("kuo-toa"), HabitatRealm::Subterranean),
+        (KindId("svirfneblin"), HabitatRealm::Subterranean),
         // THE TIDEMARK, Task 1: the registry is sparse and absence already
         // means `Surface`, so these two rows are not needed for correctness
         // — they are needed because a reader meeting `HabitatRealm::Marine`
@@ -3208,6 +3243,11 @@ pub fn locomotion_registry() -> ComponentStore<KindId, Locomotion> {
         (KindId("giant-squid"), SWIM),
         (KindId("giant-crocodile"), SWIM),
         (KindId("sea-elf"), SWIM),
+        // kuo-toa: `SWIM` with a `Subterranean` realm row — the third kind
+        // whose reach and residence disagree, and the one that reads most
+        // like a `Marine` kind from here. See `habitat_realm_registry`'s
+        // comment on its row for why it is not one.
+        (KindId("kuo-toa"), SWIM),
         // THE TIDEMARK, Task 3: the six obligate marine peoples. `SWIM` is
         // REACH, never residence (spec §3.8) — it says a body crosses deep
         // water, which is as true of a sea elf diving as of a triton at
@@ -4201,7 +4241,7 @@ impl Component for Dispersion {}
 /// for everything else (including the three dragons).
 /// type-audit: bare-ok(identifier-text)
 pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
-    [
+    let mut store = [
         (
             KindId("goblin"),
             BiosphereTraits {
@@ -5104,7 +5144,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// Sleep-debt accrued per LOCAL day awake (The Wicket, Task 9) — the rate
@@ -5153,7 +5195,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
     /// plumb: per-species(a creature's own physiology sets how fast fatigue accrues -- doc's own words: differentiating any OTHER kind's rate away from human's is a fidelity decision left for whoever authors it next; every kind but xorn shares this identical 0.3)
     const RATE: f64 = 0.3;
-    [
+    let mut store = [
         (KindId("goblin"), RATE),
         (KindId("kobold"), RATE),
         (KindId("hobgoblin"), RATE),
@@ -5212,7 +5254,9 @@ pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
         (KindId("vent-commensal"), RATE),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// How much MORE a rest or a sleep repays a body of this kind when the room
@@ -5365,7 +5409,7 @@ pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
     /// nothing to restore, and by a sessile one, which never lies down.
     /// plumb: per-species(a kind with no metabolism or no lying posture collects nothing from an afforded site -- ThermalStrategy::Absent and SocialForm::Sessile are the two traits that reach this floor)
     const NO_GAIN: f64 = 1.00;
-    [
+    let mut store = [
         // --- the settled peoples: both halves -----------------------------
         (KindId("goblin"), MADE_FOR_THE_BODY),
         (KindId("hobgoblin"), MADE_FOR_THE_BODY),
@@ -5432,7 +5476,9 @@ pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
         (KindId("shrieker"), NO_GAIN),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// How much a kind gets out of lying on a found surface of a given
@@ -5563,7 +5609,7 @@ pub fn substrate_response(realm: HabitatRealm) -> ConditionResponse {
 /// goblin's authorship, not about what the manikin is.
 /// type-audit: bare-ok(identifier-text)
 pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
-    [
+    let mut store = [
         (
             KindId("goblin"),
             MindVector {
@@ -5863,7 +5909,9 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// Per-kind dispersion. **Variability is itself a species trait** (spec §2's
@@ -5874,7 +5922,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
 /// no society to vary.
 /// type-audit: bare-ok(identifier-text)
 pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
-    [
+    let mut store = [
         // GENERALIST-LITE: the cosmopolitan weed's widest goblinoid spread,
         // still a notch below human's true psychological breadth.
         (
@@ -6128,7 +6176,9 @@ pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// The community-mind component — authored directly, present only for the
@@ -6138,7 +6188,7 @@ pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
 /// same values — again authorship, not definition.
 /// type-audit: bare-ok(identifier-text)
 pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
-    [
+    let mut store = [
         (
             KindId("goblin"),
             SocietyVector {
@@ -6435,7 +6485,9 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// The perception component — authored directly, present for every minded
@@ -6447,7 +6499,7 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
 /// falling back on goblin's row, as the pre-Vigil stopgap did.
 /// type-audit: bare-ok(identifier-text)
 pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
-    [
+    let mut store = [
         (
             KindId("goblin"),
             PerceptionVector {
@@ -6798,7 +6850,9 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// The universal taxonomy lookup: a kind's family label, authored directly
@@ -6865,6 +6919,8 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         (KindId("desert-dwarf"), "dwarf"),
         (KindId("gully-dwarf"), "dwarf"),
         (KindId("hill-dwarf"), "dwarf"),
+        (KindId("mountain-dwarf"), "dwarf"),
+        (KindId("duergar"), "dwarf"),
         // THE RADIATION (C2d): six kinds, ONE label — the roster's largest
         // family, and the programme's last. `family_proto` in
         // `hornvale_language` carries the matching `KindId("elf")` row in this
@@ -6876,6 +6932,10 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         (KindId("sea-elf"), "elf"),
         (KindId("snow-elf"), "elf"),
         (KindId("wood-elf"), "elf"),
+        // THE UNDERWORLD PEOPLES: two singleton families, landed on main
+        // while The Tidemark ran.
+        (KindId("kuo-toa"), "kuo-toa"),
+        (KindId("svirfneblin"), "svirfneblin"),
         // THE TIDEMARK (Task 3): the elf family takes a SEVENTH member, and
         // the other five marine peoples are singleton families on kobold's,
         // gnoll's and human's shape. The programme's "last family" note
@@ -6968,6 +7028,8 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("desert-dwarf-kind", "a desert dwarf"),
     ("gully-dwarf-kind", "a gully dwarf"),
     ("hill-dwarf-kind", "a hill dwarf"),
+    ("mountain-dwarf-kind", "a mountain dwarf"),
+    ("duergar-kind", "a duergar"),
     // THE RADIATION (C2d): the elf family's six — the roster's largest family,
     // and the programme's last. These six ids are what
     // `domains/language/src/accession.rs`'s epoch-10 cohort lists;
@@ -6981,6 +7043,12 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("sea-elf-kind", "a sea elf"),
     ("snow-elf-kind", "a snow elf"),
     ("wood-elf-kind", "a wood elf"),
+    // THE UNDERWORLD PEOPLES: landed on main while The Tidemark ran. Their
+    // cohort in `domains/language/src/accession.rs` sits at the EARLIER of
+    // the two appended indices, because that module orders by arrival and
+    // theirs arrived on main first.
+    ("kuo-toa-kind", "a kuo-toa"),
+    ("svirfneblin-kind", "a svirfneblin"),
     // THE TIDEMARK (Task 3): the six obligate marine peoples. These six ids
     // are what `domains/language/src/accession.rs`'s LAST cohort lists (its
     // epoch index is that cohort's position in the array and is deliberately
@@ -7553,7 +7621,57 @@ impl Component for EnvironmentNiche {}
 /// authoring a niche for a kind that places no community would be a value no
 /// consumer reads.
 pub fn environment_niche_registry() -> ComponentStore<KindId, EnvironmentNiche> {
-    [(KindId("drow"), drow_niche())].into_iter().collect()
+    let mut store: ComponentStore<KindId, EnvironmentNiche> =
+        [(KindId("drow"), drow_niche())].into_iter().collect();
+    store.insert(KindId("mountain-dwarf"), mountain_dwarf_niche());
+    store.insert(KindId("duergar"), duergar_niche());
+    store.insert(KindId("kuo-toa"), kuo_toa_niche());
+    store.insert(KindId("svirfneblin"), svirfneblin_niche());
+    store
+}
+
+fn mountain_dwarf_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (hornvale_kernel::PHYSIOGNOMY, AxisPreference::graded(0.7)),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(0.6)),
+        (hornvale_kernel::WATER, AxisPreference::graded(0.3)),
+        (hornvale_kernel::SUBSTRATE, AxisPreference::class(0.6)),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(0.0)),
+    ])
+    .expect("mountain dwarf niche is valid")
+}
+
+fn duergar_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (hornvale_kernel::PHYSIOGNOMY, AxisPreference::graded(0.3)),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(0.9)),
+        (hornvale_kernel::WATER, AxisPreference::graded(0.8)),
+        (hornvale_kernel::SUBSTRATE, AxisPreference::class(0.6)),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(0.0)),
+    ])
+    .expect("duergar niche is valid")
+}
+
+fn kuo_toa_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (hornvale_kernel::PHYSIOGNOMY, AxisPreference::graded(0.2)),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(0.8)),
+        (hornvale_kernel::WATER, AxisPreference::graded(1.0)),
+        (hornvale_kernel::SUBSTRATE, AxisPreference::class(0.6)),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(0.0)),
+    ])
+    .expect("kuo-toa niche is valid")
+}
+
+fn svirfneblin_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (hornvale_kernel::PHYSIOGNOMY, AxisPreference::graded(0.8)),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(0.3)),
+        (hornvale_kernel::WATER, AxisPreference::graded(0.5)),
+        (hornvale_kernel::SUBSTRATE, AxisPreference::class(0.6)),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(0.0)),
+    ])
+    .expect("svirfneblin niche is valid")
 }
 
 /// Drow's niche in the environment basis — **every value authored**, on the
@@ -7750,8 +7868,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            45,
-            "forty-five kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human, The Delvers added the three dwarves, The Radiation added the six elves, The Tidemark added the six marine peoples)"
+            49,
+            "forty-nine kinds compete for space: thirty-nine before either of the two campaigns that landed together here, plus the four Underworld peoples (mountain-dwarf, duergar, kuo-toa, svirfneblin), plus The Tidemark's six marine peoples. The thirty-nine themselves: The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human, The Delvers added the three dwarves, The Radiation added the six elves"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -7769,16 +7887,19 @@ mod tests {
         }
         assert_eq!(
             psy.len(),
-            24,
-            "twenty-one peoples + three minded dragons (The Tidemark adds six, \
-             of which five settle and merfolk does not — peoplehood is a mind, \
-             not a settlement)"
+            28,
+            "twenty-five peoples + three minded dragons (fifteen peoples \
+             before the two campaigns that landed together here, plus the \
+             four Underworld peoples, plus The Tidemark's six — of which \
+             five settle and merfolk does not: peoplehood is a mind, not a \
+             settlement)"
         );
         assert_eq!(
             per.len(),
-            24,
-            "perception is the twenty-one peoples + the three dragons (The \
-             Vigil's key-set equality, widened by The Tidemark)"
+            28,
+            "perception is the twenty-five peoples + the three dragons (The \
+             Vigil's key-set equality, widened by the Underworld peoples and \
+             by The Tidemark)"
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
@@ -7895,6 +8016,7 @@ mod tests {
                 "desert-elf",
                 "dire-wolf",
                 "drow",
+                "duergar",
                 "giant-constrictor-snake",
                 "giant-crocodile",
                 "giant-elk",
@@ -7913,7 +8035,9 @@ mod tests {
                 "kelp-tender",
                 "killer-whale",
                 "kobold",
+                "kuo-toa",
                 "merfolk",
+                "mountain-dwarf",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
@@ -7924,6 +8048,7 @@ mod tests {
                 "sea-elf",
                 "shrieker",
                 "snow-elf",
+                "svirfneblin",
                 "treant",
                 "triton",
                 "twig-blight",
@@ -8301,7 +8426,9 @@ mod tests {
         // an extensional coincidence — "no minded Gregarious kind yet", as
         // `components.rs::check_integrity` says at the same gate. THE
         // TIDEMARK's `merfolk` ends that coincidence, so this list now holds
-        // twenty-one kinds against twenty `Settled` ones. The assertion is
+        // twenty-five kinds against twenty-four `Settled` ones (the four
+        // Underworld peoples landed on main in the same window and all four
+        // settle; merfolk remains the single exception). The assertion is
         // unchanged in kind; what it measures has simply stopped being
         // expressible the narrower way.
         let society: Vec<_> = society_registry().ids().map(|k| k.0).collect();
@@ -8313,6 +8440,7 @@ mod tests {
                 "desert-dwarf",
                 "desert-elf",
                 "drow",
+                "duergar",
                 "gnoll",
                 "goblin",
                 "gully-dwarf",
@@ -8322,10 +8450,13 @@ mod tests {
                 "human",
                 "kelp-tender",
                 "kobold",
+                "kuo-toa",
                 "merfolk",
+                "mountain-dwarf",
                 "reef-mason",
                 "sea-elf",
                 "snow-elf",
+                "svirfneblin",
                 "triton",
                 "vent-commensal",
                 "wood-elf"

@@ -636,6 +636,15 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "the-pest",
         "the-pox",
     ],
+    // The Underworld Peoples: four new `*-kind` concepts from the species
+    // accession. Appended as a fresh cohort so existing concept roots remain
+    // stable.
+    &[
+        "duergar-kind",
+        "kuo-toa-kind",
+        "mountain-dwarf-kind",
+        "svirfneblin-kind",
+    ],
     // THE TIDEMARK, Task 3: the six obligate marine peoples. The LAST
     // cohort at the time of writing; its epoch index is its position in this
     // array and is deliberately not named here.
@@ -649,6 +658,15 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // been wrong, and only after a merge nobody had done yet. So it says what
     // it can guarantee — that this cohort is appended, never inserted — and
     // leaves the index to the array.
+    //
+    // **That merge has now happened, and this cohort sits SECOND of the two.**
+    // The Underworld Peoples' cohort is the one immediately above; ours
+    // follows it. The order is not a coin toss and not seniority: this module
+    // orders by ARRIVAL, and their cohort arrived on `main` first. Both are
+    // pure appends onto the same 23-cohort base, so neither ordering moves any
+    // pre-existing concept's proto-root — the order decides only which of the
+    // ten new kinds' own roots are drawn first, and arrival is the rule this
+    // file already applies to everything else in it.
     //
     // ONE cohort, not six, for the reason the dwarf and elf family cohorts
     // give: the campaign is one arrival event and one epoch, and six cohorts

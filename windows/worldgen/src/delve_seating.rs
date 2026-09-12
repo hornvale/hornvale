@@ -646,10 +646,10 @@ pub enum Tenancy {
 /// no occupation, is `(Found, Wild)` — the answer every column gave before
 /// The Plat.
 ///
-/// Today exactly one people carries a niche (`drow`,
-/// `environment_niche_registry()`), so it is the only people that can seat
-/// underground; a people with no niche is a surface people
-/// (`Seating::all_surface`) and cuts nothing.
+/// Today five peoples carry niches (`drow` plus the four Underworld peoples,
+/// from `environment_niche_registry()`), so they can seat underground; a
+/// people with no niche is a surface people (`Seating::all_surface`) and cuts
+/// nothing.
 pub fn column_origins(
     world: &World,
     terrain: &GeneratedTerrain,
@@ -923,14 +923,14 @@ mod tests {
         );
     }
 
-    /// Seed 42's Murrain world holds 5 historical cave-bearing columns with an
+    /// Seed 42's current world holds 100 historical cave-bearing columns with an
     /// occupation record for an underworld people, including records whose
     /// occupations have ended. The pre-Murrain `underworld_capacity_probe`
     /// measured 26 on 2026-09-03; the difference is real history movement,
     /// not a reclassification between population layers. Every current column
     /// is seated at the top or second rung, so at least one column reads
-    /// `Made` at rung 0 or 1 and exactly one rung per column is Made (a people
-    /// has one seat). This historical column witness is distinct from the
+    /// `Made` at rung 0 or 1. Multiple peoples may share a column at different
+    /// rungs; this historical column witness is distinct from the
     /// present living-occupation layer: only tenancy follows `is_alive()`.
     ///
     /// **Grouped by vertex once, rather than calling [`crate::history_emit::
@@ -979,11 +979,9 @@ mod tests {
                 .filter(|(_, o)| o.0 == ChamberOrigin::Made)
                 .map(|(i, _)| i)
                 .collect();
-            assert_eq!(made.len(), 1, "vertex {vertex:?}: one seat per people");
             assert!(
-                made[0] <= 1,
-                "vertex {vertex:?}: seated at rung {}",
-                made[0]
+                !made.is_empty() && made.iter().all(|rung| *rung <= 1),
+                "vertex {vertex:?}: every historical seat must be at rung 0 or 1, got {made:?}"
             );
             let presently_occupied = occ
                 .iter()
@@ -996,12 +994,16 @@ mod tests {
             assert_eq!(origins[made[0]].1, expected, "vertex {vertex:?}");
             historical_made_columns += 1;
         }
-        // The Tidemark re-pin: 5 -> 8. Six marine peoples re-place seed 42,
-        // and drow — the only kind this witness counts — competes for surface
-        // vertices against a wider roster, so more of its columns are made.
-        // A world-identity witness, not a claim about the delve seating.
+        // A WORLD-IDENTITY WITNESS, not a claim about the delve seating, and
+        // it has been re-pinned twice in one merge window. The Tidemark's six
+        // marine peoples re-place seed 42, and the Underworld Peoples' four
+        // subterranean peoples move the underworld occupancy directly — drow,
+        // the only kind this witness counts, now competes against both. The
+        // number below was MEASURED on the merged world, not arithmetic over
+        // the two branches' separate pins (5 -> 8 on one side, 5 -> 100 on
+        // the other).
         assert_eq!(
-            historical_made_columns, 8,
+            historical_made_columns, 56,
             "seed 42 historical occupied-underworld-column witness"
         );
     }

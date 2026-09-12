@@ -442,3 +442,34 @@ fn every_client_workspace_declares_an_optimised_dev_profile() {
         );
     }
 }
+
+/// The visual client owns its workspace; the root suite inspects its shape
+/// without linking any renderer. Resolved reachability is checked by the
+/// dedicated client gate (including normal, build and dev dependencies).
+#[test]
+fn visual_client_keeps_three_independent_crates_and_a_cpu_gate() {
+    let root = repo_root();
+    let visual = root.join("clients/visual");
+    let manifest = std::fs::read_to_string(visual.join("Cargo.toml")).unwrap();
+    let tables = parse_toml_tables(&manifest);
+    let members: BTreeSet<String> = serde_json::from_str(&tables["workspace"]["members"]).unwrap();
+    assert_eq!(
+        members,
+        BTreeSet::from(["source".into(), "bevy".into(), "planetarium".into()])
+    );
+    assert!(visual.join("Cargo.lock").is_file());
+    for member in ["source", "bevy", "planetarium"] {
+        assert!(visual.join(member).join("Cargo.toml").is_file());
+    }
+    let makefile = std::fs::read_to_string(root.join("Makefile")).unwrap();
+    assert!(makefile.contains("visual-check-run:\n"));
+    let aggregate = makefile.split("clients-check-run:\n").nth(1).unwrap();
+    let loops: Vec<_> = aggregate
+        .lines()
+        .filter(|line| line.trim_start().starts_with("for t in "))
+        .collect();
+    assert_eq!(loops.len(), 2);
+    assert!(loops.iter().all(|line| line.contains("visual-check-run")));
+    assert!(root.join("scripts/visual-dependencies.py").is_file());
+    assert!(root.join("scripts/test-visual-dependencies.py").is_file());
+}

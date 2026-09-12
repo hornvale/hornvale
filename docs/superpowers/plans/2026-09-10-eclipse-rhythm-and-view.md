@@ -56,7 +56,7 @@
 **Goal:** Re-pin only contract-bearing output and complete repository gates.
 **Success Criteria:** Required fixtures and bundles are regenerated from the implementation, docs audits pass, and no census regeneration is performed without a measured schema change.
 **Tests:** `make quick`, relevant local client checks, `make gate-commit`; queued stage/merge gates after review.
-**Status:** In Progress
+**Status:** Complete
 
 ---
 
@@ -142,4 +142,4 @@
 - [x] **Step 2: Re-run only the relevant focused checks** after resolving any artifact drift; do not rebaseline census goldens unless an actual census metric or world-generating behavior changed.
 - [x] **Step 3: Run `make quick`, the affected CLI/client checks, and `make gate-commit`; record exit codes and material output in the campaign ledger.**
 - [x] **Step 4: Resolve the integrated campaign-review findings.** The final worker was explicitly constrained to no subagents, so ledger #7 supplied the review findings directly; the fix round added behavior-first regressions and repeated the affected local checks.
-- [ ] **Step 5: Submit the completed branch to the Sluice stage/merge process only after the campaign-close review and required canonical checks.**
+- [x] **Step 5: Submit the completed branch to the Sluice stage/merge process only after the campaign-close review and required canonical checks.**

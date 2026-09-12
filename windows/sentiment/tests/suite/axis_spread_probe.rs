@@ -20,7 +20,7 @@ fn axis_spread_probe() {
     let ids: Vec<PeopleId> = cat.keys().copied().collect();
     assert_eq!(
         ids.len(),
-        21,
+        25,
         "the catalog must hold exactly the minded, social peoples — \
          `society_registry` is `minded ∧ social` (decision 0068), which was \
          extensionally `Settled` until The Tidemark's Gregarious merfolk"

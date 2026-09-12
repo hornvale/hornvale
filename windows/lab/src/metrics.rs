@@ -4241,7 +4241,7 @@ pub fn registry() -> Vec<Metric> {
             // property of a family, and `monophyly-goblinoid` was named after
             // what used to be its only possible subject.
             name: "monophyly-dwarf",
-            doc: "Whether every dwarf daughter's (desert-dwarf, gully-dwarf, hill-dwarf) \
+            doc: "Whether every dwarf daughter's (desert-dwarf, duergar, gully-dwarf, hill-dwarf, mountain-dwarf) \
                    Root derivation.proto matches an INDEPENDENT re-draw of the shared \
                    \"dwarf\" family proto-root for that concept (spec §3: cognates \
                    share a proto ancestor) — never reading the family proto back from a \
@@ -11368,10 +11368,16 @@ fn hue_depth(v: &AstronomyView, species: &str) -> MetricValue {
 /// control's value is a deliberate act, not a refactor, so the constant stays.
 const GOBLINOID_DAUGHTERS: [&str; 3] = ["goblin", "hobgoblin", "bugbear"];
 
-/// THE DELVERS (C2c): the dwarf family's three daughters — the roster's second
+/// THE DELVERS: the dwarf family's five daughters — the roster's second
 /// multi-member family, and `monophyly-dwarf`'s subject. Same shape, same
 /// rationale and the same drift guard as [`GOBLINOID_DAUGHTERS`].
-const DWARF_DAUGHTERS: [&str; 3] = ["desert-dwarf", "gully-dwarf", "hill-dwarf"];
+const DWARF_DAUGHTERS: [&str; 5] = [
+    "desert-dwarf",
+    "duergar",
+    "gully-dwarf",
+    "hill-dwarf",
+    "mountain-dwarf",
+];
 
 /// THE RADIATION (C2d): the elf family's six daughters — the roster's third
 /// and largest multi-member family, and `monophyly-elf`'s subject. Same shape,
@@ -14125,13 +14131,16 @@ mod tests {
         // 2.4242424242424243. Stellar topology and anchor generation change
         // the seed-42 settlement/naming substrate; this is a fresh live
         // measurement on the merged tree, not a change to the 2-3 target.
-        // THE TIDEMARK re-pin (2026-09-11): 2.4242424242424243 ->
-        // 2.5714285714285716. Six marine peoples re-place seed 42's
+        // TWO CAMPAIGNS RE-PIN IT TOGETHER (2026-09-11): the Underworld
+        // Peoples' four and The Tidemark's six re-place seed 42's
         // settlements, so goblin's own site pool and the names drawn for it
-        // move; still inside the 2-3 target, which is the row's claim.
+        // move. MEASURED on the merged world — neither branch's own figure
+        // (2.5714285714285716, 2.5) survives it — the merged value is
+        // 2.4285714285714284. Still inside the 2-3 target, which is the
+        // row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.5714285714285716)
+            MetricValue::Number(2.4285714285714284)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14369,14 +14378,17 @@ mod tests {
         // THE WANDERERS re-pin (2026-09-09): 2.8 -> 2.8157894736842106.
         // Stellar topology and anchor generation change the merged tree's
         // seed-42 named-site sample; it remains inside the stated 2-3 target.
-        // THE TIDEMARK re-pin (2026-09-11): 2.8157894736842106 ->
-        // 2.580246913580247. Six marine peoples re-place seed 42's
+        // TWO CAMPAIGNS RE-PIN IT TOGETHER (2026-09-11): the Underworld
+        // Peoples' four and The Tidemark's six re-place seed 42's
         // settlements, so kobold's named-site sample moves with goblin's
-        // (above); both remain inside the stated 2-3 target. Nothing in
-        // that campaign touches phonology, wear or the namer.
+        // (above). MEASURED on the merged world — neither branch's own figure
+        // (2.580246913580247, 2.3518518518518516) survives it — the merged
+        // value is 2.4096385542168677. Both remain inside the stated 2-3
+        // target; nothing in either campaign touches phonology, wear or the
+        // namer.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.580246913580247)
+            MetricValue::Number(2.4096385542168677)
         );
     }
 
@@ -14621,14 +14633,17 @@ mod tests {
         // THE MURRAIN re-pin (2026-09-07): 0.6102564102564103 ->
         // 0.6905537459283387, from the same deterministic settlement
         // substrate change that moved the syllable pin above.
-        // THE TIDEMARK re-pin (2026-09-11): 0.6905537459283387 ->
-        // 0.5974025974025974. Six marine peoples re-place seed 42's
+        // TWO CAMPAIGNS RE-PIN IT TOGETHER (2026-09-11): the Underworld
+        // Peoples' four and The Tidemark's six re-place seed 42's
         // settlements, changing which names read as transparent — the same
         // cause as the syllable pin above, and the row's claim (a
-        // distribution, not a constant) is untouched. NOT corroborated
-        // against a census: that campaign's refresh happens once, at
-        // pre-merge close, and had not been run when this was re-pinned.
-        assert_eq!(share, 0.5974025974025974, "seed 42 transparency drifted");
+        // distribution, not a constant) is untouched. MEASURED on the merged
+        // world — neither branch's own figure (0.5974025974025974,
+        // 0.6707692307692308) survives it; the merged value is
+        // 0.5732323232323232. NOT corroborated against a census:
+        // a refresh happens once, at pre-merge close, and had not been run
+        // when this was re-pinned.
+        assert_eq!(share, 0.5732323232323232, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -15281,16 +15296,27 @@ mod tests {
             // independent exposure reading. The precondition remains
             // nonempty and the mutation still exercises the river and
             // karst/wetland gates.
-            // THE TIDEMARK re-pin (Task 3, 2026-09-11): SIX — "island"
-            // returns, the TWELFTH oscillation. Six marine peoples enter
-            // the settling roster, so seed 7's competition for coastal and
-            // shelf-adjacent ground changes and goblin's reach widens
-            // again. Re-pin the set, do not swap the seed, per the
-            // precedent this comment has now followed through all twelve.
-            // Coverage is at its widest: river, elevation and
-            // karst/wetland gate classes all exercised, and "island" adds
-            // the coastal one.
-            vec!["river", "ford", "valley", "marsh", "spring", "island"],
+            // TWO CAMPAIGNS RE-PIN IT TOGETHER (2026-09-11), the TWELFTH
+            // oscillation and the NARROWEST reading this witness has ever
+            // had: THREE — river, ford and spring; "valley", "marsh" and
+            // "island" all leave. Ten new peoples enter the settling roster
+            // at once, so seed 7's competition for coastal and shelf-adjacent
+            // ground changes and goblin's reach contracts. MEASURED on the
+            // merged world — neither branch's own set survives it. Re-pin the
+            // set, do not swap the seed, per the precedent this comment has
+            // now followed through all twelve.
+            //
+            // **SAY WHAT THE NARROWING COSTS, because the precedent above is
+            // about the SET and this is about COVERAGE.** The mutation below
+            // still bites — the precondition is nonempty and stripping the
+            // gates still flips the flag — but the surviving three are all
+            // river-class and karst/wetland: the elevation gate ("valley")
+            // and the coastal one ("island") are no longer exercised HERE.
+            // `the_independent_reading_steeps_island_and_hill_where_the_lexicon_roots_them`
+            // is the row that owns the flood-fill and elevation-maximum
+            // witnesses, and it carries them at (0, desert-dwarf); this row
+            // is not the only cover for those gates.
+            vec!["river", "ford", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -15595,20 +15621,26 @@ mod tests {
         // count, until the ninth pass gives the count a like-for-like
         // predecessor.
         //
-        // **THE SUBJECT MOVED, NOT A VALUE.** Seed 2 -> 1; the species stays
-        // bugbear. Witness is **(1, bugbear)** — the earliest qualifying pair,
-        // the same selection-free rule every pass above used. No same-seed
-        // second species at 1, so this witness is load-bearing alone; (2,
-        // gully-dwarf) is the nearest corroborator, and selecting it over the
-        // earliest pair would be a choice this test does not make.
-        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
-        let steeped =
-            independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
-        let lexicon = lex(&view, "bugbear").expect("seed 1 bugbears hold a lexicon");
+        // **THE SUBJECT MOVED AGAIN, NOT A VALUE** (the NINTH pass, 2026-09-11,
+        // absorbing `origin/main`'s four Underworld peoples into The
+        // Tidemark's six marine ones). Seed 1 -> 0; bugbear -> desert-dwarf.
+        // Ten new peoples re-place every world in the sweep, so the
+        // qualifying population moved with them: **45 qualifying pairs over
+        // 0..60**, against fifty-two on the previous pass, and (1, bugbear) is
+        // no longer among them — seed 1's bugbears stopped rooting `island`,
+        // which the precondition below caught, working exactly as designed.
+        // Witness is **(0, desert-dwarf)** — the earliest qualifying pair, the
+        // same selection-free rule every pass above used, re-derived by this
+        // module's own `sweep_for_the_island_and_hill_witness`. No same-seed
+        // second species at 0, so this witness is load-bearing alone.
+        let view = FullView::build(Seed(0), &SkyPins::default()).unwrap();
+        let steeped = independently_steeped_concepts(&view, "desert-dwarf")
+            .expect("desert-dwarf is in the roster");
+        let lexicon = lex(&view, "desert-dwarf").expect("seed 0 desert dwarfs hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 1 bugbears must root {concept} for this test to bite"
+                "seed 0 desert dwarfs must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),

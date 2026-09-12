@@ -100,7 +100,7 @@ fn h4_positive_control_the_divergence_detector_can_fire() {
 }
 
 /// **H1 — the improvising arms are distributed as preregistered** (spec
-/// section 5). Frozen before the code: 15 peoples, organized 9, folk 6,
+/// section 5). Frozen before the code: 19 peoples, organized 13, folk 6,
 /// doctrine 0. Enumerated with `hornvale_species::society_registry()` — the
 /// same fifteen-people roster Task 6's `render_reticence_report`
 /// (`windows/lab/src/reticence.rs`) already walks, so this test's
@@ -136,24 +136,27 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
     // world's deterministic history, which re-draws the lexicons this arm
     // assignment reads. A readout, not a target.
     //
-    // THE TIDEMARK re-pin: (10, 5) -> (9, 11), over a roster of **21**
-    // rather than 15. Six marine peoples arrive, so both the POPULATION and
-    // the lexicons re-draw; the denominator below moves with the arm counts
-    // and the two are re-pinned together, because an arm count without its
-    // denominator is not interpretable. A readout, not a target.
+    // TWO CAMPAIGNS RE-PIN IT TOGETHER: the Underworld Peoples' four and The
+    // Tidemark's six arrive at once, over a roster of **25** rather than 15,
+    // so both the POPULATION and the lexicons re-draw. The denominator below
+    // moves with the arm counts and the two are re-pinned together, because
+    // an arm count without its denominator is not interpretable. MEASURED on
+    // the merged world — neither branch's own arm counts ((9, 11), (13, 6))
+    // survive it; the merged counts are (11, 13), leaving one wordless. A
+    // readout, not a target.
     //
-    // **21, not 20, and the difference is `merfolk`.** This loop ranges over
+    // **25, not 24, and the difference is `merfolk`.** This loop ranges over
     // the peoples `society_registry` holds — decision 0068's `minded ∧
     // social` gate — not over the `Settled` ones. Those two sets were
     // extensionally equal until The Tidemark authored a `Gregarious` people,
-    // and 20 was my first re-pin here: the settling roster's size, reached by
+    // and the settling roster's size was my first re-pin here: reached by
     // assuming the equality still held rather than by reading what the loop
-    // iterates. It does not settle, it does improvise a name, and it belongs
-    // in this denominator.
-    assert_eq!((god, spirit), (9, 11), "frozen arm counts over 21 peoples");
+    // iterates. Merfolk does not settle, it does improvise a name, and it
+    // belongs in this denominator.
+    assert_eq!((god, spirit), (11, 13), "frozen arm counts over 25 peoples");
     assert_eq!(
         god + spirit + wordless,
-        21,
+        25,
         "every people resolves to exactly one arm"
     );
 }
@@ -457,16 +460,18 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
     // not a threshold to tune. If the WORLD moves them, that is a finding to
     // report and re-quote in the chronicle — do NOT retune
     // `stance::patience()` to restore them (root `CLAUDE.md`, decision 0016).
-    // THE WINZE T2b re-pin: (70, 6) -> (71, 6). Same cause as H1 above — the
-    // working ring scan moves every world's history, so one more ask topic is
-    // observable. The sessions count is unmoved and the headline null below is
-    // unmoved; the prose that quoted "seventy" is re-quoted with it.
+    // THE UNDERWORLD re-pin: (71, 6) -> (70, 6). Adding the four peoples
+    // changed the deterministic history and removed one observable ask topic.
+    // Absorbing The Tidemark's six marine peoples on top of that puts it back:
+    // (70, 6) -> (71, 6), MEASURED on the merged world. The sessions count and
+    // the headline null are unmoved in both directions; only the denominator
+    // the chronicle quotes moves.
     assert_eq!(
         (denominator, sessions_with_observations),
         (71, 6),
-        "H4's reported denominator moved; the chronicle and retrospective quote \
-         seventy-one observable points across six sessions and must be re-quoted \
-         together with this assertion"
+        "H4's reported denominator moved; the chronicle and retrospective must \
+         quote seventy-one observable points across six sessions with this \
+         assertion"
     );
     assert_eq!(
         diverged, 0,

@@ -8,16 +8,16 @@ showing the 10 largest of 208 volcanoes
 
 | # | vertex | magnitude | names |
 |---|---|---|---|
-| 1 | 1152 | 4 | Rjorjokro, Dvookvo, Neagngop, Ṅjoṅvjamṅoṅ, Qraožraḳrar, Zmafgzashmaf, Nesax, Gfoktxat, Brallalgral, Ngatngobjak, Bengxamnlam, Rerogva, Xaejkajpaj, Xarara, Soana, Qeqe, Ṅaoṅṅaṅfroṅ, Shoekngozhngod, Sraqve, Sjonsjuṅdjoj |
-| 2 | 1847 | 4 | Kragro, Vngaavngovnga, Sopshed, Ṅjaṅvjaṅmaṅ, Drašrar, Snaovpzhax, Ngevxnoxze, Kxogzh'notgfak, Qrajlelbrej, Mogjotmag, Voxa, Pverogxo, Qoujxujpaj, Roorara, Bvaononqxa, Nrodu, Froṅṅafroṅ, Ngokshezh, Shrovshroshrov, Tjaangjongjaj |
-| 3 | 2465 | 4 | Rjokra, Kvoshngodva, Shadzhetzhet, Vjoṅṅamṅoṅ, Šroargror, Shngoovzhno, Ngefzhev, Zh'nagtfabzh'meq, Laaldrejdrej, Ngaatjabmak, Tannwa, Retaro, Xojxujxaj, Raroro, Dvonqxomqxa, Nreki, Fraṅfroṅ, Ngozhngez, Bvaebva, Sjontjojqjaj |
-| 4 | 4644 | 4 | Rjakrapra, Vngaoshnga, Nootngot, Mjoṅṅjuṅmoṅ, Žroožror, Zngodzovpsax, Zaxzhov, Zh'mobtxok, Grajlojloj, Ngobngag, Qangtengtong, Kako, Xojxej, Raaraxa, Naonsa, Nrukanra, Ṅoaṅfroṅoṅ, Ngedngazh, Pvevzre, Djujsjuj |
-| 5 | 4652 | 4 | Rjorja, Gvavnga, Maatnoqmap, Vjommjaṅ, Ḳroorprograr, Zmofsnafzhno, Fngango, Txabsh'ngabbxab, Leallejlej, Ngoabmagjat, Mwongomfe, Pvaakare, Xuujpejqej, Roaxa, Kvomomsan, Nradanra, Froṅṅo, Zaoqngaq, Shreovbvov, Tjeenzjiṅ |
-| 6 | 4672 | 4 | Grokrarjo, Shngavnga, Seogngeq, Mjoṅṅjaṅmjum, Prookror, Shnavtsox, Zasofzhe, Gfogbfag, Lajlajlol, Jabjat, Foxexo, Taogo, Kejxuj, Roaxo, Tvaanon, Nrenrenre, Ṅoaṅfrafro, Ngozhzhadngaz, Pvovqvosro, Sjejkjeṅsjeṅ |
-| 7 | 7207 | 4 | Qragrorjo, Tvoovngo, Moagngeg, Vjumṅoṅ, Ḳraažraḳrar, Zmaoxznavgza, Fngexvngovngo, Bxakzh'ngoqsh'meq, Jolloljol, Mooqjotjat, Ngleqamkem, Rate, Xajxajkoj, Roaraxa, Gxoammamsa, Bonrobo, Frooṅa, Zashngoz, Bvebvozrav, Tjoṅqjaṅgjan |
-| 8 | 7261 | 4 | Prarja, Vngaagvotvo, Shoagshedshaq, Ṅoṅvjoṅṅoṅ, Qroorḳra, Qzaaqsax, Fngavnaxzov, Sh'netqfeq, Jeelbral, Jobjoq, Mwexenbom, Toerara, Kaujxuj, Raro, Sano, Nronro, Ṅoofraṅ, Ngaozhngag, Zrevsrov, Sjuuṅgjuṅzjoj |
-| 9 | 39 | 3 | Qrokra, Kvaaqvo, Sedzhedngap, Maṅvjem, Srakrar, Qsoznapzo, Ngaxnoxnef, Qxoqgxog, Troajprol, Jaotjotngok, Bonglammlo, Gxaoro, Kejkajquj, Rarara, Kvaqvon, Koqa, Ṅoṅoṅfra, Zaedngog, Shraepvezra, Tjajdjaṅ |
-| 10 | 294 | 3 | Prorja, Bvaovngovngo, Moopzheg, Ṅjammjoṅmjam, Ḳrorqro, Snofdzhax, Zhasavngo, Kfotbfet, Joljojdroj, Ngaobngaqmak, Nloqom, Poko, Kajxujxej, Rooraro, Samqxo, Nranreda, Froṅo, Ngoadngosh, Pveavbvo, Kjojtjojdjon |
+| 1 | 1152 | 4 | Rjorjokro, Dvookvo, Neagngop, Ṅjoṅvjamṅoṅ, Qraožraḳrar, Naakkx'zhat, Zmafgzashmaf, Nesax, Gfoktxat, Brallalgral, Ngatngobjak, Bengxamnlam, Rerogva, Xaejkajpaj, Xarara, Qzozhtzhazhsos, Wodfaq, Soana, Qeqe, Ṅaoṅṅaṅfroṅ, Vasa, Shoekngozhngod, Sraqve, Sjonsjuṅdjoj |
+| 2 | 1847 | 4 | Kragro, Vngaavngovnga, Sopshed, Ṅjaṅvjaṅmaṅ, Drašrar, Nabkx'zhoknop, Snaovpzhax, Ngevxnoxze, Kxogzh'notgfak, Qrajlelbrej, Mogjotmag, Voxa, Pverogxo, Qoujxujpaj, Roorara, Saomsoz, Waadfodvop, Bvaononqxa, Nrodu, Froṅṅafroṅ, Zoakxsasha, Ngokshezh, Shrovshroshrov, Tjaangjongjaj |
+| 3 | 2465 | 4 | Rjokra, Kvoshngodva, Shadzhetzhet, Vjoṅṅamṅoṅ, Šroargror, Kx'zhaknadkx'zhak, Shngoovzhno, Ngefzhev, Zh'nagtfabzh'meq, Laaldrejdrej, Ngaatjabmak, Tannwa, Retaro, Xojxujxaj, Raroro, Dzhomdsom, Wadvop, Dvonqxomqxa, Nreki, Fraṅfroṅ, Faoshaza, Ngozhngez, Bvaebva, Sjontjojqjaj |
+| 4 | 4644 | 4 | Rjakrapra, Vngaoshnga, Nootngot, Mjoṅṅjuṅmoṅ, Žroožror, Naakkx'zhap, Zngodzovpsax, Zaxzhov, Zh'mobtxok, Grajlojloj, Ngobngag, Qangtengtong, Kako, Xojxej, Raaraxa, Zaamsomdsaz, Vopfad, Naonsa, Nrukanra, Ṅoaṅfroṅoṅ, Sofosakx, Ngedngazh, Pvevzre, Djujsjuj |
+| 5 | 4652 | 4 | Rjorja, Gvavnga, Maatnoqmap, Vjommjaṅ, Ḳroorprograr, Nabnat, Zmofsnafzhno, Fngango, Txabsh'ngabbxab, Leallejlej, Ngoabmagjat, Mwongomfe, Pvaakare, Xuujpejqej, Roaxa, Pzhozhdsam, Waapvoqwap, Kvomomsan, Nradanra, Froṅṅo, Vakxzokx, Zaoqngaq, Shreovbvov, Tjeenzjiṅ |
+| 6 | 4672 | 4 | Grokrarjo, Shngavnga, Seogngeq, Mjoṅṅjaṅmjum, Prookror, Naadnab, Shnavtsox, Zasofzhe, Gfogbfag, Lajlajlol, Jabjat, Foxexo, Taogo, Kejxuj, Roaxo, Sooszam, Fapvad, Tvaanon, Nrenrenre, Ṅoaṅfrafro, Shosakx, Ngozhzhadngaz, Pvovqvosro, Sjejkjeṅsjeṅ |
+| 7 | 7207 | 4 | Qragrorjo, Tvoovngo, Moagngeg, Vjumṅoṅ, Ḳraažraḳrar, Kx'satkx'sak, Zmaoxznavgza, Fngexvngovngo, Bxakzh'ngoqsh'meq, Jolloljol, Mooqjotjat, Ngleqamkem, Rate, Xajxajkoj, Roaraxa, Zomzozh, Xodxapwod, Gxoammamsa, Bonrobo, Frooṅa, Fokxvakx, Zashngoz, Bvebvozrav, Tjoṅqjaṅgjan |
+| 8 | 7261 | 4 | Prarja, Vngaagvotvo, Shoagshedshaq, Ṅoṅvjoṅṅoṅ, Qroorḳra, Kx'saognadkx'sok, Qzaaqsax, Fngavnaxzov, Sh'netqfeq, Jeelbral, Jobjoq, Mwexenbom, Toerara, Kaujxuj, Raro, Kzaasdzhoz, Xaadwodfoq, Sano, Nronro, Ṅoofraṅ, Saokxfo, Ngaozhngag, Zrevsrov, Sjuuṅgjuṅzjoj |
+| 9 | 39 | 3 | Qrokra, Kvaaqvo, Sedzhedngap, Maṅvjem, Srakrar, Kx'saobnoqkx'zhod, Qsoznapzo, Ngaxnoxnef, Qxoqgxog, Troajprol, Jaotjotngok, Bonglammlo, Gxaoro, Kejkajquj, Rarara, Dzamzamdsam, Voqxoqxaq, Kvaqvon, Koqa, Ṅoṅoṅfra, Soakxva, Zaedngog, Shraepvezra, Tjajdjaṅ |
+| 10 | 294 | 3 | Prorja, Bvaovngovngo, Moopzheg, Ṅjammjoṅmjam, Ḳrorqro, Kx'zhatkx'zhagnoq, Snofdzhax, Zhasavngo, Kfotbfet, Joljojdroj, Ngaobngaqmak, Nloqom, Poko, Kajxujxej, Rooraro, Tzaamzhaszom, Faqfaq, Samqxo, Nranreda, Froṅo, Vakxzhakx, Ngoadngosh, Pveavbvo, Kjojtjojdjon |
 
 ## Landmasses
 
@@ -25,16 +25,16 @@ showing the 10 largest of 10 landmasses
 
 | # | vertex | magnitude | names |
 |---|---|---|---|
-| 1 | 21 | 3106 | Grarjarjo, Vngashngatva, Maegzhop, Vjumṅoṅ, Grordrar, Psaovshmafqzof, Ngovngo, Zh'nebzh'nebzh'mog, Trelpral, Maotjob, Nlongmwangwa, Kfege, Xeojxej, Raxo, Saamgxo, Bunrabo, Froṅfroṅfra, Ngeeshngezngesh, Pvaovbvevbvov, Tjoṅtjontjoṅ |
-| 2 | 5 | 2384 | Rjagrarja, Bvaoshnga, Ngoqshed, Vjomvjuṅṅjom, Ḳroaqro, Qsazmatsa, Vnavfngo, Qxaqzh'negsh'ngot, Jaajqreltrel, Joagjob, Xongto, Reraga, Kuajqej, Xaoxa, Somtvo, Banro, Froṅṅaṅ, Ngeepzhak, Pvopvevshrev, Zjaujtjun |
-| 3 | 38 | 1598 | Qrorja, Shngaavnga, Shetmodseq, Vjomvjummum, Kroarḳrorpror, Qsoovzhngogzho, Ngovzese, Sh'natbxabtxoq, Jojtrolproj, Maotjaqmot, Fengtemfon, Rekxa, Xeujpejpej, Xaorara, Txaannana, Panru, Ṅaaṅaṅfraṅ, Zazzeshngeg, Pvozravshro, Kjeṅkjan |
-| 4 | 31 | 1281 | Kroprarjo, Shngoshnga, Shaoqshoqzhag, Mummommom, Ḳroarsror, Zmoxqzav, Fngefnof, Gxegzh'mogsh'meq, Drejtrejlaj, Mobjabjak, Nlangko, Tarore, Qeujxaj, Rooxoxa, Bvoaqvamo, Nrupoqo, Frooṅfraṅaṅ, Zaazzod, Qvopvov, Zjaṅqjejzjeṅ |
-| 5 | 9 | 912 | Grarjo, Vngoshngo, Shedzhogmag, Mamṅemṅjem, Žroḳražrar, Tsovdshofsna, Nofngezha, Tfebzh'ngak, Drejqraj, Jotngog, Tego, Pearore, Poejpejxoj, Roaxo, Soamnanmo, Tuto, Froṅoṅṅoṅ, Ngeqshazh, Bvezra, Djeajqjin |
-| 6 | 68 | 605 | Rjarja, Gvootvo, Soodmetzhep, Vjumvjamṅuṅ, Broḳro, Qzhoozhna, Fngavzhozha, Sh'mabzh'nekzh'ngek, Trelprajlel, Jooqmag, Toke, Kxeate, Xejxojkoj, Xaoro, Saaso, Nrunrupo, Fraafraṅ, Zakngodzhoq, Sraazro, Gjujqjuṅqjan |
-| 7 | 30 | 471 | Qrorjopra, Shngashnga, Ngetngopmag, Ṅjumvjumṅjoṅ, Kroorsrar, Tshaofqshovsngo, Ngovxngoxnaf, Zh'notqfab, Lelprejjel, Ngoaqjogmak, Fangwongngwo, Ratora, Xujxejqaj, Xarora, Nasomsom, Qubonra, Ṅaṅo, Zaozngogngoq, Shrobvev, Djonkjajqjoj |
-| 8 | 99 | 381 | Qroqra, Shngavngo, Sheqnogngeg, Ṅjomṅoṅ, Kroḳror, Sngovsngofpzho, Zhaxxnafnov, Zh'neqkxeggfet, Laelbrelbrej, Ngaogjabngoq, Nlengwom, Reko, Pojxojkoj, Xaoro, Namamom, Banra, Ṅofraṅfraṅ, Zeozzazshog, Qveepveqvav, Tjoajzjun |
-| 9 | 462 | 91 | Prorjo, Shngaavngavngo, Ngegngot, Mumṅjuṅ, Krarḳrožror, Zhnoavdzhavshngaf, Nesavza, Sh'megsh'nab, Prelqrajgrej, Mookngabjat, Kentong, Gvookoka, Keajxujpej, Raaroro, Saanqxomo, Debinra, Ṅaṅaṅ, Zapzhesh, Pvazrovpve, Gjujzjoj |
-| 10 | 111 | 85 | Rjorjaqra, Kvashngo, Zhedngedshag, Vjemvjaṅmeṅ, Prooršra, Qshoaznax, Ngexnex, Zh'notqxek, Grejleljal, Maokjaqngat, Nlotamvo, Tvagxoko, Peajxoj, Raoxo, Txonma, Qepepe, Fraṅofro, Ngapngegzeg, Pvaevsravbve, Kjontjujsjoṅ |
+| 1 | 21 | 3106 | Grarjarjo, Vngashngatva, Maegzhop, Vjumṅoṅ, Grordrar, Notkx'sab, Psaovshmafqzof, Ngovngo, Zh'nebzh'nebzh'mog, Trelpral, Maotjob, Nlongmwangwa, Kfege, Xeojxej, Raxo, Soamdsozhdzhaz, Waqxoqfoq, Saamgxo, Bunrabo, Froṅfroṅfra, Fakxvokxshakx, Ngeeshngezngesh, Pvaovbvevbvov, Tjoṅtjontjoṅ |
+| 2 | 5 | 2384 | Rjagrarja, Bvaoshnga, Ngoqshed, Vjomvjuṅṅjom, Ḳroaqro, Nobkx'zhobkx'sat, Qsazmatsa, Vnavfngo, Qxaqzh'negsh'ngot, Jaajqreltrel, Joagjob, Xongto, Reraga, Kuajqej, Xaoxa, Zhaamkzassas, Waqwad, Somtvo, Banro, Froṅṅaṅ, Zozhakx, Ngeepzhak, Pvopvevshrev, Zjaujtjun |
+| 3 | 38 | 1598 | Qrorja, Shngaavnga, Shetmodseq, Vjomvjummum, Kroarḳrorpror, Kx'soqnop, Qsoovzhngogzho, Ngovzese, Sh'natbxabtxoq, Jojtrolproj, Maotjaqmot, Fengtemfon, Rekxa, Xeujpejpej, Xaorara, Sazhzhazbzozh, Voodwap, Txaannana, Panru, Ṅaaṅaṅfraṅ, Zhakxvofa, Zazzeshngeg, Pvozravshro, Kjeṅkjan |
+| 4 | 31 | 1281 | Kroprarjo, Shngoshnga, Shaoqshoqzhag, Mummommom, Ḳroarsror, Kx'satkx'zhod, Zmoxqzav, Fngefnof, Gxegzh'mogsh'meq, Drejtrejlaj, Mobjabjak, Nlangko, Tarore, Qeujxaj, Rooxoxa, Qsoszhomdzozh, Foodwop, Bvoaqvamo, Nrupoqo, Frooṅfraṅaṅ, Vafokx, Zaazzod, Qvopvov, Zjaṅqjejzjeṅ |
+| 5 | 9 | 912 | Grarjo, Vngoshngo, Shedzhogmag, Mamṅemṅjem, Žroḳražrar, Kx'soagkx'zhot, Tsovdshofsna, Nofngezha, Tfebzh'ngak, Drejqraj, Jotngog, Tego, Pearore, Poejpejxoj, Roaxo, Kzhaazzhampzhom, Woqwaq, Soamnanmo, Tuto, Froṅoṅṅoṅ, Vafozho, Ngeqshazh, Bvezra, Djeajqjin |
+| 6 | 68 | 605 | Rjarja, Gvootvo, Soodmetzhep, Vjumvjamṅuṅ, Broḳro, Nodkx'zhogkx'zhot, Qzhoozhna, Fngavzhozha, Sh'mabzh'nekzh'ngek, Trelprajlel, Jooqmag, Toke, Kxeate, Xejxojkoj, Xaoro, Pzhaamsazbzam, Waapvop, Saaso, Nrunrupo, Fraafraṅ, Shaafakxso, Zakngodzhoq, Sraazro, Gjujqjuṅqjan |
+| 7 | 30 | 471 | Qrorjopra, Shngashnga, Ngetngopmag, Ṅjumvjumṅjoṅ, Kroorsrar, Kx'sapkx'zhotnot, Tshaofqshovsngo, Ngovxngoxnaf, Zh'notqfab, Lelprejjel, Ngoaqjogmak, Fangwongngwo, Ratora, Xujxejqaj, Xarora, Zaomsampsozh, Waqwod, Nasomsom, Qubonra, Ṅaṅo, Voavo, Zaozngogngoq, Shrobvev, Djonkjajqjoj |
+| 8 | 99 | 381 | Qroqra, Shngavngo, Sheqnogngeg, Ṅjomṅoṅ, Kroḳror, Noqnog, Sngovsngofpzho, Zhaxxnafnov, Zh'neqkxeggfet, Laelbrelbrej, Ngaogjabngoq, Nlengwom, Reko, Pojxojkoj, Xaoro, Zhazzhoz, Wopwoq, Namamom, Banra, Ṅofraṅfraṅ, Vakxsazho, Zeozzazshog, Qveepveqvav, Tjoajzjun |
+| 9 | 462 | 91 | Prorjo, Shngaavngavngo, Ngegngot, Mumṅjuṅ, Krarḳrožror, Nakkx'zhak, Zhnoavdzhavshngaf, Nesavza, Sh'megsh'nab, Prelqrajgrej, Mookngabjat, Kentong, Gvookoka, Keajxujpej, Raaroro, Kzaazzhamksaz, Wopwapwop, Saanqxomo, Debinra, Ṅaṅaṅ, Saoso, Zapzhesh, Pvazrovpve, Gjujzjoj |
+| 10 | 111 | 85 | Rjorjaqra, Kvashngo, Zhedngedshag, Vjemvjaṅmeṅ, Prooršra, Kx'soopkx'sagnoq, Qshoaznax, Ngexnex, Zh'notqxek, Grejleljal, Maokjaqngat, Nlotamvo, Tvagxoko, Peajxoj, Raoxo, Zoozsossoz, Waodxaqwop, Txonma, Qepepe, Fraṅofro, Zhakxzhofakx, Ngapngegzeg, Pvaevsravbve, Kjontjujsjoṅ |
 
 ## Seas
 
@@ -42,7 +42,7 @@ showing the 1 largest of 1 sea
 
 | # | vertex | magnitude | names |
 |---|---|---|---|
-| 1 | 0 | 29667 | Prakra, Shngaoshngovngo, Noopzhog, Vjaṅmjem, Šrakrarsrar, Gzhoozhnoxdzhax, Naxzhenof, Tfogsh'notzh'ngoq, Qralprej, Jotjatjaq, Nwafan, Pverore, Kaojquj, Raxaro, Soasabxon, Bonro, Fraṅṅa, Zeshngeg, Zroapvov, Sjajzjoṅzjon |
+| 1 | 0 | 29667 | Prakra, Shngaoshngovngo, Noopzhog, Vjaṅmjem, Šrakrarsrar, Natkx'saqkx'sog, Gzhoozhnoxdzhax, Naxzhenof, Tfogsh'notzh'ngoq, Qralprej, Jotjatjaq, Nwafan, Pverore, Kaojquj, Raxaro, Zaamzhamtsas, Wadfapwaq, Soasabxon, Bonro, Fraṅṅa, Fakxshosa, Zeshngeg, Zroapvov, Sjajzjoṅzjon |
 
 ## Salt lakes
 
@@ -50,16 +50,16 @@ showing the 10 largest of 80 salt lakes
 
 | # | vertex | magnitude | names |
 |---|---|---|---|
-| 1 | 4824 | 2 | Proqro, Shngooshngabvo, Zhodsagseg, Vjamvjuṅṅjom, Ḳraqrorḳra, Pshaxqzogzov, Ngafsaxsef, Bfoqbxotzh'neb, Jajdrojtroj, Jooqngagjoq, Fembontang, Gvago, Keojxejkoj, Raora, Soomtxom, Nrodo, Froṅo, Zaeshzhosh, Zroeqveshra, Zjoankjojgjoj |
-| 2 | 361 | 1 | Rjorjo, Shngagva, Ngeatmeq, Vjaṅvjemvjim, Praaḳrosrar, Dzhaofzhmofzno, Vnexvne, Zh'ngebzh'notzh'nat, Loalbrol, Jabjot, Voxeton, Rogveto, Xaejxaj, Raxara, Maamtvanon, Nrunranro, Ṅaaṅaṅṅo, Ngezhshashzeq, Pveesreqvov, Gjaṅqjuj |
-| 3 | 707 | 1 | Grorjo, Shngavngo, Zhaqmapshap, Vjaṅmuṅ, Žrošrorḳro, Znaosma, Naxzezhox, Zh'moqzh'mab, Broajloldrol, Moobjaqjat, Nglenwam, Kvoarote, Kejqoj, Raara, Nontvam, Nranrenre, Ṅoafraṅṅoṅ, Zazshep, Qvavpvebvev, Kjujgjaṅqjaṅ |
-| 4 | 1021 | 1 | Rjarjo, Shngavngoshngo, Nopshotngep, Vjumvjaṅṅoṅ, Ḳroḳrar, Sngotsoxtzaf, Ngafzafnaf, Bfoqqfakqfok, Lajgroj, Jagmakjat, Vanwon, Gvakara, Xuajxojxaj, Raxaro, Gvaamonam, Nronra, Ṅofraṅṅaṅ, Shaqngez, Sravzre, Djeijqjeṅ |
-| 5 | 1597 | 1 | Rjarjorja, Shngoovngadvo, Maepneg, Momṅom, Qrakrarḳro, Tzozhngov, Zhevna, Zh'mebzh'ngab, Troalbrolloj, Maobjot, Vennglongmle, Rapfa, Keajpoj, Roarara, Soomgxoqvom, Nrunro, Frooṅafraṅ, Zoshzash, Sroezreshrev, Zjeṅzjin |
-| 6 | 2276 | 1 | Rjakragro, Vngavngavnga, Meegsotngeq, Ṅjoṅvjam, Droḳror, Zhngooxsnax, Vngavvnongex, Kfakbfok, Jeljejlel, Ngogjot, Bevangke, Tagxo, Xuojqujxuj, Raoxoro, Naadxanbvo, Nrabuku, Froafroṅa, Zheaqngoq, Zrebvav, Zjuansjaṅzjoj |
-| 7 | 2279 | 1 | Rjarja, Vngovngovngo, Shotmodshag, Vjaṅmaṅṅjom, Sroarkro, Psaxsngofsngo, Zhevngena, Kxeqzh'met, Jeljajbrel, Jokjok, Vangfomba, Gxapxe, Paojpoj, Xaaro, Maomnantxom, Nronrata, Ṅafra, Zhaezhngod, Pvavpvav, Gjeaṅqjandjij |
-| 8 | 2586 | 1 | Rjogragro, Shngaovngoshnga, Ngaqset, Ṅjemmjemvjeṅ, Praaqroḳro, Dshoodzax, Ngavza, Sh'ngatsh'nagsh'ngak, Lojjal, Jabngaq, Gangnlongngwe, Gago, Qejxajpaj, Raxa, Namsoqxo, Nrenre, Froafroṅṅaṅ, Zoqngozhzhesh, Sreosroshre, Djaṅqjajkjen |
-| 9 | 2591 | 1 | Rjogro, Vngooshngaqvo, Zhatshadngot, Ṅjoṅvjom, Ḳroarbror, Pzhoofpzhozna, Ngexfnafno, Sh'ngokbxeksh'ngeg, Drejjajgrel, Jokmaqjog, Nlangwen, Roogoke, Peejxujqej, Raororo, Sandxontxo, Nranranru, Ṅooṅṅo, Zheeshngekngod, Sreevzrevpvev, Qjejkjen |
-| 10 | 2656 | 1 | Rjarja, Tvavnga, Mopngep, Vjeṅvjiṅṅeṅ, Šraarḳrar, Zhnatzodsa, Sezafvnga, Sh'nakqfagzh'net, Qroajjal, Jakngot, Fanxom, Pxoapxeke, Kuojxojquj, Raara, Nomonbvo, Nroba, Froaṅfraṅ, Ngoazhngegngop, Shrooqvevshrav, Kjeṅsjejgjej |
+| 1 | 4824 | 2 | Proqro, Shngooshngabvo, Zhodsagseg, Vjamvjuṅṅjom, Ḳraqrorḳra, Kx'zhaaqkx'soq, Pshaxqzogzov, Ngafsaxsef, Bfoqbxotzh'neb, Jajdrojtroj, Jooqngagjoq, Fembontang, Gvago, Keojxejkoj, Raora, Tzhazhsos, Xoqfop, Soomtxom, Nrodo, Froṅo, Shokxsho, Zaeshzhosh, Zroeqveshra, Zjoankjojgjoj |
+| 2 | 361 | 1 | Rjorjo, Shngagva, Ngeatmeq, Vjaṅvjemvjim, Praaḳrosrar, Kx'zhokkx'sod, Dzhaofzhmofzno, Vnexvne, Zh'ngebzh'notzh'nat, Loalbrol, Jabjot, Voxeton, Rogveto, Xaejxaj, Raxara, Zhaomsam, Waodfadwod, Maamtvanon, Nrunranro, Ṅaaṅaṅṅo, Sokxfashakx, Ngezhshashzeq, Pveesreqvov, Gjaṅqjuj |
+| 3 | 707 | 1 | Grorjo, Shngavngo, Zhaqmapshap, Vjaṅmuṅ, Žrošrorḳro, Notnapnad, Znaosma, Naxzezhox, Zh'moqzh'mab, Broajloldrol, Moobjaqjat, Nglenwam, Kvoarote, Kejqoj, Raara, Pzhoozqsam, Foodxoqvop, Nontvam, Nranrenre, Ṅoafraṅṅoṅ, Shaokxvofokx, Zazshep, Qvavpvebvev, Kjujgjaṅqjaṅ |
+| 4 | 1021 | 1 | Rjarjo, Shngavngoshngo, Nopshotngep, Vjumvjaṅṅoṅ, Ḳroḳrar, Nooknapkx'zhat, Sngotsoxtzaf, Ngafzafnaf, Bfoqqfakqfok, Lajgroj, Jagmakjat, Vanwon, Gvakara, Xuajxojxaj, Raxaro, Saamsozhzhom, Waqwop, Gvaamonam, Nronra, Ṅofraṅṅaṅ, Zavafokx, Shaqngez, Sravzre, Djeijqjeṅ |
+| 5 | 1597 | 1 | Rjarjorja, Shngoovngadvo, Maepneg, Momṅom, Qrakrarḳro, Naoqnadkx'zhob, Tzozhngov, Zhevna, Zh'mebzh'ngab, Troalbrolloj, Maobjot, Vennglongmle, Rapfa, Keajpoj, Roarara, Qzhomzazhkzham, Vooqxad, Soomgxoqvom, Nrunro, Frooṅafraṅ, Soasakxvo, Zoshzash, Sroezreshrev, Zjeṅzjin |
+| 6 | 2276 | 1 | Rjakragro, Vngavngavnga, Meegsotngeq, Ṅjoṅvjam, Droḳror, Kx'zhaotnog, Zhngooxsnax, Vngavvnongex, Kfakbfok, Jeljejlel, Ngogjot, Bevangke, Tagxo, Xuojqujxuj, Raoxoro, Soomqsom, Waqwoq, Naadxanbvo, Nrabuku, Froafroṅa, Shaokxzhava, Zheaqngoq, Zrebvav, Zjuansjaṅzjoj |
+| 7 | 2279 | 1 | Rjarja, Vngovngovngo, Shotmodshag, Vjaṅmaṅṅjom, Sroarkro, Naobkx'sot, Psaxsngofsngo, Zhevngena, Kxeqzh'met, Jeljajbrel, Jokjok, Vangfomba, Gxapxe, Paojpoj, Xaaro, Kzhoamqsamzoz, Xoaqvaqwop, Maomnantxom, Nronrata, Ṅafra, Faakxsafa, Zhaezhngod, Pvavpvav, Gjeaṅqjandjij |
+| 8 | 2586 | 1 | Rjogragro, Shngaovngoshnga, Ngaqset, Ṅjemmjemvjeṅ, Praaqroḳro, Napnag, Dshoodzax, Ngavza, Sh'ngatsh'nagsh'ngak, Lojjal, Jabngaq, Gangnlongngwe, Gago, Qejxajpaj, Raxa, Kzhosbzhozhsaz, Waoqxadfad, Namsoqxo, Nrenre, Froafroṅṅaṅ, Zhoafashokx, Zoqngozhzhesh, Sreosroshre, Djaṅqjajkjen |
+| 9 | 2591 | 1 | Rjogro, Vngooshngaqvo, Zhatshadngot, Ṅjoṅvjom, Ḳroarbror, Kx'zhoaqnodnab, Pzhoofpzhozna, Ngexfnafno, Sh'ngokbxeksh'ngeg, Drejjajgrel, Jokmaqjog, Nlangwen, Roogoke, Peejxujqej, Raororo, Bsomzhoz, Xaodxod, Sandxontxo, Nranranru, Ṅooṅṅo, Zhoakxfakxfo, Zheeshngekngod, Sreevzrevpvev, Qjejkjen |
+| 10 | 2656 | 1 | Rjarja, Tvavnga, Mopngep, Vjeṅvjiṅṅeṅ, Šraarḳrar, Kx'saodnaqkx'zhoq, Zhnatzodsa, Sezafvnga, Sh'nakqfagzh'net, Qroajjal, Jakngot, Fanxom, Pxoapxeke, Kuojxojquj, Raara, Zhaazzamzoz, Waqfad, Nomonbvo, Nroba, Froaṅfraṅ, Zhaokxvo, Ngoazhngegngop, Shrooqvevshrav, Kjeṅsjejgjej |
 
 ## Rivers
 
@@ -67,14 +67,14 @@ showing the 10 largest of 106 rivers
 
 | # | vertex | magnitude | names |
 |---|---|---|---|
-| 1 | 30690 | 160 | Grarjarjo, Vngashngo, Nogzhopshod, Vjummjommom, Droarkrar, Dzhaznof, Nonoxfnga, Sh'ngobzh'noq, Qroajjojjol, Joobmag, Xovamlen, Kvoare, Kajkujxaj, Xaoxa, Soatvo, Nrobanro, Fraṅfroṅ, Ngozngaz, Pvashropvav, Kjeajsjejtjiṅ |
-| 2 | 11134 | 140 | Rjorjaqro, Shngoovngashnga, Shoogngap, Mjuṅṅomvjoṅ, Ḳraorḳrorḳra, Smazmo, Zangex, Txegtxeqsh'ngok, Laeljeldrel, Maaqmaqngoq, Vonwon, Pxoorakve, Kajxujquj, Xara, Namsan, Nrapanro, Fraoṅa, Ngaazngashngoz, Sropve, Qjauntjujsjuṅ |
-| 3 | 517 | 124 | Rjoqro, Vngoogvo, Notshed, Mumṅum, Sraograr, Pzhaatzhov, Savngav, Sh'ngaksh'mok, Brolbraljoj, Jobjat, Vangfon, Gxaakxa, Xuajxejxaj, Xaoxaro, Bxaodva, Qukoto, Froofraṅṅo, Zheashzhaz, Qvavbva, Zjounkjontjaj |
-| 4 | 4824 | 105 | Rjakrapra, Vngaovngogva, Ngagshet, Mjaṅmum, Ḳroḳror, Qsavsnga, Xnenavnga, Qxetsh'megzh'not, Joolqrol, Jagmaqmag, Mlonglamba, Pora, Xujxoj, Rara, Gvobvaso, Nrunropu, Fraoṅaṅ, Shazngep, Zroevsra, Qjontjuṅkjoṅ |
-| 5 | 8960 | 105 | Rjorjo, Shngashngovngo, Sheetsap, Ṅjomvjom, Kraarḳror, Zhnaoshnaxdso, Sovzhe, Sh'ngekkxatbfek, Lejjejpraj, Joakmaq, Xeqenwen, Roegero, Xujqaj, Raxara, Moodxo, Nrenre, Froaṅfroṅṅa, Zhokzhazshek, Shraobvev, Qjuajsjujqjoṅ |
-| 6 | 5174 | 101 | Krorjoqro, Qvoovngatvo, Ngapngeq, Mjumṅjom, Kraarḳror, Zhmaafzmodzax, Nenga, Zh'nagzh'naqsh'net, Qraejleljej, Motjaq, Mwenxeva, Tveeroro, Keajxaj, Xooxora, Maamgvam, Nrepenre, Fraoṅfroṅfroṅ, Shoepzog, Qveqvavqvo, Zjujkjaj |
-| 7 | 20270 | 100 | Krarjogra, Vngakvoshnga, Zheetshatsop, Vjeṅṅem, Qradrorḳrar, Sngaosno, Zaxnovno, Zh'ngoqkxet, Broalloj, Jakngag, Konmwamxeng, Roorake, Kejxej, Xaarara, Gxoonna, Dubo, Ṅoṅaṅa, Ngaaqngozzok, Zroopvasrov, Zjaojsjojzjon |
-| 8 | 25467 | 100 | Prarjorja, Vngashngo, Shaodmodzheg, Vjumṅjuṅ, Žroosrorḳro, Dzhaovqsax, Vnoze, Zh'ngogkfegbfoq, Jooldrojjoj, Jagngatngok, Teqetang, Geraro, Xuujquj, Xaaxoxo, Saamandxan, Qonru, Froṅṅoṅ, Ngazhshagzap, Bvavbvo, Sjajtjoj |
-| 9 | 35294 | 97 | Rjapra, Shngavngashnga, Maepmap, Ṅjumvjuṅṅoṅ, Ḳrorḳrožrar, Znoovpsha, Fnaxsevvnof, Qfoqgxeb, Braoljalgrol, Jootjotjag, Mwenwong, Tfootara, Xuejxojpej, Rororo, Noasa, Padu, Fraaṅṅo, Ngaoshngoz, Pvaavpvo, Kjeinqjaṅ |
-| 10 | 2919 | 95 | Kragra, Dvaatvokvo, Maopshat, Mjummuṅ, Prorḳrarḳrar, Sngoasnafdshax, Ngevzhanga, Zh'noktxok, Lejlejqrel, Jaatngoq, Famwan, Pfeogvegvo, Xaajqoj, Rara, Soanbvodxo, Punranru, Fraṅṅaṅ, Zhodngakshoq, Zrazre, Zjenkjej |
+| 1 | 30690 | 160 | Grarjarjo, Vngashngo, Nogzhopshod, Vjummjommom, Droarkrar, Kx'saadnagnad, Dzhaznof, Nonoxfnga, Sh'ngobzh'noq, Qroajjojjol, Joobmag, Xovamlen, Kvoare, Kajkujxaj, Xaoxa, Saazzhazhzhos, Woaqwadxad, Soatvo, Nrobanro, Fraṅfroṅ, Saafokx, Ngozngaz, Pvashropvav, Kjeajsjejtjiṅ |
+| 2 | 11134 | 140 | Rjorjaqro, Shngoovngashnga, Shoogngap, Mjuṅṅomvjoṅ, Ḳraorḳrorḳra, Noapkx'zhagnad, Smazmo, Zangex, Txegtxeqsh'ngok, Laeljeldrel, Maaqmaqngoq, Vonwon, Pxoorakve, Kajxujquj, Xara, Zaazksozh, Waodwod, Namsan, Nrapanro, Fraoṅa, Vaokxfo, Ngaazngashngoz, Sropve, Qjauntjujsjuṅ |
+| 3 | 517 | 124 | Rjoqro, Vngoogvo, Notshed, Mumṅum, Sraograr, Nabkx'soknag, Pzhaatzhov, Savngav, Sh'ngaksh'mok, Brolbraljoj, Jobjat, Vangfon, Gxaakxa, Xuajxejxaj, Xaoxaro, Dsomsas, Xodfop, Bxaodva, Qukoto, Froofraṅṅo, Sookxfakx, Zheashzhaz, Qvavbva, Zjounkjontjaj |
+| 4 | 4824 | 105 | Rjakrapra, Vngaovngogva, Ngagshet, Mjaṅmum, Ḳroḳror, Kx'soaqkx'satkx'sap, Qsavsnga, Xnenavnga, Qxetsh'megzh'not, Joolqrol, Jagmaqmag, Mlonglamba, Pora, Xujxoj, Rara, Sassam, Wodwod, Gvobvaso, Nrunropu, Fraoṅaṅ, Vosazokx, Shazngep, Zroevsra, Qjontjuṅkjoṅ |
+| 5 | 8960 | 105 | Rjorjo, Shngashngovngo, Sheetsap, Ṅjomvjom, Kraarḳror, Naotnatnak, Zhnaoshnaxdso, Sovzhe, Sh'ngekkxatbfek, Lejjejpraj, Joakmaq, Xeqenwen, Roegero, Xujqaj, Raxara, Zaomqzhos, Fapwoq, Moodxo, Nrenre, Froaṅfroṅṅa, Shokxvafokx, Zhokzhazshek, Shraobvev, Qjuajsjujqjoṅ |
+| 6 | 5174 | 101 | Krorjoqro, Qvoovngatvo, Ngapngeq, Mjumṅjom, Kraarḳror, Nodnak, Zhmaafzmodzax, Nenga, Zh'nagzh'naqsh'net, Qraejleljej, Motjaq, Mwenxeva, Tveeroro, Keajxaj, Xooxora, Zaomdsomdzam, Waaqvoq, Maamgvam, Nrepenre, Fraoṅfroṅfroṅ, Vazhokx, Shoepzog, Qveqvavqvo, Zjujkjaj |
+| 7 | 20270 | 100 | Krarjogra, Vngakvoshnga, Zheetshatsop, Vjeṅṅem, Qradrorḳrar, Naognoknob, Sngaosno, Zaxnovno, Zh'ngoqkxet, Broalloj, Jakngag, Konmwamxeng, Roorake, Kejxej, Xaarara, Tzhaazsaz, Voaqxoqwad, Gxoonna, Dubo, Ṅoṅaṅa, Zosha, Ngaaqngozzok, Zroopvasrov, Zjaojsjojzjon |
+| 8 | 25467 | 100 | Prarjorja, Vngashngo, Shaodmodzheg, Vjumṅjuṅ, Žroosrorḳro, Kx'sobkx'zhat, Dzhaovqsax, Vnoze, Zh'ngogkfegbfoq, Jooldrojjoj, Jagngatngok, Teqetang, Geraro, Xuujquj, Xaaxoxo, Samkzhamqzoz, Fapxap, Saamandxan, Qonru, Froṅṅoṅ, Shaokxva, Ngazhshagzap, Bvavbvo, Sjajtjoj |
+| 9 | 35294 | 97 | Rjapra, Shngavngashnga, Maepmap, Ṅjumvjuṅṅoṅ, Ḳrorḳrožrar, Kx'zhagkx'sagkx'zhaq, Znoovpsha, Fnaxsevvnof, Qfoqgxeb, Braoljalgrol, Jootjotjag, Mwenwong, Tfootara, Xuejxojpej, Rororo, Kzaomzazkzhas, Vopwad, Noasa, Padu, Fraaṅṅo, Vaazho, Ngaoshngoz, Pvaavpvo, Kjeinqjaṅ |
+| 10 | 2919 | 95 | Kragra, Dvaatvokvo, Maopshat, Mjummuṅ, Prorḳrarḳrar, Kx'soknobnod, Sngoasnafdshax, Ngevzhanga, Zh'noktxok, Lejlejqrel, Jaatngoq, Famwan, Pfeogvegvo, Xaajqoj, Rara, Zhoamdsospzom, Woapfop, Soanbvodxo, Punranru, Fraṅṅaṅ, Vozhokxvokx, Zhodngakshoq, Zrazre, Zjenkjej |
 

@@ -179,15 +179,16 @@ mod tests {
     /// The catalogue is keyed off `society_registry`, which is
     /// `minded ∧ social` (decision 0068) — NOT `Settled`. Those two were
     /// extensionally equal until THE TIDEMARK's `merfolk`, so "the fifteen
-    /// peoples" was a true sentence about a coincidence; it is now twenty-one
-    /// against twenty settling kinds. The name no longer carries the count.
+    /// peoples" was a true sentence about a coincidence; it is now
+    /// twenty-five against twenty-four settling kinds. The name no longer
+    /// carries the count.
     #[test]
     fn catalog_holds_exactly_the_minded_social_peoples() {
         let cat = catalog();
         assert_eq!(
             cat.len(),
-            21,
-            "society_registry defines exactly 21 minded, social peoples"
+            25,
+            "society_registry defines exactly 25 minded, social peoples"
         );
     }
 
@@ -197,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn only_drow_is_subterranean_among_the_fifteen() {
+    fn subterranean_peoples_are_all_in_the_underworld_catalog() {
         let cat = catalog();
         let subterranean: Vec<PeopleId> = cat
             .values()
@@ -206,10 +207,15 @@ mod tests {
             .collect();
         assert_eq!(
             subterranean,
-            vec![hornvale_species::KindId("drow")],
-            "habitat_realm_registry also lists rust-monster and xorn as \
-             Subterranean, but neither is a settling people, so catalog() \
-             (keyed off society_registry) must not surface them"
+            vec![
+                hornvale_species::KindId("drow"),
+                hornvale_species::KindId("duergar"),
+                hornvale_species::KindId("kuo-toa"),
+                hornvale_species::KindId("mountain-dwarf"),
+                hornvale_species::KindId("svirfneblin"),
+            ],
+            "catalog() must surface every subterranean settling people, but not \
+             subterranean fauna"
         );
     }
 }

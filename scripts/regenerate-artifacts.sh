@@ -692,20 +692,21 @@ gen_chart_reference() {
 # Venggomnjen and holds 84 souls.
 # RE-READ 2026-09-06 (The Murrain, Task 2): history/bake/v4 changes the
 # seed-42 epoch. Vertex 10626 now carries one living human layer, founded in
-# 1775; the camera remains on a non-empty real column, and the framing below
-# states only facts present in the live render.
+# 1775; the camera remains on a non-empty real column.
 #
-# REPOINTED 2026-09-11 (The Tidemark, Task 3): 10626 -> 9884. Six marine
-# peoples enter the settling roster and the seed-42 epoch moves with them;
-# 10626 renders an EMPTY column now ("Nothing ever settled here"), which is
-# the one thing a stratigraphy SHOWCASE must never do, and
-# `docs_consistency::the_history_page_prose_names_the_vertex_it_renders`
-# caught it. 9884 is the deepest column in the world (17 layers, chosen by
-# counting `occ-site` facts in the committed fixture, not by guessing), it is
-# a single kobold lineage returning to one clearing across 1,300 years, and
-# the top layer still stands. The framing below states only facts present in
-# the live render.
-history_site=9884
+# REPOINTED TWICE IN ONE MERGE WINDOW, AND THAT IS THE POINT. The Underworld
+# Peoples moved the camera 10626 -> 6659 and The Tidemark moved it 10626 ->
+# 9884, each because the OTHER'S kind of roster growth had emptied the cell it
+# inherited: an expanded settled roster re-places seed 42 wholesale, and a
+# stratigraphy SHOWCASE pointed at "Nothing ever settled here" is the one
+# thing this page must never render.
+# `docs_consistency::the_history_page_prose_names_the_vertex_it_renders` is
+# what catches it, and it caught it on both branches independently. The
+# vertex below is MEASURED on the MERGED world — 10472, the deepest column it
+# carries (18 layers), counted from `occ-site` facts in the committed fixture
+# rather than guessed — and the framing states only facts present in the live
+# render.
+history_site=10472
 gen_history() {
     printf '# A Living Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -716,13 +717,13 @@ gen_history() {
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — vertex %s — and\n' "$history_site"
-    printf 'seventeen lives have passed over it, one settling atop the ruins of\n'
+    printf 'eighteen lives have passed over it, one settling atop the ruins of\n'
     printf 'the last. Every one of them is kobold: the deepest layer was founded\n'
-    printf 'in the year 700 by settlers fleeing the ice, and the lineage has\n'
-    printf 'returned to this clearing again and again across thirteen centuries,\n'
+    printf 'in the year 350 by settlers fleeing the ice, and the lineage has\n'
+    printf 'returned to this clearing again and again across sixteen centuries,\n'
     printf 'sometimes put to flight, sometimes leaving of its own accord to\n'
     printf 'carry the settlement onto ground it had just taken. The last layer\n'
-    printf 'was founded in 1950 and stands yet. There is no ruin to read — only\n'
+    printf 'was founded in 1925 and stands yet. There is no ruin to read — only\n'
     printf 'a living settlement and smoke on the air.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"

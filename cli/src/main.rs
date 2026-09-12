@@ -85,6 +85,7 @@ usage:
   hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
   hornvale scene tiles-region --world W --face F --level L --ix X --iy Y --samples N
                           emit scene/tiles-region/v1 JSON to stdout
+  hornvale scene astronomy-at [--world <PATH>] --ticks <I64>  emit scene/astronomy-at/v1 JSON
   hornvale scene system [--world <PATH>]              emit scene/system/v1 JSON to stdout
   hornvale scene moons [--world <PATH>]                emit scene/moons/v1 JSON to stdout
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
@@ -2404,6 +2405,16 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             println!("{}", hornvale_scene::scene_json(&scene));
             Ok(())
         }
+        Some("astronomy-at") => {
+            let ticks = flag_value(args, "--ticks")
+                .ok_or("scene astronomy-at requires --ticks")?
+                .parse::<i64>().map_err(|e| format!("--ticks must be an i64: {e}"))?;
+            let world = load_world(args)?;
+            let scene = hornvale_scene::astronomy_at_scene(&world, WorldTime::from_ticks(ticks))
+                .map_err(|e|e.to_string())?;
+            println!("{}", hornvale_scene::astronomy_at_json(&scene));
+            Ok(())
+        }
         Some("system") => {
             let world = load_world(args)?;
             let scene = hornvale_scene::system_scene(&world).map_err(|e| e.to_string())?;
@@ -2651,10 +2662,10 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         Some(other) => Err(format!(
-            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses, surrounds"
+            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, astronomy-at, moons, neighbors, eclipses, surrounds"
         )),
         None => Err(
-            "scene needs a kind; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses, surrounds"
+            "scene needs a kind; known kinds: tiles, tiles-region, system, astronomy-at, moons, neighbors, eclipses, surrounds"
                 .to_string(),
         ),
     }

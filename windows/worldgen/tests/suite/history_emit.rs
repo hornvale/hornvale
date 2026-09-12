@@ -718,7 +718,49 @@ fn parent_of(
     }
 }
 
-/// claim: structural(seed: [42,7,1000]) — every observed key collision is a
+/// claim: readout(off-gate, prints which seeds exhibit a `layer_key` tie so a
+/// re-witness reads a number off a run) — the regeneration procedure for
+/// [`distinct_layers_tie_only_on_genuine_material_matches`]'s seed panel.
+///
+/// That test needs at least ONE tying pair to exist, or its
+/// genuine-material-match assertions never run and it reports nothing while
+/// staying green — so it asserts `ties > 0` and reddens when the live corpus
+/// stops supplying one. A tie is a property of the deterministic settlement
+/// substrate, not of the comparator, so any roster change can take it away at
+/// one seed and hand it back at another. This prints the whole sweep in one
+/// pass rather than making the next campaign guess a seed at a time.
+#[test]
+#[ignore = "re-witness sweep: builds up to 24 worlds to Full depth (minutes); run by hand \
+            only when the tie panel below has gone red"]
+fn sweep_for_a_tying_seed() {
+    for seed in 0..24u64 {
+        let w = build_world(
+            Seed(seed),
+            &Default::default(),
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("builds");
+        let coords = coords_by_id(&occupation_records(&w));
+        let mut pairs = 0u64;
+        let mut ties = 0u64;
+        for (_, occs) in occupations_by_vertex(&w) {
+            for i in 0..occs.len() {
+                for j in (i + 1)..occs.len() {
+                    pairs += 1;
+                    let a = &occs[i];
+                    let b = &occs[j];
+                    if layer_key(a, parent_of(a, &coords)) == layer_key(b, parent_of(b, &coords)) {
+                        ties += 1;
+                    }
+                }
+            }
+        }
+        println!("    seed {seed}: {ties} tie(s) over {pairs} pair(s)");
+    }
+}
+
+/// claim: structural(seed: [42,7,1000,1]) — every observed key collision is a
 /// genuine material tie, and the live panel exercises at least one collision.
 #[test]
 fn distinct_layers_tie_only_on_genuine_material_matches() {
@@ -737,9 +779,23 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // founding coordinates are themselves equal, so the key is doing
     // exactly what its definition says, not silently colliding two
     // occupations the world actually distinguishes.
+    //
+    // **SEED 1 JOINS THE PANEL (2026-09-11), and it is a re-witness rather
+    // than a re-pin.** Absorbing `origin/main`'s four Underworld peoples into
+    // The Tidemark's six marine ones re-places every world, and the panel
+    // {42, 7, 1000} stopped exhibiting a tie at all: 0 over 6,545 compared
+    // pairs, so the genuine-material-match assertions below ran on nothing and
+    // `ties > 0` caught it, working exactly as designed. The comparator did
+    // not change — a tie is a property of the settlement substrate, and this
+    // substrate moved. `sweep_for_a_tying_seed` above measured seeds 0..24 on
+    // the merged world: seven of them tie (1, 2, 14, 18, 23 among them), so
+    // the collision case is emphatically live. Seed 1 is the EARLIEST of
+    // them, taken by that selection-free rule rather than chosen; the three
+    // original seeds are KEPT rather than replaced, because their pair counts
+    // are what make the "no false tie" half of this test wide.
     let mut pairs = 0u64;
     let mut ties = 0u64;
-    for seed in [42u64, 7, 1000] {
+    for seed in [42u64, 7, 1000, 1] {
         let w = build_world(
             Seed(seed),
             &Default::default(),
@@ -774,7 +830,7 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     }
     assert!(
         pairs > 0,
-        "compared zero occupation pairs across seeds 42/7/1000 — this test proves nothing \
+        "compared zero occupation pairs across seeds 42/7/1000/1 — this test proves nothing \
          until at least one site restacks (pairs={pairs})"
     );
     assert!(

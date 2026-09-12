@@ -500,16 +500,20 @@ type Row = (
 // across 217), and the witnessed counts did not move at all.
 // Post-unblinding re-measure, declared per decision 0016.
 const LADDER_TABLE: &[Row] = &[
-    // THE TIDEMARK re-pin (Task 3, 2026-09-11): 75 -> 100 rows, five settling
-    // marine peoples on each of seeds 1..=5 (merfolk is `Gregarious` and places
-    // nothing). **28 of the 100 rows MOVED**, which this file's own
-    // `dump_the_live_ladder_table` flags row by row — the 25 new ones plus three
-    // pre-existing peoples whose rung changed. That is the ordinary shape a
-    // roster change has here and the opposite of `deep_grammar`'s depth
-    // landscape, where not one pre-existing row moved: a ladder rung is a
-    // property of what a culture makes of its own observation record, and the
-    // record moves when placement does. Post-unblinding re-measure, declared per
-    // decision 0016.
+    // TWO CAMPAIGNS RE-PIN THIS TABLE TOGETHER (2026-09-11): 75 -> 120 rows,
+    // five settling marine peoples (The Tidemark; merfolk is `Gregarious` and
+    // places nothing) and four subterranean ones (the Underworld Peoples) on
+    // each of seeds 1..=5. The whole table below is the output of this file's
+    // own `dump_the_live_ladder_table` run against the MERGED world, taken in
+    // one pass rather than row by row — and that is the point of the dumper:
+    // re-pinning either branch's table against the other's world would have
+    // been 45 new rows discovered one gate run at a time. Against the union of
+    // the two branches' tables only FOUR rows moved (seed 2 drow, seed 3 drow,
+    // seed 4 duergar, seed 5 snow-elf), which is the ordinary shape a roster
+    // change has here and the opposite of `deep_grammar`'s depth landscape: a
+    // ladder rung is a property of what a culture makes of its own observation
+    // record, and the record moves when placement does.
+    // Post-unblinding re-measure, declared per decision 0016.
     (
         1,
         "abyssal-elf",
@@ -549,6 +553,14 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Predictive,
         6472,
         Some(36531.74198950235),
+    ),
+    (
+        1,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        6472,
+        None,
     ),
     (
         1,
@@ -624,6 +636,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         1,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        6472,
+        None,
+    ),
+    (
+        1,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        6472,
+        None,
+    ),
+    (
+        1,
         "reef-mason",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -645,6 +673,14 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Counted,
         6472,
         None,
+    ),
+    (
+        1,
+        "svirfneblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        6472,
+        Some(36531.74198950235),
     ),
     (
         1,
@@ -706,6 +742,14 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "drow",
         LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
+    ),
+    (
+        2,
+        "duergar",
+        LadderRung::Unknown,
         LadderRung::Predictive,
         81,
         Some(36337.174658835705),
@@ -784,6 +828,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         2,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
+    ),
+    (
+        2,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        81,
+        Some(36337.174658835705),
+    ),
+    (
+        2,
         "reef-mason",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -805,6 +865,14 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Predictive,
         81,
         Some(36337.174658835705),
+    ),
+    (
+        2,
+        "svirfneblin",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
     ),
     (
         2,
@@ -866,6 +934,14 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "drow",
         LadderRung::Unknown,
+        LadderRung::Predictive,
+        53,
+        Some(36125.669504115634),
+    ),
+    (
+        3,
+        "duergar",
+        LadderRung::Unknown,
         LadderRung::Counted,
         53,
         None,
@@ -944,6 +1020,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         3,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
         "reef-mason",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -965,6 +1057,14 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Counted,
         53,
         None,
+    ),
+    (
+        3,
+        "svirfneblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        53,
+        Some(36125.669504115634),
     ),
     (
         3,
@@ -1032,6 +1132,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         4,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
+    ),
+    (
+        4,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -1104,6 +1212,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         4,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
+    ),
+    (
+        4,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        3785,
+        Some(36540.36159622378),
+    ),
+    (
+        4,
         "reef-mason",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -1121,6 +1245,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         4,
         "snow-elf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
+    ),
+    (
+        4,
+        "svirfneblin",
         LadderRung::Unknown,
         LadderRung::Counted,
         3785,
@@ -1192,6 +1324,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        500,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -1264,6 +1404,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        500,
+        None,
+    ),
+    (
+        5,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        500,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
         "reef-mason",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -1282,9 +1438,17 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         500,
-        None,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
+        "svirfneblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        500,
+        Some(36556.47532198732),
     ),
     (
         5,
@@ -1312,7 +1476,7 @@ const LADDER_TABLE: &[Row] = &[
     ),
 ];
 
-/// claim: readout(off-gate, prints the whole live 75-row ladder table so a
+/// claim: readout(off-gate, prints the whole live 95-row ladder table so a
 /// re-measure reads a number off a run) — the regeneration procedure for
 /// [`LADDER_TABLE`], which every previous re-measure performed by hand.
 ///

@@ -134,26 +134,28 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// is re-drawn. A readout, not a target: nothing in this campaign touches the
 /// classifier or the typological stages the baseline is about.
 ///
-/// **THE TIDEMARK: 0.8012779552715655 -> 0.7894979272224781, and the
-/// DENOMINATOR moved with it.** Six marine peoples were authored, so the
-/// roster this classifier assigns over went from 18 tongues to 24 — and a
-/// harder assignment problem is exactly what a lower accuracy means here.
-/// Read the two numbers together: chance fell from 1/18 (0.0556) to 1/24
-/// (0.0417) while accuracy fell from 0.8013 to 0.7895, so the classifier's
-/// margin OVER chance rose. A readout, not a target: nothing in that
-/// campaign touches the classifier or the typological stages.
-const BASELINE: f64 = 0.7894979272224781;
+/// **TWO CAMPAIGNS MOVE THIS TOGETHER, AND THE DENOMINATOR MOVES WITH IT.**
+/// The Underworld Peoples authored four peoples and The Tidemark six, so the
+/// roster this classifier assigns over went from 18 tongues to 28. A harder
+/// assignment problem is exactly what a lower accuracy means here, so read
+/// the two numbers together rather than the accuracy alone: chance falls from
+/// 1/18 (0.0556) to 1/28 (0.0357) while accuracy falls from 0.8013 to
+/// 0.7663, so the classifier's margin OVER chance rose. A readout, not a
+/// target: nothing in either campaign touches the classifier or the
+/// typological stages. MEASURED on the merged world — neither branch's own
+/// figure (0.7895, 0.7626) survives the merge.
+const BASELINE: f64 = 0.7663125948406677;
 
 /// The chance floor for the assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.
 /// Derived from [`BASELINE_TONGUES`] rather than restated, so the two cannot
 /// disagree about how many tongues the accuracy is over — which is exactly
-/// what would have happened when The Tidemark moved the roster.
+/// what would have happened when the roster moved.
 const CHANCE_FLOOR: f64 = 1.0 / BASELINE_TONGUES as f64;
 
 /// The roster size the baseline and the chance floor are both taken over.
-/// 18 until THE TIDEMARK's six marine peoples took it to 24.
-const BASELINE_TONGUES: usize = 24;
+/// 18 until the Underworld Peoples and The Tidemark took it to 28.
+const BASELINE_TONGUES: usize = 28;
 
 fn load() -> Vec<(String, Vec<String>)> {
     let md = std::fs::read_to_string(DICTIONARY).expect("read the committed dictionary");

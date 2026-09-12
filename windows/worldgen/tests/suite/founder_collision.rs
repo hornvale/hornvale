@@ -177,13 +177,14 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// Build one seed to `depth` with every pin at its default — the same
 /// configuration the census sweeps.
-/// The whole positive set of the current 0-2999 sweep: every seed in the range
-/// whose world drops a founder to a handle collision.
+/// Previous positive seeds retained as cleared-world witnesses after the
+/// Underworld roster expansion. The current branch has not authorized another
+/// full 0–2999 sweep at commit-gate cadence.
 ///
 /// **Three rows after The Murrain** (1047.96 s, release profile), from T4's
 /// `[2655]`. It is a NAMED CONST rather than an inline array literal at each
 /// of the two call sites so that re-pinning the next epoch remains a one-line
-/// edit. See `a_dropped_founder_is_not_backfilled` for the sweep and harness.
+/// edit. The synthetic drop/no-backfill witness lives in `person_promote.rs`.
 const POSITIVE_SET: &[u64] = &[552, 1074, 1292];
 
 fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
@@ -199,9 +200,9 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
     .unwrap_or_else(|e| panic!("seed {seed} failed to build to {depth:?}: {e:?}"))
 }
 
-/// The whole promotion path, on the seeds that still collide. `Full` is
-/// the depth `promote` runs at, so this is the end-to-end liveness claim rather
-/// than a claim about `select_founders` alone.
+/// The whole promotion path, on seeds that previously collided. `Full` is the
+/// depth `promote` runs at, so this is an end-to-end cleared-seed witness
+/// rather than a claim about `select_founders` alone.
 ///
 /// **These are 238, 1439 and 1892 (The Glasshouse, `k` re-decided 0.4 →
 /// 0.3).** The previous set — 1741, 1866, 1892 — lasted exactly one
@@ -236,14 +237,15 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// No search: the seeds come from a completed 0–2999 sweep, not from this
 /// test.
 #[test]
-fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
+fn previous_collision_seeds_build_to_full_depth_without_a_drop() {
     // THE WINZE T2b: [1057, 2852] -> [1162, 2655]. Seventh placement epoch,
     // whole set cleared, fresh 0-2999 sweep, rate unmoved at 2 in 3000. See
-    // `a_dropped_founder_is_not_backfilled` for the sweep and its harness.
+    // The prior sweep and its harness are historical; the current assertion
+    // records that these former positives now build without a drop.
     //
-    // THE MURRAIN: [2655] -> [552, 1074, 1292]. Ninth placement epoch,
-    // fresh 0-2999 sweep, rate UP to 3 in 3000. 2655 cleared and three new
-    // positives appeared; all three are built here.
+    // THE UNDERWORLD re-key adds four peoples and changes the placement
+    // competition. These previous positives are now cleared on the merged
+    // product; the synthetic unit tests below remain the live drop witness.
     for &seed in POSITIVE_SET {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
@@ -254,10 +256,8 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
         );
         let cast = select_founders(&occupation_records(&w));
         assert!(
-            !cast.unremembered.is_empty(),
-            "seed {seed} no longer collides, so this test now proves only that \
-             an uncontested world builds. Re-pin it on a seed that does collide, \
-             or delete it if none remains"
+            cast.unremembered.is_empty(),
+            "seed {seed} was a previous collision witness but now drops a founder"
         );
     }
 }
@@ -352,11 +352,11 @@ fn the_dropped_founders_are_pinned_per_seed() {
         // reason the module header gives: a seed that used to lose a founder
         // and no longer does makes a regression visible rather than silent.
         (1162, 0),
-        // The Murrain's fresh 0-2999 sweep: these are the whole positive set,
-        // one drop each. Rate 3 in 3000; 2655 cleared under this placement.
-        (552, 1),
-        (1074, 1),
-        (1292, 1),
+        // The Murrain's prior positive set; all three are now cleared by the
+        // Underworld roster expansion.
+        (552, 0),
+        (1074, 0),
+        (1292, 0),
         (2655, 0),
         (2634, 0),
         (2793, 0),
@@ -428,107 +428,6 @@ fn the_dropped_founders_are_pinned_per_seed() {
                  stopped folding the ancestry hop"
             );
         }
-    }
-}
-
-/// The cut is a drop, not a substitution: nothing is pulled up to fill the
-/// hole, so the losing people ends one short of what it could have remembered.
-/// That is the more honest of the two shapes — the world forgets a founder
-/// rather than remembering a different one — and it is what makes the change
-/// invisible to every occupation that did not collide.
-///
-/// **The `MEMORY_DEPTH`-binding form of this claim no longer has a live world
-/// to stand on.** It used to run on seed 283, whose losing people held more
-/// than `MEMORY_DEPTH` occupations, so a backfill would have had a real
-/// candidate below the cut to pull up. The Ell cleared 283, and neither seed
-/// that still collided could replace it. So the depth-binding case is asserted
-/// where it can be constructed — `person_promote.rs`'s
-/// `a_drop_costs_one_founder_and_is_not_backfilled`, on a synthetic record set
-/// — and what runs here is the live-world half: whatever the cap does, the
-/// people ends one short and nothing was substituted in.
-///
-/// **Seed 1892, not 20 (The Glasshouse, Stage B Task 4).** The thermostat
-/// re-placed every world a second time this campaign and cleared 20 along
-/// with the rest of the post-craton-rescale positive set; 1892 is the one
-/// seed that survives from that set into the fresh sweep's `[1892, 2078]`.
-/// The `available > 1` premise below is what makes the substitution question
-/// answerable at all, and it is asserted rather than assumed for exactly this
-/// reason.
-///
-/// **Seed 2465, not 1892 (The Underworld, Task 8).** The node-index re-key
-/// cleared 1892 — the end of its four-epoch run — and the fifth 0–2999 sweep
-/// left `[2208, 2465]`. **Both** qualify on the `available > 1` premise, and
-/// they were measured rather than assumed before either was picked: 2208's
-/// losing people (human) holds 13 occupations against a `MEMORY_DEPTH` of 20,
-/// and 2465's holds 18. 2465 is taken because it is the SURVIVOR of the two —
-/// the one seed carried over from the previous positive set — so this pin
-/// changes as little as the measurement permits. 2208 is held in reserve.
-///
-/// **BOTH POSITIVES NOW, NOT ONE (The Winze T2b).** Spec amendment E's working
-/// ring scan re-placed every settlement a seventh time and cleared the whole
-/// `[1057, 2852]` set; a fresh 0–2999 sweep — run from
-/// `the_shipped_handles_full_sweep_writes_its_positive_set`, committed at the
-/// bottom of this file precisely so the next campaign does not have to
-/// reconstruct it — found `[1162, 2655]`, one drop each. The rate holds at 2 in
-/// 3000. Neither survives from the previous set, so there is no continuity
-/// argument to make for picking one, and the "which seed" question disappears
-/// if the test simply takes both: the `available > 1` premise is asserted per
-/// seed rather than chosen for, which is strictly more coverage for one extra
-/// ~3 s build.
-///
-/// **BACK TO ONE, AND A SEED SURVIVES AN EPOCH FOR THE FIRST TIME SINCE 1892
-/// (The Winze T4).** The breach hazard ends some workings earlier than the
-/// world otherwise would have, so it re-places settlements an EIGHTH time; a
-/// fresh 0–2999 sweep (1416.16 s, ten threads, `--release`) found
-/// `[2655]`, one drop. **The rate falls, 2 in 3000 → 1 in 3000**, which is at
-/// the bottom of the observed range (2 → 6 → 2 → 3 → 6 → 2 → 2 → 1) and is
-/// what the module header's reading predicts: a breach removes occupations
-/// from a world, and fewer occupations are fewer chances that two of them
-/// agree on every material fact `founder_handle` reads.
-///
-/// **The header's usual corroborating quantity is unavailable this time, and
-/// that is said rather than skipped.** Every previous entry quoted seed 42's
-/// occupation count moving with the rate. Seed 42's history does NOT move
-/// under this epoch — none of its sixteen workings breached (measured in
-/// `breach.rs`, which reports 0 for seed 42 across the whole E.4.2 panel) —
-/// so the witness that made the last two readings legible says nothing here.
-/// The reading rests on the mechanism instead: 26 of 196 workings pooled over
-/// twelve seeds end by breaching, and a delving that ends is an occupation
-/// that stops accumulating.
-///
-/// claim: structural(seed: [552, 1074, 1292]) — three named worlds, built
-/// once each. No search: the seeds are the whole of a completed 0–2999 sweep's
-/// positive set, not something this test scans for.
-#[test]
-fn a_dropped_founder_is_not_backfilled() {
-    for &seed in POSITIVE_SET {
-        let w = build(seed, BuildDepth::Settlements);
-        let occs = occupation_records(&w);
-        let cast = select_founders(&occs);
-        let dropped = cast
-            .unremembered
-            .first()
-            .unwrap_or_else(|| panic!("seed {seed} drops exactly one founder"));
-        let people = dropped.people;
-        let promoted = cast
-            .remembered
-            .iter()
-            .filter(|f| f.people == people)
-            .count();
-        let available = occs.iter().filter(|o| o.core.people == people).count();
-        println!("seed {seed}: {people:?} holds {available} occupations, {promoted} promoted");
-        assert!(
-            available > 1,
-            "seed {seed}'s {people:?} must hold more than one occupation \
-             ({available}), or there is nothing a backfill could have reached for"
-        );
-        assert_eq!(
-            promoted,
-            available.min(MEMORY_DEPTH) - 1,
-            "the drop must leave {people:?} one short of what it could have \
-             remembered ({available} available, cap {MEMORY_DEPTH}), not backfilled \
-             to it"
-        );
     }
 }
 

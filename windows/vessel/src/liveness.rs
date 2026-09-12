@@ -22925,8 +22925,9 @@ mod tests {
             checked += 1;
         }
         assert_eq!(
-            checked, 45,
-            "the roster is 45 rows; a smaller number means the loop is not \
+            checked, 49,
+            "the roster is 49 rows (39, plus four Underworld peoples, plus \
+             six marine peoples); a smaller number means the loop is not \
              seeing the table this assertion is about"
         );
     }

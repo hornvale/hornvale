@@ -485,18 +485,36 @@ make doctor        # the repo self-map — run this first in a fresh session
 # builds. `SWEEP_DAYS` is namespaced because bare `DAYS` is already
 # `board-digest`'s, defined nowhere so its tool applies its own 14-day default.
 #
-# NOTHING RECYCLES OR REAPS THE SECOND POOL, AND THAT IS THE HAZARD `make
-# sweep` DOES NOT COVER (measured 2026-09-10). `worktree-take.sh` enumerates
-# correctly — from `git worktree list`, never `find` — and then filters to the
-# pool it owns (`case "$wt" in "$POOL"/*`), so the 29 worktrees under
-# `~/.config/superpowers/worktrees/` are outside any recycling or reaping
-# mechanism. 11 of them sit on merged branches holding ~161 GB. The Sexton's
-# rationale for the pool (73 branches in a month against 3 live worktrees, each
-# new one paying a measured 771 s cold build) applies to those 29 exactly and
-# does not reach them: `make worktree-take` will never recycle one, so a
-# campaign taking a worktree there always pays the cold build and always leaves
-# the corpse behind. `make sweep` now reclaims their dead GENERATIONS, which is
-# a different and smaller thing than reclaiming the worktrees.
+# THE SECOND POOL WAS OUTSIDE EVERY RECYCLING AND REAPING MECHANISM, AND IS
+# NOT ANY MORE (measured 2026-09-10; fixed the same night). `worktree-take.sh`
+# enumerates correctly — from `git worktree list`, never `find` — and then
+# filters to the pool it owns (`case "$wt" in "$POOL"/*`), so the 29 worktrees
+# under `~/.config/superpowers/worktrees/` were unreachable by it. 11 sat on
+# merged branches holding ~161 GB. The Sexton's rationale for the pool (73
+# branches in a month against 3 live worktrees, each new one paying a measured
+# 771 s cold build) applied to those 29 exactly and reached none of them: a
+# campaign taking a worktree there always paid the cold build and always left
+# the corpse behind.
+#
+# REAPING IS THE REMEDY, AND IT IS NOT SWEEPING (`make worktree-reap-dry` /
+# `worktree-reap`). `sweep` reclaims dead build GENERATIONS inside a `target/`;
+# the reaper removes whole worktrees whose branch already landed. Sweeping a
+# finished campaign's worktree keeps the corpse and its working set; reaping it
+# returns the space and the pool slot — which is why `make sweep` reaching the
+# second pool did not close this hazard by itself. The reaper's population also
+# comes from `git worktree list`, so it spans BOTH pools, which is the entire
+# point. First dry run: 17 reapable, 22 skipped; the reap freed ~99 GiB and took
+# this repo from 805 GB to 300 GB.
+#
+# IT DOES NOT REFUSE ON THE TWO FILES `gate-run` WRITES, AND THAT IS
+# DELIBERATE. `docs/timings.md` and `docs/timings/test-baseline-<host>.tsv` are
+# written by every green local gate, including the last one a campaign runs
+# after its final commit, so "has run a gate" — the normal end state — would
+# otherwise make every worktree unreapable and the tool would report success
+# having done nothing. That is The Sexton's `worktree-take` bug exactly, which
+# this tool would have inherited verbatim. Since `docs/timings.md` is
+# append-only and NOT regenerable, the rows a reap would destroy are PRINTED
+# first; the dry run is the moment to rescue one.
 #
 # THE FIX IS NOT A SOURCE-SCAN RATCHET, AND THAT WAS CHECKED RATHER THAN
 # ASSUMED. A default-deny scan for a hardcoded pool prefix was specified and
@@ -1333,6 +1351,70 @@ promotion-at-close is the practice that failed five recorded times
 (`docs/superpowers/specs/2026-08-30-the-cartulary-design.md` §1), which is
 also why `scripts/hooks/pre-commit`'s `.superpowers/` guard comment carries
 the same correction, dated the same day.
+
+**THE SAME DEFECT HAD A SECOND INSTANCE AND IT IS NOW DELETED:
+`IMPLEMENTATION_PLAN.md`** (2026-09-10). The global CLAUDE.md told every
+campaign to stage its work in a file at the repo root, so it was one mutable
+path with no keying and no guard — the ledger's exact shape before The
+Cartulary, and it went unnoticed longer because a *plan* looks like a shared
+document in a way a decision ledger does not. What it actually held was
+whichever campaign wrote last: when this was found, **14 of the ~20 branches
+carrying the file held campaign/the-murrain's plan**, inherited by absorbing
+main, meaningless on every one of them. Only `eclipse-rhythm-view`,
+`the-planetarium` and the `codex/counterpart-*` branches had content of their
+own.
+
+The near-miss that prompted it: a session wrote the file with `cat >` — never
+having read it — and landed the clobber through a commit that staged other
+paths explicitly (`git commit` takes the whole INDEX, not the paths you last
+`add`ed). Zero lines of the-murrain's survived and the merge raised **no
+conflict**. No gate saw it; the merge queue's operator caught it by reading
+the file.
+
+**AND THE CONTENT IT WOULD HAVE DESTROYED WAS ITSELF STALE, WHICH IS THE
+STRONGER ARGUMENT.** It was first reported — by the operator, and repeated
+here — that the-murrain was *live* with Stage 4 In Progress. Checked
+afterwards: `campaign/the-murrain` and `campaign/the-murrain-across-world` are
+both merged into main, and `book/src/chronicle/the-murrain.md` and
+`docs/retrospectives/the-murrain.md` are both present there. The campaign was
+finished. The file said `Stage 4: In Progress` because this guide's own
+instruction to delete a staging document when its stages are done was never
+carried out — so the one copy that looked alive was abandoned residue too.
+
+That is the real indictment, and it is duller than a race between two writers:
+**the typical content of this path was a finished campaign's abandoned
+staging, inherited by every branch that absorbed main.** Not merely shared —
+usually wrong. A path whose common case is unwitting inheritance of stale
+state is not one anyone can be careful enough with.
+
+**AND IT LEVIED A STANDING TAX ON EVERY CAMPAIGN CLOSE, WHICH IS THE THIRD
+ARGUMENT AND THE ONE THAT COSTS SOMETHING EVERY TIME.** `sluice_is_prose_only`
+(`scripts/sluice-phases.sh`) allowlists `docs/*`, `book/src/chronicle/*`,
+`book/src/frontier/*`, `book/src/open-questions.md`, `book/src/SUMMARY.md` and
+`.claude/skills/*`. `IMPLEMENTATION_PLAN.md` sits at the repo **root** and
+matches none of them — so *deleting it*, the very act this guide prescribes at
+close, disqualified an otherwise pure-prose candidate and bought the full
+phase ladder. Measured against `campaign/eclipse-rhythm-view`'s own close
+(2026-09-11), whose changed set is six files, five of them `docs/*`:
+
+```text
+with    IMPLEMENTATION_PLAN.md -> prose-only: NO   (all five phases)
+without IMPLEMENTATION_PLAN.md -> prose-only: YES  (skips clients + heavy)
+```
+
+The file was the sole disqualifier. At that night's measurements — `clients`
+~207 s, `heavy` ~460 s — that is **~11 minutes of serial canonical-box time per
+campaign close**, paid by whoever happened to be closing, on the one resource
+every other campaign queues behind. Unlike the clobber (a race) and the
+inherited-stale-content measurement (the common case), this one was charged
+every single time.
+
+**The file is now deleted and gitignored, and staging documents are scratch.**
+Put a staging document where exactly one effort will ever touch it — the
+session scratchpad, or `docs/superpowers/plans/<slug>.md` if it is durable
+enough to commit. **Deleting it is LOUD where the clobber was silent**: a
+branch carrying its own committed copy meets a modify/delete conflict on its
+next absorb and decides for itself, which is the whole point.
 
 On lefford, the regeneration worktree is **shared** — ask before reusing it,
 verify its HEAD, and sweep orphans rather than assuming it is parked where
