@@ -94,6 +94,7 @@ fn metabolic_class_coverage_matches_the_table() {
                 "desert-elf",
                 "dire-wolf",
                 "drow",
+                "duergar",
                 "giant-elk",
                 "giant-goat",
                 "giant-hyena",
@@ -105,12 +106,15 @@ fn metabolic_class_coverage_matches_the_table() {
                 "hobgoblin",
                 "human",
                 "killer-whale",
+                "kuo-toa",
+                "mountain-dwarf",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
                 "rhinoceros",
                 "sea-elf",
                 "snow-elf",
+                "svirfneblin",
                 "white-dragon",
                 "wood-elf",
                 "woolly-mammoth",
@@ -160,8 +164,18 @@ fn status_basis_coverage_matches_the_table() {
         (
             StatusBasis::Rank,
             Rung::Witnessed,
-            // C2d: drow is the family's only `Rank` reading.
-            &["bugbear", "drow", "goblin", "hobgoblin"],
+            // C2d: the rank-bearing roster includes the underworld peoples
+            // inherited from drow's authored social row.
+            &[
+                "bugbear",
+                "drow",
+                "duergar",
+                "goblin",
+                "hobgoblin",
+                "kuo-toa",
+                "mountain-dwarf",
+                "svirfneblin",
+            ],
         ),
         // The Generalist (C2-0) gives Knowledge its SECOND witness. Human
         // standing rests on craft and lore rather than dominance, which is
@@ -245,9 +259,19 @@ fn activity_cycle_coverage_matches_the_table() {
         (
             ActivityCycle::Nocturnal,
             Rung::Witnessed,
-            // C2d (The Radiation): drow, the roster's least ambiguous
-            // nocturnal kind — there is no sun underground to keep hours by.
-            &["black-dragon", "bugbear", "drow", "kobold"],
+            // C2d (The Radiation): underground peoples keep hours without
+            // sunlight; the surface witnesses remain the dragon, bugbear,
+            // and kobold.
+            &[
+                "black-dragon",
+                "bugbear",
+                "drow",
+                "duergar",
+                "kobold",
+                "kuo-toa",
+                "mountain-dwarf",
+                "svirfneblin",
+            ],
         ),
         // Witnessed by a dragon since The Vigil; a mundane beast still cannot
         // carry an `ActivityCycle` at all (`perception_registry` is keyed to
@@ -341,6 +365,7 @@ fn social_form_coverage_matches_the_table() {
                 "desert-dwarf",
                 "desert-elf",
                 "drow",
+                "duergar",
                 "gnoll",
                 "goblin",
                 "gully-dwarf",
@@ -349,8 +374,11 @@ fn social_form_coverage_matches_the_table() {
                 "hobgoblin",
                 "human",
                 "kobold",
+                "kuo-toa",
+                "mountain-dwarf",
                 "sea-elf",
                 "snow-elf",
+                "svirfneblin",
                 "wood-elf",
             ],
         ),
@@ -454,11 +482,15 @@ fn life_schedule_coverage_matches_the_table() {
                 "desert-dwarf",
                 "desert-elf",
                 "drow",
+                "duergar",
                 "gully-dwarf",
                 "high-elf",
                 "hill-dwarf",
+                "kuo-toa",
+                "mountain-dwarf",
                 "sea-elf",
                 "snow-elf",
+                "svirfneblin",
                 "wood-elf",
             ],
         ),
@@ -743,11 +775,15 @@ fn only_the_dwarf_and_elf_families_depart_from_pure_allometry() {
             ("desert-dwarf", LifeSchedule::Paced { factor: 4.0 }),
             ("desert-elf", LifeSchedule::Paced { factor: 5.0 }),
             ("drow", LifeSchedule::Paced { factor: 5.0 }),
+            ("duergar", LifeSchedule::Paced { factor: 5.0 }),
             ("gully-dwarf", LifeSchedule::Paced { factor: 4.0 }),
             ("high-elf", LifeSchedule::Paced { factor: 5.0 }),
             ("hill-dwarf", LifeSchedule::Paced { factor: 4.0 }),
+            ("kuo-toa", LifeSchedule::Paced { factor: 5.0 }),
+            ("mountain-dwarf", LifeSchedule::Paced { factor: 5.0 }),
             ("sea-elf", LifeSchedule::Paced { factor: 5.0 }),
             ("snow-elf", LifeSchedule::Paced { factor: 5.0 }),
+            ("svirfneblin", LifeSchedule::Paced { factor: 5.0 }),
             ("wood-elf", LifeSchedule::Paced { factor: 5.0 }),
         ],
         "the dwarf and elf families are the ONLY departures from pure \
@@ -756,8 +792,8 @@ fn only_the_dwarf_and_elf_families_depart_from_pure_allometry() {
     );
     assert_eq!(
         reg.len(),
-        39,
-        "30 before C2c, plus the dwarf family's three and the elf family's six"
+        43,
+        "39 before this campaign, plus four Underworld peoples"
     );
 }
 
@@ -802,10 +838,18 @@ fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
         .collect();
     assert_eq!(
         sub,
-        vec!["drow", "rust-monster", "xorn"],
+        vec![
+            "drow",
+            "duergar",
+            "kuo-toa",
+            "mountain-dwarf",
+            "rust-monster",
+            "svirfneblin",
+            "xorn",
+        ],
         "ascending by KindId"
     );
-    assert_eq!(reg.len(), 3, "the store is sparse: absence means Surface");
+    assert_eq!(reg.len(), 7, "the store is sparse: absence means Surface");
 }
 
 #[test]

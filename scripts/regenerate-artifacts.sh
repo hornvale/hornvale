@@ -669,11 +669,12 @@ gen_chart_reference() {
 # shorter arc than before: bronze at the base, then iron, then classical, with
 # no neolithic layer left. The standing sixth was founded in 800 by
 # Venggomnjen and holds 84 souls.
-# RE-READ 2026-09-06 (The Murrain, Task 2): history/bake/v4 changes the
-# seed-42 epoch. Vertex 10626 now carries one living human layer, founded in
-# 1775; the camera remains on a non-empty real column, and the framing below
-# states only facts present in the live render.
-history_site=10626
+# RE-READ 2026-09-09 (The Underworld Peoples): the expanded settled roster
+# emptied the former camera cell. Vertex 6659 now carries seventeen layers,
+# including mountain-dwarf and kuo-toa strata, and ends with two living
+# mountain-dwarf and kuo-toa settlements. The framing below states only facts
+# present in the live render.
+history_site=6659
 gen_history() {
     printf '# A Living Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -683,11 +684,12 @@ gen_history() {
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — vertex %s — and\n' "$history_site"
-    printf 'one human steading has risen on it. Settlers came from vertex 10638\n'
-    printf 'in the year 1775, and the layer still stands after 225 years. At its\n'
-    printf 'height some 12 souls raised two huts and a granary. There is no ruin\n'
-    printf 'to read yet — only a living settlement and smoke on the air.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — vertex %s — where\n' "$history_site"
+    printf 'seventeen lives have passed over the ground. The deepest layer was a\n'
+    printf 'mountain-dwarf steading founded in year 0; the standing layers are a\n'
+    printf 'kuo-toa steading founded in year 1750 and a mountain-dwarf steading\n'
+    printf 'founded in year 1950. The ground is still occupied, with smoke on the\n'
+    printf 'air and ruins beneath it.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

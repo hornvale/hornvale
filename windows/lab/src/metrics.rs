@@ -4241,7 +4241,7 @@ pub fn registry() -> Vec<Metric> {
             // property of a family, and `monophyly-goblinoid` was named after
             // what used to be its only possible subject.
             name: "monophyly-dwarf",
-            doc: "Whether every dwarf daughter's (desert-dwarf, gully-dwarf, hill-dwarf) \
+            doc: "Whether every dwarf daughter's (desert-dwarf, duergar, gully-dwarf, hill-dwarf, mountain-dwarf) \
                    Root derivation.proto matches an INDEPENDENT re-draw of the shared \
                    \"dwarf\" family proto-root for that concept (spec §3: cognates \
                    share a proto ancestor) — never reading the family proto back from a \
@@ -11368,10 +11368,16 @@ fn hue_depth(v: &AstronomyView, species: &str) -> MetricValue {
 /// control's value is a deliberate act, not a refactor, so the constant stays.
 const GOBLINOID_DAUGHTERS: [&str; 3] = ["goblin", "hobgoblin", "bugbear"];
 
-/// THE DELVERS (C2c): the dwarf family's three daughters — the roster's second
+/// THE DELVERS: the dwarf family's five daughters — the roster's second
 /// multi-member family, and `monophyly-dwarf`'s subject. Same shape, same
 /// rationale and the same drift guard as [`GOBLINOID_DAUGHTERS`].
-const DWARF_DAUGHTERS: [&str; 3] = ["desert-dwarf", "gully-dwarf", "hill-dwarf"];
+const DWARF_DAUGHTERS: [&str; 5] = [
+    "desert-dwarf",
+    "duergar",
+    "gully-dwarf",
+    "hill-dwarf",
+    "mountain-dwarf",
+];
 
 /// THE RADIATION (C2d): the elf family's six daughters — the roster's third
 /// and largest multi-member family, and `monophyly-elf`'s subject. Same shape,
@@ -14108,17 +14114,12 @@ mod tests {
         // THE WINZE T2b re-pin: 2.391304347826087 -> 2.5. The ring scan changes
         // WHERE workings are founded, so seed 42's site pool moves and with it
         // which goblin names are drawn. Still inside the 2-3 target.
-        // THE MURRAIN re-pin (2026-09-07): 2.5 -> 2.4285714285714284.
-        // The epidemiology/history bake changes the seed-42 settlement and
-        // naming substrate; this remains the same metric claim, with the
-        // exact value re-measured on the new deterministic world.
-        // THE WANDERERS re-pin (2026-09-09): 2.4285714285714284 ->
-        // 2.4242424242424243. Stellar topology and anchor generation change
-        // the seed-42 settlement/naming substrate; this is a fresh live
-        // measurement on the merged tree, not a change to the 2-3 target.
+        // THE UNDERWORLD re-pin: 2.4285714285714284 -> 2.5. Adding the four
+        // peoples changes seed 42's settlement and naming substrate; the
+        // metric claim is unchanged and the exact value is re-measured here.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.4242424242424243)
+            MetricValue::Number(2.5)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14349,16 +14350,12 @@ mod tests {
         // census: this campaign's refresh happens once, at pre-merge close, and
         // has not been run.
         //
-        // THE MURRAIN re-pin (2026-09-07): 2.5067567567567566 -> 2.8. The
-        // epidemiology/history bake changes the seed-42 settlement substrate
-        // and therefore the named-site sample; the metric remains inside its
-        // stated 2-3 target.
-        // THE WANDERERS re-pin (2026-09-09): 2.8 -> 2.8157894736842106.
-        // Stellar topology and anchor generation change the merged tree's
-        // seed-42 named-site sample; it remains inside the stated 2-3 target.
+        // THE UNDERWORLD re-pin: 2.8 -> 2.3518518518518516. Adding the four
+        // peoples changes the seed-42 settlement substrate and therefore the
+        // named-site sample; the metric remains inside its stated 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.8157894736842106)
+            MetricValue::Number(2.3518518518518516)
         );
     }
 
@@ -14600,10 +14597,10 @@ mod tests {
         // pool, changing which names read as transparent. NOT corroborated
         // against a census: this campaign's refresh happens once, at pre-merge
         // close, and has not been run.
-        // THE MURRAIN re-pin (2026-09-07): 0.6102564102564103 ->
-        // 0.6905537459283387, from the same deterministic settlement
-        // substrate change that moved the syllable pin above.
-        assert_eq!(share, 0.6905537459283387, "seed 42 transparency drifted");
+        // THE UNDERWORLD re-pin: 0.6905537459283387 -> 0.6707692307692308,
+        // from the same deterministic settlement substrate change that moved
+        // the syllable pin above. The distribution claim is unchanged.
+        assert_eq!(share, 0.6707692307692308, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -15256,7 +15253,10 @@ mod tests {
             // independent exposure reading. The precondition remains
             // nonempty and the mutation still exercises the river and
             // karst/wetland gates.
-            vec!["river", "ford", "valley", "marsh", "spring"],
+            // THE UNDERWORLD re-pin: "valley" leaves again after the four
+            // newly admitted peoples re-place the seed-7 settlement set;
+            // the remaining four concepts still exercise the mutation.
+            vec!["river", "ford", "marsh", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {

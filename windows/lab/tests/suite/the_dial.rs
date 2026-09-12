@@ -235,7 +235,7 @@ fn the_dial_separates_the_poles() {
             if seed == 2 && voice.kind == "kobold" {
                 assert_eq!(
                     loss_shipped,
-                    3.0 / 19.0,
+                    3.0 / 23.0,
                     "seed 2 kobold's loss_fraction must read THROUGH its Explained \
                      moon-count entry (underlying: Kept) rather than counting it lost"
                 );

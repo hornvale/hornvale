@@ -246,6 +246,7 @@
 | `door` | thing | object | a leaf hung in an opening, to be shut against what is beyond |
 | `drink` | language | act | to swallow liquid |
 | `drow-kind` | species | living | a drow |
+| `duergar-kind` | species | living | a duergar |
 | `eager` | language | affect | positive, high arousal: chasing a satisfiable need |
 | `earth` | language | terrain | the ground underfoot |
 | `east` | language | quality | the direction of increasing longitude |
@@ -311,6 +312,7 @@
 | `killer-whale-kind` | species | living | a killer whale |
 | `know` | language | act | to hold something in memory or understanding — `knows` |
 | `kobold-kind` | species | living | a kobold |
+| `kuo-toa-kind` | species | living | a kuo-toa |
 | `lake` | terrain | terrain | still water held in a hollow that has no outlet to the sea |
 | `ledge` | thing | object | a broad shelf of exposed stone |
 | `lens` | language | act | to choose or report which colour lens one's sight uses — `!eyes` |
@@ -333,6 +335,7 @@
 | `moon` | astronomy | celestial | a moon |
 | `mossy-deadfall` | climate | substance | Fallen timber going back to moss and lichen. |
 | `mountain` | terrain | terrain | high ground |
+| `mountain-dwarf-kind` | species | living | a mountain dwarf |
 | `mouth` | language | body | the organ of eating and speech |
 | `move` | language | act | to go from one place to another |
 | `muskeg` | climate | substance | Waterlogged peat ground in the boreal forest. |
@@ -415,6 +418,7 @@
 | `sun-like-star` | astronomy | celestial | a distant star resembling this world's own sun |
 | `supports-rest` | language | quality | a place a body may lie down and sleep |
 | `survey` | language | act | to enumerate every creature the world holds — `!npcs` |
+| `svirfneblin-kind` | species | living | a svirfneblin |
 | `taiga` | climate | terrain | a biome class |
 | `temperate-forest` | climate | terrain | a biome class |
 | `temperate-grassland` | climate | terrain | a biome class |

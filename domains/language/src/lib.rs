@@ -186,6 +186,19 @@ pub use schemas::{
 pub mod speech {
     use hornvale_kernel::{Component, ComponentStore, KindId};
 
+    const UNDERWORLD_PEOPLE_IDS: [&str; 4] =
+        ["mountain-dwarf", "duergar", "kuo-toa", "svirfneblin"];
+
+    fn add_underworld_rows<C: Clone>(store: &mut ComponentStore<KindId, C>, source: &str) {
+        let value = store
+            .get_by_label(source)
+            .unwrap_or_else(|| panic!("underworld speech source {source:?} is registered"))
+            .clone();
+        for id in UNDERWORLD_PEOPLE_IDS {
+            store.insert(KindId(id), value.clone());
+        }
+    }
+
     /// An exotic manner of articulation found in a kind's phonology.
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum ExoticManner {
@@ -294,7 +307,7 @@ pub mod speech {
     /// not about what the manikin is.
     /// type-audit: bare-ok(identifier-text)
     pub fn articulation_registry() -> ComponentStore<KindId, ArticulationVector> {
-        [
+        let mut store = [
             (
                 KindId("goblin"),
                 ArticulationVector {
@@ -608,7 +621,9 @@ pub mod speech {
             ),
         ]
         .into_iter()
-        .collect()
+        .collect();
+        add_underworld_rows(&mut store, "drow");
+        store
     }
 
     /// Peopled lexicon, one per speaking kind. Byte-identical to the former
@@ -619,7 +634,7 @@ pub mod speech {
     /// lexicon.ids` invariant, exercised only if a dragon is ever placed).
     /// type-audit: bare-ok(identifier-text)
     pub fn lexicon_registry() -> ComponentStore<KindId, Lexicon> {
-        [
+        let mut store = [
             (
                 KindId("goblin"),
                 Lexicon {
@@ -856,7 +871,9 @@ pub mod speech {
             ),
         ]
         .into_iter()
-        .collect()
+        .collect();
+        add_underworld_rows(&mut store, "drow");
+        store
     }
 
     /// Proto ancestral articulation vectors keyed by family (goblinoid/

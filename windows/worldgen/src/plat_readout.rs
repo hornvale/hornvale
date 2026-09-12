@@ -303,7 +303,7 @@ mod tests {
         let terrain = crate::terrain_of(&world).expect("seed 42 sculpts");
         let out = render_made_population(&world, &terrain);
         for needle in [
-            "the Made population: 5 occupied columns",
+            "the Made population: 100 occupied columns",
             "heart decile <= 5:",
             "(frozen floor 0.6667; FROM Made levels TO the Heart's depth decile)",
             "doors on Made rungs:",

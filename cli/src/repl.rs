@@ -202,10 +202,12 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     })
                     .collect();
                 let labels = hornvale_almanac::qualify::SiteLabels::for_lines(world, &lines);
+                let mut labelled = std::collections::BTreeSet::new();
                 for (place, population, vertex) in &rows {
                     let label = match vertex {
-                        Some(vertex) => labels.label(*vertex),
+                        Some(vertex) if labelled.insert(*vertex) => labels.label(*vertex),
                         None => place.name.clone(),
+                        Some(_) => place.name.clone(),
                     };
                     writeln!(
                         output,

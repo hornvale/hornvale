@@ -1,0 +1,17 @@
+{
+  "OFL.txt": {
+    "url": "https://raw.githubusercontent.com/impallari/Libre-Baskerville/9852edf75ece3af500a5ec61245f94788c3d4633/OFL.txt",
+    "sha256": "28f6979946897ff9d8771ce4949e6c51fbfee99c29f31a93ffa575171ac37622",
+    "bytes": 4601
+  },
+  "LibreBaskerville-Regular.ttf": {
+    "url": "https://raw.githubusercontent.com/impallari/Libre-Baskerville/9852edf75ece3af500a5ec61245f94788c3d4633/fonts/ttf/LibreBaskerville-Regular.ttf",
+    "sha256": "df9fddf43dbd7de435c316b86a52b3d6b3ad2f6fb2ed3f6fd8bdc1835f30eec1",
+    "bytes": 156008
+  },
+  "LibreBaskerville-Medium.ttf": {
+    "url": "https://raw.githubusercontent.com/impallari/Libre-Baskerville/9852edf75ece3af500a5ec61245f94788c3d4633/fonts/ttf/LibreBaskerville-Medium.ttf",
+    "sha256": "9f15e8fd6e0b29504f4bcd75b7f2e96dd27e380e7d655b0fffd657614effa43f",
+    "bytes": 155332
+  }
+}

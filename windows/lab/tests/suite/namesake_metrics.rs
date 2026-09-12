@@ -73,8 +73,8 @@ fn the_namesake_metrics_report_in_range_on_a_real_world() {
         };
         println!("seed 42  {name} = {n}");
         let (lo, hi) = match *name {
-            "name-pattern-signatures" | "peoples-placed" => (1.0, 16.0),
-            "name-prefix-region-scope" => (1.0, 16.0),
+            "name-pattern-signatures" | "peoples-placed" => (1.0, 20.0),
+            "name-prefix-region-scope" => (1.0, 20.0),
             _ => (0.0, 1.0),
         };
         assert!(

@@ -3875,12 +3875,12 @@ mod portolan_tests {
         );
         assert_eq!(
             count(SiteKind::Settlement),
-            307,
+            308,
             "seed 42's settlement-vertex roster moved"
         );
         assert_eq!(
             d.sites.len(),
-            874 + 103 + 307,
+            874 + 103 + 308,
             "the roster holds nothing else"
         );
 
@@ -5252,6 +5252,7 @@ mod portolan_tests {
         let plate_w = hornvale_game_core::spread::PLATE_WIDTH;
         let plate_h = plate_w / hornvale_game_core::spread::GLYPH_ASPECT;
         let frame = mercator::frame_for(true);
+        let habitat = hornvale_species::habitat_realm_registry();
 
         for seed in [42u64, 7, 1337] {
             let pins = hornvale_astronomy::SkyPins {
@@ -5276,7 +5277,18 @@ mod portolan_tests {
                 "seed {seed} minted no settlements to check"
             );
 
+            // The surface Mercator plate cannot promise that a subterranean
+            // settlement's geographic coordinate lies in the locked world's
+            // habitable band; the client witness is about settlements the
+            // surface map is responsible for drawing.
             for id in settlements {
+                let species = hornvale_species::species_of(&world, id)
+                    .expect("a settlement in the locked-world witness has a people");
+                if habitat.iter().any(|(kind, realm)| {
+                    kind.0 == species && *realm == hornvale_species::HabitatRealm::Subterranean
+                }) {
+                    continue;
+                }
                 let lat = match world.ledger.value_of(id, hornvale_settlement::LATITUDE) {
                     Some(Value::Number(n)) => *n,
                     other => panic!("seed {seed}, settlement {id:?}: no latitude fact ({other:?})"),
@@ -5441,7 +5453,7 @@ mod portolan_tests {
         // PINNED, not merely printed (review fix round 1): an unasserted
         // `excluded` can grow without bound and this test would keep
         // reporting a perfect ratio over a shrinking, decreasingly
-        // meaningful `total`. 128 is this test's own doc's measured figure
+        // meaningful `total`. 99 is this test's own doc's measured figure
         // for seed 42's default floor plate at the coarsest zoom — a
         // golden that moves on a terrain epoch, a site-roster change
         // (caves/exotic/settlements) or a site-glyph vocabulary change,
@@ -5449,7 +5461,7 @@ mod portolan_tests {
         // `the_site_roster_carries_every_kind_and_only_placed_kinds_carry_
         // a_facet`'s own three golden counts.
         assert_eq!(
-            excluded, 128,
+            excluded, 99,
             "the point-site/landform exclusion moved — update this test's own doc \
              (and re-measure, do not just paste the new number) if this is expected"
         );

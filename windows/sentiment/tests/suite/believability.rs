@@ -110,8 +110,8 @@ fn believability_readout() {
     let ids: Vec<PeopleId> = cat.keys().copied().collect();
     assert_eq!(
         ids.len(),
-        15,
-        "the catalog must hold exactly the fifteen settling peoples"
+        19,
+        "the catalog must hold exactly the nineteen settling peoples"
     );
 
     // --- Step 1: the full 15x15 landscape --------------------------------
@@ -185,8 +185,8 @@ fn believability_readout() {
     }
     assert_eq!(
         cross.len(),
-        15 * 14,
-        "the off-diagonal cross-pair population must be exactly 15*14=210"
+        19 * 18,
+        "the off-diagonal cross-pair population must be exactly 19*18=342"
     );
 
     // --- Strongest pair per emotion (reported, never asserted; E4) -------
