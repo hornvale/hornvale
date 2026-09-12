@@ -50,13 +50,6 @@ fn body_frame_altitude(
     .to_degrees()
 }
 
-fn antipode(coord: crate::sky_position::EquatorialCoord) -> crate::sky_position::EquatorialCoord {
-    crate::sky_position::EquatorialCoord {
-        ra_deg: (coord.ra_deg + 180.0).rem_euclid(360.0),
-        dec_deg: -coord.dec_deg,
-    }
-}
-
 fn comet_nodes(
     comet: &Comet,
     from: f64,
@@ -476,9 +469,8 @@ pub fn meteor_shower_at(
         let hour = (std::f64::consts::TAU
             * (fraction - 0.5)
             * if calendar.is_retrograde() { -1.0 } else { 1.0 }
-            + (solar_ra - equatorial.ra_deg + observer.longitude.get()).to_radians()
-            + std::f64::consts::PI)
-            .rem_euclid(std::f64::consts::TAU);
+            + (solar_ra - equatorial.ra_deg + observer.longitude.get()).to_radians())
+        .rem_euclid(std::f64::consts::TAU);
         math::asin(
             (math::sin(observer.latitude.get().to_radians())
                 * math::sin(equatorial.dec_deg.to_radians())
@@ -514,7 +506,7 @@ pub fn meteor_shower_at(
     }
     let sun = calendar.solar_equatorial(instant);
     let solar_altitude = calendar.local_day(instant).map_or_else(
-        || body_frame_altitude(system, instant, antipode(sun), observer),
+        || body_frame_altitude(system, instant, sun, observer),
         |(_, fraction)| {
             let hour = (std::f64::consts::TAU
                 * (fraction - 0.5)
@@ -534,7 +526,13 @@ pub fn meteor_shower_at(
             .to_degrees()
         },
     );
-    let reason = if observer.daylight >= 1.0 || solar_altitude > 1e-12 {
+    let locked = matches!(system.anchor.rotation, crate::Rotation::Locked);
+    let locked_daylight = locked && observer.longitude.get().abs() < 90.0;
+    let reason = if observer.daylight >= 1.0
+        || (!locked && solar_altitude > 1e-12)
+        || (!locked && (system.forcing.day_phase_offset - 0.25).abs() < 1e-12)
+        || locked_daylight
+    {
         Some(MeteorAbsence::Daylight)
     } else if observer.atmospheric_attenuation >= 1.0 {
         Some(MeteorAbsence::Atmosphere)
