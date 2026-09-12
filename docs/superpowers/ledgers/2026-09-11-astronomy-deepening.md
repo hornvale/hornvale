@@ -80,3 +80,38 @@ scalings, a short giant phase, and cooling white dwarfs. Massive-star terminal
 eligibility derives from birth mass and age inside a requested historical
 window; no transient execution, visibility, hazard, or host evolution is added.
 Generated artifacts affected here are the stream manifest and audit reports.
+
+## #5 [Task 6] — Lazy physical star candidates and figure identities
+
+Background queries generate only requested equal-area cells on the dedicated
+`starfield/cells/v2` stream. The original label is retained. Identities carry
+the astronomy seed, fixed cell, and draw ordinal before filtering. Reordered,
+overlapping, repeated, and differently filtered queries preserve the same
+stars without a stored roster or mutable cache.
+
+Figures now consume modeled catalog IDs and background IDs with one shared
+inclusive apparent-magnitude cut. The physical reference limit remains four;
+observer queries cap at six and may apply an equatorial zenith/horizon.
+Catalog flux uses the declared first-slice bolometric-as-visual approximation
+with solar magnitude 4.83 at ten parsecs. Existing `FieldStar`, full-sky
+`starfield`, and index-based `NightSky` readers remain source-compatible;
+`starfield` retains the original sequential stream and byte-identical
+`scene/neighbors/v1` output (including seed 42's 148 background stars), while
+figures use the new physical queries. The two neighbor-observation regressions
+exposed and now guard this compatibility boundary; their fixtures are unchanged.
+`catalog_stars_at` exposes modeled IDs at an explicit epoch. Species and
+culture behavior remain outside this task.
+
+The population change is intentional, not a byte-identity claim. The red
+regression printed seed 42's former two figures (three members each), unchanged
+when modeled stars were made invisible. A temporary astronomy example after
+the repair measured four figures with 6, 3, 3, 3 members: a loose northern
+knot, tight equatorial knot, tight southern knot, and loose northern chain.
+The probe was removed after recording its output. Census regeneration remains
+the campaign-close canonical-box step, not a local Task 6 operation.
+
+Verification: seven new behavioral regressions were observed red before their
+implementations. `cargo test -p hornvale-astronomy` passes 339 unit and 56
+integration tests, including the pre-retrofit genesis golden and pin isolation.
+Astronomy clippy, formatting, type/placement/plumb checks pass; the stream
+manifest and affected audit reports were regenerated.

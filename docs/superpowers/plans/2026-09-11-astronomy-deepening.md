@@ -135,12 +135,12 @@ until Task 6 is implemented.
 
 **Interfaces:** Background-star queries take `(astronomy_seed, sky_cell/region, observer constraints)` and return the same generated stars regardless of query order. `Figure` stores stable member IDs and uses a shared brightness threshold.
 
-- [ ] Write failing tests for query-order independence, repeated-cell identity, magnitude cutoffs, and figure member-ID stability.
-- [ ] Run focused tests and verify red status.
-- [ ] Implement deterministic cell-keyed lazy generation; do not retain a global mutable cache as part of simulation state.
-- [ ] Update figure clustering to consume stable IDs and avoid assumptions that every neighbor has the same magnitude class; retain naked-eye limits.
-- [ ] Run focused tests and compare generated figure counts/descriptions against intentional baselines.
-- [ ] Commit with message `refactor(astronomy): make starfield lazy and figures identity-based`.
+- [x] Write failing tests for query-order independence, repeated-cell identity, magnitude cutoffs, and figure member-ID stability.
+- [x] Run focused tests and verify red status.
+- [x] Implement deterministic cell-keyed lazy generation; do not retain a global mutable cache as part of simulation state.
+- [x] Update figure clustering to consume stable IDs and avoid assumptions that every neighbor has the same magnitude class; retain naked-eye limits.
+- [x] Run focused tests and compare generated figure counts/descriptions against intentional baselines.
+- [x] Commit with message `refactor(astronomy): make starfield lazy and figures identity-based`.
 
 ## Stage 4: Observer sky and cultural constellations
 

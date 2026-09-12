@@ -51,6 +51,8 @@ hornvale_kernel::stream_labels! {
         WANDERERS = "wanderers" => "per-wanderer parameter draws, sequential";
         /// Background starfield draws: count, then per-star position/brightness (derived catalog — consumed on demand, never in genesis).
         STARFIELD = "starfield" => "background starfield: count + per-star position/brightness (derived on demand)";
+        /// Cell-keyed background epoch; the original sequential label is retained, never reused. // lexicon: equal-area sky region, not a mesh vertex
+        STARFIELD_CELLS = "starfield/cells/v2" => "lazy background stars: fixed cell, count, position and apparent magnitude"; // lexicon: equal-area sky region, not a mesh vertex
         /// Per-moon ascending-node longitude draws (Eclipse Seasons).
         MOON_NODES = "moon-nodes" => "per-moon ascending-node longitude draws";
         /// Stellar age draw (The Reckoning).

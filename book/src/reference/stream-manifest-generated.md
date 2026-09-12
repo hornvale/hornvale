@@ -27,6 +27,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/wanderer-count` | how many wandering planets |
 | `astronomy/wanderers` | per-wanderer parameter draws, sequential |
 | `astronomy/starfield` | background starfield: count + per-star position/brightness (derived on demand) |
+| `astronomy/starfield/cells/v2` | lazy background stars: fixed cell, count, position and apparent magnitude |
 | `astronomy/moon-nodes` | per-moon ascending-node longitude draws |
 | `astronomy/star-age` | stellar age draw |
 | `astronomy/moon-formation` | per-moon formation-mechanism draw (giant impact vs. capture) |

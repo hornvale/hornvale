@@ -7,6 +7,114 @@ use crate::sky_position::EquatorialCoord;
 use crate::system::StarSystem;
 use crate::units::StdInstant;
 
+/// Clear-sky naked-eye ceiling, before any observer suppression.
+/// type-audit: pending(wave-1)
+/// plumb: pending(wave-1)
+pub const NAKED_EYE_MAGNITUDE_LIMIT: f64 = 6.0;
+
+/// Species-independent detection constraints. A caller may lower the limiting
+/// magnitude for local conditions; a zenith limits candidates to its hemisphere.
+/// type-audit: pending(wave-1: limiting_magnitude)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StarObserver {
+    /// Faintest admitted apparent magnitude, capped at the naked-eye ceiling.
+    pub limiting_magnitude: f64,
+    /// Observer zenith in the same frame as candidate positions; None means all sky.
+    pub zenith: Option<EquatorialCoord>,
+}
+
+impl Default for StarObserver {
+    fn default() -> Self {
+        Self {
+            limiting_magnitude: NAKED_EYE_MAGNITUDE_LIMIT,
+            zenith: None,
+        }
+    }
+}
+
+impl StarObserver {
+    /// Shared inclusive brightness cut and above-horizon test. Invalid inputs refuse.
+    /// type-audit: pending(wave-1: apparent_magnitude), bare-ok(flag: return)
+    pub fn admits(&self, apparent_magnitude: f64, position: &EquatorialCoord) -> bool {
+        if !self.limiting_magnitude.is_finite()
+            || !apparent_magnitude.is_finite()
+            || apparent_magnitude > self.limiting_magnitude.min(NAKED_EYE_MAGNITUDE_LIMIT)
+            || !valid_position(position)
+        {
+            return false;
+        }
+        self.zenith.is_none_or(|zenith| {
+            if !valid_position(&zenith) {
+                return false;
+            }
+            let dec = position.dec_deg.to_radians();
+            let latitude = zenith.dec_deg.to_radians();
+            let hour_angle =
+                (position.ra_deg.rem_euclid(360.0) - zenith.ra_deg.rem_euclid(360.0)).to_radians();
+            hornvale_kernel::math::sin(latitude) * hornvale_kernel::math::sin(dec)
+                + hornvale_kernel::math::cos(latitude)
+                    * hornvale_kernel::math::cos(dec)
+                    * hornvale_kernel::math::cos(hour_angle)
+                > 0.0
+        })
+    }
+}
+
+fn valid_position(position: &EquatorialCoord) -> bool {
+    position.ra_deg.is_finite() && (-90.0..=90.0).contains(&position.dec_deg)
+}
+
+/// Convert the catalog's solar-luminosity / light-year² flux to apparent magnitude.
+/// Nonpositive or nonfinite flux has no magnitude.
+/// type-audit: bare-ok(ratio: brightness), pending(wave-1: return)
+pub fn stellar_apparent_magnitude(brightness: f64) -> Option<f64> {
+    // Solar absolute visual magnitude and ten parsecs in light-years.
+    // Catalog luminosity is bolometric: using it as visual flux is the
+    // declared first-slice approximation, shared by every star consumer here.
+    (brightness.is_finite() && brightness > 0.0).then(|| {
+        4.83 - 2.5
+            * (hornvale_kernel::math::log10(brightness)
+                + 2.0 * hornvale_kernel::math::log10(32.6156))
+    })
+}
+
+/// Visible modeled catalog stars at an explicit epoch, ordered by stable identity.
+/// The legacy [`night_sky_at`] keeps its neighbor indices for existing readers.
+pub fn catalog_stars_at(
+    system: &StarSystem,
+    calendar: &Calendar,
+    t: StdInstant,
+    observer: &StarObserver,
+) -> Vec<crate::starfield::SkyStar> {
+    if !t.0.is_finite() {
+        return Vec::new();
+    }
+    let mut stars: Vec<_> = system
+        .neighbor_catalog
+        .iter()
+        .filter_map(|star| {
+            let magnitude = stellar_apparent_magnitude(star.neighbor().apparent_brightness)?;
+            let genesis = EquatorialCoord {
+                ra_deg: star.right_ascension,
+                dec_deg: star.declination,
+            };
+            if !valid_position(&genesis) {
+                return None;
+            }
+            let position = calendar.star_equatorial_at(&genesis, t);
+            observer
+                .admits(magnitude, &position)
+                .then_some(crate::starfield::SkyStar {
+                    id: crate::starfield::StarId::Catalog(star.id),
+                    position,
+                    apparent_magnitude: magnitude,
+                })
+        })
+        .collect();
+    stars.sort_by_key(|star| star.id);
+    stars
+}
+
 /// Which celestial pole a pole star is closest to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Hemisphere {
@@ -147,6 +255,51 @@ mod tests {
     use crate::pins::{MoonsPin, RotationPin, SkyPins};
     use crate::system::generate;
     use hornvale_kernel::Seed;
+
+    #[test]
+    fn stellar_magnitudes_share_a_finite_inclusive_naked_eye_cut() {
+        let at_ten_parsecs = stellar_apparent_magnitude(1.0 / (32.6156 * 32.6156)).unwrap();
+        assert!((at_ten_parsecs - 4.83).abs() < 1e-10);
+        let position = EquatorialCoord {
+            ra_deg: 0.0,
+            dec_deg: 0.0,
+        };
+        let observer = StarObserver::default();
+        assert!(observer.admits(6.0, &position));
+        assert!(!observer.admits(6.000001, &position));
+        for invalid in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            assert!(stellar_apparent_magnitude(invalid).is_none());
+        }
+        assert!(!observer.admits(f64::NAN, &position));
+        assert!(
+            !StarObserver {
+                limiting_magnitude: f64::NAN,
+                ..observer
+            }
+            .admits(1.0, &position)
+        );
+    }
+
+    #[test]
+    fn modeled_sky_uses_physical_brightness_and_stable_ids_after_reordering() {
+        let mut system = spinning_system();
+        let cal = calendar_of(&system);
+        let observer = StarObserver::default();
+        for star in &mut system.neighbor_catalog {
+            star.distance = crate::units::LightYears(0.01);
+        }
+        let bright = catalog_stars_at(&system, &cal, StdInstant(0.0), &observer);
+        assert_eq!(bright.len(), system.neighbor_catalog.len());
+        system.neighbor_catalog.reverse();
+        assert_eq!(
+            bright,
+            catalog_stars_at(&system, &cal, StdInstant(0.0), &observer)
+        );
+        for star in &mut system.neighbor_catalog {
+            star.distance = crate::units::LightYears(1e12);
+        }
+        assert!(catalog_stars_at(&system, &cal, StdInstant(0.0), &observer).is_empty());
+    }
 
     fn spinning_system() -> StarSystem {
         let pins = SkyPins {
