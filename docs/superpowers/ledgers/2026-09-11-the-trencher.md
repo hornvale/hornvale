@@ -2048,3 +2048,105 @@ carried, not re-pinned.
 
 **Ideonomy passes / overturns:** none; a task acceptance plus a sequencing
 ruling taken from an existing precedent.
+
+---
+
+## #26 [G5] — T1 held; arm B ships unchanged; and this campaign has built the exact defect it spent the day naming
+
+Commit `1964ab996`. `make gate-commit` green. 12 seeds, `BuildDepth::Terrain`,
+**82,135** cave-bearing vertex-rung readings.
+
+**Result: no shipped change.** Arm B (`raw/(1+raw)`, already shipped) wins;
+arm C rejected; arm D confirms #24's additive ruling with a number.
+
+| arm | best `fed` occupancy | realized max | ≥ `E_TEEMING` |
+|---|---|---|---|
+| A raw sum (control) | 100% | 3.774602 | **44-92% at every rung** |
+| **B saturate (shipped)** | **92.0%** | **0.790558** | **0** |
+| C mean-of-four | 51.4% | 0.943650 | 0 |
+| D detritus replace | ruler identical to B by construction | | |
+
+**Arm C rejected on boundedness, which is the argument that matters.** `raw/4`
+breaches 1.0 at `raw > 4`, and the measured max raw is **3.774602** — so C's
+realized max sits **within 5.7% of breaching the kernel's `[0,1]` ceiling**,
+the invariant #24 established cannot be moved. It also destroys the shallow
+end (Undercroft median 0.236692, *below* `E_LEAN`; `fed` at 0.0% on the two
+shallowest rungs). B cannot breach at any input. C earned its keep as a
+diagnostic by showing a linear rescale buys the same `rich` column while
+giving up the one property that is non-negotiable.
+
+**Arm D: keep additive, now with a cost.** Replacing costs the drow **39.01%**
+of mean cave-vertex suitability — the one *peopled* subterranean kind — and
+buys nothing on the ruler. The double-counting worry is answered by shape:
+`detritus_supply_field` is a flat land mask with no depth term;
+`DetritalImport` is depth- and drainage-gated. Different shapes sum correctly.
+
+**The table cross-checks itself**, which is better than my asking for it would
+have been: `raw/(1+raw) >= 0.5`, `raw/4 >= 0.25` and `raw >= 1` are the same
+condition, so A's teeming column must equal B's fed column must equal C's lean
+column — `44.0 / 87.1 / 92.0 / 92.0 / 92.0` — and they do, exactly. And the
+capacity half carries a **zero-delta positive control**: 49,281 (kind, cave
+vertex) pairs against `per_species_suitability`, worst |delta| `0.000e0`.
+
+### MY FROZEN PREDICTION CARRIED A CLAUSE THAT COULD NOT FAIL
+
+I added a third clause — *no arm-B vertex reaches `E_TEEMING`* — deliberately,
+writing that it "is what distinguishes a calibrated ruler from the overshoot
+arm A exhibits." **It distinguishes nothing.** `raw/(1+raw) < 1.0` for every
+finite non-negative input, so the clause is guaranteed by algebra and holds in
+any world, including one where the calibration is wrong.
+
+This is a falsifier the mechanism cannot produce, and I have a written note on
+exactly that shape. Writing the note did not protect the next thing I wrote —
+which is itself the recorded lesson that a diagnosis is not a control.
+
+The implementer caught it, stated it as a qualification rather than burying it
+in a green, and **repaired it in the right direction**: the discriminating
+ratchet now sits on **arm A**, where teeming is reachable and does fire, so a
+red means the comparison lost its control rather than that something
+regressed. The two clauses that *could* have failed both held with margin.
+
+### THE FINDING NOBODY ASKED FOR, AND IT IS THE DAY'S SHARPEST
+
+**No shipped kind weights any metabolite axis.** Verified independently by me
+over `domains/species/src/lib.rs`:
+
+```
+HYDROGEN 0    REDUCED_IRON 0    REDUCED_SULPHUR 0    METHANE 0
+CHEMOSYNTHATE 9   (xorn's 0.35, plus docs and tests)
+```
+
+So Stage 2 has built a **producer with no consumer** — a high-resolution
+supply vocabulary that nothing in the world eats. That is precisely the
+**missing HALF** this campaign spent Stage 1 characterizing (#18), reproduced
+by the campaign itself, one stage later, in its own headline deliverable.
+
+It is not a defect to fix now: **Stage 4 is the consumer**, and the plan has
+always said so. But it changes what Stages 3-4 are for. Until an organism
+names a metabolite, the disaggregation is a capability, not a behaviour — and
+this campaign of all campaigns does not get to call an unfed producer a
+result.
+
+**It also qualifies #24's own justification.** I argued that leaving
+`chemosynthate` raw avoids saturating a generalist twice while a specialist
+saturates once. True prospectively, and today it **guards an empty set** —
+there are no specialists. The design decision stands (it must be right before
+Stage 4 creates them), but its stated reason is a forecast, not an observation,
+and the ledger should not read as though it were measured.
+
+### Ruling on sequencing, extended
+
+#25 ruled T1 before repair, because two arms could move the world. Neither
+did. But **main has moved 169 commits**, including four new underworld
+peoples, and absorbing that will move the world again. So the same rule
+applies once more, and the repair waits one more step:
+
+**absorb main -> repair the fourteen reds ONCE against the absorbed world ->
+stage gate.**
+
+Repairing before absorbing would pin fourteen literals to a world that is
+about to change. The measurement is committed, so absorbing is now safe —
+"never absorb mid-measurement" no longer binds.
+
+**Ideonomy passes / overturns:** none; a measurement acceptance, a self-caught
+prediction defect, and a finding that relocates Stage 4.
