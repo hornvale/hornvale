@@ -155,6 +155,92 @@ finding). No overturn.
 
 *Capture actions.* Spec §4.2; G3 flagged items.
 
+---
+
+**#4 [G4] — The cheap scoring method was measured against ground truth and it
+FAILED. 50% recall, and the misses are all in the flattering direction.**
+
+*Question.* Scoring 1,443 new items is the campaign's only real cost. The
+obvious economy is a keyword sieve over the idea registry: match each item's
+`introduces` token and title against registry row text, adjudicate the hits by
+hand, score the rest `absent`. Does it work?
+
+*The test, and why this ground truth is the right one.* The Kiln scored the 41
+arc items BY HAND, producing 6 `deferred`. That is a hand-authored answer key
+for a population the sieve can be run against blind. Run (1,787 registry rows,
+>=2 shared tokens of 4+ characters, stopworded):
+
+```
+items flagged as candidates by the sieve: 23 of 41
+deferred RECOVERED by the sieve: 3 of 6
+MISSED: ['inv-animal-dom', 'inv-coal-mining', 'inv-turnplow']
+```
+
+*Decision.* **The sieve is REFUSED as a filter.** It is not merely weak, it is
+weak in both directions at once: it misses half the true positives while
+flagging 56% of the population for adjudication, so it buys almost no labour
+and costs half the signal.
+
+*Why this is disqualifying rather than a tuning problem.* **Every miss scores
+`absent` when the truth is `deferred`, and ledger #12 established that a high
+`absent` count is this family's flattering result.** An instrument whose error
+is unbiased is a noisy instrument; one whose error runs entirely toward the
+self-serving answer is a broken one. `inv-animal-dom`'s own note records that
+its `deferred` was reached "by searching the idea registry" — and the sieve
+did not find it.
+
+**Tuning it against these 6 is refused too**, and that refusal is the load-
+bearing half: 6 positives is the only answer key this campaign will ever have,
+and fitting a threshold to it consumes the control. A sieve tuned to score 6/6
+on the only set where the truth is known tells you nothing about the 1,443
+where it is not.
+
+*The corroborated prior.* The Kiln's own follow-up on `MEM-8` records that the
+sweep which found it "was never surfaced by any keyword sieve." That was one
+anecdote; this is a measured recall figure on a real answer key, and it agrees.
+
+*Alternatives now on the table.* Carried to Nathan rather than auto-adopted --
+see #5, because the honest remaining options differ in campaign SIZE by an
+order of magnitude, which is a scope question and not a technique question.
+
+*Ideonomy passes / overturns.* One (substitution on the instrument's error
+direction, which is what turned "50% recall is weak" into "50% recall biased
+entirely toward the flattering answer is disqualifying"). No overturn -- the
+pass sharpened the reason, not the verdict.
+
+*Capture actions.* This entry; #5; the spec's scoring section needs replacing
+before any plan is written against it.
+
+---
+
+**#5 [Q] — The verdict vocabulary has no value for "admitted but not yet
+examined", and that is the deepest argument in the campaign.**
+
+*Question.* If items cannot be scored cheaply, can they be admitted unscored?
+
+*Finding.* **No.** The nine values are `present`, `refused`, `deferred`,
+`absent`, `inapplicable`, `grown`, `flat`, `lost`, `unmeasured` -- and
+`unmeasured` does not mean "not looked at": family law defines it as "reach
+PASSED, trajectory unscored" and requires a `test:`/`path:` mechanism anchor,
+which is a positive claim that the world models the capability. `verdict` is a
+required field on every item.
+
+*Consequence, stated plainly because it governs the choice in #5's sibling
+decision.* **Admitting an item to this corpus obliges a claim about it.** There
+is no way to say "we took in the whole catalogue and have examined a tenth of
+it." A census therefore costs a census's worth of judgement -- the corpus
+format enforces it -- and the only artifact that can carry an unexamined
+population is one that carries no verdicts at all.
+
+*That is the manifest fallback from #1, arriving a second time by a different
+road,* which is why it is now a live option rather than a footnote.
+
+*Ideonomy passes / overturns.* One (the vocabulary read as a pipeline, asking
+what each value presupposes; `unmeasured` was the candidate and it fails on its
+anchor requirement, not on its name).
+
+*Capture actions.* #5 carried to Nathan at the scope stop.
+
 ## Follow-ups
 
 - **The manifest-only fallback** (#1) wants an idea-registry row if this
