@@ -16,7 +16,7 @@ fn assemble_holds_every_kind_and_passes_integrity() {
     // T7 added seven, T8 added five (four marine plus the amphibious giant
     // crocodile), T9 added the gnoll, The Generalist added the human, The
     // Delvers added the three dwarves, The Radiation added the six elves).
-    assert_eq!(wc.biosphere.len(), 39);
+    assert_eq!(wc.biosphere.len(), 43);
     // Nested capacities (The Eremite, tightened by The Vigil): perception ⊆
     // psyche — every perceiver is minded — and psyche ⊆ biosphere. Since The
     // Vigil the dragons perceive too, so perception and psyche coincide at
@@ -28,13 +28,13 @@ fn assemble_holds_every_kind_and_passes_integrity() {
     }
     assert_eq!(
         wc.psyche.len(),
-        18,
-        "fifteen peoples + three minded dragons"
+        22,
+        "nineteen peoples + three minded dragons"
     );
     assert_eq!(
         wc.perception.len(),
-        18,
-        "the fifteen peoples + the three dragons perceive (The Vigil)"
+        22,
+        "the nineteen peoples + the three dragons perceive (The Vigil)"
     );
     for k in wc.psyche.ids() {
         assert!(
@@ -83,6 +83,7 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
         "desert-dwarf",
         "desert-elf",
         "drow",
+        "duergar",
         "gnoll",
         "goblin",
         "gully-dwarf",
@@ -91,9 +92,12 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
         "hobgoblin",
         "human",
         "kobold",
+        "kuo-toa",
+        "mountain-dwarf",
         "red-dragon",
         "sea-elf",
         "snow-elf",
+        "svirfneblin",
         "white-dragon",
         "wood-elf",
     ]

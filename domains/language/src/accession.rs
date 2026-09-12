@@ -636,6 +636,15 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "the-pest",
         "the-pox",
     ],
+    // Epoch 23 — The Underworld Peoples: four new `*-kind` concepts from
+    // the species accession. Appended as a fresh cohort so existing concept
+    // roots remain stable.
+    &[
+        "duergar-kind",
+        "kuo-toa-kind",
+        "mountain-dwarf-kind",
+        "svirfneblin-kind",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

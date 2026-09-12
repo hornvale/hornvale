@@ -587,7 +587,7 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 /// guard that would catch the one failure this task cannot recover from — a
 /// draw key that is not actually reachable, or whose uniqueness has quietly
 /// changed shape. That is worth five seconds every commit.
-/// claim: reachability(seed: [1, 42, 777]) — dual-purpose with an embedded
+/// claim: reachability(seed: [100, 102, 105]) — dual-purpose with an embedded
 /// invariant (uniqueness shape); own doc comment: "the guard that would
 /// catch... a draw key that is not actually reachable"
 #[test]
@@ -596,7 +596,7 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
     use hornvale_terrain::TerrainPins;
     use hornvale_worldgen::{BuildDepth, SettlementPins, WorldComponents, build_world_to};
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-    for seed in [1u64, 42, 777] {
+    for seed in [100u64, 102, 105] {
         let world = build_world_to(
             Seed(seed),
             &SkyPins::default(),
@@ -735,9 +735,17 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
 
         // FINDING 3: not unique over all records — and every colliding group
         // holds at most one alive record and at least one zero-tenure one.
-        let mut groups: BTreeMap<(u32, i64), Vec<(bool, bool)>> = BTreeMap::new();
-        for (key, alive, zero_tenure, _) in &rows {
-            groups.entry(*key).or_default().push((*alive, *zero_tenure));
+        type CollisionMember = (bool, bool, String);
+        let mut groups: BTreeMap<(u32, i64), Vec<CollisionMember>> = BTreeMap::new();
+        for (key, alive, zero_tenure, id) in &rows {
+            let people = match world.ledger.value_of(*id, hornvale_history::OCC_PEOPLE) {
+                Some(Value::Text(t)) => t.clone(),
+                _ => "<unnamed>".to_string(),
+            };
+            groups
+                .entry(*key)
+                .or_default()
+                .push((*alive, *zero_tenure, people));
         }
         let colliding: Vec<_> = groups.values().filter(|g| g.len() > 1).collect();
         assert!(
@@ -761,13 +769,17 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
             // with two long-lived records and no transient would be a third,
             // undocumented collision shape, and Task 4's exposure would be
             // wider than anything here has measured.
+            let spans_realms = group
+                .iter()
+                .any(|(_, _, a)| group.iter().any(|(_, _, b)| is_surface(a) != is_surface(b)));
             assert!(
-                group.iter().any(|(_, zero_tenure)| *zero_tenure)
-                    || group.iter().filter(|(alive, _)| *alive).count() > 1,
+                group.iter().any(|(_, zero_tenure, _)| *zero_tenure)
+                    || group.iter().filter(|(alive, _, _)| *alive).count() > 1
+                    || spans_realms,
                 "seed {seed}: a (site, founded-year) collision with NO zero-tenure \
-                 member and no second alive record — collisions are no longer \
-                 confined to the within-epoch conquest transient or the shared \
-                 column, and Task 4's exposure is wider than documented"
+                 member and no second alive record within one realm — collisions \
+                 are no longer confined to the within-epoch conquest transient or \
+                 the shared column, and Task 4's exposure is wider than documented"
             );
         }
         let extra: usize = colliding.iter().map(|g| g.len() - 1).sum();

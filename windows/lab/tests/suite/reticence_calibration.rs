@@ -100,7 +100,7 @@ fn h4_positive_control_the_divergence_detector_can_fire() {
 }
 
 /// **H1 — the improvising arms are distributed as preregistered** (spec
-/// section 5). Frozen before the code: 15 peoples, organized 9, folk 6,
+/// section 5). Frozen before the code: 19 peoples, organized 13, folk 6,
 /// doctrine 0. Enumerated with `hornvale_species::society_registry()` — the
 /// same fifteen-people roster Task 6's `render_reticence_report`
 /// (`windows/lab/src/reticence.rs`) already walks, so this test's
@@ -132,13 +132,13 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
             ImprovisedName::Wordless { .. } => wordless += 1,
         }
     }
-    // THE MURRAIN re-pin: (8, 7) -> (10, 5). The epidemic phase moves every
-    // world's deterministic history, which re-draws the lexicons this arm
-    // assignment reads. A readout, not a target.
-    assert_eq!((god, spirit), (10, 5), "frozen arm counts over 15 peoples");
+    // THE UNDERWORLD re-pin: (10, 5) -> (13, 6). Adding the four peoples
+    // changes the roster and the deterministic lexicons this arm assignment
+    // reads. A readout, not a target.
+    assert_eq!((god, spirit), (13, 6), "frozen arm counts over 19 peoples");
     assert_eq!(
         god + spirit + wordless,
-        15,
+        19,
         "every people resolves to exactly one arm"
     );
 }
@@ -442,16 +442,14 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
     // not a threshold to tune. If the WORLD moves them, that is a finding to
     // report and re-quote in the chronicle — do NOT retune
     // `stance::patience()` to restore them (root `CLAUDE.md`, decision 0016).
-    // THE WINZE T2b re-pin: (70, 6) -> (71, 6). Same cause as H1 above — the
-    // working ring scan moves every world's history, so one more ask topic is
-    // observable. The sessions count is unmoved and the headline null below is
-    // unmoved; the prose that quoted "seventy" is re-quoted with it.
+    // THE UNDERWORLD re-pin: (71, 6) -> (70, 6). Adding the four peoples
+    // changes the deterministic history and removes one observable ask topic;
+    // the sessions count and headline null remain unmoved.
     assert_eq!(
         (denominator, sessions_with_observations),
-        (71, 6),
-        "H4's reported denominator moved; the chronicle and retrospective quote \
-         seventy-one observable points across six sessions and must be re-quoted \
-         together with this assertion"
+        (70, 6),
+        "H4's reported denominator moved; the chronicle and retrospective must \
+         quote seventy observable points across six sessions with this assertion"
     );
     assert_eq!(
         diverged, 0,
