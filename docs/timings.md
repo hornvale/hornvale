@@ -7353,6 +7353,26 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T14:48:49Z | sluice:gate | 784.109 | 24489.478 | 744.559 | 32.18 | 0 | b26dec03b |  | lefford | 40 |
 | 2026-09-11T14:51:48Z | sluice:clients | 179.352 | 2921.006 | 244.374 | 17.65 | 0 | d38f9982b |  | lefford | 40 |
 | 2026-09-11T14:59:18Z | sluice:heavy | 449.428 | 12878.114 | 270.420 | 29.26 | 0 | 88db26da7 |  | lefford | 40 |
+| 2026-09-11T16:49:04Z | prewarm | 338.853 | 1335.366 | 46.460 | 4.08 | 0 | 245c6f607 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T20:46:46Z | gate-commit | 96.515 | 148.903 | 26.514 | 1.82 | 0 | 32e1c9cac | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T21:08:24Z | gate-commit | 122.083 | 90.843 | 20.475 | 0.91 | 0 | 70c99cb9f | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T21:35:11Z | gate-commit | 51.984 | 85.352 | 19.698 | 2.02 | 0 | f1ff9bcfd | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T21:58:26Z | gate-commit | 82.099 | 91.563 | 20.810 | 1.37 | 0 | cbdf8e7ca | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T22:14:58Z | gate-commit | 65.606 | 88.494 | 19.944 | 1.65 | 0 | 1a85ebd6d | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T22:37:23Z | gate-commit | 90.956 | 91.643 | 21.262 | 1.24 | 0 | c6e43fe7d | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T22:38:59Z | gate-commit | 77.725 | 87.912 | 20.227 | 1.39 | 0 | c6e43fe7d | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T22:53:34Z | gate-commit | 65.897 | 96.993 | 21.637 | 1.80 | 0 | 3d49e1732 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T23:24:13Z | gate-commit | 44.468 | 84.560 | 19.725 | 2.35 | 0 | 4c7397db8 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T23:25:26Z | gate-commit | 42.178 | 81.391 | 19.302 | 2.39 | 0 | 4c7397db8 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T23:46:17Z | gate-commit | 44.408 | 76.786 | 17.277 | 2.12 | 0 | f69515523 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T23:47:55Z | gate-commit | 43.742 | 82.699 | 19.111 | 2.33 | 0 | f69515523 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-11T23:49:51Z | gate-commit | 45.486 | 82.640 | 19.681 | 2.25 | 0 | f69515523 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T00:07:06Z | gate-commit | 48.305 | 86.816 | 20.698 | 2.23 | 0 | b7d54a2d8 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T00:15:13Z | gate-commit | 46.230 | 83.379 | 20.192 | 2.24 | 0 | 74d372b0c | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T00:39:23Z | gate-commit | 89.141 | 104.931 | 21.678 | 1.42 | 0 | 8fb1e46c3 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T00:41:29Z | gate-commit | 92.325 | 89.465 | 20.507 | 1.19 | 0 | 8fb1e46c3 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T00:51:04Z | gate-commit | 49.432 | 83.425 | 19.141 | 2.07 | 0 | f3939873e | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T00:52:34Z | gate-commit | 42.054 | 80.783 | 18.631 | 2.36 | 0 | f3939873e | campaign/the-kiln | MacBookPro | 10 |
 | 2026-09-11T17:37:15Z | gate-commit | 22.075 | 42.775 | 5.260 | 2.18 | 0 | 1bb8cb3e8 |  | MacBookPro | 10 |
 | 2026-09-11T01:36:44Z | census-tail-chorus | 60.346 | 811.712 | 26.351 | 13.89 | 0 | fa1223fd7 |  | lefford | 40 |
 | 2026-09-11T01:48:40Z | census-study-the-census | 715.525 | 26783.065 | 158.304 | 37.65 | 0 | fa1223fd7 |  | lefford | 40 |
@@ -7384,3 +7404,12 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T23:40:16Z | sluice:gate | 929.426 | 27032.358 | 898.376 | 30.05 | 0 | 1325703d0 |  | lefford | 40 |
 | 2026-09-11T23:44:48Z | sluice:clients | 271.687 | 4029.700 | 334.748 | 16.06 | 0 | bbfb9a865 |  | lefford | 40 |
 | 2026-09-11T23:53:14Z | sluice:heavy | 505.720 | 14512.122 | 300.457 | 29.29 | 0 | 22358dda4 |  | lefford | 40 |
+| 2026-09-12T02:01:02Z | gate-commit | 445.502 | 812.527 | 58.629 | 1.96 | 0 | 628877c9e | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T02:21:56Z | gate-commit | 96.091 | 93.104 | 20.988 | 1.19 | 0 | 722c55e69 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T02:26:43Z | gate-commit | 88.547 | 88.923 | 20.241 | 1.23 | 0 | 44ac00934 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T03:05:00Z | gate-commit | 20.408 | 20.781 | 0.833 | 1.06 | 0 | 23371081a | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T03:06:00Z | gate-commit | 43.118 | 80.273 | 17.756 | 2.27 | 0 | 23371081a | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T03:07:19Z | gate-commit | 45.732 | 87.212 | 20.428 | 2.35 | 0 | 23371081a | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T03:11:57Z | gate-commit | 75.937 | 90.678 | 20.060 | 1.46 | 0 | 23371081a | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T03:13:15Z | gate-commit | 45.752 | 81.732 | 18.505 | 2.19 | 0 | 9b60a9265 | campaign/the-kiln | MacBookPro | 10 |
+| 2026-09-12T15:54:52Z | gate-commit | 51.731 | 83.170 | 19.141 | 1.98 | 0 | 15a27c455 | campaign/the-kiln | MacBookPro | 10 |

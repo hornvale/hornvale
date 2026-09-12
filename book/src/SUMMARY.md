@@ -503,6 +503,7 @@
 - [The Planetarium](./chronicle/the-planetarium.md)
 - [The Living Vent](./chronicle/the-living-vent.md)
 - [Eclipse Rhythm and View](./chronicle/eclipse-rhythm-view.md)
+- [The Kiln](./chronicle/the-kiln.md)
 
 # Appendix: The Frontier
 
