@@ -189,7 +189,7 @@ windows/worldgen/tests/suite/generalist_distinctness.rs	1	unmigrated:1
 windows/worldgen/tests/suite/graph_byte_identity.rs	1	unmigrated:1
 windows/worldgen/tests/suite/hidage_probe.rs	1	identity:1
 windows/worldgen/tests/suite/history_byte_identity.rs	1	unmigrated:1
-windows/worldgen/tests/suite/history_emit.rs	3	identity:1 unmigrated:2
+windows/worldgen/tests/suite/history_emit.rs	4	identity:2 unmigrated:2
 windows/worldgen/tests/suite/history_gates.rs	2	unmigrated:2
 windows/worldgen/tests/suite/history_placement.rs	1	unmigrated:1
 windows/worldgen/tests/suite/history_shape_probe.rs	3	unmigrated:3
