@@ -18,6 +18,10 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/forcing` | deep-time orbital forcing |
 | `astronomy/phase-offsets` | per-body genesis phase offsets |
 | `astronomy/neighbor-positions` | per-neighbor celestial position draws (declination, right ascension) |
+| `astronomy/catalog-count` | modeled neighbor catalog count |
+| `astronomy/catalog-identities` | stable modeled neighbor identities |
+| `astronomy/catalog-physics` | modeled neighbor stellar mass and age |
+| `astronomy/catalog-positions` | additional modeled neighbor distances and sky positions |
 | `astronomy/spin-direction` | spin-direction draw: prograde or retrograde |
 | `astronomy/moon-inclinations` | per-moon orbital-inclination draws |
 | `astronomy/wanderer-count` | how many wandering planets |

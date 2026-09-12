@@ -61,7 +61,10 @@ pub use figures::{
 pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
 pub use illuminant::{at_elevation, daylight};
 pub use moons::{Formation, Moon, generate_moons, hill_radius_mm, is_icy, radius_km};
-pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
+pub use neighborhood::{
+    CatalogStar, CatalogStarId, MAX_CATALOG_STARS, MIN_CATALOG_STARS, Neighbor, class_luminosity,
+    class_name, generate_catalog, generate_neighbors,
+};
 pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
 pub use pins::{
     ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, SpinPin, parse_pin,
@@ -73,9 +76,9 @@ pub use provider::{
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{
-    GYR_DAYS, SPECTRAL_CLASSES, Star, T_MAX, brightening_per_gyr, class_concept, common_words,
-    generate_star, insolation_rel, insolation_rel_at, luminosity_at, main_sequence_lifetime,
-    planet_age,
+    EvolutionaryStage, GYR_DAYS, NeighborStar, SPECTRAL_CLASSES, Star, T_MAX, brightening_per_gyr,
+    class_concept, common_words, generate_star, insolation_rel, insolation_rel_at, luminosity_at,
+    main_sequence_lifetime, planet_age,
 };
 pub use starfield::{FieldStar, starfield};
 pub use stellar::{

@@ -3,7 +3,7 @@
 use crate::anchor::{Anchor, generate_anchor_for_stellar};
 use crate::comets::{Comet, generate_comets};
 use crate::moons::{Moon, generate_moons};
-use crate::neighborhood::{Neighbor, generate_neighbors};
+use crate::neighborhood::{CatalogStar, Neighbor, compatibility_neighbors, generate_catalog};
 use crate::pins::{GenesisError, SkyPins};
 use crate::star::{Star, generate_star};
 use crate::stellar::{StellarConfiguration, generate_stellar};
@@ -24,6 +24,10 @@ pub struct StarSystem {
     pub moons: Vec<Moon>,
     /// Notable neighbor stars, brightest first.
     pub neighbors: Vec<Neighbor>,
+    /// Bounded physical catalog in stable identity-assignment order. The
+    /// `neighbors` field is its legacy notable subset, brightest first;
+    /// expanded sky/figure consumption is a separate migration.
+    pub neighbor_catalog: Vec<CatalogStar>,
     /// Deep-time orbital forcing (Milankovitch triad).
     pub forcing: crate::forcing::OrbitalForcing,
     /// Wandering sibling planets, innermost first (observational: no physical effect on the anchor — declared approximation).
@@ -47,7 +51,8 @@ pub fn generate(
     let stellar = generate_stellar(astronomy_seed, &star, pins)?;
     let anchor = generate_anchor_for_stellar(astronomy_seed, &star, &stellar, pins)?;
     let (moons, notes) = generate_moons(astronomy_seed, &star, &anchor, pins)?;
-    let neighbors = generate_neighbors(astronomy_seed, pins);
+    let neighbor_catalog = generate_catalog(astronomy_seed, pins);
+    let neighbors = compatibility_neighbors(&neighbor_catalog);
     let forcing = crate::forcing::generate_forcing(astronomy_seed, &anchor, &moons, pins);
     let wanderers =
         generate_wanderers_with_mass(astronomy_seed, stellar.gravity_mass(&star), &anchor, pins);
@@ -59,6 +64,7 @@ pub fn generate(
             anchor,
             moons,
             neighbors,
+            neighbor_catalog,
             forcing,
             wanderers,
             comets,
@@ -88,5 +94,38 @@ mod tests {
         let a = generate(Seed(42), &SkyPins::default()).unwrap();
         let b = generate(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(a, b);
+    }
+
+    /// claim: invariant(catalog assembly and neighbor-pin isolation from all
+    /// existing host-system records over a bounded seed sample)
+    #[test]
+    fn system_stores_the_catalog_and_pinning_it_preserves_the_host_system() {
+        for seed in 0..32 {
+            let base = generate(Seed(seed), &SkyPins::default()).unwrap().value;
+            assert_eq!(
+                base.neighbor_catalog,
+                crate::neighborhood::generate_catalog(
+                    Seed(seed).derive(streams::ROOT),
+                    &SkyPins::default()
+                )
+            );
+            assert!((24..=40).contains(&base.neighbor_catalog.len()));
+            let pinned = generate(
+                Seed(seed),
+                &SkyPins {
+                    neighbor: Some(crate::pins::NeighborClass::BlueGiant),
+                    ..SkyPins::default()
+                },
+            )
+            .unwrap()
+            .value;
+            assert_eq!(base.star, pinned.star);
+            assert_eq!(base.stellar, pinned.stellar);
+            assert_eq!(base.anchor, pinned.anchor);
+            assert_eq!(base.moons, pinned.moons);
+            assert_eq!(base.wanderers, pinned.wanderers);
+            assert_eq!(base.comets, pinned.comets);
+            assert_eq!(base.forcing, pinned.forcing);
+        }
     }
 }

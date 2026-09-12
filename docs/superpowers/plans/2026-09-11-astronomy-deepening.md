@@ -113,12 +113,17 @@
 
 **Interfaces:** `Neighbor` becomes or wraps a stable catalog entry with ID, distance, sky coordinates, mass, age, evolutionary stage, effective temperature, luminosity, and derived apparent brightness/color. The host star remains a separate stable object.
 
-- [ ] Write failing tests for tens-count bounds, stable IDs, physical ordering, brightness consistency, host stability, and one scheduled transient eligibility check.
-- [ ] Run focused tests and capture the compatibility failures from existing class-based callers.
-- [ ] Add dedicated catalog streams and generate a bounded modeled set without changing existing streams; derive class/name/color from physical properties.
-- [ ] Preserve old public descriptions and registry facts through compatibility accessors while migrating callers.
-- [ ] Run focused tests, format, and clippy.
-- [ ] Commit with message `feat(astronomy): model stable neighbor catalog`.
+- [x] Write failing tests for tens-count bounds, stable IDs, physical ordering, brightness consistency, host stability, and one scheduled transient eligibility check.
+- [x] Run focused tests and capture the compatibility failures from existing class-based callers. The retained `Neighbor` projection keeps these callers green; only three authored `StarSystem` fixtures need the added catalog field.
+- [x] Add dedicated catalog streams and generate a bounded modeled set without changing existing streams; derive class/name/color from physical properties.
+- [x] Preserve old public descriptions and registry facts through compatibility accessors while migrating callers.
+- [x] Run focused tests, format, and clippy.
+- [x] Commit with message `feat(astronomy): model stable neighbor catalog`.
+
+Task 5 sequencing: `neighbor_catalog` stores 24–40 physical records, while
+`neighbors` remains the original notable subset until Task 6 migrates figure
+identity and brightness. See campaign ledger entry #4. Stage 3 remains open
+until Task 6 is implemented.
 
 ### Task 6: Add lazy deterministic background stars and repair figures
 

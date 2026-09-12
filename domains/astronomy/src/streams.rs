@@ -32,6 +32,14 @@ hornvale_kernel::stream_labels! {
         PHASE_OFFSETS = "phase-offsets" => "per-body genesis phase offsets";
         /// Per-neighbor celestial position draws (declination, right ascension).
         NEIGHBOR_POSITIONS = "neighbor-positions" => "per-neighbor celestial position draws (declination, right ascension)";
+        /// Bounded modeled catalog size, separate from the legacy roster.
+        CATALOG_COUNT = "catalog-count" => "modeled neighbor catalog count";
+        /// Catalog identities assigned in generation order, before sorting.
+        CATALOG_IDENTITIES = "catalog-identities" => "stable modeled neighbor identities";
+        /// Neighbor mass and age draws, isolated from the host and old neighbors.
+        CATALOG_PHYSICS = "catalog-physics" => "modeled neighbor stellar mass and age";
+        /// Distances and equatorial positions for additional catalog members.
+        CATALOG_POSITIONS = "catalog-positions" => "additional modeled neighbor distances and sky positions";
         /// Spin-direction draw: prograde or retrograde (SKY-22).
         SPIN_DIRECTION = "spin-direction" => "spin-direction draw: prograde or retrograde";
         /// Per-moon orbital-inclination draws (SKY-6).
@@ -88,6 +96,22 @@ hornvale_kernel::stream_labels! {
 #[cfg(test)]
 mod tests {
     use super::stream_labels;
+
+    #[test]
+    fn modeled_catalog_has_dedicated_streams() {
+        let labels: Vec<_> = stream_labels()
+            .into_iter()
+            .map(|(label, _)| label)
+            .collect();
+        for expected in [
+            "astronomy/catalog-count",
+            "astronomy/catalog-identities",
+            "astronomy/catalog-physics",
+            "astronomy/catalog-positions",
+        ] {
+            assert!(labels.contains(&expected), "missing stream {expected}");
+        }
+    }
 
     #[test]
     fn comet_genesis_has_dedicated_streams() {

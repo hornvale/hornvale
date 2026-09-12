@@ -6,6 +6,183 @@ use crate::units::{Au, Gyr, HabitableZone, Kelvin, SolarLuminosities, SolarMasse
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
 
+/// Genesis evolutionary phase for a modeled neighbor. Host [`Star`] is separate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EvolutionaryStage {
+    /// Hydrogen-burning phase.
+    MainSequence,
+    /// Short post-main-sequence phase, before remnant formation.
+    Giant,
+    /// Cooling low-mass remnant; no nova or binary accretion model.
+    WhiteDwarf,
+}
+
+/// Coarse, immutable neighbor evolution track; never used for host forcing.
+/// Mass and age determine the phase, luminosity and spectrum. These are
+/// declared approximations, not stellar-structure predictions.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NeighborStar {
+    /// Birth mass, retained to determine lifetime and possible fate.
+    pub initial_mass: SolarMasses,
+    /// Present mass (birth mass until the white-dwarf phase).
+    pub mass: SolarMasses,
+    /// Age at genesis, in gigayears.
+    pub age: Gyr,
+    /// Phase at genesis; never advanced by an observation query.
+    pub stage: EvolutionaryStage,
+    /// Effective temperature at genesis.
+    pub t_eff: Kelvin,
+    /// Bolometric luminosity at genesis, in solar units.
+    pub luminosity: SolarLuminosities,
+}
+
+impl NeighborStar {
+    /// Evaluate the bounded coarse track. Unsupported post-collapse states
+    /// and invalid mass/age return absence rather than inventing a remnant.
+    pub fn from_mass_age(initial_mass: SolarMasses, age: Gyr) -> Option<Self> {
+        let m = initial_mass.get();
+        if !m.is_finite()
+            || !(0.08..=40.0).contains(&m)
+            || !age.get().is_finite()
+            || !(0.0..=T_MAX.get()).contains(&age.get())
+        {
+            return None;
+        }
+        let lifetime = t_ms_of_mass(m);
+        let (stage, mass, luminosity, temperature) = if age.get() < lifetime {
+            (
+                EvolutionaryStage::MainSequence,
+                m,
+                math::powf(m, 3.5),
+                t_eff_of_mass(m),
+            )
+        } else if age.get() < 1.1 * lifetime {
+            // A coarse giant branch lasting 10% of t_MS. Low-mass giants
+            // expand/cool; massive giants stay hot. No luminosity drift is
+            // evaluated over historical time in this first catalog slice.
+            let temperature = if m < 8.0 {
+                5000.0 / m.sqrt()
+            } else {
+                t_eff_of_mass(m)
+            };
+            (EvolutionaryStage::Giant, m, 60.0 * m * m, temperature)
+        } else if m < 8.0 {
+            // Linear initial/final mass relation, followed by monotonic
+            // cooling. R = 0.012 solar radii at 0.6 solar masses, with the
+            // non-relativistic R ∝ M^-1/3 scaling. Stefan–Boltzmann sets T.
+            let mass = 0.4 + 0.1 * m;
+            let cooling_age = age.get() - 1.1 * lifetime;
+            let luminosity = 0.01 / (1.0 + cooling_age);
+            let radius = 0.012 * math::powf(mass / 0.6, -1.0 / 3.0);
+            let temperature = 5772.0 * math::powf(luminosity / (radius * radius), 0.25);
+            (EvolutionaryStage::WhiteDwarf, mass, luminosity, temperature)
+        } else {
+            return None;
+        };
+        Some(Self {
+            initial_mass,
+            mass: SolarMasses(mass),
+            age,
+            stage,
+            t_eff: Kelvin(temperature),
+            luminosity: SolarLuminosities(luminosity),
+        })
+    }
+
+    /// Compatibility taxonomy derived from physical phase and temperature.
+    /// Its six historical labels are coarse: hot main-sequence stars share
+    /// `BlueGiant` with hot giants; `stage` retains the physical distinction.
+    pub fn class(&self) -> crate::pins::NeighborClass {
+        use crate::pins::NeighborClass;
+        match self.stage {
+            EvolutionaryStage::WhiteDwarf => NeighborClass::WhiteDwarf,
+            EvolutionaryStage::MainSequence if self.t_eff.get() < 4000.0 => NeighborClass::RedDwarf,
+            EvolutionaryStage::MainSequence if self.t_eff.get() < 10_000.0 => {
+                NeighborClass::SunLike
+            }
+            EvolutionaryStage::MainSequence => NeighborClass::BlueGiant,
+            EvolutionaryStage::Giant if self.t_eff.get() < 4000.0 => NeighborClass::RedGiant,
+            EvolutionaryStage::Giant if self.t_eff.get() < 10_000.0 => NeighborClass::OrangeGiant,
+            EvolutionaryStage::Giant => NeighborClass::BlueGiant,
+        }
+    }
+
+    /// Eligibility only: a natural massive-star terminal epoch inside a
+    /// requested historical window. Does not execute a transient or infer
+    /// visibility/hazard. Windows must lie within ±50,000 standard years of
+    /// genesis. There is no forced event or time-dependent host.
+    pub fn collapse_in_window(&self, start: StdInstant, end: StdInstant) -> Option<StdInstant> {
+        let bound = 50_000.0 * 365.25;
+        if !start.get().is_finite()
+            || !end.get().is_finite()
+            || start.get() < -bound
+            || end.get() > bound
+            || start > end
+            || self.initial_mass.get() < 8.0
+            || Self::from_mass_age(self.initial_mass, self.age).is_none()
+        {
+            return None;
+        }
+        let terminal = 1.1 * t_ms_of_mass(self.initial_mass.get());
+        let epoch = StdInstant((terminal - self.age.get()) * GYR_DAYS);
+        (epoch >= start && epoch <= end).then_some(epoch)
+    }
+}
+
+/// Condition physical states on the legacy luminosity anchors. Inverting
+/// the same track preserves already published neighbor observations; the
+/// forward/inverse round-trip is never allowed to change their last bit.
+pub(crate) fn neighbor_with_legacy_class(
+    class: crate::pins::NeighborClass,
+    draw: f64,
+) -> NeighborStar {
+    use crate::pins::NeighborClass;
+    let luminosity = crate::neighborhood::class_luminosity(class);
+    let (mass, age) = match class {
+        NeighborClass::RedDwarf | NeighborClass::SunLike => {
+            let mass = math::powf(luminosity, 1.0 / 3.5);
+            (
+                mass,
+                (0.05 + 0.9 * draw) * t_ms_of_mass(mass).min(T_MAX.get()),
+            )
+        }
+        NeighborClass::OrangeGiant | NeighborClass::RedGiant | NeighborClass::BlueGiant => {
+            let mass = (luminosity / 60.0).sqrt();
+            let lifetime = t_ms_of_mass(mass);
+            (
+                mass,
+                ((1.0 + 0.1 * draw) * lifetime).min((1.1 * lifetime).next_down()),
+            )
+        }
+        NeighborClass::WhiteDwarf => {
+            let mass = 1.0 + 3.0 * draw;
+            (mass, 1.1 * t_ms_of_mass(mass) + (0.01 / luminosity - 1.0))
+        }
+    };
+    let mut star = NeighborStar::from_mass_age(SolarMasses(mass), Gyr(age))
+        .expect("legacy anchors lie inside the neighbor track");
+    star.luminosity = SolarLuminosities(luminosity);
+    star
+}
+
+/// A log-uniform 0.12–18 solar-mass envelope for a modest notable catalog,
+/// not a population census or an initial mass function. Uniform ages stay
+/// inside the valid track without targeting a terminal event in history.
+/// type-audit: bare-ok(ratio)
+pub(crate) fn draw_neighbor(mass_draw: f64, age_draw: f64) -> NeighborStar {
+    let mass = 0.12 * math::powf(150.0, mass_draw);
+    let ceiling = if mass < 8.0 {
+        T_MAX.get()
+    } else {
+        1.1 * t_ms_of_mass(mass)
+    };
+    NeighborStar::from_mass_age(
+        SolarMasses(mass),
+        Gyr((age_draw * ceiling).min(ceiling.next_down())),
+    )
+    .expect("catalog draws stay inside the neighbor track")
+}
+
 /// A main-sequence star: mass drawn, everything else derived.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Debug, Clone, PartialEq)]
@@ -233,6 +410,72 @@ pub fn insolation_rel_at(star: &Star, anchor: &crate::anchor::Anchor, t: StdInst
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    #[test]
+    fn modeled_neighbors_derive_life_stage_and_physical_ordering() {
+        let sol = NeighborStar::from_mass_age(SolarMasses(1.0), Gyr(4.5)).unwrap();
+        assert_eq!(sol.stage, EvolutionaryStage::MainSequence);
+        assert_eq!(sol.luminosity, SolarLuminosities(1.0));
+        assert_eq!(sol.t_eff, Kelvin(5772.0));
+        let larger = NeighborStar::from_mass_age(SolarMasses(2.0), Gyr(0.5)).unwrap();
+        assert!(larger.luminosity > sol.luminosity);
+        assert!(larger.t_eff > sol.t_eff);
+        let giant = NeighborStar::from_mass_age(SolarMasses(1.0), Gyr(10.5)).unwrap();
+        assert_eq!(giant.stage, EvolutionaryStage::Giant);
+        assert_eq!(giant.luminosity, SolarLuminosities(60.0));
+        assert!(giant.t_eff < sol.t_eff);
+        let dwarf = NeighborStar::from_mass_age(SolarMasses(1.0), Gyr(12.0)).unwrap();
+        assert_eq!(dwarf.stage, EvolutionaryStage::WhiteDwarf);
+        assert!(dwarf.mass < sol.mass);
+        assert!(dwarf.luminosity < sol.luminosity);
+        let cooled = NeighborStar::from_mass_age(SolarMasses(1.0), Gyr(13.0)).unwrap();
+        assert!(cooled.luminosity < dwarf.luminosity);
+        assert!(cooled.t_eff < dwarf.t_eff);
+    }
+
+    #[test]
+    fn scheduled_collapse_requires_a_massive_star_and_a_natural_time_in_the_window() {
+        // 10 solar masses lives ~0.034785 Gyr through the giant phase.
+        // Put its terminal age 1,000 years after genesis, then test windows
+        // far from the floating-point boundary (no event execution here).
+        let terminal = 1.1 * t_ms_of_mass(10.0);
+        let star =
+            NeighborStar::from_mass_age(SolarMasses(10.0), Gyr(terminal - 0.000001)).unwrap();
+        assert_eq!(star.stage, EvolutionaryStage::Giant);
+        let event = star
+            .collapse_in_window(StdInstant(0.0), StdInstant(730_500.0))
+            .unwrap();
+        assert!((event.get() - 365_250.0).abs() < 0.001);
+        assert_eq!(
+            star.collapse_in_window(StdInstant(0.0), StdInstant(182_625.0)),
+            None
+        );
+        let ordinary = NeighborStar::from_mass_age(SolarMasses(1.0), Gyr(10.5)).unwrap();
+        assert_eq!(
+            ordinary.collapse_in_window(StdInstant(0.0), StdInstant(730_500.0)),
+            None
+        );
+        assert_eq!(
+            star.collapse_in_window(StdInstant(f64::NAN), StdInstant(730_500.0)),
+            None
+        );
+        assert_eq!(
+            star.collapse_in_window(StdInstant(730_500.0), StdInstant(0.0)),
+            None
+        );
+        assert_eq!(
+            NeighborStar::from_mass_age(SolarMasses(10.0), Gyr(terminal + 0.001)),
+            None
+        );
+        assert_eq!(
+            NeighborStar::from_mass_age(SolarMasses(0.0), Gyr(1.0)),
+            None
+        );
+        assert_eq!(
+            NeighborStar::from_mass_age(SolarMasses(1.0), Gyr(f64::NAN)),
+            None
+        );
+    }
 
     /// The render direction, as a test-local lookup. Production code goes
     /// through the assembled `CommonVocabulary` (Task 4 retired the public
