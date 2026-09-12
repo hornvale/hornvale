@@ -1970,3 +1970,81 @@ projection.
 **Ideonomy passes / overturns:** one overturn — my own band-rescaling lean,
 overturned by a peer's recommendation plus the kernel invariant that settles
 it.
+
+---
+
+## #25 [G5] — Task 4b accepted: the split works, and "0 of 12 closed" is the evidence it worked
+
+Commit `1a73702ca`. `make gate-commit` green.
+
+**Measured live, not projected.** Ruler medians `Undercroft` → `Nadir`:
+
+```
+0.501129  0.568293  0.665899  0.676873  0.676873
+```
+
+Matching #24's hand projection to six digits, all between `E_FED` (0.5) and
+`E_RICH` (0.75). T1's prediction — one rung realizing `fed` at >= 25% and a
+realized max above 0.5, against a baseline of max `0.424277` with `fed` never
+realized on any of twelve seeds — now passes on a ruler that still means what
+the corpus means.
+
+**`inhabitant_fit` discriminates again, measured rather than asserted.** A
+full-field scan over all three seeds and every rung found **zero vertices at
+or above 1.0**, spread min ~0.25-0.47 / max ~0.61-0.79. Before: the *median*
+was >= 1.0 everywhere, so `energy.clamp(0.0, 1.0)` returned a constant and the
+chemotrophic term carried no information. The mechanism this campaign exists
+to serve is live again.
+
+### "0 of 12 closed" is the load-bearing result, and it is the GOOD outcome
+
+I asked for that number expecting it to be informative either way, and it is
+the strongest single piece of evidence the split landed correctly.
+
+`per_axis` feeds `chem.chemosynthate` **directly** — not `subterranean_energy()`.
+So changing the ruler cannot move placement, capacity, occupancy, names, or
+fact counts, and none of the twelve content-driven reds could have closed.
+Had any closed, the two values would still have been entangled and the split
+would have been incomplete.
+
+The same fact from the other side: `make rebaseline` moved **only
+`docs/timings.md`**, and the generated-artifact drift check over
+`docs/generated-paths.txt` is clean. A ruler change that touches no committed
+artifact is exactly what "the ruler is not the magnitude" means in practice.
+
+### The red list is FOURTEEN, not twelve
+
+The implementer found two the Task 4 inventory missed —
+`delve_seating::…seated_rung_and_nowhere_else` and
+`plat_readout::…frozen_words` — and **verified by temporarily reverting
+`energy.rs` to `HEAD~1`** that both fail identically without 4b. Pre-existing
+Task 4 world-content drift, not caused by the calibration fix. Correctly left
+untouched.
+
+Worth recording as a method note rather than a scolding: an inventory
+assembled from one full run is a **sample of the reds that run took**, not a
+census of the reds that exist. The count moved 23 → 12 → 14 across three
+passes today.
+
+### Ruling: T1 RUNS BEFORE THE REDS ARE REPAIRED
+
+The reds were parked behind the calibration decision (#24). That decision is
+made, so the obvious next move is to repair them — and it is wrong, for the
+reason the census ordering rule already teaches this project: **do the thing
+that moves the world before pinning numbers to it, or pay twice.**
+
+Task 5's T1 is now a four-arm comparison, and **two of its arms can move the
+world**: `mean-of-four` and `detritus replace`. If either wins, placement moves
+again and every literal repaired now is repaired to a dead value. The Murrain
+paid that tax this morning with a census; there is no reason to re-pay it with
+fourteen test literals.
+
+So: **Task 5 first, reds after, repaired once against the arm that wins.**
+
+`survivorship_probe` is exempt from that sequencing and from repair entirely —
+it is not a number to update in any arm. Another campaign's §5.2 claim has
+stopped holding (stratified z 1.371 against pooled 6.464), and a finding is
+carried, not re-pinned.
+
+**Ideonomy passes / overturns:** none; a task acceptance plus a sequencing
+ruling taken from an existing precedent.
