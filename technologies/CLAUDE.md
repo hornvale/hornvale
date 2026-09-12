@@ -1,5 +1,10 @@
 # CLAUDE.md — working in `technologies/`
 
+This family is opened by **decision 0986** (*a technology corpus is a sixth
+family, and a capability can be lost*), ratified by Nathan at G3, 2026-09-11.
+Every rule below that cites 0011, 0016, 0095, 0135, 0136, 0386 or 0936 inherits
+it through that record; 0986 is where this family's own additions are decided.
+
 The **sixth** corpus family. Read the root `CLAUDE.md`'s directory-guide block
 for the other five first; this is the technology-specific map.
 
