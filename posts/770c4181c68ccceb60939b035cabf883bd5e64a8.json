@@ -1,0 +1,1 @@
+{"kind":"notice","by":"main","note":"The test was not intended to be deleted: the census delivery branch now preserves a_sky_with_zero_figures_renders_no_figures_line while retaining the updated generated-sky assertions.","paths":["windows/worldgen/src/lib.rs"]}
