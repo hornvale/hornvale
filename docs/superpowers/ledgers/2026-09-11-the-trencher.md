@@ -1859,3 +1859,114 @@ assert. D is the one that could have cost real time — a careful implementer
 would have tried to preserve a U that does not exist.
 
 **Ideonomy passes / overturns:** none; a verification step with five findings.
+
+---
+
+## #24 [Q] — The Staple's calibration ruling, adopted, with one refinement the code currently forbids
+
+Nathan relayed The Staple D5B's take on Task 4's overshoot. **Adopted, and my
+own lean was wrong.** I had leaned toward rescaling the corpus bands. That is
+refuted by a structural fact I checked rather than argued:
+
+```rust
+// kernel/src/ecology.rs, EnvironmentVector::new
+if !value.is_finite() || *value < 0.0 || *value > 1.0 {
+    return Err(UnitError { reason: "must be finite and within [0, 1]", .. });
+}
+```
+
+The `ENERGY` ruler is a **[0,1] contract enforced by the kernel type**, and
+the authored underworld corpus goes through it. Moving the bands does not
+merely cost cross-domain comparability, as The Staple said — it is not
+expressible without breaking a kernel invariant. My option 3 was never on the
+table and I did not check before proposing it.
+
+### Why it shipped silently, which is its own finding
+
+Nothing constructs an `EnvironmentVector` from the *derived* field, so the
+overshoot panics nothing. The derived quantity escapes the type that contracts
+its own ruler. That is the gap; the corpus is protected and the thing measured
+against the corpus is not.
+
+### THE HARM IS CONCRETE, NOT MERELY UNITS
+
+`windows/vessel/src/underground.rs:949`:
+
+```rust
+condition_fit * (1.0 - chemo_weight) + energy.clamp(0.0, 1.0) * chemo_weight
+```
+
+With every rung's median ≥ 1.0, `energy.clamp(0.0, 1.0)` returns **exactly
+1.0 almost everywhere**, so the chemotrophic term is a constant and
+`inhabitant_fit` loses all energy-based discrimination. **The campaign's own
+mechanism is destroyed by the campaign's own fix** — a stronger argument than
+comparability, and the implementer found and documented it rather than hiding
+it.
+
+### The refinement: the ruler and the resource feed must stop being one value
+
+The Staple's framing is *"separate how much chemistry exists from how much
+normalized energy the legacy ruler reports."* The code cannot honour that
+today, because they are literally the same function:
+
+```rust
+pub fn subterranean_energy(..) -> f64 {
+    chemical_supply(..).chemosynthate     // the ruler IS the aggregate
+}
+```
+
+So the fix is to **un-collapse them**, not to bound one shared value:
+
+| | value | why |
+|---|---|---|
+| `ChemicalSupply::chemosynthate` | **stays the RAW sum** | a resource *magnitude*. Every other entry in `per_axis` is an unbounded magnitude that `score_at` saturates itself (`supply / (1.0 + supply)`). Bounding it here would saturate a generalist **twice** while a metabolite specialist saturates once — a modelling artifact dressed as a result. |
+| `subterranean_energy` | **`raw / (1 + raw)`** | the `ENERGY` **ruler** readout: compared against authored corpus bands that live in a `[0,1]`-contracted `EnvironmentVector`, and consumed by `inhabitant_fit`'s clamp. |
+
+Same Type-II transfer function the model already uses for
+resource-to-suitability, so it is not an arbitrary rescale and not a
+"divide by four."
+
+### Projected ruler medians, and why this is a genuine T1 pass
+
+`raw / (1 + raw)` on the measured medians:
+
+```
+1.004527 -> 0.501    1.316387 -> 0.568    1.993109 -> 0.666
+2.094758 -> 0.677    2.094758 -> 0.677
+```
+
+All five land **between `E_FED` (0.5) and `E_RICH` (0.75)**, preserving
+ordering and contrast. T1 predicted *"at least one rung realizes `fed` at
+>= 25%, AND the realized maximum exceeds 0.5"* against a baseline of max
+`0.424277` with `fed` never realized at any rung on any of twelve seeds. That
+now passes **honestly**, rather than by an overshoot that would have to be
+reported as a pass while meaning saturation.
+
+### Also adopted
+
+- **Metabolites stay raw, additive channels.** That is the new information.
+- **`DETRITUS` stays additive**, not replacing. `DETRITUS_AMBIENT = 0.2`
+  (`lib.rs:1201`) is a background floor; imported detritus is a separate
+  depth/drainage-dependent source, and replacing would erase one of two
+  sources rather than model their sum. It stays the largest single mover, so
+  it gets its own T1 arm rather than a defence.
+- **T1 becomes a four-arm calibration comparison** (Task 5): raw sum as
+  control expected to fail the ruler; sum-then-saturate as primary;
+  mean-of-four as diagnostic only; detritus add-vs-replace as a semantic
+  sensitivity arm. Report band occupancy, maxima, depth shape, and
+  xorn/specialist capacity for each.
+- **The twelve reds wait behind this decision** — re-pinning them now would
+  pin numbers this fix is about to move. **`survivorship_probe`'s is not a
+  re-pin at any point**: another campaign's §5.2 claim has stopped holding
+  (stratified z 1.371 vs pooled 6.464) and that is a finding to carry, not a
+  number to update.
+
+### One doc defect found on the way
+
+`energy.rs:659` cites `crate::inhabitant_fit`. It is
+`windows/vessel/src/underground.rs:937` — a different crate. Fix with the
+projection.
+
+**Ideonomy passes / overturns:** one overturn — my own band-rescaling lean,
+overturned by a peer's recommendation plus the kernel invariant that settles
+it.
