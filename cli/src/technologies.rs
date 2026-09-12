@@ -117,15 +117,29 @@ pub enum Verdict {
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum Criterion {
-    /// The population-wide aggregate — the sum of every people's own
-    /// per-people reading, divided by the full population (an unreported
-    /// people contributes zero) — lies in the inclusive band `[lo, hi]`.
+    /// The statistic is the population-weighted aggregate `sum(values) /
+    /// population` (an unreported people contributes zero); the criterion
+    /// checks that aggregate against the inclusive band `[lo, hi]`.
     ///
     /// This is the family's defense against the pathology it exists to
     /// detect: "every people holds it" (aggregate `1.0`) and "no people
     /// holds it" (aggregate `0.0`) both fail a divergence band such as
     /// `[0.15, 0.85]`, and only a genuinely mixed world (aggregate `0.5`)
     /// passes.
+    ///
+    /// **This is NOT a count of how many per-people values individually
+    /// fall inside `[lo, hi]`.** That reading is wrong for this criterion
+    /// and is ruled out by
+    /// `technology_coverage::a_universal_holding_fraction_fails_a_divergence_band`'s
+    /// third assertion (`meets(&c, &[0.5; 10], 10)` is `true`): every one
+    /// of those ten values already lies inside `[0.15, 0.85]`, so a
+    /// count-in-band reading would compute `10/10 = 1.0`, itself outside
+    /// the band, and wrongly return `false`. Only the aggregate reading —
+    /// `sum([0.5; 10]) / 10 = 0.5`, which IS inside `[0.15, 0.85]` —
+    /// produces the `true` that test requires. Naming this explicitly
+    /// because the sibling `regularities` criterion this one is modeled on
+    /// has a test named `fraction_in_band_counts_only_values_inside_it`,
+    /// which is the ruled-out reading's name, not this one's.
     #[serde(rename = "fraction-in-band")]
     FractionInBand {
         /// Inclusive lower edge.
@@ -433,7 +447,7 @@ impl Anchor {
 /// `systems::Finding` and `regularities::Finding` carry): this family's two
 /// inputs are edited by sessions with no reason to know a resolver reads
 /// them.
-/// type-audit: bare-ok(identifier-text: Unjustified.id), bare-ok(prose: Unjustified.why), bare-ok(identifier-text: Dangling.id), bare-ok(identifier-text: Dangling.anchor), bare-ok(prose: Dangling.why), bare-ok(identifier-text: StaleDeferred.id), bare-ok(identifier-text: StaleDeferred.row), bare-ok(prose: StaleDeferred.why), bare-ok(prose: Regressed.why), bare-ok(identifier-text: Novelty.corpus), bare-ok(count: Novelty.baseline), bare-ok(count: Novelty.found)
+/// type-audit: bare-ok(identifier-text: Unjustified.id), bare-ok(prose: Unjustified.why), bare-ok(identifier-text: Dangling.id), bare-ok(identifier-text: Dangling.anchor), bare-ok(prose: Dangling.why), bare-ok(identifier-text: StaleDeferred.id), bare-ok(identifier-text: StaleDeferred.row), bare-ok(prose: StaleDeferred.why), bare-ok(identifier-text: Regressed.id), bare-ok(prose: Regressed.why), bare-ok(identifier-text: Novelty.corpus), bare-ok(count: Novelty.baseline), bare-ok(count: Novelty.found)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Finding {
     /// A verdict with no anchor, the wrong kind of anchor, an anchor into
@@ -471,13 +485,9 @@ pub enum Finding {
     /// disagree — in either direction ([`two_way`]). A `grown` that
     /// computes `flat` is a lost regularity; a `flat` that computes `grown`
     /// is stale pessimism.
-    ///
-    /// Carries no item id, unlike every sibling variant: [`two_way`]
-    /// compares two verdicts in isolation, and the caller that threads a
-    /// real item's values through [`meets`] (Task 7's report) is what knows
-    /// which item this is — it attaches that context itself rather than
-    /// this variant inventing a field its own constructor cannot fill.
     Regressed {
+        /// The item's corpus-local id.
+        id: String,
         /// What the corpus claims.
         authored: Verdict,
         /// What [`meets`] computes against fresh values today.
@@ -539,13 +549,23 @@ fn verdict_name(v: Verdict) -> &'static str {
 /// CLAUDE.md`'s scope note for `lost`), not a gap in this guard. So the
 /// guard fires only when BOTH sides are `Grown` or `Flat` and disagree;
 /// anything else — `Lost` on either side, and [`Verdict::Unmeasured`], a
-/// lifecycle state that is never a coverage verdict — raises nothing.
+/// lifecycle state that is never a coverage verdict — raises nothing YET
+/// (see [`Verdict::Lost`]'s own scope note; the successor campaign is what
+/// changes that).
+///
+/// **Takes the item's `id`, unlike the plan's original two-verdict
+/// signature.** 0136 makes diagnosability part of the decision, and this
+/// is the verdict that fires when a capability was LOST — the one event
+/// this whole campaign exists to make visible — so a finding that could not
+/// name which item regressed would fail that standard on its own first use
+/// (campaign ledger #30).
 ///
 /// **No live case exists yet** (campaign ledger #27): every trajectory
 /// verdict in both committed corpora is `unmeasured`, so this is exercised
 /// only against constructed input until a successor campaign makes loss
 /// measurable — it must be correct before then, not after.
-pub fn two_way(authored: Verdict, computed: Verdict) -> Option<Finding> {
+/// type-audit: bare-ok(identifier-text: id)
+pub fn two_way(id: &str, authored: Verdict, computed: Verdict) -> Option<Finding> {
     if authored == computed {
         return None;
     }
@@ -556,24 +576,25 @@ pub fn two_way(authored: Verdict, computed: Verdict) -> Option<Finding> {
     }
     let why = if authored == Verdict::Grown {
         format!(
-            "authored `{}`, computed `{}`: a capability this corpus claims a people GROWS \
-             no longer measures grown. That is a finding about the world, not the corpus: \
-             investigate the cause before re-verdicting; if the loss is accepted, change the \
-             verdict to `flat` in a commit that says why.",
+            "{id}: authored `{}`, computed `{}`: a capability this corpus claims a people \
+             GROWS no longer measures grown. That is a finding about the world, not the \
+             corpus: investigate the cause before re-verdicting; if the loss is accepted, \
+             change the verdict to `flat` in a commit that says why.",
             verdict_name(authored),
             verdict_name(computed)
         )
     } else {
         format!(
-            "authored `{}`, computed `{}`: a capability this corpus records as FLAT now \
-             measures grown. Stale pessimism is red for the same reason a loss is: a corpus \
-             that under-reports the world is as wrong as one that over-reports it. Promote \
-             the verdict to `grown` deliberately, in a commit that claims the gain.",
+            "{id}: authored `{}`, computed `{}`: a capability this corpus records as FLAT \
+             now measures grown. Stale pessimism is red for the same reason a loss is: a \
+             corpus that under-reports the world is as wrong as one that over-reports it. \
+             Promote the verdict to `grown` deliberately, in a commit that claims the gain.",
             verdict_name(authored),
             verdict_name(computed)
         )
     };
     Some(Finding::Regressed {
+        id: id.to_string(),
         authored,
         computed,
         why,

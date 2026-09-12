@@ -837,33 +837,57 @@ fn an_empty_population_never_meets_a_criterion() {
 #[test]
 fn the_guard_reddens_in_both_directions() {
     assert!(
-        two_way(Verdict::Grown, Verdict::Flat).is_some(),
+        two_way("a", Verdict::Grown, Verdict::Flat).is_some(),
         "a regularity was lost"
     );
     assert!(
-        two_way(Verdict::Flat, Verdict::Grown).is_some(),
+        two_way("a", Verdict::Flat, Verdict::Grown).is_some(),
         "stale pessimism"
     );
-    assert!(two_way(Verdict::Grown, Verdict::Grown).is_none());
+    assert!(two_way("a", Verdict::Grown, Verdict::Grown).is_none());
+}
+
+/// The finding names the item that regressed. This is why campaign ledger
+/// #30 authorised widening `two_way`'s signature to take an id: `Regressed`
+/// is the verdict that fires when a capability was LOST — the one event
+/// this whole campaign exists to make visible — so a finding that could
+/// not say which item regressed would fail 0136's diagnosability standard
+/// on its own first use.
+#[test]
+fn the_guard_names_the_item_that_regressed() {
+    match two_way("inv-writing", Verdict::Grown, Verdict::Flat) {
+        Some(Finding::Regressed {
+            id,
+            authored,
+            computed,
+            ..
+        }) => {
+            assert_eq!(id, "inv-writing");
+            assert_eq!(authored, Verdict::Grown);
+            assert_eq!(computed, Verdict::Flat);
+        }
+        other => panic!("expected Regressed naming the item, got {other:?}"),
+    }
 }
 
 /// `unmeasured` is a lifecycle state, never a coverage verdict, and raises
 /// nothing here — which is what makes Task 7's separate tally necessary.
 #[test]
 fn unmeasured_raises_nothing() {
-    assert!(two_way(Verdict::Unmeasured, Verdict::Unmeasured).is_none());
+    assert!(two_way("a", Verdict::Unmeasured, Verdict::Unmeasured).is_none());
 }
 
 /// The guard is scoped to the two verdicts a single-snapshot criterion can
 /// actually compute. `Lost` names a capability held and then released — a
 /// trajectory [`meets`]'s boolean cannot detect — so `Lost` on either side
-/// must not trip the guard yet; that is the successor campaign's job, not a
-/// hole in this one.
+/// must not trip the guard **yet**; that is the successor campaign's job
+/// (which is what makes a computable `Lost` possible in the first place),
+/// not a hole in this one.
 #[test]
 fn lost_does_not_trip_the_guard_yet() {
-    assert!(two_way(Verdict::Grown, Verdict::Lost).is_none());
-    assert!(two_way(Verdict::Lost, Verdict::Flat).is_none());
-    assert!(two_way(Verdict::Lost, Verdict::Lost).is_none());
+    assert!(two_way("a", Verdict::Grown, Verdict::Lost).is_none());
+    assert!(two_way("a", Verdict::Lost, Verdict::Flat).is_none());
+    assert!(two_way("a", Verdict::Lost, Verdict::Lost).is_none());
 }
 
 // --- The real corpora, both halves ---------------------------------------
