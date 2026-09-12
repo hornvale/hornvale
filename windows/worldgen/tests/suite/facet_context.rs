@@ -1,5 +1,5 @@
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Facet, Seed, World};
+use hornvale_kernel::{Facet, NearestVertexIndex, Seed, World};
 use hornvale_terrain::{EndpointSide, FacetAddress, FeatureKind, TerminalKind, TerrainPins};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SurfaceBuildError, SurfacePatch, SurfaceRealizationContext,
@@ -93,6 +93,47 @@ fn shared_edge(a: &FacetAddress, b: &FacetAddress) -> Option<(usize, usize)> {
                 .then_some((ea as usize, eb as usize))
         })
     })
+}
+
+fn macro_center_height(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    address: &FacetAddress,
+) -> f64 {
+    let nearest = NearestVertexIndex::new(terrain.geosphere());
+    address
+        .macro_face
+        .corners()
+        .into_iter()
+        .map(|position| {
+            let vertex = nearest.nearest_to_position(terrain.geosphere(), position);
+            terrain.elevation_at(vertex).get()
+        })
+        .sum::<f64>()
+        / 4.0
+}
+
+#[test]
+fn emitted_patch_centers_include_bounded_conditioned_relief() {
+    let source = world(42);
+    #[allow(clippy::disallowed_methods)]
+    let terrain = hornvale_worldgen::terrain_of(&source).expect("terrain builds");
+    let context = SurfaceRealizationContext::build(&source).expect("context builds");
+    let mut active = 0;
+
+    for face in 0..6 {
+        for digit in 0..4 {
+            let address = address(face, digit);
+            let patch = context.realize(&address).expect("patch realizes");
+            let relief = patch.samples[4].height_m - macro_center_height(&terrain, &address);
+            assert!(
+                relief.abs() <= 240.0,
+                "facet relief exceeded its 240 m bound: {relief} m at {address:?}"
+            );
+            active += usize::from(relief.abs() > LENGTH_TOLERANCE_M);
+        }
+    }
+
+    assert!(active > 0, "all emitted patch centers remained macro-only");
 }
 
 #[test]

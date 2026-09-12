@@ -83,6 +83,7 @@ pub struct SurfaceRealizationContext {
     climate: GeneratedClimate,
     nearest: NearestVertexIndex,
     planet_radius_m: f64,
+    relief_noise: hornvale_terrain::SphereFbm,
     configuration: SurfaceConfiguration,
 }
 
@@ -98,6 +99,12 @@ struct SurfaceConfiguration {
     flow_half_saturation: f64,
     slope_half_saturation_m_per_rad: f64,
     channel_width_multiplier: f64,
+    relief_frequency: f64,
+    relief_octaves: u32,
+    relief_max_amplitude_m: f64,
+    relief_slope_share: f64,
+    relief_elevation_half_saturation_m: f64,
+    relief_coast_taper_m: f64,
     material_altitude_scale_m: f64,
     material_shore_scale_m: f64,
     material_sediment_half_saturation_m: f64,
@@ -119,14 +126,20 @@ struct SurfaceConfiguration {
 impl SurfaceConfiguration {
     const fn current() -> Self {
         Self {
-            record_schema: "hornvale/surface-configuration/v2",
-            algorithm_version: "hornvale/surface-realization/v2",
+            record_schema: "hornvale/surface-configuration/v3",
+            algorithm_version: "hornvale/surface-realization/v3",
             globe_level: hornvale_terrain::GLOBE_LEVEL,
             sample_topology: "quad-corners-center-dyadic-ring/world-space-fan-v2",
             material_channels: "bedrock,soil,sediment,wetland,fresh-water,salt-water,snow-ice,vegetation/v1",
             flow_half_saturation: 24.0,
             slope_half_saturation_m_per_rad: 80_000.0,
             channel_width_multiplier: 2.0,
+            relief_frequency: 192.0,
+            relief_octaves: 4,
+            relief_max_amplitude_m: 160.0,
+            relief_slope_share: 0.65,
+            relief_elevation_half_saturation_m: 1_200.0,
+            relief_coast_taper_m: 30_000.0,
             material_altitude_scale_m: 4_000.0,
             material_shore_scale_m: 20_000.0,
             material_sediment_half_saturation_m: 8.0,
@@ -243,6 +256,12 @@ impl SurfaceRealizationContext {
             )));
         }
 
+        let relief_noise = hornvale_terrain::SphereFbm::new(
+            terrain.globe().lithology_noise_seed(),
+            configuration.relief_frequency,
+            configuration.relief_octaves,
+        );
+
         Ok(Self {
             revision: revision.clone(),
             expected_revision: revision,
@@ -250,6 +269,7 @@ impl SurfaceRealizationContext {
             climate,
             nearest,
             planet_radius_m,
+            relief_noise,
             configuration,
         })
     }
@@ -334,11 +354,11 @@ impl SurfaceRealizationContext {
         vertices: [Vertex; 4],
         weights: [f64; 4],
     ) -> Result<FacetFieldSample, SurfaceBuildError> {
-        let height_m = blend(vertices, weights, |vertex| {
+        let macro_height_m = blend(vertices, weights, |vertex| {
             self.terrain.elevation_at(vertex).get()
         });
         let sea_level_m = self.terrain.sea_level().get();
-        let height_asl_m = height_m - sea_level_m;
+        let macro_height_asl_m = macro_height_m - sea_level_m;
         let temperature_c = blend(vertices, weights, |vertex| {
             self.climate.mean_temperature_at(vertex).get()
         });
@@ -382,13 +402,22 @@ impl SurfaceRealizationContext {
         ]);
         let max_surface_distance = std::f64::consts::PI * self.planet_radius_m;
         let shoreline_distance_m = if slope_m_per_rad > f64::EPSILON {
-            (height_asl_m * self.planet_radius_m / slope_m_per_rad)
+            (macro_height_asl_m * self.planet_radius_m / slope_m_per_rad)
                 .clamp(-max_surface_distance, max_surface_distance)
-        } else if height_asl_m < 0.0 {
+        } else if macro_height_asl_m < 0.0 {
             -max_surface_distance
         } else {
             max_surface_distance
         };
+        let relief_amplitude_m = relief_amplitude_m(
+            slope_strength,
+            macro_height_asl_m,
+            shoreline_distance_m,
+            self.configuration,
+        );
+        let relief_m = relief_amplitude_m * (2.0 * self.relief_noise.sample(position) - 1.0);
+        let height_m = macro_height_m + relief_m;
+        let height_asl_m = height_m - sea_level_m;
         let water_depth_m = (-height_asl_m).max(0.0);
 
         let (channel_distance_m, channel_width_m, bank_weight, floodplain_weight, terrace_weight) =
@@ -717,6 +746,32 @@ fn canonical_configuration_record(
     );
     push_f64_field(
         &mut record,
+        "relief-frequency",
+        configuration.relief_frequency,
+    );
+    push_u32_field(&mut record, "relief-octaves", configuration.relief_octaves);
+    push_f64_field(
+        &mut record,
+        "relief-max-amplitude-m",
+        configuration.relief_max_amplitude_m,
+    );
+    push_f64_field(
+        &mut record,
+        "relief-slope-share",
+        configuration.relief_slope_share,
+    );
+    push_f64_field(
+        &mut record,
+        "relief-elevation-half-saturation-m",
+        configuration.relief_elevation_half_saturation_m,
+    );
+    push_f64_field(
+        &mut record,
+        "relief-coast-taper-m",
+        configuration.relief_coast_taper_m,
+    );
+    push_f64_field(
+        &mut record,
         "material-altitude-scale-m",
         configuration.material_altitude_scale_m,
     );
@@ -878,6 +933,24 @@ fn category_fraction(
     predicate: impl Fn(Vertex) -> bool,
 ) -> f64 {
     blend(vertices, weights, |vertex| f64::from(predicate(vertex)))
+}
+
+fn relief_amplitude_m(
+    slope_strength: f64,
+    height_asl_m: f64,
+    shoreline_distance_m: f64,
+    configuration: SurfaceConfiguration,
+) -> f64 {
+    let slope = (1.0 - configuration.relief_slope_share)
+        + configuration.relief_slope_share * slope_strength.clamp(0.0, 1.0);
+    let elevation = 0.35
+        + 0.65
+            * ratio(
+                height_asl_m.abs(),
+                configuration.relief_elevation_half_saturation_m,
+            );
+    let coast = (shoreline_distance_m.abs() / configuration.relief_coast_taper_m).clamp(0.15, 1.0);
+    configuration.relief_max_amplitude_m * slope * elevation * coast
 }
 
 fn downhill_direction(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Vertex) -> [f64; 3] {
