@@ -243,6 +243,8 @@ mod tolerance_draw;
 mod tolerance_mutation;
 #[path = "suite/traversal.rs"]
 mod traversal;
+#[path = "suite/trencher_probe.rs"]
+mod trencher_probe;
 #[path = "suite/tribute_stock_agreement_probe.rs"]
 mod tribute_stock_agreement_probe;
 #[path = "suite/underworld_capacity_probe.rs"]

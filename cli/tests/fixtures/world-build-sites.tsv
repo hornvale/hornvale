@@ -244,6 +244,7 @@ windows/worldgen/tests/suite/threading_equivalence.rs	1	unmigrated:1
 windows/worldgen/tests/suite/tilth_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/tolerance_draw.rs	1	unmigrated:1
 windows/worldgen/tests/suite/tolerance_mutation.rs	2	unmigrated:2
+windows/worldgen/tests/suite/trencher_probe.rs	1	identity:1
 windows/worldgen/tests/suite/tribute_stock_agreement_probe.rs	2	unmigrated:2
 windows/worldgen/tests/suite/underworld_capacity_probe.rs	4	unmigrated:4
 windows/worldgen/tests/suite/underworld_chamber_reach.rs	2	unmigrated:2
