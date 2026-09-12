@@ -155,12 +155,12 @@ until Task 6 is implemented.
 
 **Interfaces:** A sky-observation query consumes species baseline traits plus observer latitude, local time, atmosphere, moonlight, and sky geometry; it returns visible stable-star/comet/shower candidates. It does not assign cultural names or meanings.
 
-- [ ] Write failing tests distinguishing diurnal, crepuscular, and nocturnal schedules; night vision and attention modify thresholds continuously; individual variation is absent.
-- [ ] Run focused tests and verify red status.
-- [ ] Implement deterministic hard schedule gating plus continuous acuity/attention, twilight, atmosphere, moonlight, and horizon modifiers.
-- [ ] Keep physical visibility separate from salience/attention so downstream cultural code receives candidates and evidence, not preassigned significance.
-- [ ] Run focused tests, clippy, and format checks.
-- [ ] Commit with message `feat(astronomy): expose species-specific sky visibility`.
+- [x] Write failing tests distinguishing diurnal, crepuscular, and nocturnal schedules; night vision and attention modify thresholds continuously; individual variation is absent.
+- [x] Run focused tests and verify red status.
+- [x] Implement deterministic hard schedule gating plus continuous acuity/attention, twilight, atmosphere, moonlight, and horizon modifiers.
+- [x] Keep physical visibility separate from salience/attention so downstream cultural code receives candidates and evidence, not preassigned significance.
+- [x] Run focused tests, clippy, and format checks.
+- [x] Commit with message `feat(astronomy): expose species-specific sky visibility` (commits `88b9f452f`, `25012dd8f`).
 
 ### Task 8: Add culture-owned constellation inputs and close the first slice
 
@@ -180,13 +180,13 @@ until Task 6 is implemented.
 - [x] Add an explicit follow-up boundary for eclipsing binaries, transient stellar events, dense meteor-stream clumps, and terminal stellar evolution; do not implement them in this slice.
 - [x] Run the full relevant package tests and `cargo clippy --workspace --all-targets -- -D warnings`.
 - [x] Update stage statuses in `IMPLEMENTATION_PLAN.md` as each stage lands (repository has no such file; this plan records status).
-- [ ] Commit with message `feat(astronomy): support culture-owned constellations`.
+- [x] Commit with message `feat(astronomy): support culture-owned constellations` (`54e4825f3`).
 
 ## Verification and handoff
 
-- [ ] Run `cargo fmt --check`.
-- [ ] Run `cargo clippy --workspace --all-targets -- -D warnings`.
-- [ ] Run the relevant astronomy/species/worldgen nextest filters, then the project-required gate at the stage boundary.
-- [ ] Run the repository type, placement, plumb, and report-freshness checks required by `gate-commit`.
-- [ ] Perform a final `git diff --check`, inspect generated artifacts, and confirm no unrelated files changed.
-- [ ] Use `superpowers:requesting-code-review` before merge and `superpowers:verification-before-completion` before claiming completion.
+- [x] Run `cargo fmt --check`.
+- [x] Run `cargo clippy --workspace --all-targets -- -D warnings`.
+- [x] Run the relevant astronomy/species/worldgen nextest filters, then the project-required gate at the stage boundary.
+- [x] Run the repository type, placement, plumb, and report-freshness checks required by `gate-commit`.
+- [x] Perform a final `git diff --check`, inspect generated artifacts, and confirm no unrelated files changed.
+- [x] Use independent scoped reviews before merge and verification-before-completion before claiming completion.
