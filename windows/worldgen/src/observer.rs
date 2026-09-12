@@ -21,6 +21,22 @@ use hornvale_kernel::color::{
 };
 use hornvale_species::{PerceptionVector, perception_registry};
 
+/// Adapt the species-owned perception component to astronomy's sibling-safe
+/// observer contract. The adapter carries no culture or individual state.
+pub fn astronomy_sky_perception(p: &PerceptionVector) -> hornvale_astronomy::SkyPerception {
+    hornvale_astronomy::SkyPerception {
+        activity: match p.activity {
+            hornvale_species::ActivityCycle::Diurnal => hornvale_astronomy::SkyActivity::Day,
+            hornvale_species::ActivityCycle::Nocturnal => hornvale_astronomy::SkyActivity::Night,
+            hornvale_species::ActivityCycle::Crepuscular => {
+                hornvale_astronomy::SkyActivity::Twilight
+            }
+        },
+        acuity: p.night_vision,
+        attention: p.sky_attention,
+    }
+}
+
 /// The standard observer's four authored curves (short, medium, long,
 /// scotopic), copied from `hornvale_kernel::color::standard_observer` —
 /// which does not expose its channels — so this module can build merged
@@ -226,6 +242,22 @@ pub fn observer_roster() -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn astronomy_sky_adapter_preserves_species_perception() {
+        let species = PerceptionVector {
+            activity: hornvale_species::ActivityCycle::Crepuscular,
+            night_vision: 0.73,
+            sky_attention: 0.21,
+        };
+        let astronomy = astronomy_sky_perception(&species);
+        assert_eq!(
+            astronomy.activity,
+            hornvale_astronomy::SkyActivity::Twilight
+        );
+        assert_eq!(astronomy.acuity, species.night_vision);
+        assert_eq!(astronomy.attention, species.sky_attention);
+    }
 
     #[test]
     fn scotopic_gain_is_unity_below_the_luminance_switch() {

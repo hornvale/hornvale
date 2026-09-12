@@ -65,7 +65,10 @@ pub use neighborhood::{
     CatalogStar, CatalogStarId, MAX_CATALOG_STARS, MIN_CATALOG_STARS, Neighbor, class_luminosity,
     class_name, generate_catalog, generate_neighbors,
 };
-pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
+pub use night_sky::{
+    Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, SkyActivity, SkyPerception,
+    SpeciesSkyObservation, SpeciesSkyObserver, night_sky_at, species_sky_at,
+};
 pub use pins::{
     ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, SpinPin, parse_pin,
     pin_strings,

@@ -60,6 +60,177 @@ impl StarObserver {
     }
 }
 
+/// The activity schedule used by an observer's species.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkyActivity {
+    /// Primarily active in daylight.
+    Day,
+    /// Primarily active at night.
+    Night,
+    /// Primarily active during twilight.
+    Twilight,
+}
+
+/// Species-level visual traits consumed by astronomy without depending on
+/// the species domain. Worldgen adapts its species component to this value.
+/// type-audit: pending(wave-1)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SkyPerception {
+    /// When the observer is active.
+    pub activity: SkyActivity,
+    /// Night-sky acuity, from blind (0) to exceptionally sensitive (1).
+    pub acuity: f64,
+    /// Attention paid to the sky, from earthbound (0) to sky-attentive (1).
+    pub attention: f64,
+}
+
+impl SkyPerception {
+    /// The reference daytime observer.
+    pub const fn diurnal() -> Self {
+        Self {
+            activity: SkyActivity::Day,
+            acuity: 0.5,
+            attention: 0.5,
+        }
+    }
+
+    /// A twilight observer.
+    pub const fn crepuscular() -> Self {
+        Self {
+            activity: SkyActivity::Twilight,
+            acuity: 0.5,
+            attention: 0.5,
+        }
+    }
+
+    /// A reference nighttime observer.
+    pub const fn nocturnal() -> Self {
+        Self {
+            activity: SkyActivity::Night,
+            acuity: 0.5,
+            attention: 0.5,
+        }
+    }
+}
+
+/// Location and environmental conditions for a species-specific sky query.
+/// type-audit: pending(wave-1)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpeciesSkyObserver {
+    /// Observer latitude in degrees.
+    pub latitude: f64,
+    /// Atmospheric suppression in the range 0 (clear) to 1 (opaque).
+    pub atmosphere: f64,
+    /// Relative moonlight in the range 0 (new moon) to 1 (full glare).
+    pub moonlight: f64,
+}
+
+impl SpeciesSkyObserver {
+    /// Construct an observer with clear, moonless conditions.
+    /// type-audit: pending(wave-1: latitude)
+    pub const fn at_latitude(latitude: f64) -> Self {
+        Self {
+            latitude,
+            atmosphere: 0.0,
+            moonlight: 0.0,
+        }
+    }
+}
+
+/// A species-specific derived sky view. The candidates retain physical IDs;
+/// `sky_salience` is an attention weight and carries no cultural meaning.
+/// type-audit: pending(wave-1)
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpeciesSkyObservation {
+    /// Stable modeled-star candidates admitted by the physical and perceptual cuts.
+    pub visible: Vec<crate::starfield::SkyStar>,
+    /// The effective limiting magnitude used for this query.
+    pub limiting_magnitude: f64,
+    /// The observer's unmodified sky-attention scalar.
+    pub sky_salience: f64,
+    /// Solar light regime at the query instant, when the world has a day.
+    pub band: Option<SkyBand>,
+}
+
+/// Return stable modeled-star candidates visible to a species at an epoch.
+/// This is a pure derived view: no roster, cache, or simulation mutation is
+/// retained, and culture/name systems are deliberately not involved.
+pub fn species_sky_at(
+    system: &StarSystem,
+    calendar: &Calendar,
+    t: StdInstant,
+    observer: SpeciesSkyObserver,
+    perception: SkyPerception,
+) -> SpeciesSkyObservation {
+    let band = calendar.sky_band(t, observer.latitude);
+    let limiting_magnitude = species_limiting_magnitude(&observer, &perception, band);
+    let active = activity_admits(perception.activity, band);
+    let visible = if active {
+        let zenith = EquatorialCoord {
+            ra_deg: calendar.solar_equatorial(t).ra_deg,
+            dec_deg: observer.latitude,
+        };
+        catalog_stars_at(
+            system,
+            calendar,
+            t,
+            &StarObserver {
+                limiting_magnitude,
+                zenith: Some(zenith),
+            },
+        )
+    } else {
+        Vec::new()
+    };
+    SpeciesSkyObservation {
+        visible,
+        limiting_magnitude,
+        sky_salience: perception.attention.clamp(0.0, 1.0),
+        band,
+    }
+}
+
+fn species_limiting_magnitude(
+    observer: &SpeciesSkyObserver,
+    perception: &SkyPerception,
+    band: Option<SkyBand>,
+) -> f64 {
+    let night_vision = perception.acuity.clamp(0.0, 1.0);
+    let sky_attention = if perception.attention.is_finite() {
+        perception.attention.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let atmosphere = if observer.atmosphere.is_finite() {
+        observer.atmosphere.clamp(0.0, 1.0)
+    } else {
+        1.0
+    };
+    let moonlight = if observer.moonlight.is_finite() {
+        observer.moonlight.clamp(0.0, 1.0)
+    } else {
+        1.0
+    };
+    let twilight_penalty = matches!(band, Some(SkyBand::Twilight))
+        .then_some(2.0)
+        .unwrap_or(0.0);
+    (2.5 + 2.0 * night_vision + 1.5 * sky_attention
+        - 2.0 * atmosphere
+        - moonlight
+        - twilight_penalty)
+        .clamp(0.0, NAKED_EYE_MAGNITUDE_LIMIT)
+}
+
+fn activity_admits(activity: SkyActivity, band: Option<SkyBand>) -> bool {
+    match band {
+        // A locked world has no solar band; retain the useful nighttime view.
+        None => matches!(activity, SkyActivity::Night),
+        Some(SkyBand::Day) => false,
+        Some(SkyBand::Twilight) => matches!(activity, SkyActivity::Twilight),
+        Some(SkyBand::Night) => matches!(activity, SkyActivity::Night),
+    }
+}
+
 fn valid_position(position: &EquatorialCoord) -> bool {
     position.ra_deg.is_finite() && (-90.0..=90.0).contains(&position.dec_deg)
 }
@@ -278,6 +449,145 @@ mod tests {
             }
             .admits(1.0, &position)
         );
+    }
+
+    #[test]
+    fn species_sky_observation_distinguishes_activity_cycles() {
+        let mut system = spinning_system();
+        for star in &mut system.neighbor_catalog {
+            star.distance = crate::units::LightYears(0.01);
+        }
+        let calendar = calendar_of(&system);
+        let observer = SpeciesSkyObserver {
+            latitude: 0.0,
+            atmosphere: 0.0,
+            moonlight: 0.0,
+        };
+        let day_span = calendar.day_length().unwrap().0;
+        let sample = |wanted| {
+            (0..1000)
+                .map(|i| StdInstant(day_span * f64::from(i) / 1000.0))
+                .find(|&t| calendar.sky_band(t, 0.0) == Some(wanted))
+                .expect("the spinning test world has every sky band")
+        };
+        let day = sample(SkyBand::Day);
+        let twilight = sample(SkyBand::Twilight);
+        let night = sample(SkyBand::Night);
+        let diurnal = species_sky_at(&system, &calendar, day, observer, SkyPerception::diurnal());
+        let crepuscular = species_sky_at(
+            &system,
+            &calendar,
+            twilight,
+            observer,
+            SkyPerception::crepuscular(),
+        );
+        let nocturnal = species_sky_at(
+            &system,
+            &calendar,
+            night,
+            observer,
+            SkyPerception::nocturnal(),
+        );
+        assert!(diurnal.visible.is_empty());
+        assert!(!crepuscular.visible.is_empty());
+        assert!(!nocturnal.visible.is_empty());
+        assert_ne!(crepuscular.band, nocturnal.band);
+    }
+
+    #[test]
+    fn night_vision_changes_limiting_magnitude_monotonically_and_continuously() {
+        let system = spinning_system();
+        let calendar = calendar_of(&system);
+        let observer = SpeciesSkyObserver::at_latitude(0.0);
+        let low = species_sky_at(
+            &system,
+            &calendar,
+            StdInstant(calendar.day_length().unwrap().0 * 0.5),
+            observer,
+            SkyPerception {
+                activity: SkyActivity::Night,
+                acuity: 0.2,
+                attention: 0.5,
+            },
+        );
+        let middle = species_sky_at(
+            &system,
+            &calendar,
+            StdInstant(calendar.day_length().unwrap().0 * 0.5),
+            observer,
+            SkyPerception {
+                activity: SkyActivity::Night,
+                acuity: 0.5,
+                attention: 0.5,
+            },
+        );
+        let high = species_sky_at(
+            &system,
+            &calendar,
+            StdInstant(calendar.day_length().unwrap().0 * 0.5),
+            observer,
+            SkyPerception {
+                activity: SkyActivity::Night,
+                acuity: 0.8,
+                attention: 0.5,
+            },
+        );
+        assert!(low.limiting_magnitude < middle.limiting_magnitude);
+        assert!(middle.limiting_magnitude < high.limiting_magnitude);
+        assert!((middle.limiting_magnitude - low.limiting_magnitude).abs() > 0.0);
+        assert!((high.limiting_magnitude - middle.limiting_magnitude).abs() > 0.0);
+    }
+
+    #[test]
+    fn sky_attention_and_conditions_modify_the_physical_threshold() {
+        let system = spinning_system();
+        let calendar = calendar_of(&system);
+        let t = StdInstant(calendar.day_length().unwrap().0 * 0.5);
+        let clear = SpeciesSkyObserver::at_latitude(0.0);
+        let haze = SpeciesSkyObserver {
+            atmosphere: 0.5,
+            moonlight: 0.5,
+            ..clear
+        };
+        let inattentive = species_sky_at(
+            &system,
+            &calendar,
+            t,
+            clear,
+            SkyPerception {
+                activity: SkyActivity::Night,
+                acuity: 0.5,
+                attention: 0.0,
+            },
+        );
+        let attentive = species_sky_at(
+            &system,
+            &calendar,
+            t,
+            clear,
+            SkyPerception {
+                activity: SkyActivity::Night,
+                acuity: 0.5,
+                attention: 1.0,
+            },
+        );
+        let obscured = species_sky_at(&system, &calendar, t, haze, SkyPerception::nocturnal());
+        assert!(inattentive.limiting_magnitude < attentive.limiting_magnitude);
+        assert!(obscured.limiting_magnitude < attentive.limiting_magnitude);
+        assert_eq!(attentive.sky_salience, 1.0);
+    }
+
+    #[test]
+    fn species_sky_queries_are_repeatable_and_do_not_mutate_system() {
+        let system = spinning_system();
+        let before = system.clone();
+        let calendar = calendar_of(&system);
+        let observer = SpeciesSkyObserver::at_latitude(35.0);
+        let perception = SkyPerception::nocturnal();
+        let first = species_sky_at(&system, &calendar, StdInstant(0.0), observer, perception);
+        let second = species_sky_at(&system, &calendar, StdInstant(0.0), observer, perception);
+        assert_eq!(first, second);
+        assert_eq!(system, before);
     }
 
     #[test]
