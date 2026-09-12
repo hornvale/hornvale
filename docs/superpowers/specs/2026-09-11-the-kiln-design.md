@@ -3,6 +3,14 @@
 **Status:** approved at G3 (Nathan, 2026-09-11) · **Date:** 2026-09-11 · **Campaign:** The Kiln
 · **Ledger:** [`docs/superpowers/ledgers/2026-09-11-the-kiln.md`](../ledgers/2026-09-11-the-kiln.md)
 
+**Decision block: 0986–0995** (reserved 2026-09-11; main ceiling was 0958).
+Minted: 0986. Declared here late, at Task 8, because this spec originally
+declared none: the campaign was about to mint **0937** on the strength of the
+highest record visible in its own branch (0936), and 0937 belongs to
+**the-seedbed**'s reserved 0936–0945. `decision_blocks_do_not_overlap_across_campaigns`
+is blind to a record minted with no declaration at all — its own doc says so —
+so nothing would have objected.
+
 ## 1. Why
 
 Hornvale ships a technology model. It was never ratified, it is a clock, and
