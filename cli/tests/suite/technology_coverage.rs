@@ -11,7 +11,7 @@
 
 use hornvale::technologies::{
     Anchor, Corpus, Criterion, Finding, Verdict, audit, audit_family, cross_corpus_ruling_gaps,
-    load, meets, two_way,
+    load, meets, render, two_way,
 };
 use std::path::PathBuf;
 
@@ -911,6 +911,264 @@ fn the_real_technology_corpora_have_no_findings() {
             ruling_gaps.is_empty(),
             "{} has cross-corpus ruling gaps:\n{ruling_gaps:#?}",
             corpus.corpus
+        );
+    }
+}
+
+// --- Task 7: the report's 0095/0136 properties (ledger #33) --------------
+//
+// Asserted over the RENDERED STRING `render` returns, never over the
+// committed `docs/audits/technology-coverage-*.md` file. The sanctioned
+// response to a drift-check failure is to regenerate and commit, so a test
+// reading the committed artifact would be satisfied by the very
+// regeneration that could launder a violation into the golden (ledger #33).
+// `the_real_technology_corpora_have_no_findings` above already exercises
+// the committed files' CONTENT against live repo facts; these five tests
+// exercise the RENDERER's own shape, independent of what happens to be
+// committed today.
+
+/// Byte offset of the first ASCII digit at or after `from` in `s`. Panics if
+/// none exists — every test below that calls this expects to find one.
+fn first_digit_at_or_after(s: &str, from: usize) -> usize {
+    s[from..]
+        .find(|c: char| c.is_ascii_digit())
+        .map(|rel| from + rel)
+        .expect("a digit after the given offset")
+}
+
+/// Collapse every whitespace run to a single space, so a CONTAINS check on
+/// multi-word prose does not depend on exactly where `wrap` (a private,
+/// 76-column, word-boundary wrapper) happened to turn a space into a
+/// newline. Section headings, bullet lines and table rows are never passed
+/// through `wrap`, so the byte-OFFSET comparisons below use the raw string
+/// directly; this helper is only for asserting that a phrase appears
+/// somewhere, never for asserting where.
+fn flatten(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Requirement 1 (decision 0095, stated as mechanical rather than
+/// aspirational): provenance, the declared bias and the selection rule
+/// print BEFORE any number. Asserts an ORDERING — the offsets of the
+/// `## Provenance` and `## Reading this report` headings, and of the first
+/// digit the `## Tally` section actually prints — not mere presence; a
+/// footnote below the tally would also satisfy `report.contains(...)`, and
+/// this must not.
+#[test]
+fn provenance_and_bias_precede_the_tallys_first_number() {
+    for (corpus, id) in [
+        (load_asimov(), "asimov-1989"),
+        (load_henrich(), "henrich-2004-extended"),
+    ] {
+        let report = render(&corpus, id);
+        let provenance = report.find("## Provenance").expect("a provenance section");
+        let reading = report
+            .find("## Reading this report")
+            .expect("a reading-this-report section");
+        let tally = report.find("## Tally").expect("a tally section");
+        let first_digit = first_digit_at_or_after(&report, tally);
+        assert!(
+            provenance < reading && reading < tally && tally < first_digit,
+            "{id}: expected Provenance < Reading-this-report < Tally < its first \
+             printed digit; got provenance={provenance} reading={reading} \
+             tally={tally} first_digit={first_digit}"
+        );
+        // The selection rule is the corpus's OWN declared bias (it lives in
+        // `corpus.provenance`, printed verbatim under `## Provenance`), not
+        // boilerplate this renderer would print regardless of which corpus
+        // loaded. Both real corpora state it verbatim, in exactly these
+        // words.
+        assert!(
+            flatten(&report[..tally]).contains("THE SELECTION RULE"),
+            "{id}: the corpus's own selection rule must print before the tally: \
+             {report}"
+        );
+    }
+}
+
+/// Requirement 2 (0136's consequence clause): the `present`/`unmeasured`
+/// weak-anchor caveat prints ABOVE the tally, never in a footnote. Asserts
+/// both that the caveat's own text sits strictly between `## Reading this
+/// report` and `## Tally`, and that it does NOT additionally (or only)
+/// appear below the tally — a caveat repeated after the score, or moved
+/// there, reads exactly like the footnote this property forbids.
+#[test]
+fn the_weak_anchor_caveat_precedes_the_tally_and_is_not_repeated_below_it() {
+    for (corpus, id) in [
+        (load_asimov(), "asimov-1989"),
+        (load_henrich(), "henrich-2004-extended"),
+    ] {
+        let report = render(&corpus, id);
+        let reading = report
+            .find("## Reading this report")
+            .expect("a reading-this-report section");
+        let tally = report.find("## Tally").expect("a tally section");
+        assert!(reading < tally);
+        assert!(
+            flatten(&report[reading..tally]).contains("only WEAKLY checked"),
+            "{id}: the weak-anchor caveat must sit between Reading-this-report \
+             and Tally: {report}"
+        );
+        assert!(
+            !flatten(&report[tally..]).contains("only WEAKLY checked"),
+            "{id}: the caveat must not also appear after the tally, which is \
+             what a footnote would do: {report}"
+        );
+    }
+}
+
+/// Requirement 3: `unmeasured` is reported SEPARATELY from coverage, never
+/// folded into a percentage, with its reason beside it. Asserts that the
+/// word "unmeasured" never appears inside the `## Tally` section's own body
+/// (where the eight coverage-verdict percentages live) — folding it into
+/// that same bulleted percentage list is exactly the shape this property
+/// forbids — and that the dedicated `## Unmeasured` section states the
+/// structural reason whenever the count is nonzero.
+#[test]
+fn unmeasured_is_reported_separately_from_coverage_with_its_reason_beside_it() {
+    for (corpus, id) in [
+        (load_asimov(), "asimov-1989"),
+        (load_henrich(), "henrich-2004-extended"),
+    ] {
+        let report = render(&corpus, id);
+        let tally = report.find("## Tally").expect("a tally section");
+        let unmeasured_heading = report.find("## Unmeasured").expect("an unmeasured section");
+        let demand_set = report.find("## Demand set").expect("a demand-set section");
+        assert!(tally < unmeasured_heading && unmeasured_heading < demand_set);
+
+        // The Tally section's own prose is allowed to NAME "unmeasured" (it
+        // must, in fact, say why the denominator excludes it — leaving that
+        // unexplained would itself look like a silent omission). What it
+        // must never do is carry an `unmeasured` BULLET in the same list as
+        // the eight coverage percentages — that specific shape is the one
+        // this property forbids, and checking for the bare word instead
+        // would fail on the renderer's own honest explanation of why there
+        // is no such bullet.
+        let tally_body = &report[tally..unmeasured_heading];
+        assert!(
+            !tally_body
+                .lines()
+                .any(|l| l.trim_start().to_lowercase().starts_with("- unmeasured:")),
+            "{id}: the Tally section must not carry an `- unmeasured: N (P%)` \
+             bullet alongside the eight coverage verdicts — that is exactly \
+             what 'never folded into a percentage' forbids: {tally_body}"
+        );
+
+        let unmeasured_count = corpus
+            .items
+            .iter()
+            .filter(|i| i.verdict == Verdict::Unmeasured)
+            .count();
+        let unmeasured_body = &report[unmeasured_heading..demand_set];
+        if unmeasured_count == 0 {
+            assert!(
+                unmeasured_body.contains("None —"),
+                "{id}: a zero count must say so plainly: {unmeasured_body}"
+            );
+        } else {
+            let flat_body = flatten(unmeasured_body);
+            assert!(
+                flat_body.contains("tech_for") && flat_body.contains("monotone"),
+                "{id}: a nonzero unmeasured count ({unmeasured_count}) must carry \
+                 its structural reason beside it, not just the number: \
+                 {unmeasured_body}"
+            );
+        }
+    }
+}
+
+/// Requirement 4: BOTH counts that make the finding sayable appear, DERIVED
+/// from the corpus rather than hard-coded here — N (every item), K (`reach`:
+/// `present` + `unmeasured`, the items Hornvale's mechanism reaches at all)
+/// and how many of those K currently read `lost`. A single tally cannot say
+/// this (Task 7's brief); this asserts all three numbers land in the same
+/// sentence, not scattered where a reader could not connect them.
+#[test]
+fn the_reach_and_loss_finding_states_both_counts_together() {
+    for (corpus, id) in [
+        (load_asimov(), "asimov-1989"),
+        (load_henrich(), "henrich-2004-extended"),
+    ] {
+        let report = render(&corpus, id);
+        let present = corpus
+            .items
+            .iter()
+            .filter(|i| i.verdict == Verdict::Present)
+            .count();
+        let unmeasured = corpus
+            .items
+            .iter()
+            .filter(|i| i.verdict == Verdict::Unmeasured)
+            .count();
+        let lost = corpus
+            .items
+            .iter()
+            .filter(|i| i.verdict == Verdict::Lost)
+            .count();
+        let reach = present + unmeasured;
+        let flat = flatten(&report);
+
+        assert!(
+            flat.contains(&format!("of the {} item(s) here", corpus.items.len())),
+            "{id}: the N (every item) count must be stated: {report}"
+        );
+        assert!(
+            flat.contains(&format!("mechanism reaches {reach} of them at all")),
+            "{id}: the K (reach) count must be derived from the corpus and \
+             stated, got reach={reach}: {report}"
+        );
+        assert!(
+            flat.contains(&format!("represent the LOSS of exactly {lost}")),
+            "{id}: the lost count must be stated beside K, not alone, got \
+             lost={lost}: {report}"
+        );
+
+        let finding = flat
+            .find("THE FINDING THIS CORPUS MAKES SAYABLE")
+            .expect("the finding sentence");
+        let reach_pos = flat[finding..]
+            .find(&format!("reaches {reach} of them at all"))
+            .expect("reach stated inside the finding sentence");
+        let lost_pos = flat[finding..]
+            .find(&format!("exactly {lost}"))
+            .expect("lost stated inside the finding sentence");
+        assert!(
+            reach_pos < lost_pos,
+            "{id}: K must be stated before the loss count it qualifies, in \
+             the same sentence: {report}"
+        );
+    }
+}
+
+/// Requirement 5 (The Repertoire's own Critical finding: an artifact
+/// "listed seven capabilities the world already had under a heading reading
+/// *missing*"). Deliberately narrow, not a word-sieve over every synonym
+/// for "backlog" — this campaign has already thrown away two over-broad
+/// default-deny lists (ledger #21, #25) — so this checks for the ONE
+/// heading shape that is the documented failure, and separately names the
+/// heading this renderer actually chose for the actionable output instead.
+#[test]
+fn no_heading_reads_like_a_missing_capabilities_backlog() {
+    for (corpus, id) in [
+        (load_asimov(), "asimov-1989"),
+        (load_henrich(), "henrich-2004-extended"),
+    ] {
+        let report = render(&corpus, id);
+        let headings: Vec<&str> = report
+            .lines()
+            .filter(|l| l.starts_with("## "))
+            .map(|l| l.trim_start_matches("## ").trim())
+            .collect();
+        assert!(
+            !headings.iter().any(|h| h.eq_ignore_ascii_case("missing")),
+            "{id}: a heading reading `Missing` appeared — The Repertoire's own \
+             documented failure shape: {headings:?}"
+        );
+        assert!(
+            headings.contains(&"Demand set"),
+            "{id}: the actionable output must be headed `## Demand set`, the \
+             heading this renderer chose instead of one implying a work \
+             queue: {headings:?}"
         );
     }
 }
