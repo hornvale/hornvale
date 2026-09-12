@@ -13828,11 +13828,20 @@ mod tests {
     /// A generated sky renders a figures line with its actual nonzero count;
     /// it never falls back to the old zero-figure placeholder.
     #[test]
-    fn a_sky_with_zero_figures_renders_no_figures_line() {
+    fn seed_1_generated_default_has_a_figures_summary_line() {
         let world = generated(1);
         let lines = night_sky_lines(&world).unwrap().unwrap();
         assert_eq!(lines.figures.len(), 1);
         assert!(lines.figures[0].starts_with("The sky holds 8 figures; 2 stand"));
+    }
+
+    /// A generated sky with no constellation candidates renders no figures
+    /// line at all (never "The sky holds 0 figures").
+    #[test]
+    fn a_sky_with_zero_figures_renders_no_figures_line() {
+        let world = generated(79);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert!(lines.figures.is_empty());
     }
 
     #[test]
