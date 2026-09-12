@@ -176,6 +176,10 @@ fn valid_surface_number(value: f64) -> bool {
 }
 
 const MAX_SURFACE_CHILD_DEPTH: usize = 23;
+// The supported anchor-radius interval makes a planet's half-circumference
+// smaller than this bound. Channel distance remains signed within that
+// physical surface-distance envelope.
+const MAX_CHANNEL_DISTANCE_M: f64 = 100_000_000.0;
 const UNIT_TOLERANCE: f64 = 1.0e-5;
 const WEIGHT_TOLERANCE: f64 = 1.0e-5;
 
@@ -291,7 +295,7 @@ pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<
                 && vertex.material_weights.iter().copied().all(valid_weight)
                 && (vertex.material_weights.iter().sum::<f64>() - 1.0).abs() <= WEIGHT_TOLERANCE
                 && vertex.water_depth_m >= 0.0
-                && vertex.channel_distance_m >= 0.0
+                && vertex.channel_distance_m.abs() <= MAX_CHANNEL_DISTANCE_M
                 && vertex.channel_width_m >= 0.0
                 && vertex.flow_strength >= 0.0
                 && vertex.flow_strength <= 1.0

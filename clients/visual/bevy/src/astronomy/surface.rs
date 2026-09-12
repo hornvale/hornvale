@@ -7,10 +7,17 @@
 use crate::documents::{Moon, SurfacePatchDocument, SurfacePatchFeature, Tiles};
 use bevy::{
     asset::RenderAssetUsages,
-    mesh::{Indices, PrimitiveTopology},
+    mesh::{Indices, MeshVertexAttribute, PrimitiveTopology},
     prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
+    render::render_resource::{Extent3d, TextureDimension, TextureFormat, VertexFormat},
 };
+
+/// Source-owned directional channels retained in the render mesh. These are
+/// direct data attributes; the client does not reconstruct terrain semantics.
+pub const ATTRIBUTE_FLOW_DIRECTION: MeshVertexAttribute =
+    MeshVertexAttribute::new("Surface_FlowDirection", 8, VertexFormat::Float32x3);
+pub const ATTRIBUTE_RIDGE_DIRECTION: MeshVertexAttribute =
+    MeshVertexAttribute::new("Surface_RidgeDirection", 9, VertexFormat::Float32x3);
 fn image(width: u32, height: u32, bytes: Vec<u8>) -> Image {
     Image::new(
         Extent3d {
@@ -243,41 +250,76 @@ pub fn surface_mesh(
     patch: &SurfacePatchDocument,
     transition: Option<&SurfacePatchDocument>,
 ) -> Mesh {
-    let positions = patch
+    let mut vertices = patch
         .vertices
         .iter()
-        .map(render_position)
-        .collect::<Vec<_>>();
-    let normals = patch
-        .vertices
-        .iter()
-        .map(|vertex| vertex.normal.map(|value| value as f32))
-        .collect::<Vec<_>>();
-    let uv = patch.vertices.iter().map(render_uv).collect::<Vec<_>>();
-    let colors = patch
-        .vertices
-        .iter()
-        .map(|vertex| {
-            let feature_mask = patch
-                .features
-                .iter()
-                .map(|feature| narrow_feature_mask(patch, feature, vertex.position.map(|v| v as f32)))
-                .fold(0.0, f32::max);
-            material_color(source_material_weights(vertex, feature_mask))
-        })
+        .map(|vertex| (vertex, patch.features.as_slice()))
         .collect::<Vec<_>>();
     let indices = if !patch.transition_triangles.is_empty() {
         patch.transition_triangles.iter().flatten().copied().collect()
     } else if let Some(document) = transition {
-        document.triangles.iter().flatten().copied().collect()
+        let candidate = if document.transition_triangles.is_empty() {
+            &document.triangles
+        } else {
+            &document.transition_triangles
+        };
+        if candidate.is_empty() {
+            patch.triangles.iter().flatten().copied().collect()
+        } else {
+            let mut remapped = Vec::with_capacity(candidate.len() * 3);
+            for index in candidate.iter().flatten().copied() {
+                let vertex = &document.vertices[index as usize];
+                let mapped = vertices
+                    .iter()
+                    .position(|(candidate, _)| candidate.position == vertex.position)
+                    .unwrap_or_else(|| {
+                        vertices.push((vertex, document.features.as_slice()));
+                        vertices.len() - 1
+                    });
+                remapped.push(mapped as u32);
+            }
+            remapped
+        }
     } else {
         patch.triangles.iter().flatten().copied().collect()
     };
+    let positions = vertices
+        .iter()
+        .map(|(vertex, _)| render_position(vertex))
+        .collect::<Vec<_>>();
+    let normals = vertices
+        .iter()
+        .map(|(vertex, _)| vertex.normal.map(|value| value as f32))
+        .collect::<Vec<_>>();
+    let uv = vertices
+        .iter()
+        .map(|(vertex, _)| render_uv(vertex))
+        .collect::<Vec<_>>();
+    let colors = vertices
+        .iter()
+        .map(|(vertex, features)| {
+            let feature_mask = features
+                .iter()
+                .map(|feature| feature_mask(features, feature, vertex.position.map(|v| v as f32)))
+                .fold(0.0, f32::max);
+            material_color(source_material_weights(vertex, feature_mask))
+        })
+        .collect::<Vec<_>>();
+    let flow_direction = vertices
+        .iter()
+        .map(|(vertex, _)| vertex.flow_direction.map(|value| value as f32))
+        .collect::<Vec<_>>();
+    let ridge_direction = vertices
+        .iter()
+        .map(|(vertex, _)| vertex.ridge_direction.map(|value| value as f32))
+        .collect::<Vec<_>>();
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all())
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uv)
         .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colors)
+        .with_inserted_attribute(ATTRIBUTE_FLOW_DIRECTION, flow_direction)
+        .with_inserted_attribute(ATTRIBUTE_RIDGE_DIRECTION, ridge_direction)
         .with_inserted_indices(Indices::U32(indices))
 }
 
@@ -338,7 +380,7 @@ fn source_material_weights(
 ) -> [f64; 8] {
     let mut weights = vertex.material_weights;
     let channel = if vertex.channel_width_m > 0.0 {
-        (1.0 - vertex.channel_distance_m / vertex.channel_width_m).clamp(0.0, 1.0)
+        (1.0 - vertex.channel_distance_m.abs() / vertex.channel_width_m).clamp(0.0, 1.0)
     } else {
         0.0
     };
@@ -384,7 +426,15 @@ pub fn narrow_feature_mask(
     feature: &SurfacePatchFeature,
     position: [f32; 3],
 ) -> f32 {
-    if !patch.features.iter().any(|candidate| candidate == feature) {
+    feature_mask(&patch.features, feature, position)
+}
+
+fn feature_mask(
+    features: &[SurfacePatchFeature],
+    feature: &SurfacePatchFeature,
+    position: [f32; 3],
+) -> f32 {
+    if !features.iter().any(|candidate| candidate == feature) {
         return 0.0;
     }
     let position = Vec3::from_array(position);

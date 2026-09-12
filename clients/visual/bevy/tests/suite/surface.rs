@@ -199,6 +199,53 @@ fn surface_validation_rejects_unbounded_semantics_and_unknown_endpoints() {
 }
 
 #[test]
+fn surface_validation_accepts_signed_channel_distance_but_rejects_non_finite_values() {
+    let mut value: serde_json::Value = serde_json::from_str(&patch_json(&"a".repeat(40))).unwrap();
+    value["samples"][0]["channel_distance_m"] = serde_json::json!(-10.0);
+    let document = documents::surface_patch(&value.to_string()).unwrap();
+    assert_eq!(document.vertices[0].channel_distance_m, -10.0);
+
+    value["samples"][0]["channel_distance_m"] = serde_json::json!("not-a-number");
+    assert!(documents::surface_patch(&value.to_string()).is_err());
+
+    value["samples"][0]["channel_distance_m"] = serde_json::json!(-100_000_001.0);
+    assert!(documents::surface_patch(&value.to_string()).is_err());
+}
+
+#[test]
+fn signed_channel_distance_has_symmetric_channel_material_influence() {
+    let mut positive: serde_json::Value = serde_json::from_str(&patch_json(&"a".repeat(40))).unwrap();
+    positive["samples"][0]["channel_distance_m"] = serde_json::json!(10.0);
+    positive["samples"][0]["channel_width_m"] = serde_json::json!(100.0);
+    positive["samples"][0]["flow_strength"] = serde_json::json!(1.0);
+    let mut negative = positive.clone();
+    negative["samples"][0]["channel_distance_m"] = serde_json::json!(-10.0);
+    let positive = documents::surface_patch(&positive.to_string()).unwrap();
+    let negative = documents::surface_patch(&negative.to_string()).unwrap();
+    let positive_material = surface::surface_material(&positive);
+    let negative_material = surface::surface_material(&negative);
+    assert_eq!(positive_material.base_color, negative_material.base_color);
+}
+
+#[test]
+fn surface_mesh_preserves_source_direction_fields_as_render_attributes() {
+    let document = documents::surface_patch(&patch_json(&"a".repeat(40))).unwrap();
+    let mesh = surface::surface_mesh(&document, None);
+    let Some(VertexAttributeValues::Float32x3(flow)) =
+        mesh.attribute(surface::ATTRIBUTE_FLOW_DIRECTION)
+    else {
+        panic!("flow direction attribute")
+    };
+    let Some(VertexAttributeValues::Float32x3(ridge)) =
+        mesh.attribute(surface::ATTRIBUTE_RIDGE_DIRECTION)
+    else {
+        panic!("ridge direction attribute")
+    };
+    assert_eq!(flow[0], [0.0, 1.0, 0.0]);
+    assert_eq!(ridge[0], [0.0, 1.0, 0.0]);
+}
+
+#[test]
 fn cache_key_includes_the_full_surface_revision() {
     let first = documents::surface_patch(&patch_json(&"a".repeat(40))).unwrap();
     let mut changed = first.clone();
@@ -273,4 +320,36 @@ fn mixed_lod_mesh_has_no_boundary_gap() {
     };
     assert_eq!(points.len(), coarse.vertices.len());
     assert_eq!(mesh.indices().unwrap().iter().collect::<Vec<_>>(), vec![0, 1, 3]);
+}
+
+#[test]
+fn mixed_lod_mesh_remaps_indices_for_a_distinct_transition_layout() {
+    let revision = "a".repeat(40);
+    let coarse = documents::surface_patch(&patch_json(&revision)).unwrap();
+    let mut fine: serde_json::Value = serde_json::from_str(&patch_json(&revision)).unwrap();
+    fine["address"]["child_path"] = serde_json::json!([1]);
+    fine["samples"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({
+            "position": [0.0,-1.0,0.0], "height_m": 10.0, "normal": [0.0,-1.0,0.0],
+            "material_weights": [1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],
+            "shoreline_distance_m": 10.0, "water_depth_m": 0.0,
+            "flow_direction": [0.0,1.0,0.0], "flow_strength": 0.0,
+            "channel_distance_m": 10.0, "channel_width_m": 0.0,
+            "floodplain_weight": 0.0, "bank_weight": 0.0, "terrace_weight": 0.0,
+            "delta_weight": 0.0, "ridge_direction": [0.0,1.0,0.0], "ridge_strength": 0.0
+        }));
+    fine["triangles"] = serde_json::json!([[0, 1, 4]]);
+    let fine = documents::surface_patch(&fine.to_string()).unwrap();
+    let mesh = surface::surface_mesh(&coarse, Some(&fine));
+    let Some(VertexAttributeValues::Float32x3(points)) =
+        mesh.attribute(hornvale_bevy_view::bevy::mesh::Mesh::ATTRIBUTE_POSITION)
+    else {
+        panic!("positions")
+    };
+    let indices = mesh.indices().unwrap().iter().collect::<Vec<_>>();
+    assert_eq!(points.len(), 5);
+    assert_eq!(indices, vec![0, 1, 4]);
+    assert!(indices.iter().all(|index| (*index as usize) < points.len()));
 }
