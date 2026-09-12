@@ -10,7 +10,8 @@
 //! that check alone would prove nothing about whether the resolver works.
 
 use hornvale::technologies::{
-    Anchor, Corpus, Finding, audit, audit_family, cross_corpus_ruling_gaps, load,
+    Anchor, Corpus, Criterion, Finding, Verdict, audit, audit_family, cross_corpus_ruling_gaps,
+    load, meets, two_way,
 };
 use std::path::PathBuf;
 
@@ -754,6 +755,115 @@ fn audit_family_includes_cross_corpus_gaps() {
         "a fixture mentioning none of the real corpora's registry rows must \
          still surface cross-corpus gaps through audit_family"
     );
+}
+
+// --- The criterion, and the two-way trajectory guard (Task 6) ------------
+
+/// Both edges of `MedianInBand` are inclusive — the same arithmetic the
+/// sibling `regularities::Criterion::MedianInBand` guards
+/// (`cli/tests/suite/regularity_corpus.rs`'s
+/// `median_in_band_is_inclusive_at_both_edges`), reproduced for this
+/// family.
+#[test]
+fn median_in_band_is_inclusive_at_both_edges() {
+    let v = [0.2, 0.5, 0.8];
+    assert!(meets(&Criterion::MedianInBand { lo: 0.5, hi: 0.9 }, &v, 3));
+    assert!(meets(&Criterion::MedianInBand { lo: 0.1, hi: 0.5 }, &v, 3));
+    assert!(!meets(&Criterion::MedianInBand { lo: 0.6, hi: 0.7 }, &v, 3));
+}
+
+/// `FractionInBand` divides by the POPULATION, never by the number of
+/// values on hand — this family's own version of the sibling's
+/// `fraction_in_band_counts_only_values_inside_it` /
+/// `present_on_fraction_measures_against_the_world_count_not_the_value_
+/// count` denominator bug. Two peoples report a holding fraction of 0.5
+/// each; against a population of 4 (two more peoples reported nothing), the
+/// aggregate is 1.0/4 = 0.25, which clears `[0.2, 0.3]`. A denominator bug
+/// dividing by `values.len()` == 2 instead would compute 1.0/2 = 0.5, which
+/// does not — this is the discriminating case, same as the sibling's.
+#[test]
+fn fraction_in_band_measures_against_the_population_not_the_value_count() {
+    let v = [0.5, 0.5];
+    let c = Criterion::FractionInBand { lo: 0.2, hi: 0.3 };
+    assert!(
+        meets(&c, &v, 4),
+        "1.0 summed over a population of 4 is 0.25, inside [0.2, 0.3]"
+    );
+    assert!(
+        !meets(&c, &v, 2),
+        "1.0 summed over a population of 2 is 0.5, outside [0.2, 0.3] -- the \
+         value-count denominator a bug would use"
+    );
+}
+
+/// The pathology this family exists to detect (spec §5.2a): a bare boolean
+/// cannot see divergence. Today every surviving community is Classical, so
+/// a holding fraction of 1.0 must NOT read as success — it is exactly as
+/// wrong as 0.0.
+#[test]
+fn a_universal_holding_fraction_fails_a_divergence_band() {
+    let c = Criterion::FractionInBand { lo: 0.15, hi: 0.85 };
+    assert!(
+        !meets(&c, &[1.0; 10], 10),
+        "every people holding it is not divergence"
+    );
+    assert!(
+        !meets(&c, &[0.0; 10], 10),
+        "no people holding it is not divergence"
+    );
+    assert!(meets(&c, &[0.5; 10], 10));
+}
+
+/// An empty population never meets a criterion — an honest `false`, never a
+/// vacuous `true` (the sibling's `an_empty_population_never_meets_a_
+/// criterion`, reproduced for both of this family's criterion kinds).
+#[test]
+fn an_empty_population_never_meets_a_criterion() {
+    assert!(!meets(
+        &Criterion::MedianInBand { lo: -1.0, hi: 1.0 },
+        &[],
+        0
+    ));
+    assert!(!meets(
+        &Criterion::FractionInBand { lo: 0.0, hi: 1.0 },
+        &[],
+        0
+    ));
+}
+
+/// 0936's guard is two-way. An implementation reddening only one direction
+/// has built half a guard, and the half it skipped is the one that lets a
+/// corpus quietly under-report the world.
+#[test]
+fn the_guard_reddens_in_both_directions() {
+    assert!(
+        two_way(Verdict::Grown, Verdict::Flat).is_some(),
+        "a regularity was lost"
+    );
+    assert!(
+        two_way(Verdict::Flat, Verdict::Grown).is_some(),
+        "stale pessimism"
+    );
+    assert!(two_way(Verdict::Grown, Verdict::Grown).is_none());
+}
+
+/// `unmeasured` is a lifecycle state, never a coverage verdict, and raises
+/// nothing here — which is what makes Task 7's separate tally necessary.
+#[test]
+fn unmeasured_raises_nothing() {
+    assert!(two_way(Verdict::Unmeasured, Verdict::Unmeasured).is_none());
+}
+
+/// The guard is scoped to the two verdicts a single-snapshot criterion can
+/// actually compute. `Lost` names a capability held and then released — a
+/// trajectory [`meets`]'s boolean cannot detect — so `Lost` on either side
+/// must not trip the guard yet; that is the successor campaign's job, not a
+/// hole in this one.
+#[test]
+fn lost_does_not_trip_the_guard_yet() {
+    assert!(two_way(Verdict::Grown, Verdict::Lost).is_none());
+    assert!(two_way(Verdict::Lost, Verdict::Flat).is_none());
+    assert!(two_way(Verdict::Lost, Verdict::Lost).is_none());
 }
 
 // --- The real corpora, both halves ---------------------------------------

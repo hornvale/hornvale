@@ -35,10 +35,20 @@
 //! reach half is checkable, even though its trajectory is not), and a
 //! registry row any sibling corpus cites must be ruled on — cited, or
 //! refused in writing — by every other corpus in the family
-//! (`technologies/CLAUDE.md`'s cross-corpus rule). Criterion evaluation and
-//! the two-way trajectory guard are later tasks' work and deliberately do
-//! not live here yet: [`Criterion`] is a minimal round-tripping type today,
-//! not something this module evaluates.
+//! (`technologies/CLAUDE.md`'s cross-corpus rule).
+//!
+//! **The criterion evaluator and the two-way trajectory guard** ([`meets`],
+//! [`two_way`], Task 6). [`meets`] scores a [`Criterion`] against the
+//! per-people values a census would report and the corpus's own population
+//! count — never a bare boolean over the world, because "every surviving
+//! community holds it" and "half do" must not score identically (the
+//! defect this family exists to detect, `technologies/CLAUDE.md`'s "a bare
+//! boolean is blind to divergence"). [`two_way`] compares an authored
+//! trajectory verdict against what [`meets`] computes today and reddens in
+//! *either* direction of disagreement, mirroring
+//! [`crate::regularities`]'s own two-way guard (decision 0936) — a report
+//! generator wiring the two together, over the real census, is Task 7's
+//! work.
 //!
 //! The corpus is DATA (`technologies/*.technology.json`) and this module is
 //! its RESOLVER (decision 0011). Nothing in `domains/*` or `windows/*` reads
@@ -83,25 +93,87 @@ pub enum Verdict {
 /// The frozen, falsifiable claim an item makes about the statistic's
 /// distribution across peoples.
 ///
-/// **Minimal on purpose.** `Criterion` is Task 6's to define and evaluate;
-/// this shape only needs to round-trip what Tasks 1 and 2 authored, which is
-/// exactly one shape in both frozen corpora today
-/// (`{"kind": "fraction-in-band", "lo": ..., "hi": ...}`). An unrecognized
-/// `kind` is a parse error naming the offending value, via `serde`'s own
-/// tagged-enum deserialization — the same mechanism `regularities::Criterion`
-/// relies on, not a hand-written check.
-/// type-audit: bare-ok(ratio: FractionInBand.lo), bare-ok(ratio: FractionInBand.hi)
+/// Two kinds, both scored by [`meets`]. `FractionInBand` divides by the
+/// **population** (every people the corpus scores, present or not), never
+/// by the number of values on hand — the same discipline
+/// `regularities::Criterion::FractionInBandAtLeast` and `PresentOnFraction`
+/// hold, so a statistic only a handful of peoples happen to report cannot
+/// score as though the whole world agreed. `MedianInBand` matches its
+/// `regularities` namesake exactly: the median of the present values,
+/// inclusive at both edges.
+///
+/// **The wire tag is pinned explicitly on each variant**, not left to the
+/// `rename_all = "kebab-case"` derive. Task 3's review flagged this as a
+/// family-wide exposure (`regularities::Criterion` carries the identical
+/// latent shape): a derived tag matches today's data by coincidence, and
+/// renaming a variant would silently change the wire format both frozen
+/// corpora already parse against, with nothing to catch it. Pinning removes
+/// that coincidence rather than merely documenting it.
+///
+/// An unrecognized `kind` is a parse error naming the offending value, via
+/// `serde`'s own tagged-enum deserialization — the same mechanism
+/// `regularities::Criterion` relies on, not a hand-written check.
+/// type-audit: bare-ok(ratio: FractionInBand.lo), bare-ok(ratio: FractionInBand.hi), bare-ok(ratio: MedianInBand.lo), bare-ok(ratio: MedianInBand.hi)
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum Criterion {
-    /// The statistic's value across peoples lies in the inclusive band
-    /// `[lo, hi]`.
+    /// The population-wide aggregate — the sum of every people's own
+    /// per-people reading, divided by the full population (an unreported
+    /// people contributes zero) — lies in the inclusive band `[lo, hi]`.
+    ///
+    /// This is the family's defense against the pathology it exists to
+    /// detect: "every people holds it" (aggregate `1.0`) and "no people
+    /// holds it" (aggregate `0.0`) both fail a divergence band such as
+    /// `[0.15, 0.85]`, and only a genuinely mixed world (aggregate `0.5`)
+    /// passes.
+    #[serde(rename = "fraction-in-band")]
     FractionInBand {
         /// Inclusive lower edge.
         lo: f64,
         /// Inclusive upper edge.
         hi: f64,
     },
+    /// The median of the present per-people values lies in the inclusive
+    /// band `[lo, hi]`.
+    #[serde(rename = "median-in-band")]
+    MedianInBand {
+        /// Inclusive lower edge.
+        lo: f64,
+        /// Inclusive upper edge.
+        hi: f64,
+    },
+}
+
+/// Whether a frozen criterion is met by a set of per-people statistic
+/// readings.
+///
+/// `values` holds one reading per people that reported the statistic;
+/// `population` is the total number of peoples this item scores against,
+/// **including** any that reported none. The two differ, and
+/// `FractionInBand` divides by `population`, never by `values.len()`: a
+/// people that never reported contributes zero to the aggregate rather than
+/// being excluded from it, so a statistic only a handful of peoples happen
+/// to report cannot score as though the whole world agreed (the same
+/// discipline `regularities::meets`'s doc comment states for its own
+/// fraction criteria).
+///
+/// An empty population never meets a criterion — an honest `false`, never a
+/// vacuous `true`: there is nothing to measure, so nothing can be in-band.
+/// type-audit: bare-ok(ratio: values), bare-ok(count: population), bare-ok(flag: return)
+pub fn meets(c: &Criterion, values: &[f64], population: usize) -> bool {
+    if population == 0 {
+        return false;
+    }
+    match c {
+        Criterion::FractionInBand { lo, hi } => {
+            let aggregate = values.iter().sum::<f64>() / population as f64;
+            aggregate >= *lo && aggregate <= *hi
+        }
+        Criterion::MedianInBand { lo, hi } => match crate::regularities::median(values) {
+            Some(m) => m >= *lo && m <= *hi,
+            None => false,
+        },
+    }
 }
 
 /// One capability item as authored in the corpus.
@@ -354,12 +426,14 @@ impl Anchor {
 }
 
 /// One thing wrong with an item's verdict and its evidence, or with the
-/// corpus as a whole — decision 0136's four conditions. Every variant
-/// carries enough to diagnose it without knowing this instrument exists
-/// (the same diagnosability standard `systems::Finding` and
-/// `regularities::Finding` carry): this family's two inputs are edited by
-/// sessions with no reason to know a resolver reads them.
-/// type-audit: bare-ok(identifier-text: Unjustified.id), bare-ok(prose: Unjustified.why), bare-ok(identifier-text: Dangling.id), bare-ok(identifier-text: Dangling.anchor), bare-ok(prose: Dangling.why), bare-ok(identifier-text: StaleDeferred.id), bare-ok(identifier-text: StaleDeferred.row), bare-ok(prose: StaleDeferred.why), bare-ok(identifier-text: Novelty.corpus), bare-ok(count: Novelty.baseline), bare-ok(count: Novelty.found)
+/// corpus as a whole — decision 0136's four conditions, plus this family's
+/// own two-way trajectory guard (decision 0936's guard, widened from its
+/// `regularities` origin). Every variant carries enough to diagnose it
+/// without knowing this instrument exists (the same diagnosability standard
+/// `systems::Finding` and `regularities::Finding` carry): this family's two
+/// inputs are edited by sessions with no reason to know a resolver reads
+/// them.
+/// type-audit: bare-ok(identifier-text: Unjustified.id), bare-ok(prose: Unjustified.why), bare-ok(identifier-text: Dangling.id), bare-ok(identifier-text: Dangling.anchor), bare-ok(prose: Dangling.why), bare-ok(identifier-text: StaleDeferred.id), bare-ok(identifier-text: StaleDeferred.row), bare-ok(prose: StaleDeferred.why), bare-ok(prose: Regressed.why), bare-ok(identifier-text: Novelty.corpus), bare-ok(count: Novelty.baseline), bare-ok(count: Novelty.found)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Finding {
     /// A verdict with no anchor, the wrong kind of anchor, an anchor into
@@ -393,6 +467,24 @@ pub enum Finding {
         /// What to do about it.
         why: String,
     },
+    /// An authored trajectory verdict and the one [`meets`] computes today
+    /// disagree — in either direction ([`two_way`]). A `grown` that
+    /// computes `flat` is a lost regularity; a `flat` that computes `grown`
+    /// is stale pessimism.
+    ///
+    /// Carries no item id, unlike every sibling variant: [`two_way`]
+    /// compares two verdicts in isolation, and the caller that threads a
+    /// real item's values through [`meets`] (Task 7's report) is what knows
+    /// which item this is — it attaches that context itself rather than
+    /// this variant inventing a field its own constructor cannot fill.
+    Regressed {
+        /// What the corpus claims.
+        authored: Verdict,
+        /// What [`meets`] computes against fresh values today.
+        computed: Verdict,
+        /// What to do about it.
+        why: String,
+    },
     /// The `absent` count rose above its baseline — 0136's one
     /// falsification-by-count guard. `inapplicable`'s tally is deliberately
     /// not ratcheted; only `absent` is.
@@ -419,6 +511,73 @@ fn verdict_name(v: Verdict) -> &'static str {
         Verdict::Lost => "lost",
         Verdict::Unmeasured => "unmeasured",
     }
+}
+
+/// The two-way trajectory guard (decision 0936, whose two-way rule this
+/// family inherits wholesale from its closest sibling `regularities/`):
+/// compare an authored trajectory verdict against what [`meets`] computes
+/// fresh today, and red on either direction of disagreement. `None` when
+/// they agree, or when the pair is not one this guard covers.
+///
+/// **Two-way, exactly as 0936 states it (its own lines 58-60):**
+/// - authored `grown`, computed `flat` — a regularity was lost.
+/// - authored `flat`, computed `grown` — stale pessimism; a real gain is
+///   claimed deliberately, in a commit that says so, never left for a
+///   reader to notice on their own.
+///
+/// A one-directional guard would be half built, and the half it skipped is
+/// the one that lets a corpus quietly under-report the world
+/// (`technologies/CLAUDE.md`'s "a bare boolean is blind to divergence" is
+/// the same failure shape one axis over).
+///
+/// **Scoped to the two verdicts [`meets`] can actually produce.** `meets`
+/// returns a `bool`, so the only `computed` values this guard ever sees in
+/// practice are [`Verdict::Grown`] and [`Verdict::Flat`]. This family's
+/// third measured value, [`Verdict::Lost`], names a capability a people
+/// held and then released — a trajectory a single-snapshot criterion cannot
+/// detect, which is the successor campaign's job (`technologies/
+/// CLAUDE.md`'s scope note for `lost`), not a gap in this guard. So the
+/// guard fires only when BOTH sides are `Grown` or `Flat` and disagree;
+/// anything else — `Lost` on either side, and [`Verdict::Unmeasured`], a
+/// lifecycle state that is never a coverage verdict — raises nothing.
+///
+/// **No live case exists yet** (campaign ledger #27): every trajectory
+/// verdict in both committed corpora is `unmeasured`, so this is exercised
+/// only against constructed input until a successor campaign makes loss
+/// measurable — it must be correct before then, not after.
+pub fn two_way(authored: Verdict, computed: Verdict) -> Option<Finding> {
+    if authored == computed {
+        return None;
+    }
+    if !matches!(authored, Verdict::Grown | Verdict::Flat)
+        || !matches!(computed, Verdict::Grown | Verdict::Flat)
+    {
+        return None;
+    }
+    let why = if authored == Verdict::Grown {
+        format!(
+            "authored `{}`, computed `{}`: a capability this corpus claims a people GROWS \
+             no longer measures grown. That is a finding about the world, not the corpus: \
+             investigate the cause before re-verdicting; if the loss is accepted, change the \
+             verdict to `flat` in a commit that says why.",
+            verdict_name(authored),
+            verdict_name(computed)
+        )
+    } else {
+        format!(
+            "authored `{}`, computed `{}`: a capability this corpus records as FLAT now \
+             measures grown. Stale pessimism is red for the same reason a loss is: a corpus \
+             that under-reports the world is as wrong as one that over-reports it. Promote \
+             the verdict to `grown` deliberately, in a commit that claims the gain.",
+            verdict_name(authored),
+            verdict_name(computed)
+        )
+    };
+    Some(Finding::Regressed {
+        authored,
+        computed,
+        why,
+    })
 }
 
 /// The anchor kind(s) a verdict requires, for failure text.
