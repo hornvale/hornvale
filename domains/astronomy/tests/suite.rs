@@ -13,6 +13,8 @@
 mod anchor_radius;
 #[path = "suite/calendar_negative_time.rs"]
 mod calendar_negative_time;
+#[path = "suite/constellation_candidates.rs"]
+mod constellation_candidates;
 #[path = "suite/day_is_a_whole_tick_count.rs"]
 mod day_is_a_whole_tick_count;
 #[path = "suite/eclipse_rhythm_view.rs"]

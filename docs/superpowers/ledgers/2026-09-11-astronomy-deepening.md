@@ -115,3 +115,18 @@ implementations. `cargo test -p hornvale-astronomy` passes 339 unit and 56
 integration tests, including the pre-retrofit genesis golden and pin isolation.
 Astronomy clippy, formatting, type/placement/plumb checks pass; the stream
 manifest and affected audit reports were regenerated.
+
+## #6 [Task 8] — Culture-owned constellation seam
+
+Culture owns a small deterministic `SkyCandidate` input and
+`ConstellationCulture` grouping/name/meaning output. It has no astronomy
+dependency: the worldgen composition root adapts astronomy's filtered
+`SkyStar` records into opaque stable IDs plus position and brightness. Empty
+candidate sets are valid, and two grouping rules demonstrate that cultures can
+interpret the same physical sky differently. The four follow-ups—eclipsing
+binaries, transient stellar events, dense meteor-stream clumps, and terminal
+stellar evolution—are documented as deferred and are not inputs here.
+
+Verification: culture, worldgen, and astronomy integration tests pass;
+workspace clippy and formatting pass. The commit gate remains to be run after
+the final staged change.

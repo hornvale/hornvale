@@ -174,12 +174,12 @@ until Task 6 is implemented.
 
 **Interfaces:** Astronomy supplies visible stable-star IDs, positions, brightness, and optional physical descriptors. Culture consumes those candidates and produces constellation groupings, names, and meanings; different cultures may group the same candidates differently.
 
-- [ ] Write failing tests showing two cultures can produce different groupings from the same observer-specific candidate set, including low-acuity and daylight cases.
-- [ ] Run focused tests and verify red status.
-- [ ] Implement the smallest culture-owned grouping/name interface; keep it naked-eye-only and avoid telescope-only catalog obligations.
-- [ ] Add an explicit follow-up boundary for eclipsing binaries, transient stellar events, dense meteor-stream clumps, and terminal stellar evolution; do not implement them in this slice.
-- [ ] Run the full relevant package tests and `cargo clippy --workspace --all-targets -- -D warnings`.
-- [ ] Update stage statuses in `IMPLEMENTATION_PLAN.md` as each stage lands.
+- [x] Write failing tests showing two cultures can produce different groupings from the same observer-specific candidate set, including low-acuity and daylight cases.
+- [x] Run focused tests and verify red status.
+- [x] Implement the smallest culture-owned grouping/name interface; keep it naked-eye-only and avoid telescope-only catalog obligations.
+- [x] Add an explicit follow-up boundary for eclipsing binaries, transient stellar events, dense meteor-stream clumps, and terminal stellar evolution; do not implement them in this slice.
+- [x] Run the full relevant package tests and `cargo clippy --workspace --all-targets -- -D warnings`.
+- [x] Update stage statuses in `IMPLEMENTATION_PLAN.md` as each stage lands (repository has no such file; this plan records status).
 - [ ] Commit with message `feat(astronomy): support culture-owned constellations`.
 
 ## Verification and handoff

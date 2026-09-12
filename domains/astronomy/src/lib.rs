@@ -83,7 +83,7 @@ pub use star::{
     class_concept, common_words, generate_star, insolation_rel, insolation_rel_at, luminosity_at,
     main_sequence_lifetime, planet_age,
 };
-pub use starfield::{FieldStar, starfield};
+pub use starfield::{BackgroundStarId, FieldStar, SkyCell, SkyStar, StarId, starfield}; // lexicon: equal-area sky region, not a mesh vertex
 pub use stellar::{
     BinaryOrbit, CompanionStar, StellarConfiguration, StellarTopology, generate_stellar,
     stellar_gravity_mass, stellar_luminosity_at,
