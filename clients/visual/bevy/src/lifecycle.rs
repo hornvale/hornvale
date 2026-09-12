@@ -9,7 +9,7 @@ use bevy::{
     light::{Atmosphere, atmosphere::ScatteringMedium},
     prelude::*,
 };
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::{Mutex, OnceLock};
 pub const KM_PER_UNIT: f64 = 1000.;
 #[derive(Component)]
@@ -80,7 +80,7 @@ pub struct SurfaceMeshHandles {
 #[derive(Default)]
 struct SurfacePatchState {
     generation: u64,
-    pending: HashMap<(Binding, u64, u64), SurfacePatchCacheKey>,
+    pending: BTreeMap<(Binding, u64, u64), SurfacePatchCacheKey>,
 }
 
 static ACTIVE_SURFACE_PATCHES: OnceLock<Mutex<SurfacePatchState>> = OnceLock::new();

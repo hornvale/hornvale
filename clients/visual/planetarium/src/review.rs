@@ -531,13 +531,12 @@ fn validate_live_pathology(case_name: &str, patch: &serde_json::Value) -> Result
                 return Err("live coast crossing patch does not cross the shoreline".into());
             }
         }
-        "unequal_lod transition" => {
+        "unequal_lod transition"
             if patch["transition_triangles"]
                 .as_array()
-                .is_none_or(Vec::is_empty)
-            {
-                return Err("live unequal-LOD patch has no transition triangles".into());
-            }
+                .is_none_or(Vec::is_empty) =>
+        {
+            return Err("live unequal-LOD patch has no transition triangles".into());
         }
         _ => {}
     }

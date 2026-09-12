@@ -373,5 +373,5 @@ fn mixed_lod_mesh_remaps_indices_for_a_distinct_transition_layout() {
     let indices = mesh.indices().unwrap().iter().collect::<Vec<_>>();
     assert_eq!(points.len(), 5);
     assert_eq!(indices, vec![0, 1, 4]);
-    assert!(indices.iter().all(|index| (*index as usize) < points.len()));
+    assert!(indices.iter().all(|index| *index < points.len()));
 }

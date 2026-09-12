@@ -388,13 +388,13 @@ fn source_material_weights(
     } else {
         0.0
     };
-    weights[2] += f64::from(vertex.floodplain_weight + vertex.delta_weight) * 0.25;
-    weights[3] += f64::from(vertex.terrace_weight) * 0.15;
+    weights[2] += (vertex.floodplain_weight + vertex.delta_weight) * 0.25;
+    weights[3] += vertex.terrace_weight * 0.15;
     weights[4] +=
         f64::from((feature_mask + channel as f32 * vertex.flow_strength as f32).clamp(0.0, 1.0));
     weights[5] += (vertex.water_depth_m / 500.0).clamp(0.0, 1.0);
-    weights[6] += f64::from(vertex.ridge_strength) * 0.2;
-    weights[7] += f64::from(vertex.bank_weight) * 0.1;
+    weights[6] += vertex.ridge_strength * 0.2;
+    weights[7] += vertex.bank_weight * 0.1;
     weights
 }
 
