@@ -332,6 +332,20 @@ fn children_preserve_parent_feature_ids() {
         .flat_map(|p| p.curves.iter().map(|c| c.feature))
         .collect();
     assert_eq!(ids, child_ids);
+    let parent_strip_ids: std::collections::BTreeSet<_> =
+        parent.strips.iter().map(|strip| strip.feature).collect();
+    let child_strip_ids = children
+        .iter()
+        .flat_map(|patch| patch.strips.iter().map(|strip| strip.feature))
+        .collect();
+    assert_eq!(parent_strip_ids, ids);
+    assert_eq!(parent_strip_ids, child_strip_ids);
+    assert!(parent.strips.iter().all(|strip| {
+        strip
+            .endpoints
+            .iter()
+            .all(|endpoint| endpoint.feature == strip.feature)
+    }));
 }
 
 /// claim: invariant(seed-42 mixed-LOD fields and topology agree across all six cube faces)

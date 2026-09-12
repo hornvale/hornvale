@@ -4,7 +4,7 @@ use hornvale_bevy_view::{
     bevy::{asset::Assets, mesh::VertexAttributeValues, pbr::StandardMaterial, prelude::*},
     camera::OrbitCamera,
     documents::{self, SurfacePatchCacheKey, SurfacePatchRevision},
-    lifecycle::{self, SceneCatalog},
+    lifecycle::{self, SceneCatalog, SurfaceFeatureVisual},
 };
 
 const MACRO_FACE: u32 = 1 << 17;
@@ -123,6 +123,28 @@ fn patch_json(revision: &str) -> String {
     }).to_string()
 }
 
+fn patch_with_strip_json(revision: &str) -> String {
+    let mut patch: serde_json::Value = serde_json::from_str(&patch_json(revision)).unwrap();
+    patch["strips"] = serde_json::json!([{
+        "feature": {"kind":"channel_reach", "macro_anchor": 1, "ordinal": 0},
+        "centerline": [[0.7071067812,-0.7071067812,0.0],[0.7071067812,0.7071067812,0.0]],
+        "width_rad": [0.1,0.1],
+        "vertices": [
+            {"position":[0.7062230818,-0.7062230818,-0.0499791693],"height_m":10.0,"normal":[0.7071067812,-0.7071067812,0.0],"side":-1,"signed_distance_rad":-0.05},
+            {"position":[0.7062230818,-0.7062230818,0.0499791693],"height_m":10.0,"normal":[0.7071067812,-0.7071067812,0.0],"side":1,"signed_distance_rad":0.05},
+            {"position":[0.7062230818,0.7062230818,-0.0499791693],"height_m":10.0,"normal":[0.7071067812,0.7071067812,0.0],"side":-1,"signed_distance_rad":-0.05},
+            {"position":[0.7062230818,0.7062230818,0.0499791693],"height_m":10.0,"normal":[0.7071067812,0.7071067812,0.0],"side":1,"signed_distance_rad":0.05}
+        ],
+        "triangles": [[0,1,2],[1,3,2]],
+        "semantic_mask": [0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0],
+        "endpoints": [
+            {"feature":{"kind":"channel_reach","macro_anchor":1,"ordinal":0},"side":"upstream","boundary":null,"terminal":"headwater"},
+            {"feature":{"kind":"channel_reach","macro_anchor":1,"ordinal":0},"side":"downstream","boundary":null,"terminal":"ocean"}
+        ]
+    }]);
+    patch.to_string()
+}
+
 fn binding_value() -> serde_json::Value {
     serde_json::json!({
         "source_id": "surface-test",
@@ -166,6 +188,22 @@ fn patch_document_round_trips() {
     let encoded = serde_json::to_string(&document).unwrap();
     let round_trip = documents::surface_patch(&encoded).unwrap();
     assert_eq!(document, round_trip);
+}
+
+#[test]
+fn strip_protocol_accepts_finite_signed_geometry_and_rejects_malformed_edges() {
+    let json = patch_with_strip_json(&"a".repeat(40));
+    let document = documents::surface_patch(&json).unwrap();
+    assert_eq!(document.strips.len(), 1);
+    assert_eq!(document.strips[0].vertices[0].side, -1);
+    assert!(document.strips[0].vertices[0].signed_distance_rad < 0.0);
+
+    let mut malformed: serde_json::Value = serde_json::from_str(&json).unwrap();
+    malformed["strips"][0]["vertices"][0]["side"] = serde_json::json!(0);
+    assert!(documents::surface_patch(&malformed.to_string()).is_err());
+    malformed["strips"][0]["vertices"][0]["side"] = serde_json::json!(-1);
+    malformed["strips"][0]["vertices"][0]["signed_distance_rad"] = serde_json::json!("not-finite");
+    assert!(documents::surface_patch(&malformed.to_string()).is_err());
 }
 
 #[test]
@@ -598,6 +636,45 @@ fn ready_patch_suppresses_its_fallback_region_without_hiding_uncovered_globe() {
         1.0,
         "positive Bevy depth bias must pull only the ready patch ahead of covered fallback"
     );
+}
+
+#[test]
+fn ready_patch_inserts_strip_geometry_as_an_independent_feature_entity() {
+    let (mut world, mirror, mut catalog) = scene_catalog();
+    let revision = mirror.initial().binding.source_revision.clone();
+    let patch = patch_with_strip_json(&revision);
+    let key = documents::surface_patch(&patch).unwrap().cache_key();
+    catalog
+        .set_desired_surface_patches(&mirror, vec![key.clone()])
+        .unwrap();
+    catalog
+        .schedule_surface_patch(key, catalog_request(&mirror, 73))
+        .unwrap();
+    let before_meshes = world.resource::<Assets<Mesh>>().len();
+    let before_materials = world.resource::<Assets<StandardMaterial>>().len();
+    let before_entities = world.query::<&Mesh3d>().iter(&world).count();
+
+    catalog
+        .apply_surface_reply(&mut world, &catalog_reply(&mirror, 73, &patch))
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(world.resource::<Assets<Mesh>>().len(), before_meshes + 2);
+    assert_eq!(
+        world.resource::<Assets<StandardMaterial>>().len(),
+        before_materials + 2
+    );
+    assert_eq!(
+        world.query::<&Mesh3d>().iter(&world).count(),
+        before_entities + 2
+    );
+    let identities = world
+        .query::<&SurfaceFeatureVisual>()
+        .iter(&world)
+        .collect::<Vec<_>>();
+    assert_eq!(identities.len(), 1);
+    assert_eq!(identities[0].feature.kind, "channel_reach");
+    assert_eq!(identities[0].generation, mirror.generation());
 }
 
 #[test]

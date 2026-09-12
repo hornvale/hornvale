@@ -109,7 +109,7 @@ fn initial_bootstraps_surface_revision_matching_binding() {
     assert_eq!(revision["source_revision"], binding["source_revision"]);
     assert_eq!(
         revision["algorithm_version"],
-        "hornvale/surface-realization/v2"
+        "hornvale/surface-realization/v6"
     );
     assert_eq!(
         revision["configuration_hash_hex"].as_str().unwrap().len(),
@@ -206,6 +206,22 @@ fn independent_sources_and_request_orders_return_identical_patch_bytes() {
 
     assert_eq!(first_a_reply, second_a_reply);
     assert_eq!(first_b_reply, second_b_reply);
+}
+
+#[test]
+fn source_reply_carries_stable_feature_strips() {
+    let (mut source, initial) = source_and_initial();
+    let request = request(&initial["binding"], &initial["surface_revision"], 103, &[1]);
+    let first = source.observe_surface(&request).unwrap();
+    let second = source.observe_surface(&request).unwrap();
+    assert_eq!(patch_bytes(&first), patch_bytes(&second));
+    let reply: Value = serde_json::from_str(&first).unwrap();
+    let strips = reply["patch"]["strips"].as_array().unwrap();
+    assert!(!strips.is_empty());
+    assert!(strips.iter().all(|strip| {
+        strip["feature"] == strip["endpoints"][0]["feature"]
+            && strip["feature"] == strip["endpoints"][1]["feature"]
+    }));
 }
 
 #[test]

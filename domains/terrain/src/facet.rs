@@ -180,6 +180,52 @@ pub struct RealizedCurve {
     pub endpoints: [FeatureEndpoint; 2],
 }
 
+/// Calibration for deterministic, patch-local ribbon sampling.
+/// type-audit: bare-ok(count: patch_divisions), bare-ok(ratio: width_step_multiplier), bare-ok(ratio: curvature_gain), bare-ok(count: max_subdivisions)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FeatureStripSampling {
+    /// Baseline longitudinal samples across one patch diameter.
+    pub patch_divisions: u32,
+    /// Maximum longitudinal step as a multiple of feature width.
+    pub width_step_multiplier: f64,
+    /// Additional sampling pressure at polyline turns.
+    pub curvature_gain: f64,
+    /// Per-source-segment safety bound.
+    pub max_subdivisions: u32,
+}
+
+/// One signed ribbon edge vertex before worldgen evaluates its surface field.
+/// type-audit: pending(wave-1)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FeatureStripLayoutVertex {
+    /// Canonical unit-sphere position.
+    pub position: [f64; 3],
+    /// `-1` on the right and `1` on the left, facing feature travel.
+    pub side: i8,
+    /// Signed angular distance from the centerline.
+    pub signed_distance_rad: f64,
+}
+
+/// Adaptive, render-independent layout for one patch-local feature ribbon.
+/// type-audit: pending(wave-1)
+#[derive(Clone, Debug, PartialEq)]
+pub struct FeatureStripLayout {
+    /// Stable source feature identity.
+    pub feature: FeatureId,
+    /// Adaptively sampled unit-sphere centerline in travel order.
+    pub centerline: Vec<[f64; 3]>,
+    /// Full angular width at each centerline sample.
+    pub width_rad: Vec<f64>,
+    /// Paired right/left edge vertices for every centerline sample.
+    pub vertices: Vec<FeatureStripLayoutVertex>,
+    /// Canonical triangle-list topology over `vertices`.
+    pub triangles: Vec<[u32; 3]>,
+    /// Source-owned material-channel mask.
+    pub semantic_mask: [f32; 8],
+    /// Unchanged feature topology and boundary continuation metadata.
+    pub endpoints: [FeatureEndpoint; 2],
+}
+
 /// Continuous terrain fields evaluated at one world-space position.
 /// type-audit: pending(wave-1)
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -387,6 +433,136 @@ pub fn realize_channel_curves(
         }
     }
     curves
+}
+
+/// Build deterministic patch-local ribbons independently of terrain vertices.
+///
+/// Longitudinal spacing responds to patch scale, feature width and polyline
+/// turning. Refinement may change the number of samples, but never feature or
+/// endpoint identity. Curves have already been clipped by the canonical facet
+/// boundary evaluator, so strip endpoints retain those exact continuation
+/// tokens.
+pub fn adaptive_feature_strips(
+    curves: &[RealizedCurve],
+    address: &FacetAddress,
+    sampling: FeatureStripSampling,
+) -> Vec<FeatureStripLayout> {
+    assert!(sampling.patch_divisions > 0);
+    assert!(sampling.width_step_multiplier.is_finite() && sampling.width_step_multiplier > 0.0);
+    assert!(sampling.curvature_gain.is_finite() && sampling.curvature_gain >= 0.0);
+    assert!(sampling.max_subdivisions > 0);
+    let corners = address.resolved().corners();
+    let patch_scale = (0..4)
+        .map(|edge| angle(corners[edge], corners[(edge + 1) % 4]))
+        .fold(0.0, f64::max);
+    let patch_step = patch_scale / f64::from(sampling.patch_divisions);
+    let minimum_step = patch_step * 0.5;
+    let mut layouts = curves
+        .iter()
+        .filter(|curve| curve.points.len() >= 2 && curve.points.len() == curve.width.len())
+        .map(|curve| {
+            let mut centerline = Vec::new();
+            let mut width_rad = Vec::new();
+            for (segment_index, segment) in curve.points.windows(2).enumerate() {
+                let segment_length = angle(segment[0], segment[1]);
+                let width = curve.width[segment_index]
+                    .min(curve.width[segment_index + 1])
+                    .max(f64::EPSILON);
+                let turn = endpoint_turn(&curve.points, segment_index)
+                    .max(endpoint_turn(&curve.points, segment_index + 1));
+                let width_step = (width * sampling.width_step_multiplier).max(minimum_step);
+                let target_step = patch_step.min(width_step)
+                    / (1.0 + sampling.curvature_gain * turn / std::f64::consts::PI);
+                let subdivisions = ((segment_length / target_step).ceil() as u32)
+                    .clamp(1, sampling.max_subdivisions);
+                if centerline.is_empty() {
+                    centerline.push(segment[0]);
+                    width_rad.push(curve.width[segment_index]);
+                }
+                for step in 1..=subdivisions {
+                    let t = f64::from(step) / f64::from(subdivisions);
+                    centerline.push(interpolate(segment[0], segment[1], t));
+                    width_rad.push(
+                        curve.width[segment_index]
+                            + t * (curve.width[segment_index + 1] - curve.width[segment_index]),
+                    );
+                }
+            }
+            let vertices = centerline
+                .iter()
+                .enumerate()
+                .flat_map(|(index, &center)| {
+                    let before = centerline[index.saturating_sub(1)];
+                    let after = centerline[(index + 1).min(centerline.len() - 1)];
+                    let mut lateral = normalize(cross(before, after));
+                    if dot(lateral, lateral) == 0.0 {
+                        lateral = normalize(cross(center, after));
+                    }
+                    let half_width = width_rad[index] * 0.5;
+                    [-1_i8, 1_i8].map(|side| {
+                        let signed_distance_rad = f64::from(side) * half_width;
+                        let (sine, cosine) = (
+                            math::sin(signed_distance_rad),
+                            math::cos(signed_distance_rad),
+                        );
+                        FeatureStripLayoutVertex {
+                            position: normalize(std::array::from_fn(|axis| {
+                                cosine * center[axis] + sine * lateral[axis]
+                            })),
+                            side,
+                            signed_distance_rad,
+                        }
+                    })
+                })
+                .collect::<Vec<_>>();
+            let triangles = (0..centerline.len().saturating_sub(1))
+                .flat_map(|index| {
+                    let right = u32::try_from(index * 2).expect("feature strip exceeds u32");
+                    [
+                        [right, right + 1, right + 2],
+                        [right + 1, right + 3, right + 2],
+                    ]
+                })
+                .collect();
+            let semantic_mask = match curve.feature.kind {
+                FeatureKind::ChannelReach | FeatureKind::Confluence => {
+                    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+                }
+                FeatureKind::Shoreline => [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+                FeatureKind::Ridge => [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                FeatureKind::MaterialTransition => [0.0; 8],
+            };
+            FeatureStripLayout {
+                feature: curve.feature,
+                centerline,
+                width_rad,
+                vertices,
+                triangles,
+                semantic_mask,
+                endpoints: curve.endpoints.clone(),
+            }
+        })
+        .collect::<Vec<_>>();
+    layouts.sort_by(|left, right| {
+        left.feature.cmp(&right.feature).then_with(|| {
+            point_cmp(&left.centerline[0], &right.centerline[0]).then_with(|| {
+                point_cmp(
+                    left.centerline.last().expect("strip has samples"),
+                    right.centerline.last().expect("strip has samples"),
+                )
+            })
+        })
+    });
+    layouts
+}
+
+fn endpoint_turn(points: &[[f64; 3]], index: usize) -> f64 {
+    if index == 0 || index + 1 >= points.len() {
+        return 0.0;
+    }
+    let incoming = normalize(cross(points[index - 1], points[index]));
+    let outgoing = normalize(cross(points[index], points[index + 1]));
+    angle(incoming, outgoing)
 }
 
 impl RealizedCurve {

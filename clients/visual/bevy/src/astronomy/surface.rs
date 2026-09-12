@@ -4,7 +4,7 @@
     clippy::disallowed_methods,
     reason = "client mesh and material math must not import the simulation kernel"
 )]
-use crate::documents::{Moon, SurfacePatchDocument, SurfacePatchFeature, Tiles};
+use crate::documents::{Moon, SurfacePatchDocument, SurfacePatchFeature, SurfacePatchStrip, Tiles};
 use bevy::{
     asset::RenderAssetUsages,
     mesh::{Indices, MeshVertexAttribute, PrimitiveTopology},
@@ -18,6 +18,10 @@ pub const ATTRIBUTE_FLOW_DIRECTION: MeshVertexAttribute =
     MeshVertexAttribute::new("Surface_FlowDirection", 8, VertexFormat::Float32x3);
 pub const ATTRIBUTE_RIDGE_DIRECTION: MeshVertexAttribute =
     MeshVertexAttribute::new("Surface_RidgeDirection", 9, VertexFormat::Float32x3);
+pub const ATTRIBUTE_FEATURE_SIDE: MeshVertexAttribute =
+    MeshVertexAttribute::new("Surface_FeatureSide", 10, VertexFormat::Float32);
+pub const ATTRIBUTE_FEATURE_DISTANCE: MeshVertexAttribute =
+    MeshVertexAttribute::new("Surface_FeatureDistance", 11, VertexFormat::Float32);
 fn image(width: u32, height: u32, bytes: Vec<u8>) -> Image {
     Image::new(
         Extent3d {
@@ -326,6 +330,55 @@ pub fn surface_mesh(
         .with_inserted_attribute(ATTRIBUTE_FLOW_DIRECTION, flow_direction)
         .with_inserted_attribute(ATTRIBUTE_RIDGE_DIRECTION, ridge_direction)
         .with_inserted_indices(Indices::U32(indices))
+}
+
+/// Convert one validated source-owned strip into independent ribbon geometry.
+pub fn feature_strip_mesh(strip: &SurfacePatchStrip) -> Mesh {
+    let positions = strip
+        .vertices
+        .iter()
+        .map(|vertex| {
+            let direction = Vec3::from_array(vertex.position.map(|value| value as f32));
+            (direction * (1.0 + vertex.height_m as f32 * 1e-6).max(0.001)).to_array()
+        })
+        .collect::<Vec<_>>();
+    let normals = strip
+        .vertices
+        .iter()
+        .map(|vertex| vertex.normal.map(|value| value as f32))
+        .collect::<Vec<_>>();
+    let sides = strip
+        .vertices
+        .iter()
+        .map(|vertex| f32::from(vertex.side))
+        .collect::<Vec<_>>();
+    let distances = strip
+        .vertices
+        .iter()
+        .map(|vertex| vertex.signed_distance_rad as f32)
+        .collect::<Vec<_>>();
+    let color = material_color(strip.semantic_mask);
+    let colors = vec![color; strip.vertices.len()];
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colors)
+        .with_inserted_attribute(ATTRIBUTE_FEATURE_SIDE, sides)
+        .with_inserted_attribute(ATTRIBUTE_FEATURE_DISTANCE, distances)
+        .with_inserted_indices(Indices::U32(
+            strip.triangles.iter().flatten().copied().collect(),
+        ))
+}
+
+/// Presentation material driven only by the strip's source semantic mask.
+pub fn feature_strip_material(strip: &SurfacePatchStrip) -> StandardMaterial {
+    let color = material_color(strip.semantic_mask);
+    StandardMaterial {
+        base_color: Color::linear_rgba(color[0], color[1], color[2], color[3]),
+        perceptual_roughness: 0.45,
+        reflectance: 0.04,
+        ..default()
+    }
 }
 
 fn render_position(vertex: &crate::documents::SurfacePatchVertex) -> [f32; 3] {

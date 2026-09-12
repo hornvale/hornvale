@@ -1,7 +1,8 @@
 use hornvale_kernel::{Facet, Vertex};
 use hornvale_terrain::{
-    EndpointSide, FacetAddress, FeatureEndpoint, FeatureId, FeatureKind, RealizedCurve,
-    TerminalKind, canonical_corner_sample, canonical_edge_sample, feature_sample,
+    EndpointSide, FacetAddress, FeatureEndpoint, FeatureId, FeatureKind, FeatureStripSampling,
+    RealizedCurve, TerminalKind, adaptive_feature_strips, canonical_corner_sample,
+    canonical_edge_sample, feature_sample,
 };
 
 use hornvale_kernel::{Geosphere, Seed};
@@ -481,6 +482,60 @@ fn refinement_changes_samples_but_not_feature_id() {
         canonical_corner_sample(&refined, 0)
     );
     assert_eq!(feature, same_feature_after_refinement);
+}
+
+#[test]
+fn strip_sampling_adapts_to_width_and_preserves_feature_endpoints() {
+    let address = FacetAddress::new(macro_facet(0, 1), Vec::new()).unwrap();
+    let points = [
+        canonical_corner_sample(&address, 0),
+        canonical_corner_sample(&address, 2),
+    ];
+    let make_curve = |ordinal, width| {
+        let feature = FeatureId::new(FeatureKind::ChannelReach, Vertex(42), ordinal);
+        RealizedCurve {
+            feature,
+            points: points.to_vec(),
+            width: vec![width; 2],
+            endpoints: [
+                FeatureEndpoint {
+                    feature,
+                    side: EndpointSide::Upstream,
+                    boundary: None,
+                    terminal: TerminalKind::Headwater,
+                },
+                FeatureEndpoint {
+                    feature,
+                    side: EndpointSide::Downstream,
+                    boundary: None,
+                    terminal: TerminalKind::Ocean,
+                },
+            ],
+        }
+    };
+    let curves = [make_curve(1, 1.0e-8), make_curve(2, 1.0)];
+    let strips = adaptive_feature_strips(
+        &curves,
+        &address,
+        FeatureStripSampling {
+            patch_divisions: 8,
+            width_step_multiplier: 8.0,
+            curvature_gain: 1.0,
+            max_subdivisions: 32,
+        },
+    );
+    assert!(strips[0].centerline.len() > strips[1].centerline.len());
+    for (strip, curve) in strips.iter().zip(curves) {
+        assert_eq!(strip.feature, curve.feature);
+        assert_eq!(strip.endpoints, curve.endpoints);
+        assert_eq!(strip.vertices.len(), strip.centerline.len() * 2);
+        assert!(strip.vertices.chunks_exact(2).all(|pair| {
+            pair[0].side == -1
+                && pair[1].side == 1
+                && pair[0].signed_distance_rad < 0.0
+                && pair[1].signed_distance_rad > 0.0
+        }));
+    }
 }
 
 #[test]

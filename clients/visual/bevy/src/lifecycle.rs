@@ -3,7 +3,9 @@ use crate::{
     Binding, CameraPose, ObservationMirror, ViewError,
     astronomy::surface,
     camera::OrbitCamera,
-    documents::{self, SurfacePatchCacheKey, SurfacePatchDocument, SurfacePatchRevision},
+    documents::{
+        self, SurfaceFeatureId, SurfacePatchCacheKey, SurfacePatchDocument, SurfacePatchRevision,
+    },
 };
 use bevy::{
     camera::visibility::RenderLayers,
@@ -26,6 +28,14 @@ struct SurfacePatchVisual {
     binding: Binding,
     generation: u64,
     key: SurfacePatchCacheKey,
+}
+/// Render identity for one source-owned feature ribbon.
+#[derive(Component, Clone, Debug, PartialEq)]
+pub struct SurfaceFeatureVisual {
+    pub feature: SurfaceFeatureId,
+    pub binding: Binding,
+    pub generation: u64,
+    pub key: SurfacePatchCacheKey,
 }
 #[derive(Component)]
 struct PointVisual {
@@ -87,6 +97,14 @@ pub struct SurfaceMeshHandles {
     pub key: SurfacePatchCacheKey,
     pub mesh: Mesh,
     pub material: StandardMaterial,
+    pub feature_meshes: Vec<SurfaceFeatureMesh>,
+}
+
+/// Prepared renderer assets retaining their source feature identity.
+pub struct SurfaceFeatureMesh {
+    pub feature: SurfaceFeatureId,
+    pub mesh: Mesh,
+    pub material: StandardMaterial,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -111,6 +129,21 @@ struct ReadySurfacePatch {
     entity: Entity,
     mesh: Handle<Mesh>,
     material: Handle<StandardMaterial>,
+    feature_entities: Vec<Entity>,
+    feature_meshes: Vec<Handle<Mesh>>,
+    feature_materials: Vec<Handle<StandardMaterial>>,
+}
+
+fn prepare_feature_meshes(document: &SurfacePatchDocument) -> Vec<SurfaceFeatureMesh> {
+    document
+        .strips
+        .iter()
+        .map(|strip| SurfaceFeatureMesh {
+            feature: strip.feature.clone(),
+            mesh: surface::feature_strip_mesh(strip),
+            material: surface::feature_strip_material(strip),
+        })
+        .collect()
 }
 
 const MACRO_PATCH_DEPTH: usize = 6;
@@ -311,6 +344,7 @@ pub fn apply_surface_patch(
         key,
         mesh: surface::surface_mesh(document, None),
         material: surface::surface_material(document),
+        feature_meshes: prepare_feature_meshes(document),
     })
 }
 
@@ -338,6 +372,7 @@ pub fn apply_surface_reply(json: &str) -> Result<SurfaceMeshHandles, ViewError> 
         key,
         mesh: surface::surface_mesh(&reply.patch, None),
         material: surface::surface_material(&reply.patch),
+        feature_meshes: prepare_feature_meshes(&reply.patch),
     })
 }
 impl SceneCatalog {
@@ -498,7 +533,7 @@ impl SceneCatalog {
                 anchor_transform,
                 Visibility::Hidden,
                 SurfacePatchVisual {
-                    binding: reply.binding,
+                    binding: reply.binding.clone(),
                     generation: reply.generation,
                     key: key.clone(),
                 },
@@ -508,11 +543,63 @@ impl SceneCatalog {
         self.meshes.push(mesh.clone());
         self.materials.push(material.clone());
         self.entities.push(entity);
+        let mut feature_entities = Vec::new();
+        let mut feature_meshes = Vec::new();
+        let mut feature_materials = Vec::new();
+        for (strip, mut prepared) in reply
+            .patch
+            .strips
+            .iter()
+            .zip(prepare_feature_meshes(&reply.patch))
+        {
+            prepared.mesh.insert_attribute(
+                Mesh::ATTRIBUTE_POSITION,
+                strip
+                    .vertices
+                    .iter()
+                    .map(|vertex| {
+                        let direction = Vec3::from_array(vertex.position.map(|value| value as f32));
+                        let height_above_sea_km = (vertex.height_m - sea_level_m) / 1000.0;
+                        let radius = (radius_km + height_above_sea_km) / KM_PER_UNIT;
+                        (direction * radius as f32).to_array()
+                    })
+                    .collect::<Vec<_>>(),
+            );
+            let feature_mesh = world.resource_mut::<Assets<Mesh>>().add(prepared.mesh);
+            prepared.material.depth_bias = 2.0;
+            let feature_material = world
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(prepared.material);
+            let feature_entity = world
+                .spawn((
+                    Mesh3d(feature_mesh.clone()),
+                    MeshMaterial3d(feature_material.clone()),
+                    anchor_transform,
+                    Visibility::Hidden,
+                    SurfaceFeatureVisual {
+                        feature: prepared.feature,
+                        binding: reply.binding.clone(),
+                        generation: reply.generation,
+                        key: key.clone(),
+                    },
+                    RenderLayers::layer(0),
+                ))
+                .id();
+            self.meshes.push(feature_mesh.clone());
+            self.materials.push(feature_material.clone());
+            self.entities.push(feature_entity);
+            feature_entities.push(feature_entity);
+            feature_meshes.push(feature_mesh);
+            feature_materials.push(feature_material);
+        }
         self.surface.ready.push(ReadySurfacePatch {
             key,
             entity,
             mesh,
             material,
+            feature_entities,
+            feature_meshes,
+            feature_materials,
         });
         let complete = !self.surface.desired.is_empty()
             && self
@@ -532,14 +619,34 @@ impl SceneCatalog {
                     world
                         .resource_mut::<Assets<StandardMaterial>>()
                         .remove(ready.material.id());
+                    for entity in &ready.feature_entities {
+                        world.despawn(*entity);
+                    }
+                    for mesh in &ready.feature_meshes {
+                        world.resource_mut::<Assets<Mesh>>().remove(mesh.id());
+                    }
+                    for material in &ready.feature_materials {
+                        world
+                            .resource_mut::<Assets<StandardMaterial>>()
+                            .remove(material.id());
+                    }
                     self.entities.retain(|entity| *entity != ready.entity);
+                    self.entities
+                        .retain(|entity| !ready.feature_entities.contains(entity));
                     self.meshes.retain(|handle| handle != &ready.mesh);
+                    self.meshes
+                        .retain(|handle| !ready.feature_meshes.contains(handle));
                     self.materials.retain(|handle| handle != &ready.material);
+                    self.materials
+                        .retain(|handle| !ready.feature_materials.contains(handle));
                 }
             }
             self.surface.ready = retained;
             for ready in &self.surface.ready {
                 world.entity_mut(ready.entity).insert(Visibility::Visible);
+                for entity in &ready.feature_entities {
+                    world.entity_mut(*entity).insert(Visibility::Visible);
+                }
             }
         }
         Ok(Some(entity))

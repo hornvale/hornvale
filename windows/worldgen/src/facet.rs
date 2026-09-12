@@ -4,8 +4,9 @@ use std::fmt::{self, Write as _};
 
 use hornvale_kernel::{Facet, NearestVertexIndex, Seed, Vertex, World};
 use hornvale_terrain::{
-    FacetAddress, FacetFieldSample, RealizedCurve, TerrainFacetInputs, WaterKind,
-    canonical_corner_sample, canonical_edge_sample, realize_channel_curves,
+    FacetAddress, FacetFieldSample, FeatureEndpoint, FeatureId, FeatureStripSampling,
+    RealizedCurve, TerrainFacetInputs, WaterKind, adaptive_feature_strips, canonical_corner_sample,
+    canonical_edge_sample, realize_channel_curves,
 };
 
 use crate::{GeneratedClimate, climate_from, sky_of, terrain_of};
@@ -35,12 +36,50 @@ pub struct SurfacePatch {
     pub samples: Vec<FacetFieldSample>,
     /// Stable inherited terrain curves clipped to this patch.
     pub curves: Vec<RealizedCurve>,
+    /// Adaptive source-owned ribbons independent of the terrain sample grid.
+    pub strips: Vec<SurfaceFeatureStrip>,
     /// Sample indices forming the patch mesh.
     pub triangles: Vec<[u32; 3]>,
     /// Source-computed replacement topology for one unequal-LOD boundary.
     /// Indices address this patch's samples; an empty list means no seam was
     /// requested for this realization.
     pub transition_triangles: Vec<[u32; 3]>,
+}
+
+/// One source-evaluated edge vertex of an adaptive feature ribbon.
+/// type-audit: pending(wave-1)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SurfaceFeatureStripVertex {
+    /// Canonical unit-sphere ribbon-edge position.
+    pub position: [f64; 3],
+    /// Source-owned patch height carried onto the narrow ribbon.
+    pub height_m: f64,
+    /// Source-owned patch normal carried onto the narrow ribbon.
+    pub normal: [f64; 3],
+    /// `-1` on the right and `1` on the left, facing feature travel.
+    pub side: i8,
+    /// Signed angular distance from the feature centerline.
+    pub signed_distance_rad: f64,
+}
+
+/// One canonical patch-local feature ribbon ready for derived protocols.
+/// type-audit: pending(wave-1)
+#[derive(Clone, Debug, PartialEq)]
+pub struct SurfaceFeatureStrip {
+    /// Stable feature identity, unchanged by patch refinement.
+    pub feature: FeatureId,
+    /// Adaptive unit-sphere centerline positions in feature travel order.
+    pub centerline: Vec<[f64; 3]>,
+    /// Full angular width at each centerline position.
+    pub width_rad: Vec<f64>,
+    /// Paired source-evaluated right/left vertices.
+    pub vertices: Vec<SurfaceFeatureStripVertex>,
+    /// Canonical triangle-list topology over `vertices`.
+    pub triangles: Vec<[u32; 3]>,
+    /// Source-owned terrain material-channel influence.
+    pub semantic_mask: [f32; 8],
+    /// Original terminal and canonical continuation metadata.
+    pub endpoints: [FeatureEndpoint; 2],
 }
 
 /// Why a surface context or patch could not be constructed.
@@ -130,13 +169,17 @@ struct SurfaceConfiguration {
     material_sediment_shore_share: f64,
     material_snow_base: f64,
     material_snow_ocean_share: f64,
+    strip_patch_divisions: u32,
+    strip_width_step_multiplier: f64,
+    strip_curvature_gain: f64,
+    strip_max_subdivisions: u32,
 }
 
 impl SurfaceConfiguration {
     const fn current() -> Self {
         Self {
             record_schema: "hornvale/surface-configuration/v4",
-            algorithm_version: "hornvale/surface-realization/v5",
+            algorithm_version: "hornvale/surface-realization/v6",
             globe_level: hornvale_terrain::GLOBE_LEVEL,
             sample_topology: "quad-corners-center-dyadic-ring/world-space-fan-v2",
             material_channels: "bedrock,soil,sediment,wetland,fresh-water,salt-water,snow-ice,vegetation/v1",
@@ -174,6 +217,10 @@ impl SurfaceConfiguration {
             material_sediment_shore_share: 0.5,
             material_snow_base: 0.25,
             material_snow_ocean_share: 0.5,
+            strip_patch_divisions: 8,
+            strip_width_step_multiplier: 8.0,
+            strip_curvature_gain: 1.0,
+            strip_max_subdivisions: 32,
         }
     }
 }
@@ -334,12 +381,56 @@ impl SurfaceRealizationContext {
             },
             address,
         );
+        let strips = adaptive_feature_strips(
+            &curves,
+            address,
+            FeatureStripSampling {
+                patch_divisions: self.configuration.strip_patch_divisions,
+                width_step_multiplier: self.configuration.strip_width_step_multiplier,
+                curvature_gain: self.configuration.strip_curvature_gain,
+                max_subdivisions: self.configuration.strip_max_subdivisions,
+            },
+        )
+        .into_iter()
+        .map(|layout| {
+            let vertices = layout
+                .vertices
+                .iter()
+                .map(|vertex| {
+                    let surface = samples
+                        .iter()
+                        .min_by(|left, right| {
+                            angular_distance(left.position, vertex.position)
+                                .total_cmp(&angular_distance(right.position, vertex.position))
+                        })
+                        .expect("a realized patch has canonical samples");
+                    SurfaceFeatureStripVertex {
+                        position: vertex.position,
+                        height_m: surface.height_m,
+                        normal: surface.normal,
+                        side: vertex.side,
+                        signed_distance_rad: vertex.signed_distance_rad,
+                    }
+                })
+                .collect();
+            Ok(SurfaceFeatureStrip {
+                feature: layout.feature,
+                centerline: layout.centerline,
+                width_rad: layout.width_rad,
+                vertices,
+                triangles: layout.triangles,
+                semantic_mask: layout.semantic_mask,
+                endpoints: layout.endpoints,
+            })
+        })
+        .collect::<Result<Vec<_>, SurfaceBuildError>>()?;
 
         Ok(SurfacePatch {
             revision: self.revision.clone(),
             address: address.clone(),
             samples,
             curves,
+            strips,
             triangles: vec![[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]],
             transition_triangles: Vec::new(),
         })
@@ -914,6 +1005,26 @@ fn canonical_configuration_record(
         &mut record,
         "material-snow-ocean-share",
         configuration.material_snow_ocean_share,
+    );
+    push_u32_field(
+        &mut record,
+        "strip-patch-divisions",
+        configuration.strip_patch_divisions,
+    );
+    push_f64_field(
+        &mut record,
+        "strip-width-step-multiplier",
+        configuration.strip_width_step_multiplier,
+    );
+    push_f64_field(
+        &mut record,
+        "strip-curvature-gain",
+        configuration.strip_curvature_gain,
+    );
+    push_u32_field(
+        &mut record,
+        "strip-max-subdivisions",
+        configuration.strip_max_subdivisions,
     );
     push_text_field(&mut record, "source-revision", source_revision);
     push_text_field(&mut record, "world-bytes", world_bytes);

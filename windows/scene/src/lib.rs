@@ -17,7 +17,8 @@ use hornvale_terrain::{
     RealizedCurve, TerminalKind,
 };
 use hornvale_worldgen::{
-    SurfacePatch, SurfaceRealizationContext, SurfaceRevision, facet::stitch_transition,
+    SurfaceFeatureStrip, SurfacePatch, SurfaceRealizationContext, SurfaceRevision,
+    facet::stitch_transition,
 };
 use serde::Serialize;
 
@@ -571,6 +572,7 @@ struct SurfacePatchDocument {
     address: SurfaceAddressDocument,
     samples: Vec<SurfaceSampleDocument>,
     curves: Vec<SurfaceCurveDocument>,
+    strips: Vec<SurfaceStripDocument>,
     triangles: Vec<[u32; 3]>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     transition_triangles: Vec<[u32; 3]>,
@@ -618,6 +620,28 @@ struct SurfaceCurveDocument {
     points: Vec<Vec<f64>>,
     width_rad: Vec<f64>,
     endpoints: [SurfaceEndpointDocument; 2],
+}
+
+#[derive(Serialize)]
+struct SurfaceStripDocument {
+    feature: SurfaceFeatureDocument,
+    centerline: Vec<Vec<f64>>,
+    width_rad: Vec<f64>,
+    vertices: Vec<SurfaceStripVertexDocument>,
+    triangles: Vec<[u32; 3]>,
+    semantic_mask: Vec<f64>,
+    endpoints: [SurfaceEndpointDocument; 2],
+}
+
+#[derive(Serialize)]
+struct SurfaceStripVertexDocument {
+    position: Vec<f64>,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    height_m: f64,
+    normal: Vec<f64>,
+    side: i8,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    signed_distance_rad: f64,
 }
 
 #[derive(Serialize)]
@@ -724,6 +748,35 @@ fn surface_curve_document(curve: &RealizedCurve) -> SurfaceCurveDocument {
     }
 }
 
+fn surface_strip_document(strip: &SurfaceFeatureStrip) -> SurfaceStripDocument {
+    SurfaceStripDocument {
+        feature: surface_feature_document(strip.feature),
+        centerline: strip
+            .centerline
+            .iter()
+            .map(|point| quantized_vector(*point))
+            .collect(),
+        width_rad: quantized_vector(strip.width_rad.iter().copied()),
+        vertices: strip
+            .vertices
+            .iter()
+            .map(|vertex| SurfaceStripVertexDocument {
+                position: quantized_vector(vertex.position),
+                height_m: vertex.height_m,
+                normal: quantized_vector(vertex.normal),
+                side: vertex.side,
+                signed_distance_rad: vertex.signed_distance_rad,
+            })
+            .collect(),
+        triangles: strip.triangles.clone(),
+        semantic_mask: quantized_vector(strip.semantic_mask.map(f64::from)),
+        endpoints: [
+            surface_endpoint_document(&strip.endpoints[0]),
+            surface_endpoint_document(&strip.endpoints[1]),
+        ],
+    }
+}
+
 fn surface_sample_document(sample: FacetFieldSample) -> SurfaceSampleDocument {
     SurfaceSampleDocument {
         position: quantized_vector(sample.position),
@@ -770,6 +823,7 @@ pub fn surface_patch_json(patch: &SurfacePatch) -> String {
             .map(surface_sample_document)
             .collect(),
         curves: patch.curves.iter().map(surface_curve_document).collect(),
+        strips: patch.strips.iter().map(surface_strip_document).collect(),
         triangles: patch.triangles.clone(),
         transition_triangles: patch.transition_triangles.clone(),
     };

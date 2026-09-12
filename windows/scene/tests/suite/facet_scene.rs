@@ -323,6 +323,7 @@ fn surface_document_is_canonical_and_contains_no_weather_hooks() {
             "address",
             "samples",
             "curves",
+            "strips",
             "triangles",
         ],
     );
@@ -335,6 +336,7 @@ fn surface_document_is_canonical_and_contains_no_weather_hooks() {
             "address",
             "samples",
             "curves",
+            "strips",
             "triangles"
         ])
     );
@@ -357,7 +359,7 @@ fn surface_document_is_canonical_and_contains_no_weather_hooks() {
     );
     assert_eq!(
         value["revision"]["algorithm_version"],
-        "hornvale/surface-realization/v2"
+        "hornvale/surface-realization/v6"
     );
     assert_eq!(
         value["revision"]["configuration_hash_hex"]
@@ -374,6 +376,7 @@ fn surface_document_is_canonical_and_contains_no_weather_hooks() {
     assert_eq!(value["address"]["child_path"], serde_json::json!([1]));
     assert_eq!(value["samples"].as_array().unwrap().len(), 9);
     assert!(!value["curves"].as_array().unwrap().is_empty());
+    assert!(!value["strips"].as_array().unwrap().is_empty());
     assert!(!value["triangles"].as_array().unwrap().is_empty());
     for sample in value["samples"].as_array().unwrap() {
         assert_eq!(
@@ -423,4 +426,45 @@ fn surface_document_is_canonical_and_contains_no_weather_hooks() {
     for hook in ["weather", "cloud", "precip", "roughness"] {
         assert!(!first.contains(hook), "surface document contains {hook}");
     }
+}
+
+#[test]
+fn surface_document_emits_a_strip_for_a_curve_between_terrain_samples() {
+    let world = seed_42_world();
+    let context = SceneContext::build(&world).unwrap();
+    let address = FacetAddress::new(
+        Facet {
+            face: 0,
+            path: vec![0; 6],
+        },
+        vec![1],
+    )
+    .unwrap();
+    let query = SurfacePatchQuery {
+        address,
+        expected_revision: context.surface_revision().clone(),
+    };
+    let patch = surface_patch_scene(&context, &query).unwrap();
+    let missed = patch
+        .curves
+        .iter()
+        .find(|curve| {
+            patch.samples.iter().all(|sample| {
+                let (distance, width) = hornvale_terrain::feature_sample(curve, sample.position);
+                distance.abs() > width * 0.5
+            })
+        })
+        .expect("fixture must contain a curve whose width misses every terrain sample");
+
+    let document: Value = serde_json::from_str(&surface_patch_json(&patch)).unwrap();
+    let strips = document["strips"]
+        .as_array()
+        .expect("surface document must carry source-owned feature strips");
+    assert!(
+        strips
+            .iter()
+            .any(|strip| strip["feature"] == feature_value(missed.feature)),
+        "between-sample feature {:?} has no render strip",
+        missed.feature
+    );
 }

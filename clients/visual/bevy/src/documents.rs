@@ -99,6 +99,30 @@ pub struct SurfacePatchFeature {
     pub endpoints: [SurfacePatchEndpoint; 2],
 }
 
+/// One source-owned signed edge vertex of an adaptive feature ribbon.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchStripVertex {
+    pub position: [f64; 3],
+    pub height_m: f64,
+    pub normal: [f64; 3],
+    pub side: i8,
+    pub signed_distance_rad: f64,
+}
+
+/// Adaptive source-owned geometry for a feature that may miss terrain vertices.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchStrip {
+    pub feature: SurfaceFeatureId,
+    pub centerline: Vec<[f64; 3]>,
+    pub width_rad: Vec<f64>,
+    pub vertices: Vec<SurfacePatchStripVertex>,
+    pub triangles: Vec<[u32; 3]>,
+    pub semantic_mask: [f64; 8],
+    pub endpoints: [SurfacePatchEndpoint; 2],
+}
+
 /// One source-owned surface sample. The renderer consumes these values as-is.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -132,6 +156,8 @@ pub struct SurfacePatchDocument {
     pub vertices: Vec<SurfacePatchVertex>,
     #[serde(rename = "curves", alias = "features")]
     pub features: Vec<SurfacePatchFeature>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub strips: Vec<SurfacePatchStrip>,
     pub triangles: Vec<[u32; 3]>,
     /// Optional source-carried replacement topology for an unequal-LOD seam.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -381,6 +407,58 @@ pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<
                 && valid_endpoint(&feature.endpoints[1], &feature.feature, "downstream")
         }),
         "surface feature curve is incomplete or non-finite",
+    )?;
+    check(
+        document.strips.iter().all(|strip| {
+            valid_feature_kind(&strip.feature.kind)
+                && strip.centerline.len() >= 2
+                && strip.centerline.len() == strip.width_rad.len()
+                && strip.vertices.len() == strip.centerline.len() * 2
+                && strip
+                    .centerline
+                    .iter()
+                    .copied()
+                    .all(|point| valid_unit_vector(point, false))
+                && strip.width_rad.iter().all(|width| {
+                    width.is_finite() && *width > 0.0 && *width <= std::f64::consts::PI
+                })
+                && strip.semantic_mask.iter().copied().all(valid_weight)
+                && strip.semantic_mask.iter().any(|weight| *weight > 0.0)
+                && valid_endpoint(&strip.endpoints[0], &strip.feature, "upstream")
+                && valid_endpoint(&strip.endpoints[1], &strip.feature, "downstream")
+                && strip
+                    .vertices
+                    .chunks_exact(2)
+                    .enumerate()
+                    .all(|(index, pair)| {
+                        pair[0].side == -1
+                            && pair[1].side == 1
+                            && pair[0].signed_distance_rad < 0.0
+                            && pair[1].signed_distance_rad > 0.0
+                            && (pair[0].signed_distance_rad.abs() - strip.width_rad[index] * 0.5)
+                                .abs()
+                                <= UNIT_TOLERANCE
+                            && (pair[1].signed_distance_rad.abs() - strip.width_rad[index] * 0.5)
+                                .abs()
+                                <= UNIT_TOLERANCE
+                            && pair.iter().all(|vertex| {
+                                valid_unit_vector(vertex.position, false)
+                                    && valid_unit_vector(vertex.normal, false)
+                                    && vertex.height_m.is_finite()
+                                    && vertex.signed_distance_rad.is_finite()
+                            })
+                    })
+                && strip.triangles.len() == (strip.centerline.len() - 1) * 2
+                && strip.triangles.iter().all(|triangle| {
+                    triangle
+                        .iter()
+                        .all(|index| (*index as usize) < strip.vertices.len())
+                        && triangle[0] != triangle[1]
+                        && triangle[1] != triangle[2]
+                        && triangle[0] != triangle[2]
+                })
+        }),
+        "surface feature strip is incomplete, malformed, or non-finite",
     )?;
     Ok(())
 }
