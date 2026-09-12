@@ -1,8 +1,10 @@
 use hornvale_bevy_view::{
+    CameraPose, ObservationMirror,
     astronomy::{lighting, surface},
-    bevy::mesh::VertexAttributeValues,
-    documents::{self, SurfacePatchCacheKey},
-    lifecycle,
+    bevy::{asset::Assets, mesh::VertexAttributeValues, pbr::StandardMaterial, prelude::*},
+    camera::OrbitCamera,
+    documents::{self, SurfacePatchCacheKey, SurfacePatchRevision},
+    lifecycle::{self, SceneCatalog},
 };
 
 const MACRO_FACE: u32 = 1 << 17;
@@ -374,4 +376,151 @@ fn mixed_lod_mesh_remaps_indices_for_a_distinct_transition_layout() {
     assert_eq!(points.len(), 5);
     assert_eq!(indices, vec![0, 1, 4]);
     assert!(indices.iter().all(|index| *index < points.len()));
+}
+
+#[test]
+fn camera_patch_selection_is_bounded_canonical_and_repeatable() {
+    // Catches an unbounded/global selector or completion-order-dependent output.
+    let camera = OrbitCamera::new(CameraPose {
+        eye_km: [30_000.0, 0.0, 0.0],
+        target_km: [0.0; 3],
+        up: [0.0, 0.0, 1.0],
+        vertical_fov_radians: 0.7,
+        focus_distance_km: 30_000.0,
+    });
+    let revision = SurfacePatchRevision {
+        source_revision: "a".repeat(40),
+        algorithm_version: "hornvale/surface-realization/v2".into(),
+        configuration_hash_hex: "11".repeat(32),
+    };
+    let first = lifecycle::visible_surface_patches(&camera, [0.0; 3], 7_000.0, &revision).unwrap();
+    let second = lifecycle::visible_surface_patches(&camera, [0.0; 3], 7_000.0, &revision).unwrap();
+    assert!(
+        (5..=9).contains(&first.len()),
+        "bounded one-ring: {first:?}"
+    );
+    assert_eq!(first, second);
+    assert!(first.windows(2).all(|pair| {
+        (pair[0].macro_face, &pair[0].child_path) < (pair[1].macro_face, &pair[1].child_path)
+    }));
+    assert!(
+        first
+            .iter()
+            .all(|key| key.revision == revision.cache_token())
+    );
+}
+
+fn scene_catalog() -> (World, ObservationMirror, SceneCatalog) {
+    let mut world = World::new();
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<Image>>();
+    world.init_resource::<Assets<StandardMaterial>>();
+    world.init_resource::<Assets<hornvale_bevy_view::bevy::light::atmosphere::ScatteringMedium>>();
+    let mut mirror = ObservationMirror::new(include_str!("../fixtures/initial.json")).unwrap();
+    mirror.request(0).unwrap();
+    mirror
+        .accept(include_str!("../fixtures/reply.json"))
+        .unwrap();
+    let mut catalog = SceneCatalog::default();
+    catalog.populate(&mut world, &mirror).unwrap();
+    (world, mirror, catalog)
+}
+
+fn catalog_request(mirror: &ObservationMirror, request_id: u64) -> String {
+    let revision = &mirror.initial().binding.source_revision;
+    serde_json::json!({
+        "schema": "visual/surface-request/v1",
+        "binding": mirror.initial().binding,
+        "request_id": request_id,
+        "generation": mirror.generation(),
+        "address": {"macro_face": MACRO_FACE, "child_path": []},
+        "expected_revision": {
+            "source_revision": revision,
+            "algorithm_version": "hornvale/surface-realization/v2",
+            "configuration_hash_hex": "11".repeat(32)
+        }
+    })
+    .to_string()
+}
+
+fn catalog_reply(mirror: &ObservationMirror, request_id: u64, patch: &str) -> String {
+    serde_json::json!({
+        "schema": "visual/surface-reply/v1",
+        "binding": mirror.initial().binding,
+        "request_id": request_id,
+        "generation": mirror.generation(),
+        "patch": serde_json::from_str::<serde_json::Value>(patch).unwrap()
+    })
+    .to_string()
+}
+
+#[test]
+fn catalog_reply_moves_pending_to_ready_and_owns_bevy_assets() {
+    // Catches returning transient Mesh/Material values without catalog insertion.
+    let (mut world, mirror, mut catalog) = scene_catalog();
+    let revision = mirror.initial().binding.source_revision.clone();
+    let key = documents::surface_patch(&patch_json(&revision))
+        .unwrap()
+        .cache_key();
+    catalog
+        .set_desired_surface_patches(&mirror, vec![key.clone()])
+        .unwrap();
+    catalog
+        .schedule_surface_patch(key.clone(), catalog_request(&mirror, 71))
+        .unwrap();
+    let before_meshes = world.resource::<Assets<Mesh>>().len();
+    let before_materials = world.resource::<Assets<StandardMaterial>>().len();
+    let entity = catalog
+        .apply_surface_reply(
+            &mut world,
+            &catalog_reply(&mirror, 71, &patch_json(&revision)),
+        )
+        .unwrap();
+    let state = catalog.surface_patch_state();
+    assert!(state.pending.is_empty());
+    assert_eq!(state.ready, vec![key]);
+    assert!(world.get_entity(entity).is_ok());
+    assert_eq!(world.resource::<Assets<Mesh>>().len(), before_meshes + 1);
+    assert_eq!(
+        world.resource::<Assets<StandardMaterial>>().len(),
+        before_materials + 1
+    );
+    assert!(!catalog.fallback_surface_visible(&world));
+}
+
+#[test]
+fn stale_catalog_reply_is_rejected_before_asset_insertion() {
+    // Catches generation checks performed after mutating Bevy asset storage.
+    let (mut world, mut mirror, mut catalog) = scene_catalog();
+    let revision = mirror.initial().binding.source_revision.clone();
+    let key = documents::surface_patch(&patch_json(&revision))
+        .unwrap()
+        .cache_key();
+    catalog
+        .set_desired_surface_patches(&mirror, vec![key.clone()])
+        .unwrap();
+    catalog
+        .schedule_surface_patch(key, catalog_request(&mirror, 72))
+        .unwrap();
+    let stale_reply = catalog_reply(&mirror, 72, &patch_json(&revision));
+    mirror
+        .reset(include_str!("../fixtures/initial.json"))
+        .unwrap();
+    catalog.reset(&mut world, &mirror).unwrap();
+    let before = (
+        world.resource::<Assets<Mesh>>().len(),
+        world.resource::<Assets<StandardMaterial>>().len(),
+    );
+    assert!(
+        catalog
+            .apply_surface_reply(&mut world, &stale_reply)
+            .is_err()
+    );
+    assert_eq!(
+        before,
+        (
+            world.resource::<Assets<Mesh>>().len(),
+            world.resource::<Assets<StandardMaterial>>().len()
+        )
+    );
 }

@@ -1,3 +1,7 @@
+use hornvale_bevy_view::{
+    CameraPose, camera::OrbitCamera, documents::SurfacePatchRevision,
+    lifecycle::visible_surface_patches,
+};
 use planetarium::review::{
     CapturedFrames, SurfaceProofMetrics, compare_surface_review, run_surface_proof,
 };
@@ -78,6 +82,31 @@ fn capture_provenance_names_source_owned_ground() {
     let capture = include_str!("../../src/capture.rs");
     assert!(capture.contains("source-owned coherent ground"));
     assert!(capture.contains("dynamic weather remains deferred"));
+}
+
+#[test]
+fn visible_patch_addresses_are_stable_capture_metadata() {
+    // Catches a selector whose capture identity varies with request completion.
+    let camera = OrbitCamera::new(CameraPose {
+        eye_km: [30_000.0, 0.0, 0.0],
+        target_km: [0.0; 3],
+        up: [0.0, 0.0, 1.0],
+        vertical_fov_radians: 0.7,
+        focus_distance_km: 30_000.0,
+    });
+    let revision = SurfacePatchRevision {
+        source_revision: "a".repeat(40),
+        algorithm_version: "hornvale/surface-realization/v2".into(),
+        configuration_hash_hex: "11".repeat(32),
+    };
+    let addresses = visible_surface_patches(&camera, [0.0; 3], 7_000.0, &revision).unwrap();
+    let first = serde_json::to_vec(&addresses).unwrap();
+    let second = serde_json::to_vec(
+        &visible_surface_patches(&camera, [0.0; 3], 7_000.0, &revision).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(first, second);
+    assert!(!first.is_empty());
 }
 
 #[allow(dead_code)]

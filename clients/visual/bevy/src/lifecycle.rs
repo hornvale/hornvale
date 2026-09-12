@@ -2,7 +2,8 @@
 use crate::{
     Binding, CameraPose, ObservationMirror, ViewError,
     astronomy::surface,
-    documents::{self, SurfacePatchCacheKey, SurfacePatchDocument},
+    camera::OrbitCamera,
+    documents::{self, SurfacePatchCacheKey, SurfacePatchDocument, SurfacePatchRevision},
 };
 use bevy::{
     camera::visibility::RenderLayers,
@@ -19,6 +20,12 @@ pub(crate) struct BodyVisual {
 }
 #[derive(Component)]
 struct CosmeticCloud;
+#[derive(Component)]
+struct SurfacePatchVisual {
+    binding: Binding,
+    generation: u64,
+    key: SurfacePatchCacheKey,
+}
 #[derive(Component)]
 struct PointVisual {
     pub(crate) id: String,
@@ -62,6 +69,8 @@ pub struct SceneCatalog {
     generation: u64,
     selected: Option<String>,
     capture: bool,
+    surface: CatalogSurfaceState,
+    fallback_surface: Option<Entity>,
 }
 /// Application camera/viewport; source geometry always comes from the mirror.
 pub struct SceneTarget {
@@ -75,6 +84,114 @@ pub struct SurfaceMeshHandles {
     pub key: SurfacePatchCacheKey,
     pub mesh: Mesh,
     pub material: StandardMaterial,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SurfacePatchCatalogState {
+    pub desired: Vec<SurfacePatchCacheKey>,
+    pub pending: Vec<SurfacePatchCacheKey>,
+    pub ready: Vec<SurfacePatchCacheKey>,
+    pub retired: Vec<SurfacePatchCacheKey>,
+}
+
+#[derive(Default)]
+struct CatalogSurfaceState {
+    desired: Vec<SurfacePatchCacheKey>,
+    pending: BTreeMap<(Binding, u64, u64), SurfacePatchCacheKey>,
+    ready: Vec<ReadySurfacePatch>,
+    retired: Vec<SurfacePatchCacheKey>,
+}
+
+struct ReadySurfacePatch {
+    key: SurfacePatchCacheKey,
+    entity: Entity,
+    mesh: Handle<Mesh>,
+    material: Handle<StandardMaterial>,
+}
+
+const MACRO_PATCH_DEPTH: usize = 6;
+const CUBE_FACES: [[[f64; 3]; 3]; 6] = [
+    [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+    [[-1., 0., 0.], [0., -1., 0.], [0., 0., 1.]],
+    [[0., 1., 0.], [-1., 0., 0.], [0., 0., 1.]],
+    [[0., -1., 0.], [1., 0., 0.], [0., 0., 1.]],
+    [[0., 0., 1.], [1., 0., 0.], [0., 1., 0.]],
+    [[0., 0., -1.], [-1., 0., 0.], [0., 1., 0.]],
+];
+
+fn cache_key_order(key: &SurfacePatchCacheKey) -> (&str, u32, &[u8]) {
+    (&key.revision, key.macro_face, &key.child_path)
+}
+
+fn packed_macro_face(face: usize, x: u32, y: u32) -> u32 {
+    let mut pathword = 1_u32;
+    for bit in (0..MACRO_PATCH_DEPTH).rev() {
+        let digit = (((x >> bit) & 1) << 1) | ((y >> bit) & 1);
+        pathword = (pathword << 2) | digit;
+    }
+    (pathword << 5) | face as u32
+}
+
+/// Select the camera-facing Level-6 macro patch and its bounded face-local ring.
+/// Integer address sorting makes repeated selection independent of reply order.
+pub fn visible_surface_patches(
+    camera: &OrbitCamera,
+    body_position_km: [f64; 3],
+    body_radius_km: f64,
+    revision: &SurfacePatchRevision,
+) -> Result<Vec<SurfacePatchCacheKey>, ViewError> {
+    documents::validate_surface_patch_revision(revision)?;
+    let eye = bevy::math::DVec3::from_array(camera.pose.eye_km);
+    let center = bevy::math::DVec3::from_array(body_position_km);
+    let offset = eye - center;
+    if !body_radius_km.is_finite()
+        || body_radius_km <= 0.0
+        || !offset.is_finite()
+        || offset.length() <= body_radius_km
+    {
+        return Err(ViewError::Range(
+            "camera has no valid body-facing envelope".into(),
+        ));
+    }
+    let direction = offset.normalize().to_array();
+    let dot = |a: [f64; 3], b: [f64; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    let (face, _) = CUBE_FACES
+        .iter()
+        .enumerate()
+        .map(|(face, [normal, _, _])| (face, dot(direction, *normal)))
+        .max_by(|left, right| left.1.total_cmp(&right.1))
+        .expect("cube has faces");
+    let [normal, u, v] = CUBE_FACES[face];
+    let normal_component = dot(direction, normal);
+    let unwarp = |value: f64| {
+        if value.abs() == 1.0 {
+            value
+        } else {
+            libm::atan(value) / std::f64::consts::FRAC_PI_4
+        }
+    };
+    let scale = 1_u32 << MACRO_PATCH_DEPTH;
+    let coordinate = |axis: [f64; 3]| {
+        let parameter = unwarp(dot(direction, axis) / normal_component);
+        (((parameter + 1.0) * 0.5 * f64::from(scale)).floor() as i64).clamp(0, i64::from(scale - 1))
+    };
+    let (x, y) = (coordinate(u), coordinate(v));
+    let revision = revision.cache_token();
+    let mut selected = Vec::with_capacity(9);
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            let (nx, ny) = (x + dx, y + dy);
+            if (0..i64::from(scale)).contains(&nx) && (0..i64::from(scale)).contains(&ny) {
+                selected.push(SurfacePatchCacheKey {
+                    revision: revision.clone(),
+                    macro_face: packed_macro_face(face, nx as u32, ny as u32),
+                    child_path: Vec::new(),
+                });
+            }
+        }
+    }
+    selected.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+    Ok(selected)
 }
 
 #[derive(Default)]
@@ -229,6 +346,184 @@ pub fn apply_surface_reply(json: &str) -> Result<SurfaceMeshHandles, ViewError> 
     })
 }
 impl SceneCatalog {
+    pub fn surface_patch_state(&self) -> SurfacePatchCatalogState {
+        let mut pending = self.surface.pending.values().cloned().collect::<Vec<_>>();
+        let mut ready = self
+            .surface
+            .ready
+            .iter()
+            .map(|patch| patch.key.clone())
+            .collect::<Vec<_>>();
+        pending.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+        ready.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+        SurfacePatchCatalogState {
+            desired: self.surface.desired.clone(),
+            pending,
+            ready,
+            retired: self.surface.retired.clone(),
+        }
+    }
+
+    pub fn set_desired_surface_patches(
+        &mut self,
+        mirror: &ObservationMirror,
+        mut desired: Vec<SurfacePatchCacheKey>,
+    ) -> Result<(), ViewError> {
+        let binding = &mirror.initial().binding;
+        if self.binding.as_ref() != Some(binding) || self.generation != mirror.generation() {
+            return Err(ViewError::Binding(
+                "surface selection does not match the catalog binding and generation".into(),
+            ));
+        }
+        desired.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+        desired.dedup();
+        self.surface.pending.retain(|_, key| {
+            if desired.contains(key) {
+                true
+            } else {
+                self.surface.retired.push(key.clone());
+                false
+            }
+        });
+        self.surface.desired = desired;
+        self.surface
+            .retired
+            .sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+        self.surface.retired.dedup();
+        Ok(())
+    }
+
+    pub fn schedule_surface_patch(
+        &mut self,
+        mut key: SurfacePatchCacheKey,
+        request: String,
+    ) -> Result<(), ViewError> {
+        let request: documents::SurfaceRequestDocument = serde_json::from_str(&request)
+            .map_err(|error| ViewError::Document(format!("invalid surface request: {error}")))?;
+        if request.schema != "visual/surface-request/v1" {
+            return Err(ViewError::Document("unknown surface request schema".into()));
+        }
+        request.binding.validate()?;
+        documents::validate_surface_patch_revision(&request.expected_revision)?;
+        documents::validate_surface_patch_address(&request.address)?;
+        if let Some(transition) = &request.transition_address {
+            documents::validate_surface_patch_address(transition)?;
+        }
+        if key.revision == request.expected_revision.source_revision {
+            key.revision = request.expected_revision.cache_token();
+        }
+        if self.binding.as_ref() != Some(&request.binding)
+            || self.generation != request.generation
+            || request.expected_revision.source_revision != request.binding.source_revision
+            || key.revision != request.expected_revision.cache_token()
+            || key.macro_face != request.address.macro_face
+            || key.child_path != request.address.child_path
+            || !self.surface.desired.contains(&key)
+        {
+            return Err(ViewError::Binding(
+                "surface request does not match desired catalog identity".into(),
+            ));
+        }
+        let identity = (request.binding, request.request_id, request.generation);
+        if self.surface.pending.insert(identity, key).is_some() {
+            return Err(ViewError::Binding(
+                "surface request ID is already scheduled for this binding".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Validate identity before insertion, then publish a complete selected set
+    /// in one exclusive world mutation. Until then the legacy globe remains.
+    pub fn apply_surface_reply(
+        &mut self,
+        world: &mut World,
+        json: &str,
+    ) -> Result<Entity, ViewError> {
+        let reply = documents::surface_reply(json)?;
+        let key = reply.patch.cache_key();
+        let identity = (reply.binding.clone(), reply.request_id, reply.generation);
+        if self.binding.as_ref() != Some(&reply.binding)
+            || self.generation != reply.generation
+            || self.surface.pending.get(&identity) != Some(&key)
+            || !self.surface.desired.contains(&key)
+        {
+            return Err(ViewError::Binding(
+                "surface reply belongs to a stale binding, request, generation, or patch".into(),
+            ));
+        }
+        self.surface.pending.remove(&identity);
+        let mesh = world
+            .resource_mut::<Assets<Mesh>>()
+            .add(surface::surface_mesh(&reply.patch, None));
+        let material = world
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(surface::surface_material(&reply.patch));
+        let entity = world
+            .spawn((
+                Mesh3d(mesh.clone()),
+                MeshMaterial3d(material.clone()),
+                Transform::IDENTITY,
+                Visibility::Hidden,
+                SurfacePatchVisual {
+                    binding: reply.binding,
+                    generation: reply.generation,
+                    key: key.clone(),
+                },
+                RenderLayers::layer(0),
+            ))
+            .id();
+        self.meshes.push(mesh.clone());
+        self.materials.push(material.clone());
+        self.entities.push(entity);
+        self.surface.ready.push(ReadySurfacePatch {
+            key,
+            entity,
+            mesh,
+            material,
+        });
+        let complete = !self.surface.desired.is_empty()
+            && self
+                .surface
+                .desired
+                .iter()
+                .all(|desired| self.surface.ready.iter().any(|ready| &ready.key == desired));
+        if complete {
+            let mut retained = Vec::new();
+            for ready in self.surface.ready.drain(..) {
+                if self.surface.desired.contains(&ready.key) {
+                    retained.push(ready);
+                } else {
+                    self.surface.retired.push(ready.key);
+                    world.despawn(ready.entity);
+                    world.resource_mut::<Assets<Mesh>>().remove(ready.mesh.id());
+                    world
+                        .resource_mut::<Assets<StandardMaterial>>()
+                        .remove(ready.material.id());
+                    self.entities.retain(|entity| *entity != ready.entity);
+                    self.meshes.retain(|handle| handle != &ready.mesh);
+                    self.materials.retain(|handle| handle != &ready.material);
+                }
+            }
+            self.surface.ready = retained;
+            for ready in &self.surface.ready {
+                world.entity_mut(ready.entity).insert(Visibility::Visible);
+            }
+            if let Some(fallback) = self.fallback_surface {
+                world.entity_mut(fallback).insert(Visibility::Hidden);
+            }
+        }
+        Ok(entity)
+    }
+
+    pub fn fallback_surface_visible(&self, world: &World) -> bool {
+        self.fallback_surface.is_some_and(|entity| {
+            world
+                .get::<Visibility>(entity)
+                .is_none_or(|visibility| *visibility != Visibility::Hidden)
+        })
+    }
+
     /// Prepare the entire snapshot first, then queue one atomic ECS application.
     pub fn apply(
         &mut self,
@@ -381,6 +676,8 @@ impl SceneCatalog {
         }
         self.selected = None;
         self.atmosphere = None;
+        self.surface = CatalogSurfaceState::default();
+        self.fallback_surface = None;
         self.binding = Some(mirror.initial().binding.clone());
         self.generation = mirror.generation();
         world.insert_resource(CaptureResult::default());
@@ -509,20 +806,22 @@ impl SceneCatalog {
                     ..default()
                 });
             materials.push(material.clone());
-            entities.push(
-                world
-                    .spawn((
-                        Mesh3d(mesh),
-                        MeshMaterial3d(material),
-                        Transform::IDENTITY,
-                        BodyVisual {
-                            binding: reply.binding.clone(),
-                            id: body.id.clone(),
-                        },
-                        RenderLayers::layer(0),
-                    ))
-                    .id(),
-            );
+            let entity = world
+                .spawn((
+                    Mesh3d(mesh),
+                    MeshMaterial3d(material),
+                    Transform::IDENTITY,
+                    BodyVisual {
+                        binding: reply.binding.clone(),
+                        id: body.id.clone(),
+                    },
+                    RenderLayers::layer(0),
+                ))
+                .id();
+            if body.id == "anchor" {
+                self.fallback_surface = Some(entity);
+            }
+            entities.push(entity);
         }
         // A static, source-coverage-conditioned presentation layer. It never casts
         // an eclipse/cloud shadow and is not part of the physical body inventory.
@@ -656,6 +955,20 @@ pub(crate) fn apply_pending_scene(world: &mut World) {
         .iter_mut(world)
     {
         *t = transforms[&visual.id];
+    }
+    let patch_identity = {
+        let mirror = world.resource::<ObservationMirror>();
+        (mirror.initial().binding.clone(), mirror.generation())
+    };
+    for (patch, mut t) in world
+        .query::<(&SurfacePatchVisual, &mut Transform)>()
+        .iter_mut(world)
+    {
+        if (patch.binding.clone(), patch.generation) == patch_identity
+            && !patch.key.revision.is_empty()
+        {
+            *t = transforms["anchor"];
+        }
     }
     for mut t in world
         .query_filtered::<&mut Transform, With<CosmeticCloud>>()

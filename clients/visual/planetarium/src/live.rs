@@ -22,7 +22,8 @@ use hornvale_bevy_view::{
         window::{PrimaryWindow, WindowResolution},
     },
     camera::{BodyBound, OrbitCamera, PickTarget, camera_components},
-    lifecycle::{SceneCatalog, SceneTarget},
+    documents::SurfacePatchRevision,
+    lifecycle::{self, SceneCatalog, SceneTarget},
 };
 use std::{collections::BTreeMap, path::PathBuf};
 #[derive(Resource)]
@@ -48,6 +49,8 @@ struct Live {
     dimensions: (u32, u32),
     elapsed: f64,
     render_frames: u64,
+    surface_revision: SurfacePatchRevision,
+    next_surface_request_id: u64,
 }
 pub fn positions(m: &ObservationMirror) -> BTreeMap<String, [f64; 3]> {
     m.current()
@@ -123,6 +126,9 @@ pub fn run(
     if benchmark.is_some() {
         source.enable_query_samples();
     }
+    let surface_revision: SurfacePatchRevision = serde_json::from_value(
+        serde_json::from_str::<serde_json::Value>(&initial)?["surface_revision"].clone(),
+    )?;
     let mut mirror = ObservationMirror::new(&initial)?;
     film.validate(&mirror.initial().binding)?;
     let q = mirror.request(film.clock().tick_at(0)?)?;
@@ -294,6 +300,8 @@ pub fn run(
         dimensions: (0, 0),
         elapsed: 0.,
         render_frames: 0,
+        surface_revision,
+        next_surface_request_id: 1 << 63,
     });
     if let Some(benchmark) = benchmark {
         use bevy::render::{
@@ -410,7 +418,28 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
     let dt = world.resource::<Time<Real>>().delta_secs_f64();
     l.elapsed += dt;
     l.render_frames += 1;
-    if l.observation.poll(&mut l.source).unwrap_or(false) {
+    let accepted_observation = match l.source.poll()? {
+        Some(reply)
+            if serde_json::from_str::<serde_json::Value>(&reply)
+                .ok()
+                .and_then(|value| value["schema"].as_str().map(str::to_owned))
+                .is_some_and(|schema| schema == "visual/surface-reply/v1") =>
+        {
+            if let Err(error) = l.catalog.apply_surface_reply(world, &reply)
+                && !matches!(error, hornvale_bevy_view::ViewError::Binding(_))
+            {
+                return Err(error.to_string());
+            }
+            false
+        }
+        Some(reply) => l
+            .observation
+            .mirror
+            .accept(&reply)
+            .map_err(|error| error.to_string())?,
+        None => false,
+    };
+    if accepted_observation {
         l.committed_frame = l
             .observation
             .timeline
@@ -611,6 +640,8 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
     l.playback.advance(dt, l.film.frames, l.film.fps);
     let desired = l.playback.frame();
     if (!l.observation.pending() || l.playback.paused)
+        && !l.source.diagnostics().pending
+        && !l.source.diagnostics().active
         && desired
             != l.observation
                 .timeline
@@ -622,6 +653,58 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
         if l.playback.paused {
             println!("control seek frame={desired}");
         }
+    }
+    let anchor = l
+        .observation
+        .mirror
+        .current()
+        .and_then(|reply| {
+            reply
+                .astronomy
+                .bodies
+                .iter()
+                .find(|body| body.id == "anchor")
+        })
+        .ok_or("accepted observation has no anchor body")?;
+    let desired_patches = lifecycle::visible_surface_patches(
+        &l.orbit,
+        anchor.position_km,
+        anchor.radius_km.ok_or("anchor body has no radius")?,
+        &l.surface_revision,
+    )
+    .map_err(|error| error.to_string())?;
+    l.catalog
+        .set_desired_surface_patches(&l.observation.mirror, desired_patches)
+        .map_err(|error| error.to_string())?;
+    let patch_state = l.catalog.surface_patch_state();
+    let diagnostics = l.source.diagnostics();
+    if patch_state.pending.is_empty()
+        && !diagnostics.pending
+        && !diagnostics.active
+        && let Some(key) = patch_state
+            .desired
+            .iter()
+            .find(|key| !patch_state.ready.contains(key))
+            .cloned()
+    {
+        let request_id = l.next_surface_request_id;
+        l.next_surface_request_id = l
+            .next_surface_request_id
+            .checked_add(1)
+            .ok_or("surface request ID overflow")?;
+        let request = serde_json::json!({
+            "schema": "visual/surface-request/v1",
+            "binding": l.observation.mirror.initial().binding,
+            "request_id": request_id,
+            "generation": l.observation.mirror.generation(),
+            "address": {"macro_face": key.macro_face, "child_path": key.child_path},
+            "expected_revision": l.surface_revision,
+        })
+        .to_string();
+        l.catalog
+            .schedule_surface_patch(key, request.clone())
+            .map_err(|error| error.to_string())?;
+        l.source.submit(request)?;
     }
     l.catalog
         .apply(
