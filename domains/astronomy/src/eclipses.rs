@@ -144,17 +144,15 @@ pub fn moon_ecliptic_latitude_deg(
 /// the event, never cached (the tidal-braking seam). The exact orbital radius
 /// remains available from `Calendar::anchor_orbital_state_at` for later
 /// physical consumers without moving this committed compatibility output.
+/// Invalid anchor state yields zero angular diameter (no eclipse cross-section).
 /// type-audit: pending(wave-1)
 pub fn sun_angular_rel_at(system: &StarSystem, calendar: &Calendar, t: StdInstant) -> f64 {
-    // Make the eclipse reader share the calendar's authoritative orbital
-    // validity/evaluation seam even while preserving the established
-    // first-order emitted scale below.
-    let _state = calendar
-        .anchor_orbital_state_at(t)
-        .expect("generated anchor orbit is valid at every compatibility instant");
-    let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
-    let e = system.forcing.eccentricity_at(t.0);
-    mean / (1.0 - e * math::sin(std::f64::consts::TAU * calendar.year_phase(t)))
+    let Some(state) = calendar.anchor_orbital_state_at(t) else {
+        return 0.0;
+    };
+    let mean =
+        crate::star::sun_angular_diameter_rel(&system.star, crate::Au(state.semi_major_axis));
+    mean / state.legacy_anchor_radius_ratio()
 }
 
 /// Which body is darkened.
@@ -1009,18 +1007,62 @@ mod tests {
     }
 
     #[test]
-    fn calendar_and_eclipses_consume_the_ephemeris_anchor_position() {
+    fn ephemeris_and_eclipse_project_the_same_calendar_anchor_state() {
         let (mut system, _) = super::luna_sol();
-        system.forcing.year_phase_offset = 0.0;
+        system.forcing.year_phase_offset = 0.125;
         system.forcing.ecc_mean = 0.2;
         system.forcing.ecc_amp = 0.0;
         let calendar = crate::calendar::calendar_of(&system);
-        let instant = StdInstant(system.anchor.year.get() / 4.0);
-        let state = calendar.anchor_orbital_state_at(instant).unwrap();
-        let radius =
-            (state.position[0] * state.position[0] + state.position[1] * state.position[1]).sqrt();
-        assert!(radius.is_finite() && radius > 0.0);
-        assert!(calendar.anchor_orbital_state_at(instant).is_some());
+        let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
+        // Periapsis and apoapsis on either side of genesis. The existing
+        // scene is circular; the eclipse diameter keeps its first-order scale.
+        for (years, phase, radius_ratio, y_sign) in
+            [(-0.875, 0.25, 0.8, 1.0), (0.625, 0.75, 1.2, -1.0)]
+        {
+            let instant = StdInstant(system.anchor.year.get() * years);
+            let state = calendar.anchor_orbital_state_at(instant).unwrap();
+            let position = crate::ephemeris::anchor_position_at(&system, instant);
+            assert!((calendar.year_phase(instant) - phase).abs() < 1e-12);
+            assert!((state.radius / system.anchor.orbit.get() - radius_ratio).abs() < 1e-12);
+            assert!(position.x_au.abs() < 1e-12);
+            assert!((position.y_au / system.anchor.orbit.get() - y_sign).abs() < 1e-12);
+            assert!(
+                (sun_angular_rel_at(&system, &calendar, instant) / mean - 1.0 / radius_ratio).abs()
+                    < 1e-12
+            );
+        }
+        // The supplied calendar owns the evaluated orbital elements. A stale
+        // system forcing record must not become a second eclipse geometry.
+        system.forcing.ecc_mean = 0.0;
+        let instant = StdInstant(system.anchor.year.get() * 0.125);
+        assert!((sun_angular_rel_at(&system, &calendar, instant) / mean - 1.25).abs() < 1e-12);
+    }
+
+    #[test]
+    fn invalid_anchor_state_has_total_ephemeris_and_eclipse_fallbacks() {
+        for (period, radius, eccentricity) in [
+            (0.0, 1.0, 0.2),
+            (f64::INFINITY, 1.0, 0.2),
+            (8.0, f64::NAN, 0.2),
+            (8.0, 1.0, 1.0),
+        ] {
+            let (mut system, _) = super::luna_sol();
+            system.anchor.year = StdDays(period);
+            system.anchor.orbit = crate::Au(radius);
+            system.forcing.ecc_mean = eccentricity;
+            system.forcing.ecc_amp = 0.0;
+            let calendar = crate::calendar_of(&system);
+            let instant = StdInstant(0.0);
+            assert!(calendar.anchor_orbital_state_at(instant).is_none());
+            assert_eq!(
+                crate::ephemeris::anchor_position_at(&system, instant),
+                crate::OrbitalPosition {
+                    x_au: 0.0,
+                    y_au: 0.0
+                }
+            );
+            assert_eq!(sun_angular_rel_at(&system, &calendar, instant), 0.0);
+        }
     }
 
     fn test_moon(inclination_deg: f64, node_longitude_deg: f64) -> Moon {

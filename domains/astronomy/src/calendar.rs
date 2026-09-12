@@ -685,20 +685,7 @@ pub fn wanderer_calendar_marks(
 
 impl Calendar {
     pub(crate) fn anchor_orbital_state_at(&self, t: StdInstant) -> Option<OrbitalState> {
-        orbital_state_at(
-            &OrbitalElements {
-                frame: OrbitalFrame::SystemPlaneAu,
-                epoch: StdInstant(0.0),
-                period: self.year,
-                semi_major_axis: self.anchor_orbit.get(),
-                eccentricity: self.forcing.eccentricity_at(t.get()),
-                mean_longitude_at_epoch_turns: self.forcing.year_phase_offset,
-                // The existing forcing convention puts periapsis at year phase 0.25.
-                periapsis_longitude_turns: 0.25,
-                validity: OrbitalValidity::UNBOUNDED,
-            },
-            t,
-        )
+        crate::ephemeris::anchor_orbital_state_at(self.anchor_orbit, self.year, &self.forcing, t)
     }
 
     pub(crate) fn moon_orbital_state_at(
@@ -815,12 +802,9 @@ impl Calendar {
         // back a phase of -0.49. Byte-neutral for every existing world:
         // for a non-negative operand `trunc` and `floor` coincide, so the
         // two agree exactly.
-        orbital_phase_at(
-            self.year,
-            StdInstant(0.0),
-            self.forcing.year_phase_offset,
-            t,
-        )
+        // The calendar keeps the mean-longitude compatibility projection.
+        self.anchor_orbital_state_at(t)
+            .map_or(0.0, |state| state.mean_longitude_turns)
     }
     /// Seasonal phase; present when either driver (tilt or eccentricity) acts.
     /// type-audit: bare-ok(ratio)
