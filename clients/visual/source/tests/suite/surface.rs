@@ -1,7 +1,8 @@
-use hornvale_kernel::{Facet, World};
+use hornvale_kernel::Facet;
 use hornvale_visual_source::{Source, SourceError};
-use hornvale_worldgen::SurfaceRealizationContext;
-use serde_json::{Value, json};
+use serde::Deserialize;
+use serde_json::{Value, json, value::RawValue};
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 const REV: &str = "4e06e33492a82e245aec899559b8cdf33ac7fdcd";
@@ -10,17 +11,12 @@ fn fixture() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../cli/tests/fixtures/world-seed-42.json")
 }
 
-fn surface_revision() -> Value {
-    let world = World::from_json(&std::fs::read_to_string(fixture()).unwrap()).unwrap();
-    let revision = SurfaceRealizationContext::build(&world).unwrap().revision;
-    json!({
-        "source_revision": revision.source_revision,
-        "algorithm_version": revision.algorithm_version,
-        "configuration_hash_hex": revision.configuration_hash.iter().map(|byte| format!("{byte:02x}")).collect::<String>()
-    })
-}
-
-fn request(binding: &Value, expected_revision: &Value, request_id: u64) -> String {
+fn request(
+    binding: &Value,
+    expected_revision: &Value,
+    request_id: u64,
+    child_path: &[u8],
+) -> String {
     let macro_face = Facet {
         face: 0,
         path: vec![0; 6],
@@ -32,56 +28,113 @@ fn request(binding: &Value, expected_revision: &Value, request_id: u64) -> Strin
         "schema": "visual/surface-request/v1",
         "binding": binding,
         "request_id": request_id,
-        "address": {"macro_face": macro_face, "child_path": [1]},
+        "address": {"macro_face": macro_face, "child_path": child_path},
         "expected_revision": expected_revision
     })
     .to_string()
 }
 
-fn source_and_binding() -> (Source, Value) {
+fn source_and_initial() -> (Source, Value) {
     let mut source = Source::open(&fixture(), REV, "surface-test").unwrap();
     let initial: Value = serde_json::from_str(&source.initial_document(16).unwrap()).unwrap();
-    (source, initial["binding"].clone())
+    (source, initial)
+}
+
+fn keys(value: &Value) -> BTreeSet<&str> {
+    value
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect()
+}
+
+#[derive(Deserialize)]
+struct SurfaceReply<'a> {
+    #[serde(borrow)]
+    patch: &'a RawValue,
+}
+
+fn patch_bytes(reply: &str) -> String {
+    serde_json::from_str::<SurfaceReply<'_>>(reply)
+        .unwrap()
+        .patch
+        .get()
+        .to_owned()
 }
 
 #[test]
-fn surface_document_is_stable() {
-    let (mut source, binding) = source_and_binding();
-    let revision = surface_revision();
-    let request = request(&binding, &revision, 17);
-    let first = source.observe_surface(&request).unwrap();
-    let second = source.observe_surface(&request).unwrap();
-    assert_eq!(first, second);
-    assert!(first.contains("\"scene/surface/v1\""));
+fn initial_bootstraps_surface_revision_matching_binding() {
+    let (mut source, initial) = source_and_initial();
+    let binding = &initial["binding"];
+    let revision = &initial["surface_revision"];
+
+    assert_eq!(
+        keys(&initial),
+        BTreeSet::from([
+            "schema",
+            "binding",
+            "surface_revision",
+            "system",
+            "moons",
+            "tiles",
+            "ticks_per_std_day"
+        ])
+    );
+    assert_eq!(initial["schema"], "visual/initial/v1");
+    assert_eq!(revision["source_revision"], binding["source_revision"]);
+    assert_eq!(revision["algorithm_version"], "hornvale/surface-realization/v2");
+    assert_eq!(revision["configuration_hash_hex"].as_str().unwrap().len(), 64);
+
+    let reply: Value = serde_json::from_str(
+        &source
+            .observe_surface(&request(binding, revision, 17, &[1]))
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(reply["binding"], *binding);
+    assert_eq!(reply["patch"]["revision"], *revision);
 }
 
 #[test]
 fn surface_rejects_wrong_binding() {
-    let (mut source, mut binding) = source_and_binding();
+    let (mut source, initial) = source_and_initial();
+    let mut binding = initial["binding"].clone();
     binding["scope_id"] = json!("wrong-scope");
     let error = source
-        .observe_surface(&request(&binding, &surface_revision(), 18))
+        .observe_surface(&request(
+            &binding,
+            &initial["surface_revision"],
+            18,
+            &[1],
+        ))
         .unwrap_err();
     assert!(matches!(error, SourceError::InvalidRequest(message) if message.contains("binding")));
 }
 
 #[test]
 fn surface_rejects_stale_revision() {
-    let (mut source, binding) = source_and_binding();
-    let mut revision = surface_revision();
+    let (mut source, initial) = source_and_initial();
+    let binding = &initial["binding"];
+    let mut revision = initial["surface_revision"].clone();
     revision["source_revision"] = json!("0".repeat(64));
     let error = source
-        .observe_surface(&request(&binding, &revision, 19))
+        .observe_surface(&request(binding, &revision, 19, &[1]))
         .unwrap_err();
     assert!(matches!(error, SourceError::InvalidRequest(message) if message.contains("revision")));
 }
 
 #[test]
 fn surface_preserves_request_id() {
-    let (mut source, binding) = source_and_binding();
+    let (mut source, initial) = source_and_initial();
     let reply: Value = serde_json::from_str(
         &source
-            .observe_surface(&request(&binding, &surface_revision(), 4_294_967_297))
+            .observe_surface(&request(
+                &initial["binding"],
+                &initial["surface_revision"],
+                4_294_967_297,
+                &[1],
+            ))
             .unwrap(),
     )
     .unwrap();
@@ -91,11 +144,38 @@ fn surface_preserves_request_id() {
 
 #[test]
 fn surface_contains_no_weather_hooks() {
-    let (mut source, binding) = source_and_binding();
+    let (mut source, initial) = source_and_initial();
     let document = source
-        .observe_surface(&request(&binding, &surface_revision(), 20))
+        .observe_surface(&request(
+            &initial["binding"],
+            &initial["surface_revision"],
+            20,
+            &[1],
+        ))
         .unwrap();
     for hook in ["weather", "cloud", "precip", "roughness"] {
         assert!(!document.contains(hook), "surface transport contains {hook}");
     }
+}
+
+#[test]
+fn independent_sources_and_request_orders_return_identical_patch_bytes() {
+    let (mut first, first_initial) = source_and_initial();
+    let (mut second, second_initial) = source_and_initial();
+    let first_binding = &first_initial["binding"];
+    let second_binding = &second_initial["binding"];
+    let first_revision = &first_initial["surface_revision"];
+    let second_revision = &second_initial["surface_revision"];
+    let first_a = request(first_binding, first_revision, 101, &[1]);
+    let first_b = request(first_binding, first_revision, 102, &[2]);
+    let second_a = request(second_binding, second_revision, 101, &[1]);
+    let second_b = request(second_binding, second_revision, 102, &[2]);
+
+    let first_b_reply = patch_bytes(&first.observe_surface(&first_b).unwrap());
+    let first_a_reply = patch_bytes(&first.observe_surface(&first_a).unwrap());
+    let second_a_reply = patch_bytes(&second.observe_surface(&second_a).unwrap());
+    let second_b_reply = patch_bytes(&second.observe_surface(&second_b).unwrap());
+
+    assert_eq!(first_a_reply, second_a_reply);
+    assert_eq!(first_b_reply, second_b_reply);
 }

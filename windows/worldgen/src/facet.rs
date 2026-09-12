@@ -149,10 +149,6 @@ impl SurfaceRealizationContext {
     // and retain one terrain/climate pair for all subsequent patch reads.
     #[allow(clippy::disallowed_methods)]
     pub fn build(world: &World) -> Result<SurfaceRealizationContext, SurfaceBuildError> {
-        let configuration = SurfaceConfiguration::current();
-        let world_bytes = world.to_json();
-        let revision = surface_revision(&world_bytes, configuration);
-
         let terrain = terrain_of(world).map_err(|error| {
             SurfaceBuildError::MissingMacroContext(format!(
                 "terrain reconstruction failed: {error}"
@@ -163,6 +159,55 @@ impl SurfaceRealizationContext {
                 "climate reconstruction failed: {error}"
             ))
         })?;
+        Self::from_parts(world, terrain, climate)
+    }
+
+    /// Reconstruct a context whose revision uses the source's supplied
+    /// binding revision rather than deriving a second identity from world
+    /// bytes. This is the source boundary's entry point.
+    /// type-audit: bare-ok(identifier-text: source_revision)
+    #[allow(clippy::disallowed_methods)]
+    pub fn build_with_source_revision(
+        world: &World,
+        source_revision: &str,
+    ) -> Result<SurfaceRealizationContext, SurfaceBuildError> {
+        let terrain = terrain_of(world).map_err(|error| {
+            SurfaceBuildError::MissingMacroContext(format!(
+                "terrain reconstruction failed: {error}"
+            ))
+        })?;
+        let climate = climate_from(world, &terrain).map_err(|error| {
+            SurfaceBuildError::MissingMacroContext(format!(
+                "climate reconstruction failed: {error}"
+            ))
+        })?;
+        Self::from_parts_with_source_revision(world, terrain, climate, source_revision)
+    }
+
+    /// Compose a context from macro terrain and climate already derived by a
+    /// caller, avoiding a second terrain/climate derivation.
+    pub fn from_parts(
+        world: &World,
+        terrain: hornvale_terrain::GeneratedTerrain,
+        climate: GeneratedClimate,
+    ) -> Result<SurfaceRealizationContext, SurfaceBuildError> {
+        let source_revision = hexadecimal(&stable_digest(&world.to_json()));
+        Self::from_parts_with_source_revision(world, terrain, climate, &source_revision)
+    }
+
+    /// Compose a context from caller-owned macro values and the source
+    /// binding revision that names them.
+    /// type-audit: bare-ok(identifier-text: source_revision)
+    pub fn from_parts_with_source_revision(
+        world: &World,
+        terrain: hornvale_terrain::GeneratedTerrain,
+        climate: GeneratedClimate,
+        source_revision: &str,
+    ) -> Result<SurfaceRealizationContext, SurfaceBuildError> {
+        let configuration = SurfaceConfiguration::current();
+        let world_bytes = world.to_json();
+        let revision = surface_revision(&world_bytes, source_revision, configuration);
+
         if terrain.geosphere().depth() != configuration.globe_level {
             return Err(SurfaceBuildError::MissingMacroContext(format!(
                 "terrain mesh depth {} is not the Level-{} surface authority",
@@ -203,6 +248,18 @@ impl SurfaceRealizationContext {
             planet_radius_m,
             configuration,
         })
+    }
+
+    /// Compute the active revision without deriving terrain, climate, or
+    /// astronomy. Request boundaries use this to reject stale work before a
+    /// full surface context is built.
+    /// type-audit: bare-ok(identifier-text: source_revision)
+    pub fn revision_for(world: &World, source_revision: &str) -> SurfaceRevision {
+        surface_revision(
+            &world.to_json(),
+            source_revision,
+            SurfaceConfiguration::current(),
+        )
     }
 
     /// Realize one patch solely from retained macro state and its validated address.
@@ -598,12 +655,15 @@ fn validate_patch(patch: &SurfacePatch) -> Result<(), SurfaceBuildError> {
     Ok(())
 }
 
-fn surface_revision(world_bytes: &str, configuration: SurfaceConfiguration) -> SurfaceRevision {
-    let source_revision = hexadecimal(&stable_digest(world_bytes));
+fn surface_revision(
+    world_bytes: &str,
+    source_revision: &str,
+    configuration: SurfaceConfiguration,
+) -> SurfaceRevision {
     let configuration_record =
-        canonical_configuration_record(world_bytes, &source_revision, configuration);
+        canonical_configuration_record(world_bytes, source_revision, configuration);
     SurfaceRevision {
-        source_revision,
+        source_revision: source_revision.into(),
         algorithm_version: configuration.algorithm_version,
         configuration_hash: stable_digest(&configuration_record),
     }
@@ -970,8 +1030,10 @@ mod tests {
         let mut changed = baseline;
         changed.flow_half_saturation += 1.0;
 
-        let baseline_revision = surface_revision("canonical-world-bytes", baseline);
-        let changed_revision = surface_revision("canonical-world-bytes", changed);
+        let baseline_revision =
+            surface_revision("canonical-world-bytes", "source-revision", baseline);
+        let changed_revision =
+            surface_revision("canonical-world-bytes", "source-revision", changed);
 
         assert_ne!(
             baseline_revision.configuration_hash,

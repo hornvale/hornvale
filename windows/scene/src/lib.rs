@@ -442,6 +442,26 @@ impl SceneContext {
     // sculpts/fits once, shared by every reader built from this context.
     #[allow(clippy::disallowed_methods)]
     pub fn build(world: &World) -> Result<SceneContext, SceneError> {
+        Self::build_internal(world, None)
+    }
+
+    /// Build a scene context while preserving a source boundary's revision
+    /// identity. Terrain and climate are handed to the surface context after
+    /// this one derivation, rather than being reconstructed there.
+    /// type-audit: bare-ok(identifier-text: source_revision)
+    #[allow(clippy::disallowed_methods)]
+    pub fn build_with_source_revision(
+        world: &World,
+        source_revision: &str,
+    ) -> Result<SceneContext, SceneError> {
+        Self::build_internal(world, Some(source_revision))
+    }
+
+    #[allow(clippy::disallowed_methods)]
+    fn build_internal(
+        world: &World,
+        source_revision: Option<&str>,
+    ) -> Result<SceneContext, SceneError> {
         let terrain =
             hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
         let climate = hornvale_worldgen::climate_from(world, &terrain)
@@ -449,8 +469,16 @@ impl SceneContext {
         let terrain_index = NearestVertexIndex::new(terrain.geosphere());
         let climate_index = NearestVertexIndex::new(climate.geosphere());
         let biomes = climate.biome_map();
-        let surface = SurfaceRealizationContext::build(world)
-            .map_err(|e| SceneError::Surface(e.to_string()))?;
+        let surface = match source_revision {
+            Some(source_revision) => SurfaceRealizationContext::from_parts_with_source_revision(
+                world,
+                terrain.clone(),
+                climate.clone(),
+                source_revision,
+            ),
+            None => SurfaceRealizationContext::from_parts(world, terrain.clone(), climate.clone()),
+        }
+        .map_err(|e| SceneError::Surface(e.to_string()))?;
         Ok(SceneContext {
             seed: world.seed,
             terrain,

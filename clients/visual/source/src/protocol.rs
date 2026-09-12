@@ -28,6 +28,7 @@ pub(crate) struct Reply<'a> {
 pub(crate) struct Initial<'a> {
     pub schema: &'static str,
     pub binding: &'a Binding,
+    pub surface_revision: SurfaceRevisionWire,
     pub system: &'a RawValue,
     pub moons: &'a RawValue,
     pub tiles: &'a RawValue,
@@ -59,7 +60,7 @@ pub(crate) struct FacetAddressWire {
     pub child_path: Vec<u8>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct SurfaceRevisionWire {
     pub source_revision: String,

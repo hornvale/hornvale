@@ -7,6 +7,27 @@ use hornvale_terrain::{
 use hornvale_worldgen::facet::stitch_transition;
 use hornvale_worldgen::{SurfacePatch, SurfaceRealizationContext, seed_42_world};
 use serde_json::{Value, json};
+use std::collections::BTreeSet;
+
+fn keys(value: &Value) -> BTreeSet<&str> {
+    value
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect()
+}
+
+fn assert_field_order(document: &str, fields: &[&str]) {
+    let mut previous = 0;
+    for field in fields {
+        let position = document
+            .find(&format!("\"{field}\""))
+            .unwrap_or_else(|| panic!("missing field {field}"));
+        assert!(position >= previous, "field {field} is out of order");
+        previous = position;
+    }
+}
 
 fn address_value(address: &FacetAddress) -> Value {
     json!({"face": address.macro_face.face, "macro_path": address.macro_face.path, "child_path": address.child_path})
@@ -270,6 +291,14 @@ fn proof_fixture_contains_required_surface_fields() {
 fn surface_document_is_canonical_and_contains_no_weather_hooks() {
     let world = seed_42_world();
     let context = SceneContext::build(&world).unwrap();
+    let independent_context = SceneContext::build(&world).unwrap();
+    let macro_face = Facet {
+        face: 0,
+        path: vec![0; 6],
+    }
+    .pack()
+    .unwrap()
+    .0 as u32;
     let address = FacetAddress::new(
         Facet {
             face: 0,
@@ -283,13 +312,114 @@ fn surface_document_is_canonical_and_contains_no_weather_hooks() {
         expected_revision: context.surface_revision().clone(),
     };
     let first = surface_patch_json(&surface_patch_scene(&context, &query).unwrap());
-    let second = surface_patch_json(&surface_patch_scene(&context, &query).unwrap());
+    let second = surface_patch_json(&surface_patch_scene(&independent_context, &query).unwrap());
     assert_eq!(first, second);
     let value: Value = serde_json::from_str(&first).unwrap();
+    assert_field_order(
+        &first,
+        &[
+            "schema",
+            "revision",
+            "address",
+            "samples",
+            "curves",
+            "triangles",
+        ],
+    );
+
+    assert_eq!(
+        keys(&value),
+        BTreeSet::from([
+            "schema",
+            "revision",
+            "address",
+            "samples",
+            "curves",
+            "triangles"
+        ])
+    );
     assert_eq!(value["schema"], "scene/surface/v1");
-    assert!(value["revision"]["configuration_hash_hex"].is_string());
-    assert!(value["samples"].is_array());
-    assert!(value["triangles"].is_array());
+    assert_eq!(
+        keys(&value["revision"]),
+        BTreeSet::from([
+            "source_revision",
+            "algorithm_version",
+            "configuration_hash_hex"
+        ])
+    );
+    assert_eq!(
+        value["revision"]["source_revision"].as_str().unwrap().len(),
+        64
+    );
+    assert_eq!(
+        value["revision"]["source_revision"],
+        context.surface_revision().source_revision
+    );
+    assert_eq!(
+        value["revision"]["algorithm_version"],
+        "hornvale/surface-realization/v2"
+    );
+    assert_eq!(
+        value["revision"]["configuration_hash_hex"]
+            .as_str()
+            .unwrap()
+            .len(),
+        64
+    );
+    assert_eq!(
+        keys(&value["address"]),
+        BTreeSet::from(["macro_face", "child_path"])
+    );
+    assert_eq!(value["address"]["macro_face"], macro_face);
+    assert_eq!(value["address"]["child_path"], serde_json::json!([1]));
+    assert_eq!(value["samples"].as_array().unwrap().len(), 9);
+    assert!(!value["curves"].as_array().unwrap().is_empty());
+    assert!(!value["triangles"].as_array().unwrap().is_empty());
+    for sample in value["samples"].as_array().unwrap() {
+        assert_eq!(
+            keys(sample),
+            BTreeSet::from([
+                "position",
+                "height_m",
+                "normal",
+                "material_weights",
+                "shoreline_distance_m",
+                "water_depth_m",
+                "flow_direction",
+                "flow_strength",
+                "channel_distance_m",
+                "channel_width_m",
+                "floodplain_weight",
+                "bank_weight",
+                "terrace_weight",
+                "delta_weight",
+                "ridge_direction",
+                "ridge_strength"
+            ])
+        );
+        assert_eq!(sample["position"].as_array().unwrap().len(), 3);
+        assert_eq!(sample["normal"].as_array().unwrap().len(), 3);
+        assert_eq!(sample["material_weights"].as_array().unwrap().len(), 8);
+        assert_eq!(sample["flow_direction"].as_array().unwrap().len(), 3);
+        assert_eq!(sample["ridge_direction"].as_array().unwrap().len(), 3);
+    }
+    for curve in value["curves"].as_array().unwrap() {
+        assert_eq!(
+            keys(curve),
+            BTreeSet::from(["feature", "points", "width_rad", "endpoints"])
+        );
+        assert_eq!(
+            keys(&curve["feature"]),
+            BTreeSet::from(["kind", "macro_anchor", "ordinal"])
+        );
+        assert_eq!(curve["endpoints"].as_array().unwrap().len(), 2);
+        for endpoint in curve["endpoints"].as_array().unwrap() {
+            assert_eq!(
+                keys(endpoint),
+                BTreeSet::from(["feature", "side", "boundary", "terminal"])
+            );
+        }
+    }
     for hook in ["weather", "cloud", "precip", "roughness"] {
         assert!(!first.contains(hook), "surface document contains {hook}");
     }
