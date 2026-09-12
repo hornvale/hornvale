@@ -113,6 +113,97 @@ fn macro_center_height(
 }
 
 #[test]
+fn emitted_channel_interior_follows_the_inherited_downstream_grade() {
+    let source = world(42);
+    #[allow(clippy::disallowed_methods)]
+    let terrain = hornvale_worldgen::terrain_of(&source).unwrap();
+    let context = SurfaceRealizationContext::build(&source).unwrap();
+    let mut checked = 0;
+    for (line, vertices) in terrain.channels().run_vertices.iter().enumerate() {
+        for (j, pair) in vertices.windows(2).enumerate() {
+            let heights = [
+                terrain.elevation_at(pair[0]).get(),
+                terrain.elevation_at(pair[1]).get(),
+            ];
+            if heights[0] - heights[1] < 20.0 {
+                continue;
+            }
+            let points = &terrain.channels().polylines[line].points[j..=j + 1];
+            let mut previous = f64::INFINITY;
+            for t in [0.25, 0.5, 0.75] {
+                let p: [f64; 3] =
+                    std::array::from_fn(|i| points[0][i] * (1.0 - t) + points[1][i] * t);
+                let norm = p.iter().map(|v| v * v).sum::<f64>().sqrt();
+                let p = p.map(|v| v / norm);
+                if terrain.channels().bank_reading(p).unwrap().line != line {
+                    continue;
+                }
+                let fine = Facet::containing(p, 20);
+                let address = FacetAddress::new(
+                    Facet {
+                        face: fine.face,
+                        path: fine.path[..6].to_vec(),
+                    },
+                    fine.path[6..].to_vec(),
+                )
+                .unwrap();
+                let patch = context.realize(&address).unwrap();
+                let sample = patch
+                    .samples
+                    .iter()
+                    .min_by(|a, b| separation(a.position, p).total_cmp(&separation(b.position, p)))
+                    .unwrap();
+                let expected = heights[0] + t * (heights[1] - heights[0]) - 12.0;
+                assert!(
+                    (sample.height_m - expected).abs() < 1.0,
+                    "emitted bed missed inherited interior grade: actual={} expected={expected}",
+                    sample.height_m
+                );
+                assert!(sample.height_m <= previous, "emitted bed rises downstream");
+                previous = sample.height_m;
+                checked += 1;
+            }
+            if checked >= 6 {
+                return;
+            }
+        }
+    }
+    panic!("fixture must exercise six interior channel samples, got {checked}");
+}
+
+#[test]
+fn emitted_channel_endpoints_are_incised_below_the_inherited_bed() {
+    let source = world(42);
+    #[allow(clippy::disallowed_methods)]
+    let terrain = hornvale_worldgen::terrain_of(&source).unwrap();
+    let context = SurfaceRealizationContext::build(&source).unwrap();
+    let mut checked = 0;
+    for (line, vertices) in terrain.channels().run_vertices.iter().enumerate() {
+        let point = terrain.channels().polylines[line].points[0];
+        let address = FacetAddress::new(Facet::containing(point, 6), vec![]).unwrap();
+        let patch = context.realize(&address).unwrap();
+        let Some(sample) = patch
+            .samples
+            .iter()
+            .find(|s| separation(s.position, point) < GEOMETRY_TOLERANCE)
+        else {
+            continue;
+        };
+        assert!(
+            sample.height_m < terrain.elevation_at(vertices[0]).get() - 1.0,
+            "emitted channel head has no incision: height={} inherited={}",
+            sample.height_m,
+            terrain.elevation_at(vertices[0]).get()
+        );
+        checked += 1;
+        if checked == 1 {
+            break;
+        }
+    }
+    assert_eq!(checked, 1, "fixture must exercise an emitted channel head");
+}
+
+#[test]
 fn emitted_patch_centers_include_bounded_conditioned_relief() {
     let source = world(42);
     #[allow(clippy::disallowed_methods)]
@@ -126,8 +217,8 @@ fn emitted_patch_centers_include_bounded_conditioned_relief() {
             let patch = context.realize(&address).expect("patch realizes");
             let relief = patch.samples[4].height_m - macro_center_height(&terrain, &address);
             assert!(
-                relief.abs() <= 240.0,
-                "facet relief exceeded its 240 m bound: {relief} m at {address:?}"
+                relief.abs() <= 160.0,
+                "facet relief exceeded its configured 160 m bound: {relief} m at {address:?}"
             );
             active += usize::from(relief.abs() > LENGTH_TOLERANCE_M);
         }

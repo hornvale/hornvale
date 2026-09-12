@@ -105,6 +105,15 @@ struct SurfaceConfiguration {
     relief_slope_share: f64,
     relief_elevation_half_saturation_m: f64,
     relief_coast_taper_m: f64,
+    channel_incision_m: f64,
+    relief_elevation_base: f64,
+    relief_coast_minimum: f64,
+    bank_height_m: f64,
+    floodplain_height_m: f64,
+    hydrology_max_adjustment_m: f64,
+    delta_height_m: f64,
+    ridge_share: f64,
+    ridge_smoothing_rad: f64,
     material_altitude_scale_m: f64,
     material_shore_scale_m: f64,
     material_sediment_half_saturation_m: f64,
@@ -126,8 +135,8 @@ struct SurfaceConfiguration {
 impl SurfaceConfiguration {
     const fn current() -> Self {
         Self {
-            record_schema: "hornvale/surface-configuration/v3",
-            algorithm_version: "hornvale/surface-realization/v3",
+            record_schema: "hornvale/surface-configuration/v4",
+            algorithm_version: "hornvale/surface-realization/v4",
             globe_level: hornvale_terrain::GLOBE_LEVEL,
             sample_topology: "quad-corners-center-dyadic-ring/world-space-fan-v2",
             material_channels: "bedrock,soil,sediment,wetland,fresh-water,salt-water,snow-ice,vegetation/v1",
@@ -140,6 +149,15 @@ impl SurfaceConfiguration {
             relief_slope_share: 0.65,
             relief_elevation_half_saturation_m: 1_200.0,
             relief_coast_taper_m: 30_000.0,
+            channel_incision_m: 12.0,
+            relief_elevation_base: 0.35,
+            relief_coast_minimum: 0.15,
+            bank_height_m: 4.0,
+            floodplain_height_m: 6.0,
+            hydrology_max_adjustment_m: 2_000.0,
+            delta_height_m: 3.0,
+            ridge_share: 0.35,
+            ridge_smoothing_rad: 0.008,
             material_altitude_scale_m: 4_000.0,
             material_shore_scale_m: 20_000.0,
             material_sediment_half_saturation_m: 8.0,
@@ -415,16 +433,44 @@ impl SurfaceRealizationContext {
             shoreline_distance_m,
             self.configuration,
         );
-        let relief_m = relief_amplitude_m * (2.0 * self.relief_noise.sample(position) - 1.0);
-        let height_m = macro_height_m + relief_m;
+        let ridge_direction = normalized_or_zero(cross(position, flow_direction));
+        let ridge_strength = slope_strength * (1.0 - flow_strength);
+        // Average the same random-access field along the inherited ridge axis.
+        // Reversing the axis is identical; variation across it is retained.
+        let ridge_noise = ridge_noise(
+            &self.relief_noise,
+            position,
+            ridge_direction,
+            self.configuration.ridge_smoothing_rad,
+        );
+        let ridge_share = self.configuration.ridge_share * ridge_strength;
+        let relief_m = relief_amplitude_m
+            * ((1.0 - ridge_share) * (2.0 * self.relief_noise.sample(position) - 1.0)
+                + ridge_share * ridge_noise);
+        let channel_reading = self.terrain.channels().bank_reading(position);
+        let channel_bed = channel_reading
+            .map(|reading| channel_bed_height(&self.terrain, reading.line, position));
+        let ambient_height = macro_height_m + relief_m;
+        let height_m = match (channel_reading, channel_bed) {
+            (Some(reading), Some(bed)) => channel_height_m(
+                ambient_height,
+                reading.signed_distance.abs(),
+                bed,
+                self.configuration,
+            ),
+            _ => ambient_height,
+        };
         let height_asl_m = height_m - sea_level_m;
         let water_depth_m = (-height_asl_m).max(0.0);
 
         let (channel_distance_m, channel_width_m, bank_weight, floodplain_weight, terrace_weight) =
-            match self.terrain.channels().bank_reading(position) {
+            match channel_reading {
                 Some(reading) => {
                     let distance = reading.signed_distance * self.planet_radius_m;
-                    let edges = reading.band_edges.map(|edge| edge * self.planet_radius_m);
+                    let edges = channel_bed
+                        .expect("reading has a bed")
+                        .edges
+                        .map(|edge| edge * self.planet_radius_m);
                     (
                         distance,
                         self.configuration.channel_width_multiplier * edges[0],
@@ -452,7 +498,6 @@ impl SurfaceRealizationContext {
             },
             self.configuration,
         );
-        let ridge_direction = normalized_or_zero(cross(position, flow_direction));
         let sample = FacetFieldSample {
             position,
             height_m,
@@ -467,9 +512,11 @@ impl SurfaceRealizationContext {
             floodplain_weight,
             bank_weight,
             terrace_weight,
-            delta_weight: (delta * (1.0 - slope_strength)) as f32,
+            delta_weight: (delta * (1.0 - slope_strength)).max(channel_bed.map_or(0.0, |bed| {
+                bed.terminal_progress * f64::from(floodplain_weight)
+            })) as f32,
             ridge_direction,
-            ridge_strength: (slope_strength * (1.0 - flow_strength)) as f32,
+            ridge_strength: ridge_strength as f32,
         };
         validate_sample(&sample)?;
         Ok(sample)
@@ -772,6 +819,26 @@ fn canonical_configuration_record(
     );
     push_f64_field(
         &mut record,
+        "channel-incision-m",
+        configuration.channel_incision_m,
+    );
+    for (name, value) in [
+        ("relief-elevation-base", configuration.relief_elevation_base),
+        ("relief-coast-minimum", configuration.relief_coast_minimum),
+        ("bank-height-m", configuration.bank_height_m),
+        ("floodplain-height-m", configuration.floodplain_height_m),
+        (
+            "hydrology-max-adjustment-m",
+            configuration.hydrology_max_adjustment_m,
+        ),
+        ("delta-height-m", configuration.delta_height_m),
+        ("ridge-share", configuration.ridge_share),
+        ("ridge-smoothing-rad", configuration.ridge_smoothing_rad),
+    ] {
+        push_f64_field(&mut record, name, value);
+    }
+    push_f64_field(
+        &mut record,
         "material-altitude-scale-m",
         configuration.material_altitude_scale_m,
     );
@@ -935,6 +1002,157 @@ fn category_fraction(
     blend(vertices, weights, |vertex| f64::from(predicate(vertex)))
 }
 
+/// Interpolate the same inherited run elevations as terrain's bed profile.
+/// Projection reads the repaired centerline; it never constructs drainage.
+#[derive(Clone, Copy)]
+struct ChannelBed {
+    height_m: f64,
+    grade_m_per_rad: f64,
+    edges: [f64; 4],
+    terminal_progress: f64,
+}
+
+fn channel_bed_height(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    line: usize,
+    position: [f64; 3],
+) -> ChannelBed {
+    let points = &terrain.channels().polylines[line].points;
+    let mut best = (f64::INFINITY, 0, 0.0);
+    for (j, pair) in points.windows(2).enumerate() {
+        let axis = normalized_or_zero(cross(pair[0], pair[1]));
+        let foot = normalized_or_zero(std::array::from_fn(|i| {
+            position[i] - axis[i] * dot(position, axis)
+        }));
+        let length = angular_distance(pair[0], pair[1]);
+        let t = if dot(cross(pair[0], foot), axis) < 0.0 {
+            0.0
+        } else if dot(cross(foot, pair[1]), axis) < 0.0 {
+            1.0
+        } else if length > 0.0 {
+            angular_distance(pair[0], foot) / length
+        } else {
+            0.0
+        };
+        let projected = if t <= 0.0 {
+            pair[0]
+        } else if t >= 1.0 {
+            pair[1]
+        } else {
+            foot
+        };
+        let distance = angular_distance(position, projected);
+        if distance < best.0 {
+            best = (distance, j, t.clamp(0.0, 1.0));
+        }
+    }
+    let vertices = &terrain.channels().run_vertices[line];
+    let a = terrain.elevation_at(vertices[best.1]).get();
+    let b = terrain.elevation_at(vertices[best.1 + 1]).get();
+    let length = angular_distance(points[best.1], points[best.1 + 1]);
+    let edges = &terrain.channels().band_edges[line];
+    let terminal = hornvale_terrain::channel_endpoint_kind(
+        TerrainFacetInputs {
+            globe: terrain.globe(),
+            geo: terrain.geosphere(),
+            channels: terrain.channels(),
+        },
+        *vertices.last().expect("run has a terminal"),
+        true,
+    );
+    ChannelBed {
+        height_m: a + best.2 * (b - a),
+        grade_m_per_rad: if length > 0.0 {
+            ((a - b) / length).max(0.0)
+        } else {
+            0.0
+        },
+        edges: std::array::from_fn(|i| {
+            edges[best.1][i] + best.2 * (edges[best.1 + 1][i] - edges[best.1][i])
+        }),
+        terminal_progress: if best.1 + 2 == points.len()
+            && matches!(
+                terminal,
+                hornvale_terrain::TerminalKind::Lake | hornvale_terrain::TerminalKind::Ocean
+            ) {
+            best.2
+        } else {
+            0.0
+        },
+    }
+}
+
+/// A continuous transverse profile over the source's four band borders.
+/// The center bed excludes noise; banks climb to a graded floodplain, and
+/// the terrace settles back to the ambient surface. A terminal apron adds
+/// sediment outside the bed only, so it cannot reverse the downstream grade.
+/// Total hydrology displacement is capped independently of the relief budget.
+fn channel_height_m(
+    ambient: f64,
+    distance: f64,
+    bed: ChannelBed,
+    config: SurfaceConfiguration,
+) -> f64 {
+    let [channel, bank, floodplain, terrace] = bed.edges;
+    if distance >= terrace {
+        return ambient;
+    }
+    let mix = |a: f64, b: f64, t: f64| a + t.clamp(0.0, 1.0) * (b - a);
+    let flatness = 1.0 - ratio(bed.grade_m_per_rad, config.slope_half_saturation_m_per_rad);
+    let bank_height = bed.height_m + config.bank_height_m * flatness;
+    let flood_height = bed.height_m + config.floodplain_height_m * flatness;
+    let shaped = if distance <= channel {
+        bed.height_m - config.channel_incision_m
+    } else if distance < bank {
+        mix(
+            bed.height_m - config.channel_incision_m,
+            bank_height,
+            (distance - channel) / (bank - channel),
+        )
+    } else if distance < floodplain {
+        mix(
+            bank_height,
+            flood_height,
+            (distance - bank) / (floodplain - bank),
+        )
+    } else {
+        mix(
+            flood_height,
+            ambient,
+            (distance - floodplain) / (terrace - floodplain),
+        )
+    };
+    let apron = config.delta_height_m
+        * bed.terminal_progress
+        * f64::from(annulus_weight(distance, bank, floodplain));
+    ambient
+        + (shaped + apron - ambient).clamp(
+            -config.hydrology_max_adjustment_m,
+            config.hydrology_max_adjustment_m,
+        )
+}
+
+fn angular_distance(a: [f64; 3], b: [f64; 3]) -> f64 {
+    let normal = cross(a, b);
+    hornvale_kernel::math::atan2(dot(normal, normal).sqrt(), dot(a, b))
+}
+
+fn ridge_noise(
+    noise: &hornvale_terrain::SphereFbm,
+    position: [f64; 3],
+    direction: [f64; 3],
+    smoothing_rad: f64,
+) -> f64 {
+    let offset = |sign: f64| {
+        normalized_or_zero(std::array::from_fn(|i| {
+            position[i] + sign * smoothing_rad * direction[i]
+        }))
+    };
+    // Sum the symmetric pair first so direction reversal is bit-identical.
+    2.0 * ((noise.sample(offset(-1.0)) + noise.sample(offset(1.0))) + noise.sample(position)) / 3.0
+        - 1.0
+}
+
 fn relief_amplitude_m(
     slope_strength: f64,
     height_asl_m: f64,
@@ -943,13 +1161,14 @@ fn relief_amplitude_m(
 ) -> f64 {
     let slope = (1.0 - configuration.relief_slope_share)
         + configuration.relief_slope_share * slope_strength.clamp(0.0, 1.0);
-    let elevation = 0.35
-        + 0.65
+    let elevation = configuration.relief_elevation_base
+        + (1.0 - configuration.relief_elevation_base)
             * ratio(
                 height_asl_m.abs(),
                 configuration.relief_elevation_half_saturation_m,
             );
-    let coast = (shoreline_distance_m.abs() / configuration.relief_coast_taper_m).clamp(0.15, 1.0);
+    let coast = (shoreline_distance_m.abs() / configuration.relief_coast_taper_m)
+        .clamp(configuration.relief_coast_minimum, 1.0);
     configuration.relief_max_amplitude_m * slope * elevation * coast
 }
 
@@ -1100,7 +1319,198 @@ fn normalized_or_zero(vector: [f64; 3]) -> [f64; 3] {
 
 #[cfg(test)]
 mod tests {
-    use super::{SurfaceConfiguration, surface_revision};
+    use super::*;
+
+    fn fixture_context() -> SurfaceRealizationContext {
+        let world = crate::seed_42_world();
+        SurfaceRealizationContext::build(&world).unwrap()
+    }
+
+    #[test]
+    fn relief_calibrations_each_change_the_configuration_hash() {
+        let baseline = SurfaceConfiguration::current();
+        let hash = surface_revision("world", "source", baseline).configuration_hash;
+        let changes: [fn(&mut SurfaceConfiguration); 10] = [
+            |c| c.relief_elevation_base += 0.01,
+            |c| c.relief_coast_minimum += 0.01,
+            |c| c.channel_incision_m += 1.0,
+            |c| c.bank_height_m += 1.0,
+            |c| c.floodplain_height_m += 1.0,
+            |c| c.hydrology_max_adjustment_m += 1.0,
+            |c| c.delta_height_m += 1.0,
+            |c| c.ridge_share += 0.01,
+            |c| c.ridge_smoothing_rad += 0.001,
+            |c| c.relief_max_amplitude_m += 1.0,
+        ];
+        for change in changes {
+            let mut config = baseline;
+            change(&mut config);
+            assert_ne!(
+                hash,
+                surface_revision("world", "source", config).configuration_hash
+            );
+        }
+    }
+
+    #[test]
+    fn emitted_channel_bands_and_terminal_apron_respond_to_calibration() {
+        let mut context = fixture_context();
+        let mut checked = [false; 4];
+        for line in 0..context.terrain.channels().polylines.len() {
+            let points = context.terrain.channels().polylines[line].points.clone();
+            let j = points.len() - 2;
+            let center =
+                normalized_or_zero(std::array::from_fn(|i| points[j][i] + points[j + 1][i]));
+            let side = normalized_or_zero(cross(points[j], points[j + 1]));
+            let edges = context.terrain.channels().band_edges[line][j];
+            let vertex = *context.terrain.channels().run_vertices[line]
+                .last()
+                .unwrap();
+            let terminal = hornvale_terrain::channel_endpoint_kind(
+                TerrainFacetInputs {
+                    globe: context.terrain.globe(),
+                    geo: context.terrain.geosphere(),
+                    channels: context.terrain.channels(),
+                },
+                vertex,
+                true,
+            );
+            for (band, checked_band) in checked.iter_mut().enumerate() {
+                if *checked_band
+                    || (band == 3
+                        && !matches!(
+                            terminal,
+                            hornvale_terrain::TerminalKind::Ocean
+                                | hornvale_terrain::TerminalKind::Lake
+                        ))
+                {
+                    continue;
+                }
+                let borders = match band {
+                    0 => [edges[0], edges[1]],
+                    1 | 3 => [edges[1], edges[2]],
+                    _ => [edges[2], edges[3]],
+                };
+                if borders[1] <= borders[0] {
+                    continue;
+                }
+                let distance = (borders[0] + borders[1]) / 2.0;
+                let position =
+                    normalized_or_zero(std::array::from_fn(|i| center[i] + distance * side[i]));
+                if context
+                    .terrain
+                    .channels()
+                    .bank_reading(position)
+                    .unwrap()
+                    .line
+                    != line
+                {
+                    continue;
+                }
+                let fine = Facet::containing(position, 20);
+                let address = FacetAddress::new(
+                    Facet {
+                        face: fine.face,
+                        path: fine.path[..6].to_vec(),
+                    },
+                    fine.path[6..].to_vec(),
+                )
+                .unwrap();
+                let before = context.realize(&address).unwrap();
+                let saved = context.configuration;
+                match band {
+                    0 => context.configuration.bank_height_m += 1.0,
+                    1 | 2 => context.configuration.floodplain_height_m += 1.0,
+                    _ => context.configuration.delta_height_m += 1.0,
+                }
+                let after = context.realize(&address).unwrap();
+                context.configuration = saved;
+                assert!(
+                    before
+                        .samples
+                        .iter()
+                        .zip(&after.samples)
+                        .any(|(a, b)| (a.height_m - b.height_m).abs() > 1e-7),
+                    "band {band} calibration never reaches emitted heights"
+                );
+                *checked_band = true;
+            }
+            if checked.iter().all(|v| *v) {
+                return;
+            }
+        }
+        panic!("fixture missed channel bands: {checked:?}");
+    }
+
+    #[test]
+    fn emitted_ridge_relief_is_active_and_bounded_by_configuration() {
+        let mut context = fixture_context();
+        // Exercise the configured bound, including a non-default budget.
+        context.configuration.relief_max_amplitude_m = 7.0;
+        let mut active = 0;
+        let mut directional = 0;
+        for face in 0..6 {
+            let address = FacetAddress::new(
+                Facet {
+                    face,
+                    path: vec![0; 6],
+                },
+                vec![],
+            )
+            .unwrap();
+            let with = context.realize(&address).unwrap();
+            let share = context.configuration.ridge_share;
+            context.configuration.ridge_share = 0.0;
+            let without = context.realize(&address).unwrap();
+            context.configuration.ridge_share = share;
+            let bound = context.configuration.relief_max_amplitude_m;
+            context.configuration.relief_max_amplitude_m = 0.0;
+            let no_relief = context.realize(&address).unwrap();
+            context.configuration.relief_max_amplitude_m = bound;
+            for (sample, baseline) in with.samples.iter().zip(&no_relief.samples) {
+                assert!(
+                    (sample.height_m - baseline.height_m).abs() <= bound + 1e-10,
+                    "emitted relief exceeds its configured {bound} m budget"
+                );
+                let ridge = ridge_noise(
+                    &context.relief_noise,
+                    sample.position,
+                    sample.ridge_direction,
+                    context.configuration.ridge_smoothing_rad,
+                );
+                let reversed = ridge_noise(
+                    &context.relief_noise,
+                    sample.position,
+                    sample.ridge_direction.map(|v| -v),
+                    context.configuration.ridge_smoothing_rad,
+                );
+                let transverse = ridge_noise(
+                    &context.relief_noise,
+                    sample.position,
+                    normalized_or_zero(cross(sample.position, sample.ridge_direction)),
+                    context.configuration.ridge_smoothing_rad,
+                );
+                assert_eq!(
+                    ridge, reversed,
+                    "an undirected ridge must survive axis reversal"
+                );
+                directional += usize::from((ridge - transverse).abs() > 1e-7);
+            }
+            for (a, b) in with.samples.iter().zip(&without.samples) {
+                let difference = (a.height_m - b.height_m).abs();
+                assert!(difference <= 2.0 * share * context.configuration.relief_max_amplitude_m);
+                active += usize::from(difference > 1e-7 && a.ridge_strength > 0.0);
+            }
+        }
+        assert!(
+            active > 0,
+            "ridge contribution never reaches emitted heights"
+        );
+        assert!(
+            directional > 0,
+            "ridge noise ignores the inherited direction"
+        );
+    }
 
     #[test]
     fn changing_consumed_calibration_changes_configuration_hash_and_revision() {
