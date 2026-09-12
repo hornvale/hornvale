@@ -253,6 +253,8 @@ docs/audits/glyph-specimen-sheet.txt	artifacts
 docs/audits/placement-audit-roster.md	artifacts
 docs/audits/plumb-roster.md	artifacts
 docs/audits/regularity-coverage-sugarscape-1996.md	artifacts
+docs/audits/technology-coverage-asimov-1989.md	artifacts
+docs/audits/technology-coverage-henrich-2004-extended.md	artifacts
 
 # `docs/generated-path-writes.tsv` (Task 4, The Attestation) is Task 1's
 # by-hand write-set measurement made a byproduct of every ordinary run: a

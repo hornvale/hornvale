@@ -1,0 +1,935 @@
+<!-- GENERATED FILE — do not edit. Regenerate with `hornvale technologies report henrich-2004-extended`. -->
+
+# Technology coverage
+
+## Provenance
+
+- **Corpus:** `henrich-2004-extended`
+- **Source:** NOT A SINGLE-SOURCED CORPUS, AND THE NAME SAYS SO DELIBERATELY. Joseph
+Henrich, "Demography and Cultural Evolution: How Adaptive Cultural Processes
+Can Produce Maladaptive Losses -- The Tasmanian Case," *American Antiquity*
+69(2):197-214 (2004), supplies the THEORY OF LOSS and its own cases. Items
+beyond those cases CARRY THEIR OWN CITATION, in the item's `source` field.
+Every sibling corpus in this repository and its four sibling families is one
+named external source with a year -- `polti`, `tvtropes-2012`,
+`wolverson-2021`, `sugarscape-1996`, `asimov-1989` -- which is what lets a
+single `provenance` state a single bias. This one is not, and the word
+"extended" in the filename is the declaration: it is still externally
+sourced PER ITEM, still frozen, still adversarial to Hornvale; what it stops
+being is SINGLE-sourced. Campaign ledger #10 ratified that shape, and its
+reason is the one this paragraph exists to honour: an authored corpus that
+READS like a sourced one is the failure decision 0095 exists to prevent, so
+the difference must be emitted rather than merely understood. THE THEORY OF
+LOSS, STATED EXACTLY, BECAUSE THE WHOLE CORPUS HANGS FROM IT. Henrich models
+the average skill level in a population of social learners and derives the
+condition for it to rise rather than ebb: N* must exceed a threshold set by
+the ratio of two inference parameters (his equation 3, N* > e^(alpha/beta)),
+where N* is "the critical number of social learners necessary to produce
+cumulative adaptive cultural evolution for a specified set of inferential
+processes ... which relate to specific skills, techniques, or practices."
+Below it, "these culturally acquired skills, knowledge, and related
+technologies will begin to ebb away." Loss is therefore NOT an event and not
+a decision: it is a DISTRIBUTION falling below a self-sustaining threshold,
+skill by skill, and it is compatible with individuals repeatedly reinventing
+the thing -- "such skills can be reinvented repeatedly, but still won't
+appear in the archaeological record." THE TWO COLUMNS CARRY INCOMPATIBLE
+THEORIES OF WHAT A TECHNOLOGY IS, AND UNDER 0095 THE DISAGREEMENT IS THE
+FINDING. `asimov-1989` frames a technology as an INDIVIDUAL INVENTION -- who
+made it, where, in what year -- and orders its items by date of first
+attestation. Henrich frames it as a DISTRIBUTION OF SKILL IN A POPULATION
+that can drift below a threshold. The two are not reconcilable, and neither
+is a correction of the other: an invention catalogue ordered by first
+attestation is STRUCTURALLY BLIND to loss, because every item enters once
+and never leaves, which is why a second column exists at all rather than
+more rows in the first. AND THE POPULATION FRAMING IS MUCH CLOSER TO THIS
+PROJECT'S OWN DOCTRINE, which is worth stating plainly rather than leaving
+for a reader to notice: `TECH-1`'s "Technology as capability thresholds, not
+a tech tree -- a capability is crossed when biome resources x subsistence x
+surplus clear a bar" is Henrich's shape, not Asimov's. The project's own
+speculative vocabulary already prefers the theory this column is built on,
+and what it has BUILT (`tech_for`, a four-rung ladder keyed to the year) is
+the other one, minus the inventors. TIER A'S PROVENANCE IS A FETCH; TIERS B
+AND C'S IS WEAKER, AND THE DIFFERENCE IS NAMED RATHER THAN AVERAGED. FETCH
+(2026-09-11T20:13Z): `https://gwern.net/doc/sociology/2004-henrich.pdf`,
+579,245 bytes, sha256
+1d671b4ef047be00480a930195d47ff8e2db57805af85aab0b4c7548d965937b, a scan of
+the published article; the author's own copy at `www2.psych.ubc.ca` and the
+Harvard repository copy both failed (TLS reset and 403 respectively,
+recorded so a later reader does not assume the canonical host was used). Two
+earlier fetch attempts against those hosts returned nothing and are named
+for the same reason `asimov-1989` names its 404s: a naive fetch of a paper
+can enumerate zero and report success. Every Tier A item's capability, date
+and wording is transcribed from that file's extracted text -- the p. 198
+enumeration and the Rivers material at pp. 208-209 -- and the quotations in
+the item notes are verbatim from it. TIERS B AND C ARE NOT TRANSCRIBED FROM
+A FETCHED SOURCE. Each item names a standard work or literature for its
+episode; the loss claim for each episode was checked against public search
+results before the item was written, and NO PAGE NUMBER IS ASSERTED for a
+source that was not fetched. THE CONSEQUENCE, STATED SO IT CANNOT BE
+MISREAD: 14 of this corpus's 41 items are held to the standard `asimov-1989`
+is held to, and 27 are held to a weaker one. A reader auditing this column
+should audit the Tier C citations first. THE SELECTION RULE, STATED BEFORE
+ANYTHING WAS SELECTED, IN THREE TIERS. (A) Take Henrich (2004)'s own
+documented cases, WHOLE: every capability his text names as lost or possibly
+lost, in his own enumeration order, with no item added or dropped. (B) Take
+the four cases this campaign's OWN design documents name as contested --
+Roman concrete, Greek fire, Antikythera-class gearing, Polynesian deep-water
+voyaging (spec S4.2; ledger #10). Those four were selected by the campaign,
+not by this task, which is why they are a tier of their own rather than
+folded into (C). (C) Widen by whole EPISODES, never by individual items. An
+episode is a named society at an approximately dated moment whose losses a
+citable source documents together, and it is ADMITTED if and only if: (i) a
+named citable source documents the loss, (ii) the losing society is
+identified, (iii) the loss is dated at least approximately, and (iv) the
+capability was demonstrably HELD before it was lost. An admitted episode
+contributes every capability its source names as lost. THERE IS NO SIZE
+FLOOR AND NO EARLY STOP, WHICH IS A DELIBERATE DEPARTURE FROM TASK 1'S RULE
+AND NOT AN OVERSIGHT. `asimov-1989`'s rule widens or narrows by whole arcs
+until the count lands in a 40-80 band, which is possible because its
+catalogue is a CLOSED population: 1,484 enumerable slugs and exactly three
+published arcs. The documented-loss literature has no closed enumeration, so
+a count-keyed rule over it would be arithmetic dressed as a population --
+and worse, a rule that stops at the first episode crossing a floor makes the
+floor's position decide which episodes are in, which is hand-picking
+relocated from the item to the threshold. Two candidate floors were
+considered and both produced the hazard in its clearest form: a floor of 30
+and a floor of 40 admit DIFFERENT episode sets, and the best-evidenced case
+in the whole corpus (the Inughuit, whose loss and re-acquisition are both
+documented) falls outside a 40-item early stop. So the rule is keyed to the
+source and not to the count, and the count is reported as whatever it is.
+THE COUNT LANDING ON 41 -- THE SIBLING COLUMN'S COUNT EXACTLY -- IS A
+COINCIDENCE, and it is named because a reader is entitled to suspect
+otherwise. The selection rule above contains no count term; the
+de-duplication rule below CUT the count (five literacy instances to one
+item, four watercraft instances to one); and no episode was admitted or
+refused with a total in view. A reader who wants to check this can: the
+tiers, the episodes and the de-duplication rule are all stated, so the item
+set is recomputable from them. DE-DUPLICATION: ONE ITEM PER CAPABILITY,
+NEVER ONE PER INSTANCE -- AND THE RULE CUTS AGAINST THIS AUTHOR'S INTEREST.
+The corpus's `unit` is `capability`, so two peoples losing the same
+capability are two INSTANCES of one item, and the item's `note` names every
+instance. Five documented literacy losses (Indus, Linear B, cuneiform,
+Egyptian, Maya) are therefore ONE item; four documented losses of
+sea-voyaging craft construction (Torres, Banks, Mangareva, Rapa Nui) are ONE
+item; the Tasmanian multipronged fishing spear and the Inughuit fish leister
+are ONE item; the bow and arrow lost in Oceania and by the Inughuit is ONE
+item. WITHOUT THE RULE THIS CORPUS WOULD CARRY 56 ITEMS INSTEAD OF 41, and
+since nine of the fifteen suppressed instances attach to `absent` items it
+would carry 40 `absent` verdicts instead of 31. That direction matters: this
+campaign's thesis is that Hornvale's technology model is impoverished, so a
+HIGH `absent` count is the flattering result, and a rule that suppresses
+eight flattering rows is the opposite of self-serving. It is stated as a
+rule rather than applied silently so that a reader who prefers
+instance-granularity can reconstruct the other number exactly. OMISSIONS,
+RECORDED WITH THEIR REASONS RATHER THAN LEFT INVISIBLE. (1) NORSE GREENLAND
+was considered as a Tier C episode and REFUSED on admission test (iv)'s
+implicit half: the colony did not survive to lack its capabilities, and a
+population that ends is an extinction rather than a loss. Its iron-working
+would otherwise have been a second instance of `col-iron-smelting`. The
+distinction is load-bearing for this family, because `lost` means "a people
+that HELD the capability no longer holds it" -- which presupposes the
+people. (2) THE MORIORI OF THE CHATHAM ISLANDS and THE ONA AND YAHGAN OF
+TIERRA DEL FUEGO appear at length in Henrich's text and contribute NOTHING
+here: they are his CONTRAST cases, cool-climate maritime foragers who
+retained what the Tasmanians lacked, and his own footnote says nobody in
+Tierra del Fuego stopped manufacturing winter clothing. A corpus that
+harvested them for items would have converted a control group into data. (3)
+SEWN BARK CANOES and GROUND-EDGE TOOLS appear in Henrich's mainland and
+Fuegian comparison lists and are NOT in his p. 198 enumeration of Tasmanian
+losses; they are excluded for that reason, which is the whole-enumeration
+rule working against a richer corpus. DEMANDS ARE DERIVED, NEVER WRITTEN
+(decision 0386). Each item names the ONE demand it `introduces` and the
+items it `presupposes`; the demand set is the transitive closure over
+`presupposes`, computed on read. No demand list appears anywhere in this
+file, and adding one would reopen 0386 rather than extend it. `presupposes`
+NAMES ITEMS IN THIS CORPUS AND NOTHING ELSE, which drops real prerequisites
+on purpose. Cordage, basketry, shell-working, stone tools, gunpowder,
+driftwood framing, surveying and precision stone-working are all real
+prerequisites of items here and all sit outside the corpus; each affected
+item's `note` names what was dropped. TWO EDGES WERE AVAILABLE AND
+DELIBERATELY NOT ASSERTED, which is the harder half of this discipline:
+`col-skin-boat` really does presuppose hide preparation, and `col-tanning`
+is an item of this corpus -- but the Inughuit sealskin technique and the
+Romano-British tanning trade are not established to be the same capability
+by any source read here, so the edge is named in the note and left out of
+the lattice. `col-greek-fire`'s bronze siphon is the second. An invented
+edge corrupts the derived closure, which is the one thing 0386 buys, and the
+closure is what the disclosure rule below is computed from -- so a wrong
+edge would propagate into the non-blindness accounting. ORDERING. `ordered`
+is true, and the order is derived by a stated rule rather than chosen: the
+three tiers in order, each source's own enumeration order within its episode
+(Henrich's p. 198 list in his sequence; his Rivers material in his sequence;
+spec S4.2's own sentence order for Tier B; Fleming's own enumeration order
+for post-Roman Britain), Tier C's episodes in the order they were admitted,
+then a STABLE TOPOLOGICAL SORT over `presupposes` so that a prerequisite
+always precedes its dependent. THE TIER C SEQUENCE MAKES NO CHRONOLOGICAL
+CLAIM. Every `presupposes` edge points backwards in the file -- that is the
+one constraint `ordered` actually has to support, it holds with zero forward
+edges, and it is mechanically checkable -- and the sort RELOCATED exactly
+two items, each pulled earlier than its source position by a dependent in an
+earlier tier: `col-lime-plaster` from the Maya episode to ahead of Tier B's
+`col-hydraulic-concrete`, and `col-copper-smelting` from the
+post-Roman-Britain block to ahead of Tier B's `col-geared-calculation`.
+Stating the sort rather than hand-reordering is what keeps the order
+recomputable: nothing in this file's sequence is a judgement, and an earlier
+draft of this file DID hand-place `col-lime-plaster` at the head of Tier B
+to avoid a forward edge -- which made this paragraph's claim false while
+every mechanical check still passed, and is recorded because a hand
+placement that satisfies a validator is exactly the kind of defect a
+validator cannot find. THIS PARAGRAPH USED TO CARRY A DESCRIPTIVE CLAIM
+ABOUT TIER C'S DATES AND IT IS DELETED RATHER THAN CORRECTED A FOURTH TIME
+(campaign ledger #23). Four drafts characterised the Tier C sequence: the
+first claimed it ran by date of loss earliest-first, the second repeated
+that after fixing the sort half, the third restated it against the wrong
+order (the file's, not the admission order the rule describes), and the
+fourth's main clause was independently verified and still carried two
+uncomputed numbers. The deletion is not a concession that the fourth was
+false. The reasons are that the surviving rule half is UNFALSIFIABLE -- the
+admission order is defined as the file order modulo the two relocations
+above, so it constrains nothing, which is exactly why three drafts reached
+for a chronological claim to give it content -- that the statistic it
+produced has NO CONSUMER, over an order carrying no verdict and no closure,
+and that the episode dates are an AUTHORING JUDGEMENT rather than data:
+taking the Negev half of `col-hydraulic-works` (after the 7th century)
+instead of the Angkor half (c. 1400) breaks the sequence the fourth draft
+measured. A count of items displaced by the sort went with it, unresolved
+rather than arbitrated: this author measured 19 and the review measured 18,
+and the instruction was to delete rather than compute, which is the right
+call precisely because a third reading is not obviously more trustworthy
+than the first two. THE LESSON IS THIS FILE'S OWN, TURNED ON ITSELF: prefer
+the checked invariant to the prose description of it. Where both exist the
+prose is optional and the invariant is not, and a sentence that has been
+wrong four times is not optional but a liability. The history is kept in the
+campaign's ledger (#22, #23), so nothing is lost that shows this artifact
+once described itself wrongly -- and that evidence is worth more in a
+ledger, where it cannot rot against the data, than in the artifact, where it
+already did. DECLARED BIAS -- AN INSTRUMENT WITH KNOWN BIAS, NEVER A
+STANDARD (decision 0095). This corpus's biases are different from the
+sibling's and are not smaller. (1) IT IS A CASE LITERATURE ABOUT SMALL,
+ISOLATED AND COLLAPSING SOCIETIES, because those are the societies in which
+loss is archaeologically legible; continuous large populations lose things
+too and leave less trace, so the corpus over-represents islands and
+collapses. Counted: 11 of 41 items come from one island's toolkit. (2) TIER
+A'S CENTRAL CASE IS ITSELF CONTESTED, and by more than the fishing dispute
+this file marks -- Henrich's Tasmanian argument drew published replies in
+the same journal, and the model's application to that case is disputed on
+record. The corpus uses his THEORY and his CASE LIST; it does not adjudicate
+the dispute, and a reader who thinks the Tasmanian toolkit was adequate
+rather than diminished should read all eleven Tasmanian items as contested,
+not just the nine that say so. (3) MATERIAL TECHNIQUE DOMINATES AND
+INSTITUTIONAL CAPABILITY IS THIN: 2 of 41 items (`col-standard-weights`,
+`col-palace-accounting`) are agreements a population maintains rather than
+skills in a pair of hands, and those are exactly the ones Henrich's
+mechanism fits least. (4) FOUR ITEMS ARE NOT DISTRIBUTIONAL LOSSES AT ALL on
+the reading their own notes record -- `col-greek-fire` (a state secret),
+`col-ocean-fleet` (a policy cessation), `col-firearms` (a licensing regime),
+and arguably `col-deep-water-voyaging` -- so the corpus is not internally
+homogeneous in its mechanism, and says so rather than letting Henrich's
+model appear to cover all 41. HORNVALE IS NOT OWED THESE CAPABILITIES AND
+THIS COLUMN IS NOT A DEFICIENCY SCORE: a world of goblins and drow is not
+obliged to have had a potter's wheel to lose. THE REACH QUESTION, TAKEN
+VERBATIM FROM THE SIBLING COLUMN SO THE TWO ARE COMPARABLE: can a Hornvale
+world TODAY carry the capability this item introduces as a committed fact
+that CAN DIFFER BETWEEN TWO PEOPLES? The second half is the load-bearing
+half, and this corpus adds no new reach rule to the sibling's; it applies
+four of them often enough that they are worth restating. (R2, CONFLATION) A
+label that bundles the capability with a neighbouring one, so that no world
+can hold the one without the other, does not meet the demand --
+`col-monumental-bronze` turns on this. (R3, CONSTRUCTION) A label every
+community carries by construction is not a capability a people acquires --
+the 18 artisan-rung WORDS turn on this. (R4, GEOGRAPHY) A property that is
+an exact function of place is not a capability:
+`domains/culture/src/subsistence.rs`'s first line says subsistence is "an
+exact function of its biome class and whether it reaches the coast", and
+`windows/vessel/src/fabric.rs` derives a building's Stone/Timber/Cob/Thatch
+from lithology, biome and soil. `col-fishing`, `col-sawn-timber`,
+`col-mortared-masonry`, `col-brick-drainage` and `col-horticulture` all have
+a near-miss of this exact shape, and it is the most seductive error
+available in this column, because the model's value really does vary between
+settlements -- it just varies with the ground and not with anyone's
+knowledge. (R5, RENDER-SIDE) A fact computed in a window and never committed
+is not a committed fact: `Fabric` lives in `windows/vessel`, is absent from
+the 449-row concept registry, and is registered as no predicate. TWO SCORING
+RULES CARRY OVER FROM THE SIBLING AND ARE APPLIED HERE WITHOUT AMENDMENT.
+(1) An item's reach verdict is AUTHORED as its weakest demand over its
+derived closure; "weakest" is an authoring discipline, not a computation,
+and nothing in this repository computes an ordering over verdicts. (2) A row
+makes an item `deferred` only if it names the capability the item's own
+`introduces` token names; a row planning a PREREQUISITE does not discharge
+the item; breadth alone is not a refusal, and if one broad row is accepted
+another may not be refused for breadth. That second rule is what makes the
+`deferred` verdicts here auditable: `TECH-2` is accepted four times
+(pottery, the wheel-and-kiln, coinage, crucible steel) because each of those
+is one of the row's OWN enumerated elements or its named process, and
+refused for `col-lime-plaster` because lime is in the row's TITLE's framing
+and not in its list. VERDICT TALLY, AND IT IS TWO COUNTS RATHER THAN ONE
+(campaign ledger #16). 31 `absent`, 8 `deferred`, 2 `unmeasured`, 0
+`present`, 0 `refused`, 0 `inapplicable`, 0 measured
+(`grown`/`flat`/`lost`). THE STATEMENT THE COLUMN SUPPORTS, which is
+strictly sharper than a uniform column could make: OF 41 DOCUMENTED LOSSES,
+HORNVALE CAN REPRESENT 2 OF THE TECHNOLOGIES AT ALL, AND OF THOSE 2 IT CAN
+REPRESENT THE LOSS OF EXACTLY ZERO. An earlier draft of the plan and of spec
+S4.2 would have had every item read `unmeasured`, which flattens the two
+classes together and throws away the 2 -- and the 2 is the number that
+bites, because an absence Hornvale never modelled is a gap while an absence
+in something it DOES model is a refusal of the axis. THE TWO ARE
+`col-copper-smelting` AND `col-iron-smelting`, and their reach rests on
+three verified facts: `TechHorizon` (`domains/history/src/record.rs:60`)
+names `Bronze` "Bronze-working" at :64 and `Iron` "Iron-working" at :66; the
+horizon is committed per occupation as the registered functional predicate
+`occ-tech` ("the occupation's technological horizon",
+`domains/history/src/lib.rs:142`, present in the generated concept
+registry); and it can differ between peoples, because `tech_for(year +
+c.tech_offset)` is evaluated per COMMUNITY
+(`windows/worldgen/src/history_bake.rs:4806`) against an offset drawn per
+community at genesis from `pstream.range_u32(0, 300)` (`:6577`). WHY THEY
+ARE `unmeasured` AND NOT `flat`, WHICH IS A READING THIS FILE HAD TO SETTLE.
+Spec S5.2a says "under such a criterion today's world scores `flat` -- the
+holding fraction is 1.0". That is a PREDICTION about what a successor will
+measure, not a verdict this file may author, for a structural reason: a
+measured value requires a `doc:` anchor admissible only against a path
+`docs/generated-paths.txt` gives a generator (decision 0936's rule), and no
+generator, resolver or report exists in the repository as this file is
+committed. Authoring `flat` here would mean citing an artifact that does not
+exist -- the defect campaign ledger #13 was written about -- so the
+trajectory stays unscored and the prediction stays in the spec where a
+successor can be wrong about it. AND THE AXIS IS NOT MERELY UNMODELLED -- IT
+IS GUARDED AGAINST BY AN EXPLICIT COMPARISON, WHICH IS A STRONGER FINDING
+THAN AN ABSENCE. `Bake::touch`
+(`windows/worldgen/src/history_bake.rs:4806-4812`) reads `let tech =
+tech_for(year + c.tech_offset); if tech > c.tech { c.tech = tech; }`, and
+`tech_for`'s own doc comment says "monotone in `year`, so tech only ever
+rises". The one-way test is in the source. `roller_strength` (`:2923`)
+closes the last door from the other side: a people that has lost every
+community still has its raiding strength reckoned as `pop *
+tech_weight(tech_for(year + offset))`, so a homeless remnant's horizon keeps
+RISING while it holds nothing at all. THE REGISTRY RECORDS THE SAME SHAPE
+TWICE MORE, IN TWO OTHER LAYERS, WHICH IS WHY THIS READS AS A PATTERN RATHER
+THAN AN OVERSIGHT: `KNOW-monotone` (`elaborated`) -- "Knowledge is monotone --
+absorption only ever extends, so the world forgets and the knower never
+does"; and `BIO-land-capital` (`raw`) -- "The land has no capital account,
+so it cannot be used up ... a place can never be ruined by its own
+occupants. The Dust Bowl is unrepresentable." `refused` AND `inapplicable`
+EARN NOTHING, AND THE FIRST IS A MATTER OF FACT RATHER THAN OF JUDGEMENT. A
+case-insensitive sweep of all 383 lines of
+`docs/digest/decisions-in-force.md` for sixteen terms (technolog, tech tree,
+craft, metallurg, pottery, literac, writing, navigat, voyag, concrete,
+masonry, loss, lost, monoton, clothing, textile, fish) returns two hits,
+both irrelevant: decision 0142 is about a rendering channel's "lost axis"
+and 0396 about a "monotone latch" on passage openness. No in-force decision
+declines any of these 41 capabilities, so none could be cited.
+`inapplicable` requires the world to DELIBERATELY lack a precondition; every
+precondition missing here is missing by omission, and "a people would not
+want it" is a claim about preferences Hornvale models nowhere -- which is
+itself a finding and a cleaner one than a row of soft `inapplicable`
+verdicts. THE `absent` COLUMN WAS SWEPT AGAINST THE IDEA REGISTRY, AND THE
+SWEEP'S POPULATION IS NARROWER THAN "EVERY ROW" -- STATED EXACTLY, BECAUSE
+CAMPAIGN LEDGER #14 IS ABOUT PRECISELY THIS GAP. WHAT WAS CHECKED: all 1,779
+rows of `book/src/frontier/idea-registry.md` were extracted programmatically
+(the count is the file's own, not an estimate) and matched against a 70-term
+keyword list covering every capability in this corpus and its materials,
+plus every row of the seven smallest relevant categories read in full (TECH
+4, NAV 5, WAT 4, MAT 3, ALCH 7, ECON 1, GRAIN 13 = 37 rows). WHAT THE CLAIM
+RANGES OVER: that no row other than the five this file cites as anchors
+(`TECH-2`, `TECH-3`, `BIO-8`, `MAP-8`, `MAP-18`) and the thirty-nine further
+rows it names, refuses or cites as corroborating evidence names any item's
+own capability. THE GAP BETWEEN THEM: the keyword list is this author's, so
+a row naming a capability in words none of the 70 terms contains is
+invisible to the sweep, and 1,742 rows were never read in full. That gap is
+the same shape as the one that left `BIO-8` unchecked in the sibling column --
+a row one link from a row that WAS checked -- and it is reported rather than
+repaired, because the repair is reading 1,779 rows and the honest
+alternative is naming the bound. THE SWEEP MOVED EIGHT ITEMS OFF `absent`,
+WHICH IS THE EVIDENCE THAT IT WAS REAL. `col-pottery` and
+`col-wheel-thrown-pottery` and `col-coinage` and `col-crucible-steel` to
+`deferred` on `TECH-2`; `col-stone-quarrying` on `TECH-3`;
+`col-horticulture` on `BIO-8`; `col-literacy` on `MAP-8`; `col-long-count`
+on `MAP-18`. Three of those rows (`TECH-2`, `TECH-3`, `BIO-8`) are rows the
+sibling column already tested, and `TECH-2` is the case worth reading twice:
+`asimov-1989` tested it against six items and refused all six, because in
+every one the metal was a dropped prerequisite and the item's own demand was
+a fitting, a propellant, a formation or mass reproduction. Here four items'
+own demands ARE the row's own enumerated elements. TWO OF `TECH-2`'S FOUR
+ELEMENTS ARE DISCHARGED BY ITEMS IN THIS COLUMN AND NONE BY ITEMS IN THE
+SIBLING -- which is the single clearest measurement of what the two columns
+see differently, and exactly the matrix decision 0095 asks for. ONE SWEEP
+RESULT IS A DISAGREEMENT WITH THE SIBLING COLUMN, AND IT IS REPORTED RATHER
+THAN ACTED ON. `MAP-8` ("Writing as a culture acquiring its own ledger --
+oral = phenomena, literate = freezing phenomena into facts; borrowed scripts
+as contact fossils", `elaborated`) names `col-literacy`'s capability as its
+entire content, so this column scores that item `deferred`. `asimov-1989`
+scores `inv-writing` `absent`; `MAP-8` appears nowhere in that file (`grep -c
+MAP-8` returns 0, as does `MAP-18`); and `inv-writing`'s own note states the
+condition `MAP-8` meets -- "WHAT WOULD CHANGE THE VERDICT: a committed fact
+that some peoples keep written records and others do not" -- while its
+`disclosure` anticipates the consequence: "a reader who reads that row as
+planning written records in the world rather than their RENDERING should
+move this item to `deferred` and the five items downstream of it with it."
+AT THE FREEZE THIS TASK DID NOT EDIT A FROZEN ARTIFACT, and escalated
+instead; the paragraph above is left in its original tense because the
+escalation is the part worth keeping. IT WAS THEN ADJUDICATED AND THE
+DISAGREEMENT IS CLOSED (campaign ledger #17): `inv-writing` is `deferred` on
+`MAP-8` in the sibling column too, so the two columns now score that row
+identically, and two further items moved with it (`inv-literature` on
+`DOM-aesthetics`, `inv-library` on `MEM-4`). The sibling's `provenance`
+carries its own amendment record. A matrix whose two columns score one
+registry row two ways is broken in a way neither column can show alone,
+which is why this was escalated rather than noted -- and the repair ran in
+the UNFLATTERING direction, taking that column's `absent` count from 38 to
+35. SIX ROWS WERE REFUSED AS ANCHORS FOR THE WHOLE COLUMN RATHER THAN FOR
+ONE ITEM, AND THE REFUSALS ARE THE MOST IMPORTANT JUDGEMENTS IN THIS FILE.
+Decision 0095 forbids reading this artifact as a backlog, and this family's
+`CLAUDE.md` names the mechanism: "anchoring a mass of `absent` items to one
+generic idea-registry row turns a measurement into a wish list." Each of
+these six would have done it. (1) `TECH-1` (`raw`) plans capability
+thresholds GENERICALLY and names no technology; it is the row this corpus is
+most tempted by, because its framing is Henrich's own, and it would have
+moved all 31 `absent` items in one line. (2) `ECON-livelihood` (`raw`) plans
+the layer a trade would live in and names no trade. (3) `MAT-object-genus`
+(`raw`) plans the missing `object` genus, not any object: "sword -> weapon ->
+tool -> artifact -> object has no member registered anywhere, and the
+artifact branch's sole inhabitant is `hearth`". (4) `MEM-1` (`elaborated`) --
+"every retained fact carries an upkeep cost; held only while surplus x will
+exceeds it, else it melts fact -> phenomenon -> myth ... survival curves are
+a Lab metric" -- is the project's OWN loss mechanism, and it is about
+retained FACTS rather than held capabilities; it is the nearest thing in the
+registry to this corpus's subject and it discharges no item. (5) `LANG-42`,
+whose status string reads "shipped (floor: the time axis ...; the CEILING
+stays open: decay/lost arts, schism)" and whose prose says "Knowledge is
+non-monotonic: ... decay opens them -- lost arts, a fact retreating
+exoteric->esoteric->forgotten, a civilization's fall rendered as its Book
+LOSING its margins-of-correctness". (6) `ALCH-4` (`raw`), which says a world
+with an empty violation catalog "still derives correspondence-thinking,
+false causes, rival schools, and lost arts" -- and two of those four
+elements HAVE shipped, so by this family's own test the row enumerates
+deliverables and does plan lost arts generically. REFUSING (4), (5) AND (6)
+IS THE CLOSEST CALL IN THIS FILE. Three rows plan decay, in three layers,
+and not one of them names a capability a people holds; on rule 2 that means
+they plan a phenomenon and not these items. A reader who overturns any of
+them moves a large number of items at once, which is exactly why the refusal
+is recorded here in full rather than left implicit in 31 silent `absent`
+verdicts. WHY THE `absent` MASS IS STRUCTURAL RATHER THAN A SCORE, AND THE
+COMPACT FORM OF IT IS A WORD LIST. `domains/language/src/lib.rs` gives each
+of 18 registered kinds an `artisan`-rung WORD -- 18 assignments, 15
+distinct: artificer, artisan, boneworker, bowyer, fletcher, glassblower,
+glassmith, hullwright, patcher, shaper, smith, tanner, webwright, wright,
+wyrm. FOUR OF THIS CORPUS'S ITEMS HAVE THEIR PRACTITIONER NAMED THERE AND
+THEIR CAPABILITY MODELLED NOWHERE: the snow-elf's `boneworker` against
+`col-bone-tools`; the wood-elf's `bowyer` and the gnoll's `fletcher` against
+`col-bow-and-arrow`; the sea-elf's `hullwright` against `col-sea-canoe`; the
+bugbear's `tanner` against `col-tanning`. The sibling column's version of
+this observation is that "a smith's anvil is a noun in a room while no
+people in any world holds smithing"; this is the sharper form, because the
+anvil is scene furniture and the artisan word VARIES BY PEOPLE -- which is
+the reach question's own second half, met by a label and not by a
+capability. The registry states the cause itself, in `MAT-object-genus`:
+demand-driven growth built "a natural-history vocabulary -- biomes, star
+classes, ocean layers, landforms, wild fauna, weather, colour, kin -- with a
+thin social overlay and no material culture". Everyday material technique
+has had no consumer in this engine, so no predicate was ever minted for it,
+while 449 registry rows name the furniture. THE CRITERION IS ADOPTED FROM
+THE SIBLING UNCHANGED, AND THAT IS A RULING RATHER THAN A DEFAULT. Every
+item carries `statistic: fraction-of-peoples-holding` and `criterion:
+{fraction-in-band, lo 0.05, hi 0.95}`, inclusive at both bounds, identical
+to `asimov-1989`'s. TWO REASONS, AND THE SECOND IS A DISQUALIFICATION. (1)
+Comparability: decision 0095's output is a MATRIX over corpora, and two
+columns measured against two different bands cannot be read across. (2) THIS
+SESSION IS DISQUALIFIED FROM BANDING THIS STATISTIC, and the
+disqualification is structural rather than accidental: the family's own
+`CLAUDE.md` says "any session that has read the distribution a criterion
+bands is disqualified from re-banding that criterion", and this task's brief
+REQUIRES reading `asimov-1989`'s `provenance` in full -- which publishes the
+distribution, stating that every live community is Classical at bake end and
+the people-level holding fraction is 1.0. So the family's onboarding
+disqualifies every author after the first. That is worth recording as a
+property of the family and not just of this file: the set of sessions
+eligible to tighten this band was empty from the moment the first corpus
+shipped, and the campaign's own follow-up list already carries the narrower
+version of the observation. THE STATISTIC IS DEFINED HERE, NOT LEFT TO THE
+SESSION THAT SCORES IT, and it is defined identically to the sibling so that
+"the same band" means the same thing. `fraction-of-peoples-holding` is:
+(NUMERATOR) the number of peoples holding the capability, over (DENOMINATOR)
+the number of peoples with at least one community alive at the evaluation
+instant. AGGREGATION -- ANY LIVE COMMUNITY: `tech` and `tech_offset` are
+fields on a COMMUNITY (`windows/worldgen/src/history_bake.rs:2388-2390`),
+the census reports the quantity per OCCUPATION
+(`first-day-occ-tech-neolithic`/`-bronze`/`-iron`/`-classical`, all four
+verified present in `book/src/laboratory/generated/the-census/rows.csv`),
+and a people's communities can sit on different rungs, so a people holds the
+capability if AT LEAST ONE of its communities alive at the evaluation
+instant holds it. EVALUATION INSTANT -- BAKE END:
+`BakeConfig::default_millennia`'s `end_year` is 2000.0 (`:986`), and the
+denominator is the population the census column `peoples-alive-at-bake-end`
+counts, NOT `peoples-placed`, which includes peoples that have already
+closed and hold nothing. THE BAND'S STATED MEANING IS N-DEPENDENT AND N IS
+MEASURED HERE RATHER THAN INHERITED: "at least one people holds it and at
+least one lacks it" is what `[0.05, 0.95]` means only while N <= 20, since
+the smallest non-zero fraction is 1/N and the largest non-one is (N-1)/N.
+Computed over all 1,000 rows of the committed census by this task, both
+columns independently: `peoples-placed` runs 9 to 15 and
+`peoples-alive-at-bake-end` runs 9 to 15. The claim holds today with
+headroom, and above N = 20 it becomes false silently -- a successor meeting
+a red at N > 20 should read this sentence before concluding the world
+diverged less than it did. THE TRAJECTORY PREDICATE IS DEFINED TOO, BECAUSE
+THIS IS THE COLUMN WHERE `lost` IS SUPPOSED TO BE REACHABLE AND A BAND ALONE
+DOES NOT REACH IT. Under this family's ratified scope, `lost` means a people
+that held the capability no longer holds it -- and with ANY aggregation that
+is exact: a people loses a capability at the first year at which NO live
+community of it holds the capability, having held it at some earlier year.
+The band then governs the CROSS-SECTIONAL fraction at bake end, and the two
+work together rather than redundantly: a world in which some peoples have
+lost a capability has a bake-end fraction below 1.0 and therefore inside the
+band, while a world in which nothing is ever lost sits at 1.0 and REDDENS.
+FALSIFYING WORLDS, the same for every item: 0.0 (nobody holds it) and 1.0
+(every surviving people holds it) both redden, and both are shapes this
+engine produces -- 1.0 is the shape it produces today, for the two items
+that reach at all. NON-BLINDNESS, AT TWO LEVELS, WITH A DIFFERENT INSTRUMENT
+FOR EACH. CORPUS LEVEL: these verdicts were authored by a session that had
+read `TechHorizon`, `tech_for`, `tech_weight`, `Bake::touch`,
+`roller_strength`, `occ-tech`'s registration, `subsistence.rs`, `fabric.rs`,
+the 18 artisan words, this campaign's spec and ledger, and `asimov-1989`'s
+`provenance` in full. That is uniform across all 41 items and to the same
+degree, so it is stated here ONCE at full strength; copying it into 41
+fields would state one fact 41 times, which decision 0261 forbids. AND IT IS
+WORSE THAN THE SIBLING'S POSITION, NOT EQUAL TO IT: Task 1's selection rule
+ran against a catalogue fetched before the task was dispatched, so its
+SELECTION was structurally blind. This corpus's selection rule was written
+by a session that had ALREADY read the model, because the brief requires
+reading the family's law and the sibling corpus first. The structural
+mitigation here is therefore different and weaker: the rule takes whole
+episodes and every capability a source names, never individual items, and
+the episodes are fixed by Henrich's own text and by the campaign's own
+design documents for 18 of the 41. For the other 23 the mitigation is the
+admission test and the stated sourcing standard, not blindness. A reader
+should weight the Tier C selection accordingly. ITEM LEVEL: `disclosure`
+MARKS PER-ITEM NON-BLINDNESS, INCLUDING ON AN `absent` (campaign ledger #12,
+which rejected and inverted the opposite rule). The cut is CHOSEN vs
+INHERITED: an item's verdict is CHOSEN when NO prerequisite anywhere in its
+derived closure is `absent`, so nothing upstream forces it and it rests on a
+search of the repository; INHERITED otherwise, when the weakest-demand rule
+reads the verdict off an `absent` prerequisite and no Hornvale fact decided
+it. Chosen items carry a `disclosure`; inherited items do not, because a
+refusal that could not have changed the verdict is evidence for a `note`
+rather than a choice in a verdict. THE CHOSEN SET HERE IS 32 OF 41 -- far
+denser than the sibling's 12 of 41 -- AND THE DENSITY IS A PROPERTY OF THE
+LATTICE'S SHAPE RATHER THAN OF A DIFFERENT RULE. Two measured causes. (1)
+THIS CORPUS IS A SET OF INDEPENDENT EPISODES AND THE SIBLING IS A DEPENDENCY
+CHAIN: 23 of 41 items here are roots (no `presupposes` edge at all) against
+10 of 41 there, because a catalogue's "Built on" links form a chain and
+documented collapses in different centuries do not. (2) TEN NON-`absent`
+VERDICTS UNFORCE THEIR DEPENDENTS: 8 `deferred` and 2 `unmeasured` verdicts
+mean nine non-root items have no `absent` anywhere in their closure. THE
+NINE ARE `col-geared-calculation`, `col-palace-accounting`,
+`col-wheel-thrown-pottery`, `col-coinage`, `col-long-count`, `col-firearms`,
+`col-crucible-steel`, `col-monumental-bronze` and `col-megalith-transport`.
+A ROOT-KEYED CHECK WOULD THEREFORE UNDER-COVER BY EXACTLY NINE ITEMS HERE,
+measured by computing both sets over this file's own data -- against the
+sibling column's one (`inv-parchment`), which is the counterexample campaign
+ledger #13 was written on. The family's `CLAUDE.md` says a root-keyed check
+under-covers from the first authoring and needs no trigger; this corpus is
+the quantitative version of that sentence, and the ratio (9 against 1) is
+why the proxy should be distrusted rather than merely noted. NOTHING IN THIS
+REPOSITORY ENFORCES ANY OF THE ABOVE. No resolver exists; no authoring
+harness is committed, and committing one would make this file's `frozen`
+field false and destroy the property that makes decision 0016's freeze
+STRUCTURAL here rather than promised (campaign ledger #13). HOW THIS FILE
+QUOTES THE REGISTRY, AS ONE CHECKABLE CLAIM AND NOT AS A DESCRIBED
+CONVENTION: every quotation of a registry row matches that row after four
+character transliterations -- em dash, en dash, arrow and multiplication
+sign to ASCII -- with markup ignored, and every elision inside a quotation
+is marked `...` or `[...]`. Measured across both corpora in fix round 4: 38
+quotation segments, 0 mismatches. MARKUP IS OUTSIDE THAT GUARANTEE: the
+registry's `**bold**` and `[[row]]` markup is NOT normalised by this file,
+practice varies -- measured in fix round 4, four quotations across the two
+corpora keep it and one drops it -- and the comparison ignores it on both
+sides, so a reader diffing bytes should expect markup differences and
+nothing else. An earlier version of this clause asserted the markup 'is
+dropped', which is false in four places and was introduced by the same round
+whose mechanical sweep caught two misquotes: the sweep checked quotations
+against rows and nothing tested the sentence describing the sweep (campaign
+ledger #24). THAT DISCIPLINE WAS CHECKED MECHANICALLY IN FIX ROUND 3 AND
+FOUND TWO VIOLATIONS IN THIS FILE, both repaired: a `CUL-17` quotation had
+moved its own closing parenthesis so as to swallow ', MEM-3 stickiness', and
+a `LANG-35` quotation ended mid-phrase at 'into surfaces' where the row
+reads 'into surface prose'. Neither changed an argument and both made the
+file assert text a row does not contain. The check is worth naming because a
+looser version of it was tried first and was useless -- matching every
+single-quoted span produced 153 candidates, almost all of them apostrophes
+in possessives, which is an instrument you must hand-filter rather than
+read. The usable form takes only this file's canonical citation shape, ``
+`ROW-ID` ('...') ``, splits each quotation at its marked elisions, and
+requires every segment of four words or more to be a substring of that row
+under the normalisation above: 38 segments across both corpora, zero
+mismatches after the repair. A resolver could run it; none does yet. WHAT
+WAS ACTUALLY RUN, in the past tense and carrying no standing guarantee: an
+uncommitted throwaway script in a session scratchpad asserted, before this
+file was written, that ids are unique and all carry the `col-` prefix, that
+no id collides with the sibling corpus's `inv-` ids, that every
+`presupposes` target resolves inside this corpus, that the lattice is
+acyclic and every edge points backwards in file order, that no item's
+verdict outranks a prerequisite's under the weakest-demand reading, that
+`absent` and `unmeasured` cite no anchor while every `deferred` cites a
+`registry:` row that exists in `book/src/frontier/idea-registry.md` and is
+not `shipped`, that the computed chosen set equals the set of items carrying
+a `disclosure` exactly (both directions), that every item carries the
+uniform statistic and band, and that the tallies and counts written into
+this prose match the data. It is gone with its worktree. A CITED MITIGATION
+THAT DOES NOT EXIST IS WORSE THAN AN ABSENT ONE, because a later author
+reading "enforced" has no reason to build the check. SO THE RULES ABOVE PASS
+TO `cli/tests/suite/technology_corpus.rs` AS OBLIGATIONS, and three of them
+are new with this file. TASK 4'S RESOLVER MUST assert this corpus's item
+count of 41, so that changing it becomes a deliberate act; MUST enforce the
+chosen rule two-directionally (every chosen item carries a `disclosure`, no
+inherited item does), computing "chosen" from the derived closure and never
+from roots; MUST red on a `presupposes` target that does not resolve inside
+the corpus; MUST treat `contested` as OPTIONAL and never require it, since
+it is present only on the 16 items whose loss or its framing is disputed in
+the literature; and MUST NOT require an anchor for `unmeasured`. THAT LAST
+OBLIGATION EXPOSES A GAP THIS FILE CANNOT CLOSE AND DOES NOT PRETEND TO: the
+ratified vocabulary gives `unmeasured` no anchor, so the reach evidence for
+the two reach-passing items lives in their `note` prose and is NOT
+machine-checkable. Two honest options, named so the next author chooses
+rather than discovers: assert the COUNT of `unmeasured` items (2) and accept
+that their reach is human-checked, or open a decision record giving
+`unmeasured` a mechanism anchor (`path:`/`test:`) the way `present` has one.
+The second is better and is not this task's to take. `contested` IS THE ONE
+FIELD THIS CORPUS CARRIES THAT `asimov-1989` DOES NOT, and it is here
+because campaign ledger #10 requires it: a case whose loss is historically
+contested is "marked contested in the item rather than silently promoted to
+fact", which is the same move as 0095's `inapplicable(reason)` -- keeping a
+real distinction visible instead of flattening it into the score. 16 OF THE
+41 ITEMS CARRY IT, and each one's `note` names WHO contests it and on WHAT:
+Bassett (2004) on Tasmanian fishing; Henrich's own disjunction ("lost, OR
+NEVER DEVELOPED") on eight of the Tasmanian toolkit items; the Roman
+cementitious literature on the "lost recipe" framing; the historiography of
+Byzantine military technology on whether Greek fire was ever broadly held;
+historians of ancient and medieval instruments on whether geared calculation
+was lost or relocated; Atholl Anderson's late-settlement reading on the
+Polynesian long pause; historians of Ming maritime policy on whether a
+prohibition is a loss; the literature against Perrin (1979) on Tokugawa
+firearms; and Hunt and Lipo on the Rapa Nui collapse framing. NOTE WHAT THE
+MARK DOES NOT DO: it does not lower an item's verdict or exempt it from the
+tally, because whether Hornvale can model a capability is independent of
+whether historians agree it was lost. It tells a reader which rows would
+move if the history moved. EVERY `note` IN THIS FILE IS MODEL-DERIVED, AND A
+MISSING `disclosure` NEVER CLAIMS OTHERWISE. The near-miss analysis in an
+inherited item's note was written by the same non-blind session; what its
+missing `disclosure` says is that no Hornvale fact DECIDED the verdict, not
+that the note was authored blind. The corpus-level statement above is what
+covers the notes. THE REGISTRY SWEEP WAS RE-RUN EXHAUSTIVELY AFTER FREEZE
+(campaign ledger #17, fix round 1), AND IT MOVED NO VERDICT IN THIS COLUMN.
+THE SWEEP'S POPULATION IS NOW EVERY ROW OF THE IDEA REGISTRY, AND IT IS
+STATED AS A POPULATION RATHER THAN AS A PURPOSE (campaign ledger #17).
+METHOD, exactly: all 1,779 rows of `book/src/frontier/idea-registry.md` were
+extracted programmatically (the count is the file's own); the OPENING 92
+CHARACTERS OF EVERY ONE OF THE 1,779 was then read in full, in category
+order -- the registry's own authoring rule puts the subject in the opening
+clause ('A row is a shelf-mark: what the idea is, plus a pointer') -- and
+every row whose opening named a material capability, a craft, a skill, an
+institution, a transmission mechanism or a decay mechanism was then read in
+FULL TEXT and ruled on in writing. A KEYWORD SIEVE WAS BUILT FIRST AND
+ABANDONED AS USELESS, which is worth recording because it is why the reading
+was done: a 313-term sieve derived from both corpora's own `introduces`
+tokens and titles matched 1,704 of 1,779 rows, and a 141-term sieve of
+specific capability nouns matched 1,169 -- a filter that admits 66-96% of
+its population narrows nothing, so there was no substitute for reading. WHAT
+THE POPULATIONS ARE, SEPARATELY: the population READ is every row's opening
+plus the full text of every candidate; the population the CLAIM ranges over
+is every row. THE RESIDUAL GAP, NAMED: a row whose subject is not in its
+opening 92 characters and which no candidate rule caught is invisible to
+this sweep. That is a far smaller gap than the one ledger #17 measured, and
+it is not zero. THE RESULT IS A NULL AND IS REPORTED AS ONE: the eight
+`deferred` verdicts above stand, no ninth was found, and no item moved in
+either direction. That is a weaker claim than it sounds and a stronger one
+than the first sweep could make -- the first sweep was already registry-wide
+by keyword (this corpus cited 49 distinct rows against the sibling's 18,
+which is the measurement that exposed the sibling's scope gap), so the
+exhaustive read had less to find here. WHAT IT DID FIND is fourteen further
+rows worth refusing in writing, each recorded in the item it touches:
+`SEQ-2`, `SOC-11`, `MEM-5`, `LANG-44`, `EXP-8`, `EXP-6`, `DOM-11`,
+`DOM-aesthetics`, `MAP-the-road-with-no-builder`, `LANG-35`, `MEM-8`,
+`PSY-expertise-per-individual`, `DOM-8` and `DOM-transmission`. AND IT FOUND
+ONE CLAIM OF THIS FILE'S OWN TO BE TOO STRONG, WHICH IS THE MOST IMPORTANT
+THING THE EXHAUSTIVE READ PRODUCED. The paragraph on the six refused
+column-wide rows says that three rows plan decay 'and not one of them names
+a capability a people holds'. `MEM-8` (`raw`) -- which the keyword sweep
+never surfaced -- says the opposite in terms: 'Inscribed rots (the unpaid
+scribe), incorporated dies with the last practitioner, oral drifts into
+myth; a magic item / cognitive artifact carries the knowledge in the object,
+and its failure mode is unlike all three: **the knowledge does not decay --
+the capacity to make more does.** The instance survives; the recipe never
+does. So "they don't make them like they used to" is derived, not authored --
+ruins full of working relics nobody can replicate', and it goes on to name
+'three roads back to a lost lemma' (rediscovery, comparative reconstruction,
+artifact reverse-engineering). THAT IS THIS CAMPAIGN'S OWN AXIS, PLANNED IN
+DETAIL, AND THE FILE DID NOT KNOW IT. The row is still refused as an anchor,
+on two grounds that are narrower than the claim it corrects: its unit is a
+recipe bound to an ARTIFACT rather than a capability held by a PEOPLE, and
+it names no specific capability, so under rule 2 it discharges no item. The
+corrected statement is therefore: the registry plans capability loss
+GENERICALLY, for artifact-borne recipes, in one `raw` row -- and plans it
+for no particular technology and for no people. A THIRD GROUND WAS SUPPLIED
+AT REVIEW AND IT IS DECISIVE WHERE THE FIRST TWO WERE VULNERABLE (campaign
+ledger #20): `deferred` is a REACH-stage verdict under the one-field
+pipeline, and `MEM-8` plans a TRAJECTORY mechanism -- loss. A row planning
+the loss half cannot discharge a demand whose REACH has already failed,
+which is true of all 31 items, so the refusal does not depend on the
+artifact/people distinction at all. AND THE CORRECT RESPONSE TO DISAGREEING
+IS NOT TO RE-ANCHOR THIS COLUMN, which an earlier draft of this sentence
+invited: what `MEM-8` actually exposes is that the collapsed one-field
+vocabulary HAS NO WAY TO SAY 'loss is planned but unbuilt', and that is a
+gap in a vocabulary this campaign ratified. It is repaired by a decision
+record, not by 31 re-anchored cells -- anchoring a mass of `absent` items to
+one generic `raw` row is what family law names as turning a measurement into
+a wish list, and it would do it to 76% of this column. `CUL-17` ('The
+ossification ratchet -- a rung long in existence becomes sticky (harder to
+shed than to grow, MEM-3 stickiness)', `raw`) is the fourth ratchet this
+corpus can now name, beside `tech_for`'s, `KNOW-monotone`'s and
+`BIO-land-capital`'s, and `SOC-sclerosis` ('Nothing here fails from the
+inside') is the registry's own summary of why. THE TWO `unmeasured` ITEMS
+NOW CARRY A MECHANISM ANCHOR (campaign ledger #18), which supersedes the
+paragraph above that named this an open gap and two ways to close it.
+`unmeasured` takes a `path:` or `test:` anchor for its REACH half -- reach
+has already succeeded, and that success is exactly as checkable as a
+`present` verdict's -- while the trajectory half is what the verdict says is
+unmeasured. Both items cite `path:domains/history/src/record.rs`,
+deliberately the same file, because `TechHorizon::Bronze` and `::Iron` are
+two variants of one enum; Task 5's resolver must accept two items citing one
+path. Line numbers stay in the notes and out of the anchors, matching the
+sibling families' convention. The obligation on Task 4 to assert the
+`unmeasured` COUNT is unchanged and is now a second check rather than the
+only one. RULING ON THE TWO ROWS THE SIBLING COLUMN CITES AND THIS ONE HAD
+NOT RULED ON (fix round 2, under the cross-corpus obligation now stated as
+family law). Both are refused, and neither refusal was available to a text
+search: one of them was NAMED in this file already, in a sentence reporting
+what the sibling did, which satisfies a grep and rules on nothing -- a
+mention is not a ruling, and that distinction is now in
+`technologies/CLAUDE.md` because this file is the instance that needed it.
+`BIO-animal-domestication` ('Sharpens BIO-8: the registry already admits
+domestication for the plant kingdom ... and refuses it for the animal
+kingdom -- every one of the ~30 registered `*-kind` fauna is wild', `raw`)
+anchors `inv-animal-dom` in the sibling column and discharges no demand
+here. This corpus contains no domestication item at all: its nearest items
+are `col-horticulture` (cultivation, anchored on the broader `BIO-8`, which
+`BIO-animal-domestication` explicitly sharpens) and `col-tanning` (a hide
+already off the animal). A row planning a WORKING ANIMAL is a prerequisite
+of nothing in this column and the capability of nothing in it either.
+Recording it matters for a reason beyond compliance: the absence of a
+domestication item is the clearest structural difference between the two
+columns' subject matter, and an invention catalogue's first entry having no
+counterpart in a loss corpus is a fact about what gets DOCUMENTED as lost,
+not about Hornvale. `MEM-4` ('Preservation as craft -- a conservator
+institution spends surplus specifically to *lower* the decay rate of chosen
+items', `raw`) anchors `inv-library` in the sibling column, and it is the
+harder of the two to refuse, because this column DOES contain items about
+durable content: `col-literacy` and `col-palace-accounting`. It is refused
+for both, on grounds that differ. For `col-literacy` the demand is literate
+record-KEEPING -- a people that writes -- and `MEM-4` plans the upkeep of
+content already held, which presupposes the record rather than planning it;
+`MAP-8`, which plans the acquisition, is cited instead and is the better
+anchor for exactly that reason. For `col-palace-accounting` the demand is a
+ledger of commodities, rations and personnel, and `MEM-4`'s subject is the
+DECAY RATE of chosen items under `MEM-1`'s melt, which is a retention
+mechanism over content rather than the act of accounting. Both refusals are
+the same cut this column already applies to `SOC-11`: the institution and
+the record it keeps are two capabilities, and this family scores the
+narrower one.
+- **Frozen:** before first measurement, The Kiln (2026-09-11). THE FREEZE IS STRUCTURAL
+RATHER THAN PROMISED, which is the discipline decision 0936 established for
+`regularities/` and the reason decision 0016 means anything here. This file
+is Task 2 of 10 of its campaign and the LAST artifact that lands before any
+evaluation code exists, which is the whole point of the task ordering: NO
+EVALUATION CODE EXISTS IN THE REPOSITORY AS IT IS COMMITTED. There is no
+`cli/tests/suite/technology_corpus.rs`, no closure computation, no anchor
+resolver, no report generator, no
+`docs/audits/technology-coverage-henrich-2004-extended.md`, and nothing in
+`domains/*` or `windows/*` reads a corpus file at all (decision 0011: the
+corpus is data, the resolver is code). Every one of them arrives in a later
+task of the same campaign, and a reader can confirm the freeze from the git
+history rather than taking this sentence's word for it. THE ITEM COUNT IS
+41, AND TASK 4'S RESOLVER MUST ASSERT IT so that changing this corpus
+becomes a deliberate act (decision 0016), the way the already-shipped
+`regularity_corpus.rs` asserts 45 for its own corpus and as the resolver
+must also do for `asimov-1989`'s 41. Stated as an obligation rather than a
+fact, deliberately: nothing holds that invariant while this file and its
+sibling are the only things that exist. The two corpora having the same
+count is a coincidence and `provenance` says why it is not a target.
+RE-FREEZING IS NOT SOMETHING A LATER SESSION MAY DO, AND FOR THIS CORPUS THE
+DISQUALIFICATION IS INHERITED RATHER THAN INCURRED. The criterion frozen
+here is a distribution across peoples of who holds a capability, computed
+from `occ-tech`, and `occ-tech`'s distribution is published in several
+places a session reads for ordinary reasons -- the committed census carries
+four metrics over it, the almanac and `windows/lot` render it as prose, this
+campaign's spec states it as finding F4, and `asimov-1989`'s own
+`provenance` states the arithmetic outright. THIS TASK'S BRIEF REQUIRED
+READING THAT PROVENANCE IN FULL, so this session was disqualified from
+banding before it scored a single item, and it therefore ADOPTED the
+sibling's band unchanged rather than authoring one. The consequence is a
+property of the family and not of this file: after the first corpus in a
+family publishes its distribution in its own provenance, and the family's
+onboarding requires reading it, the set of sessions eligible to tighten the
+band is empty. Tighten it now -- which is to say, in a campaign that has not
+read this -- or accept it. WHAT A LATER READER CAN ALWAYS DO WITHOUT
+DISQUALIFYING THEMSELVES is audit the band's discriminating power from this
+file alone, with no data: the falsifying worlds are stated in `provenance`
+(a fraction of 0.0 and a fraction of 1.0, both reddening), the trajectory
+predicate that makes `lost` reachable under the same band is stated there
+too, and the argument for uniformity across all 41 items is stated so that
+it can be attacked directly. WHAT IS NOT FROZEN, AND SHOULD NOT BE READ AS
+IF IT WERE: the 16 `contested` marks are claims about a historical
+literature rather than about this repository, and a historiography can move.
+A later reader who finds that one of the eight is settled, in either
+direction, should say so in a campaign record rather than editing this file --
+the mark's job is to tell a reader which rows would move if the history
+moved, and an un-marked row is not a claim that the history is closed.
+
+## Reading this report
+
+This measures whether a PEOPLE acquires, holds, and loses one imported
+technology-capability catalogue, resolved against the per-people trajectory
+a census would report — an instrument with known bias (decision 0095), never
+a standard and never a verdict on the world. `present` and `unmeasured` are
+both only WEAKLY checked: a mechanism anchor that resolves (a real
+`test:`/`path:`) is not proof the capability is met, only that something at
+that location exists. `unmeasured` additionally means the trajectory itself
+has not been scored at all — reach passed, nothing about growth, flatness or
+loss has been measured yet — so an `unmeasured` count is not a weaker
+`present`, it is a different kind of claim. Both are printed here, above the
+tally they most affect, per 0136's consequence clause: a reader must pass
+this sentence before reaching a score.
+
+## Tally
+
+The eight coverage verdicts below are percentages of 39 — every item MINUS
+the ones still `unmeasured` (see the next section). An `unmeasured` item has
+not been judged, so counting it here would move a coverage percentage for a
+reason unrelated to what that percentage claims to measure.
+
+- present: 0 (0%)
+- refused: 0 (0%)
+- deferred: 8 (21%)
+- absent: 31 (79%)
+- inapplicable: 0 (0%)
+- grown: 0 (0%)
+- flat: 0 (0%)
+- lost: 0 (0%)
+- **coverage total:** 39
+
+## Unmeasured
+
+2 item(s), reported separately from the tally above and never folded into a
+percentage. Each has PASSED reach — Hornvale's mechanism for the capability
+exists and is cited by a `test:`/`path:` anchor exactly as a `present`
+verdict's would be — but its TRAJECTORY (does a people grow it, hold it
+flat, or lose it) is not yet scored. The reason is structural, not a backlog
+item: `tech_for` (`windows/worldgen/src/history_bake.rs`) is documented
+monotone in `year`, so no world this campaign can build yet exhibits a
+measured loss, and the family's live measurement wiring (comparing an
+authored trajectory against a fresh `meets()` computation over the census,
+mirroring `regularities::two_way`) is a successor campaign's work.
+
+| id | title | anchor |
+|---|---|---|
+| col-copper-smelting | Copper and copper-alloy smelting - Roman Britain, the skills gone in the generations around 400 CE | path:domains/history/src/record.rs |
+| col-iron-smelting | Iron smelting - Roman Britain, the skills gone in the generations around 400 CE | path:domains/history/src/record.rs |
+
+THE FINDING THIS CORPUS MAKES SAYABLE: of the 41 item(s) here, Hornvale's
+mechanism reaches 2 of them at all (0 `present`, 2 `unmeasured`) — and of
+those 2, it can currently represent the LOSS of exactly 0. A single tally
+has no way to say this; it takes both counts together.
+
+## Demand set
+
+Not a backlog: this is what each item's own `presupposes` closure (decision
+0386) names, derived on read and never authored by hand. An item's demand
+set always includes its own `introduces` token, so a root's set has one
+entry and a deep item's may have several. `refused` and `inapplicable` items
+are excluded — those are decided non-goals, not open demands.
+
+| id | title | verdict | demand set |
+|---|---|---|---|
+| col-bone-tools | Bone-tool manufacture of any kind - Tasmania, lost by c. 3,500 BP | absent | bone-tools-worked |
+| col-cold-clothing | Tailored cold-weather clothing - Tasmania, lost during the Holocene | absent | bone-tools-worked, cold-weather-clothing-made |
+| col-fishhooks | Fishhooks - Tasmania, absent ethnographically | absent | fishhooks-made |
+| col-hafted-tools | Hafted (composite) tools - Tasmania, absent ethnographically | absent | hafted-tools-made |
+| col-fishing-spears | Fishing spears - Tasmania, absent ethnographically | absent | fishing-spears-made, hafted-tools-made |
+| col-barbed-spears | Barbed spears - Tasmania, absent ethnographically | absent | barbed-spears-made, bone-tools-worked, hafted-tools-made |
+| col-fish-traps | Fish and eel traps - Tasmania, absent ethnographically | absent | fish-traps-made |
+| col-nets | Netting - Tasmania, absent ethnographically | absent | nets-made |
+| col-spear-throwers | Spear-throwers - Tasmania, absent ethnographically | absent | spear-throwers-made |
+| col-boomerangs | Boomerangs - Tasmania, absent ethnographically | absent | boomerangs-made |
+| col-fishing | The capture of bony and cartilaginous fish - Tasmania, fish gone from the record by 3,800 BP | absent | fish-caught-as-food, fish-traps-made, fishhooks-made, fishing-spears-made, hafted-tools-made, nets-made |
+| col-sea-canoe | Sea-voyaging craft construction - Oceania, several peoples, prehistoric to the 19th century | absent | sea-voyaging-craft-built |
+| col-bow-and-arrow | The bow and arrow - Oceania (Rivers) and the Inughuit of northwest Greenland | absent | bone-tools-worked, bow-and-arrow-made, hafted-tools-made |
+| col-pottery | Ceramic vessel manufacture - Oceania, scattered losses | deferred | ceramic-vessels-made |
+| col-lime-plaster | Burnt-lime and lime-plaster production - Maya lowlands after c. 900 CE, and the western Roman lime industry after the 5th century | absent | burnt-lime-produced |
+| col-hydraulic-concrete | Pozzolanic hydraulic concrete at imperial scale - the Roman west, after the 5th century | absent | burnt-lime-produced, hydraulic-concrete-built |
+| col-greek-fire | Greek fire - Byzantium, the formula unrecovered after the 13th century | absent | incendiary-siphon-deployed |
+| col-geared-calculation | Geared astronomical calculation, Antikythera-class - the eastern Mediterranean, 1st century BCE onward | absent | bronze-working-held, geared-calculator-built |
+| col-deep-water-voyaging | Deep-water voyaging and open-ocean wayfinding - East Polynesia, the 'long pause' | absent | open-ocean-wayfinding-held, sea-voyaging-craft-built |
+| col-skin-boat | Skin-boat (kayak) construction - the Inughuit of northwest Greenland, lost before the 1820s, taught back in the 1860s | absent | skin-boats-built |
+| col-literacy | Literate record-keeping in a script a people's own readers can read - five peoples, c. 1900 BCE to c. 900 CE | deferred | literate-records-kept |
+| col-brick-drainage | Fired-brick urban drainage and sanitation - the Indus cities, after c. 1900 BCE | absent | fired-brick-drainage-built |
+| col-standard-weights | Standardised weights and measures - the Indus cities, after c. 1900 BCE | absent | standard-weights-held |
+| col-palace-accounting | Palace-scale administrative accounting - the Mycenaean Aegean, after c. 1200 BCE | absent | literate-records-kept, palace-accounts-kept |
+| col-sawn-timber | Sawn board and plank making - Roman Britain, c. 400-450 CE | absent | sawn-boards-made |
+| col-stone-quarrying | Stone quarrying - Roman Britain, c. 400-450 CE | deferred | stone-quarried |
+| col-butchery | Commercial butchery - Roman Britain, c. 400-450 CE | absent | commercial-butchery-practised |
+| col-horticulture | Horticulture - Roman Britain, c. 400-450 CE | deferred | horticulture-practised |
+| col-tanning | Tanning - Roman Britain, c. 400-450 CE | absent | hides-tanned |
+| col-wheel-thrown-pottery | Wheel-thrown, kiln-fired pottery - Roman Britain, kiln-firing effectively over by c. 410 CE and the slow wheel abandoned by c. 420 | deferred | ceramic-vessels-made, wheel-thrown-pottery-made |
+| col-mortared-masonry | Building in mortared stone at monumental scale - three peoples, c. 1200 BCE to c. 900 CE | absent | burnt-lime-produced, mortared-masonry-built, stone-quarried |
+| col-coinage | Coin currency in circulation - Roman Britain, low-denomination coin out of use within a decade of 400 CE | deferred | bronze-working-held, coin-currency-circulated |
+| col-long-count | Computed calendrical astronomy - the Maya lowlands, the Long Count lapsing after c. 900 CE | deferred | computed-calendar-held, literate-records-kept |
+| col-hydraulic-works | Large-scale water-management engineering - Angkor after c. 1400 CE, and the Negev runoff-farming systems after the 7th century | absent | water-works-engineered |
+| col-ocean-fleet | Ocean-going fleet shipbuilding at state scale - Ming China after 1433 | absent | ocean-fleet-built, sawn-boards-made |
+| col-firearms | Firearm manufacture and use - Tokugawa Japan, 17th to 19th centuries | absent | firearms-made, iron-working-held |
+| col-crucible-steel | Crucible (wootz) steel production - south India and its trade, lapsed in the 19th century | deferred | crucible-steel-made, iron-working-held |
+| col-monumental-bronze | Monumental hollow lost-wax bronze casting - Latin Europe, c. 500-1100 CE, revived from 1412 | absent | bronze-working-held, monumental-bronze-cast |
+| col-megalith-transport | Transport and erection of multi-tonne monoliths - Rapa Nui, after c. 1600 CE | absent | monoliths-raised, stone-quarried |
+
+## Items
+
+| id | title | verdict | anchor | contested | disclosure | note |
+|---|---|---|---|---|---|---|
+| col-bone-tools | Bone-tool manufacture of any kind - Tasmania, lost by c. 3,500 BP | absent |  |  | NOT BLIND, AND THE VERDICT IS CHOSEN RATHER THAN FORCED: a root, so nothing upstream fixes it, and it rests on a search of this repository run by a session that had already read `TechHorizon`, `tech_for`, `Bake::touch` and the 18 artisan-rung words. What the search produced: no predicate among the concept registry's 449 rows names bone or a worked tool; `MAT-object-genus` says the artifact branch's only member is `hearth`; `bone tool` returns zero idea-registry rows. The `boneworker` artisan word was found by reading `domains/language/src/lib.rs` for this corpus and is the reason this item's note is long -- it is a near-miss a blind author would have missed entirely, and it does not move the verdict. | THE BEST-EVIDENCED LOSS IN THE CORPUS, and the only Tasmanian item whose prior holding is quantitative rather than inferred: Henrich reports a gradual decline in the number, types and quality of bone tools against stone, and 'ethnographically, there is not a single mention of bone tools'. NEAR-MISS, AND IT IS THE SHARPEST SHAPE IN THIS COLUMN: `domains/language/src/lib.rs` gives each of 18 registered kinds an `artisan`-rung WORD (15 distinct: artificer, artisan, boneworker, bowyer, fletcher, glassblower, glassmith, hullwright, patcher, shaper, smith, tanner, webwright, wright, wyrm), and the word DIFFERS BETWEEN PEOPLES -- which is the second half of the reach question. It is still a label, not a capability: a settlement's artisan rung is named by its kind's lexicon whatever that settlement does, so every people carries one by construction and none can acquire or lose it. The snow-elf's artisan word is `boneworker`, so a world can commit a people whose artisan rung is NAMED for this capability while no people in any world works bone. WHAT WOULD CHANGE THE VERDICT: a committed fact that some peoples work bone and others do not. SWEPT AND REFUSED: `MAT-object-genus` (`raw`) records that 'there is no concept for *object*' and that the registry 'is a natural-history vocabulary ... with a thin social overlay and no material culture' -- which is evidence FOR this verdict, not a plan that discharges it; it plans the missing genus, not any tool. Anchoring this item (or the other thirty like it) on that row would turn the column into the backlog decision 0095 forbids. PREREQUISITE DROPPED: none -- this is a root in the lattice and in the source. |
+| col-cold-clothing | Tailored cold-weather clothing - Tasmania, lost during the Holocene | absent |  |  |  | INHERITED from `col-bone-tools`, and the source supplies the edge rather than this task inventing it: Henrich writes that 'the loss of bone tools and cold-weather clothing may be linked'. Ethnographic Tasmanians wore wallaby skins slung over a shoulder and tied with skin scraps, plus grease or ochre, against a maritime climate a few hundred kilometres from an expanded Antarctica. SWEPT AND REFUSED: `MAT-worn-affiliation` (`raw`) is the one row in 1,779 that treats clothing as a subject -- 'Clothing is the cheapest physical carrier of rank, membership, wealth and competence-claims', with sumptuary law as the cross-domain payoff. It plans clothing as a SIGN and assumes garments exist; the capability here is the skill of MAKING a tailored cold-weather garment. Testing that reading as this family requires: none of the row's own enumerated elements (a garment facet, sumptuary law) has shipped, and the one thing it cites as already present is 'the status basis the composition root already reads for selection temperature' -- an input, not a deliverable. So the input-assumption reading holds and the row does not plan this. The refusal could not have changed the verdict in any case, since a prerequisite is `absent`, which is why no `disclosure` sits beside it. |
+| col-fishhooks | Fishhooks - Tasmania, absent ethnographically | absent |  | yes | NOT BLIND, CHOSEN (a root). The search that produced this `absent`: `hook` matches 19 idea-registry rows and not one is tackle; the two rows that touch fish (`MAP-the-renewable-stock`, `BIO-7`) plan a stock, which was read in full and refused in the note. A reader who thinks a fishing-stock row plans fishing gear should move this item and `col-fishing` with it. | Tasmanian men 'used only one-piece spears, rocks, and throwing clubs'; the entire toolkit ran to about 24 items. CONTESTED: Henrich's own sentence is a disjunction -- the Tasmanians 'likely lost, OR NEVER DEVELOPED' this -- so whether it was ever held is open in the source itself, and this corpus's admission test (the capability was demonstrably held before the loss) is satisfied only on the first reading. Henrich says the distinction does not matter for his model ('Fishing merely moves from the category of lost to that of never evolved'); it matters here, because an item never held is not a loss. Marked rather than resolved. SWEPT AND REFUSED: the only rows that touch fishing are `MAP-the-renewable-stock` (`elaborated`: 'game, fish, timber, pasture, ore and water are all unbuilt at room scale') and `BIO-7` (`raw`: 'predator/prey/forage as fields feeding subsistence and hazard'). Both plan a RESOURCE STOCK; neither plans a tackle a people knows how to make. A row that plans the fish does not plan the hook. PREREQUISITE DROPPED: shell-working, which is outside the corpus. CONTESTED BY: Henrich (2004) himself, whose sentence reads 'lost, or never developed'. |
+| col-hafted-tools | Hafted (composite) tools - Tasmania, absent ethnographically | absent |  | yes | NOT BLIND, CHOSEN (a root), and this is the disclosure that matters most in the Tasmanian block, because five other items' verdicts hang from it: if this is wrong, `col-fishing-spears`, `col-barbed-spears`, `col-bow-and-arrow` and (through them) `col-fishing` all move. The search: `hafted` and `adze` return zero idea-registry rows; `MAT-object-genus` records that no tool is registered anywhere; no predicate in the 449-row registry names a tool. | The capability is affixing a worked head to a handle -- the single most generative absence in the Tasmanian toolkit, since five other items in this corpus presuppose it. CONTESTED: Henrich's own sentence is a disjunction -- the Tasmanians 'likely lost, OR NEVER DEVELOPED' this -- so whether it was ever held is open in the source itself, and this corpus's admission test (the capability was demonstrably held before the loss) is satisfied only on the first reading. Henrich says the distinction does not matter for his model ('Fishing merely moves from the category of lost to that of never evolved'); it matters here, because an item never held is not a loss. Marked rather than resolved. SWEPT AND REFUSED: `MAT-object-genus` (`raw`) again, for the reason given on `col-bone-tools`: 'sword -> weapon -> tool -> artifact -> object has no member registered anywhere, and the artifact branch's sole inhabitant is `hearth`'. The row is the registry's own statement that this column's subject matter is unrepresented, which is why it is quoted in `provenance` as evidence and refused here as an anchor. PREREQUISITE DROPPED: stone tools and cordage, both outside the corpus. CONTESTED BY: Henrich (2004) himself, whose sentence reads 'lost, or never developed'. |
+| col-fishing-spears | Fishing spears - Tasmania, absent ethnographically | absent |  | yes |  | TWO INSTANCES, ONE CAPABILITY, per this corpus's de-duplication rule (see `provenance`): the Tasmanian multipronged fishing spear and the Inughuit fish leister are the same capability lost by two peoples, so they are one item and both instances are named here rather than scored twice. The Inughuit instance is the stronger of the two, because it was demonstrably HELD and then demonstrably RE-ACQUIRED by teaching -- a documented loss-and-recovery, which is what this family's `lost` verdict is for. INHERITED from `col-hafted-tools`: a pronged or barbed fishing spear is a composite tool. CONTESTED: Henrich's own sentence is a disjunction -- the Tasmanians 'likely lost, OR NEVER DEVELOPED' this -- so whether it was ever held is open in the source itself, and this corpus's admission test (the capability was demonstrably held before the loss) is satisfied only on the first reading. Henrich says the distinction does not matter for his model ('Fishing merely moves from the category of lost to that of never evolved'); it matters here, because an item never held is not a loss. Marked rather than resolved. CONTESTED BY: Henrich (2004) himself, whose sentence reads 'lost, or never developed'. |
+| col-barbed-spears | Barbed spears - Tasmania, absent ethnographically | absent |  | yes |  | INHERITED from two `absent` prerequisites, and the source supplies both edges: Henrich's phrase for the lost article is 'bone-tipped, barbed' -- a worked bone point (hence `col-bone-tools`) affixed to a shaft (hence `col-hafted-tools`). Tasmanians were 'limited to clubs, a single one-piece spear (without barbs), and a baited bird-blind trap'. CONTESTED: Henrich's own sentence is a disjunction -- the Tasmanians 'likely lost, OR NEVER DEVELOPED' this -- so whether it was ever held is open in the source itself, and this corpus's admission test (the capability was demonstrably held before the loss) is satisfied only on the first reading. Henrich says the distinction does not matter for his model ('Fishing merely moves from the category of lost to that of never evolved'); it matters here, because an item never held is not a loss. Marked rather than resolved. CONTESTED BY: Henrich (2004) himself, whose sentence reads 'lost, or never developed'. |
+| col-fish-traps | Fish and eel traps - Tasmania, absent ethnographically | absent |  | yes | NOT BLIND, CHOSEN (a root). The search produced one genuinely relevant row, `MAP-features-are-vending-machines`, and it was read in full and refused in the note for cutting the other way -- its content is that placed features have no users at all. That is evidence for this verdict, which is why the item carries a disclosure: the verdict rests on reading a row rather than on nothing. | A standing structure that catches without a person present -- the capability, in Hornvale's vocabulary, would be a placed artifact a people knows how to build and maintain. CONTESTED: Henrich's own sentence is a disjunction -- the Tasmanians 'likely lost, OR NEVER DEVELOPED' this -- so whether it was ever held is open in the source itself, and this corpus's admission test (the capability was demonstrably held before the loss) is satisfied only on the first reading. Henrich says the distinction does not matter for his model ('Fishing merely moves from the category of lost to that of never evolved'); it matters here, because an item never held is not a loss. Marked rather than resolved. SWEPT AND REFUSED: `MAP-features-are-vending-machines` (`elaborated`) is the nearest row and it cuts the wrong way for this item -- its whole content is that 'every classic dungeon feature is inert until the protagonist touches it, and no inhabitant has any relationship to it'. A row whose thesis is that placed features have no users is evidence that this capability is absent, not a plan to build it. PREREQUISITE DROPPED: basketry and wickerwork, outside the corpus. CONTESTED BY: Henrich (2004) himself, whose sentence reads 'lost, or never developed'. |
+| col-nets | Netting - Tasmania, absent ethnographically | absent |  | yes | NOT BLIND, CHOSEN (a root). The search: `net ` matches 19 rows, all of them networks or golden-file machinery; `rope`, `cordage`, `fibre`, `fiber` and `textile` return nothing relevant across 1,779 rows. The absence of a cordage row is what makes the dropped prerequisite honest rather than convenient. | Henrich's mainland contrast names 'a variety of nets for birds, fish and wallabies'; the Fuegian contrast names 'at least two kinds of nets' and 'specialized seal-nets (manufactured from seal hide)'. CONTESTED: Henrich's own sentence is a disjunction -- the Tasmanians 'likely lost, OR NEVER DEVELOPED' this -- so whether it was ever held is open in the source itself, and this corpus's admission test (the capability was demonstrably held before the loss) is satisfied only on the first reading. Henrich says the distinction does not matter for his model ('Fishing merely moves from the category of lost to that of never evolved'); it matters here, because an item never held is not a loss. Marked rather than resolved. PREREQUISITE DROPPED: cordage, outside the corpus -- and the registry has no row for it either (`rope`, `cordage`, `fibre` and `textile` return nothing relevant across all 1,779 rows). CONTESTED BY: Henrich (2004) himself, whose sentence reads 'lost, or never developed'. |
+| col-spear-throwers | Spear-throwers - Tasmania, absent ethnographically | absent |  | yes | NOT BLIND, CHOSEN (a root). The search produced the armament finding recorded in the note -- that raiding strength is population x `tech_weight(tech)` and no weapon exists as a thing a people makes -- which was read out of `windows/worldgen/src/history_bake.rs` by this session and not inherited from the sibling column's note on `inv-standing-army`. | A force-multiplying device held separately from the spear it throws, and a root in this lattice: it presupposes nothing else in the corpus, because a one-piece spear -- which Tasmanians did hold -- is all it needs to be useful. CONTESTED: Henrich's own sentence is a disjunction -- the Tasmanians 'likely lost, OR NEVER DEVELOPED' this -- so whether it was ever held is open in the source itself, and this corpus's admission test (the capability was demonstrably held before the loss) is satisfied only on the first reading. Henrich says the distinction does not matter for his model ('Fishing merely moves from the category of lost to that of never evolved'); it matters here, because an item never held is not a loss. Marked rather than resolved. SWEPT AND REFUSED: no row in the registry names a weapon a people makes. `MAP-9` (`elaborated`, 'Contact and exchange') and `SOC-contact` (`raw`) model what peoples DO to each other, and `windows/worldgen/src/history_bake.rs` reckons raiding strength as population x `tech_weight(tech)` -- a scalar multiplier on the horizon, not an armament. That conflation is already a recorded campaign follow-up (`inv-standing-army`, Task 1 concern 3); it is named here because it is the same gap seen from the other side. CONTESTED BY: Henrich (2004) himself, whose sentence reads 'lost, or never developed'. SWEPT AGAINST THE WHOLE REGISTRY (ledger #17, fix round 1): `EXP-8` ('Martial traditions as culture, not choreography ... the payload is the tradition and its significance, not the moves', `elaborated`) is the only row treating fighting as a transmitted practice and is refused on its own words, and because its generative premise is a people DENIED weapons. The sibling column records the same refusal for `inv-longbow` and `inv-arquebus`. |
+| col-boomerangs | Boomerangs - Tasmania, absent ethnographically | absent |  | yes | NOT BLIND, CHOSEN (a root). `boomerang` returns zero idea-registry rows and no predicate names a thrown weapon; this is the thinnest search in the corpus and the verdict rests on it, which is exactly what a disclosure is for. | The last item of Henrich's p. 198 enumeration, taken whole with the rest rather than judged individually. CONTESTED: Henrich's own sentence is a disjunction -- the Tasmanians 'likely lost, OR NEVER DEVELOPED' this -- so whether it was ever held is open in the source itself, and this corpus's admission test (the capability was demonstrably held before the loss) is satisfied only on the first reading. Henrich says the distinction does not matter for his model ('Fishing merely moves from the category of lost to that of never evolved'); it matters here, because an item never held is not a loss. Marked rather than resolved. PREREQUISITE DROPPED: shaped hardwood working, outside the corpus. CONTESTED BY: Henrich (2004) himself, whose sentence reads 'lost, or never developed'. |
+| col-fishing | The capture of bony and cartilaginous fish - Tasmania, fish gone from the record by 3,800 BP | absent |  | yes |  | THE LOSS OF A PRACTICE RATHER THAN OF AN ARTEFACT, and Henrich's own best case: fish supplied about 21 percent of the meat between 8,000 and 5,000 BP, declined by 5000 BP, and 'by 3800 B.P. fish disappeared entirely from the archaeological record all over Tasmania' while the rest of a diverse diet did not shift. Ethnographically the Tasmanians expressed disgust at the thought of eating fish and repeatedly refused offers of it, and -- Henrich's sharpest point -- 'in the ensuing four millennia it never re-entered the economic repertoire'. THE NEAR-MISS IS THE STRONGEST IN THIS CORPUS AND IT FAILS ON WHAT DECIDES THE VALUE, NOT ON WHETHER THE WORLD HAS ONE. `subsistence` is a committed predicate whose values are Farming, Herding, Fishing and Foraging (`domains/culture/src/subsistence.rs`), it differs between settlements in one world, and `Subsistence::Fishing` is documented 'Coastal fishing'. But that module's own first line says it is 'an exact function of its biome class and whether it reaches the coast', and `subsistence(class, coastal)` is that function: a settlement fishes because of where it is. A capability that is a pure function of place cannot be acquired, held, or given up -- it is geography wearing a capability's name -- so a Hornvale people can no more lose fishing than it can lose its latitude. INHERITED: every one of the four gear items in its closure is `absent`. CONTESTED: Henrich's own sentence is a disjunction -- the Tasmanians 'likely lost, OR NEVER DEVELOPED' this -- so whether it was ever held is open in the source itself, and this corpus's admission test (the capability was demonstrably held before the loss) is satisfied only on the first reading. Henrich says the distinction does not matter for his model ('Fishing merely moves from the category of lost to that of never evolved'); it matters here, because an item never held is not a loss. Marked rather than resolved. CONTESTED BY: Bassett (2004), who reads Jones's Rocky Cave data as consistent with a 'seal-butchery interpretation' -- the fish bones being the contents of seals' guts -- which would mean the Tasmanians may never have fished at all; Henrich records the dispute and says his model does not hinge on it. |
+| col-sea-canoe | Sea-voyaging craft construction - Oceania, several peoples, prehistoric to the 19th century | absent |  |  | NOT BLIND, CHOSEN (a root), and the search here was the most substantial of any `absent` item: `MAP-55` and `MAP-61` were both read in full and both refused in the note, on the ground that one plans a geography-driven disposition and the other plans sea LANES. Either refusal is arguable, and overturning `MAP-61` would move this item and `col-deep-water-voyaging` with it. The `hullwright` artisan word came from the same read of `domains/language/src/lib.rs` that produced the other three. | FOUR INSTANCES, ONE CAPABILITY (the de-duplication rule). Henrich, carrying Rivers: the Torres Islanders 'apparently lost the ability to make the kind of seaworthy canoes that they surely arrived in' and were reduced to 'crude bamboo catamarans that were of no use in fishing and too flimsy for travel outside of the immediate island group'; the Banks Islanders 'went for a time without canoes after having lost the manufacturing skills' and had partly re-acquired them by the mid-nineteenth century, though 'still insufficient for travel outside the local island group'; Mangareva's sea-voyaging canoes devolved 'into crude bamboo rafts'. Henrich's own argument for why these are losses rather than adaptations is worth keeping: 'in none of these cases was there a lack of raw materials ... and it is difficult to argue that an island-dwelling people really don't need a good canoe'. The Banks Islands instance is this corpus's second documented RE-ACQUISITION. NEAR-MISS, AND IT IS THE SHARPEST SHAPE IN THIS COLUMN: `domains/language/src/lib.rs` gives each of 18 registered kinds an `artisan`-rung WORD (15 distinct: artificer, artisan, boneworker, bowyer, fletcher, glassblower, glassmith, hullwright, patcher, shaper, smith, tanner, webwright, wright, wyrm), and the word DIFFERS BETWEEN PEOPLES -- which is the second half of the reach question. It is still a label, not a capability: a settlement's artisan rung is named by its kind's lexicon whatever that settlement does, so every people carries one by construction and none can acquire or lose it. The sea-elf's artisan word is `hullwright`. SWEPT AND REFUSED, TWO ROWS, AND BOTH REFUSALS ARE ABOUT THE SUBJECT OF THE CAPABILITY: `MAP-55` (`raw`, the thalassocracy thesis) makes coastline complexity an INPUT to culture -- 'indented coasts make harbors; smooth coasts don't', 'Greece and Norway are seafaring *because* their coasts are fractal' -- which plans a geography-driven disposition, not a skill a people can lose; scoring this item off that row would repeat exactly the error `col-fishing` records about `subsistence`. `MAP-61` (`elaborated`, slice-2 shipped, the connection graph) derives 'sailing lanes' as graph EDGES from currents, which is an affordance of the sea rather than a competence of a crew. `MAP-61` is nonetheless the nearest the registry comes to this corpus's whole subject, in four words -- 'isolation -> divergence -> rediscovery' -- and it is named here so a later reader meets it. |
+| col-bow-and-arrow | The bow and arrow - Oceania (Rivers) and the Inughuit of northwest Greenland | absent |  |  |  | TWO INSTANCES, ONE CAPABILITY. Rivers's claim, as Henrich carries it, is that 'the scattered losses of canoes, bows and arrows, and pottery in Oceania cannot be explained consistently by economic factors such as the availability of raw materials or the diffusion of alternative technologies or practices'. The Inughuit instance is independently documented and is the cleanest loss-and-recovery in the corpus. NEAR-MISS, AND IT IS THE SHARPEST SHAPE IN THIS COLUMN: `domains/language/src/lib.rs` gives each of 18 registered kinds an `artisan`-rung WORD (15 distinct: artificer, artisan, boneworker, bowyer, fletcher, glassblower, glassmith, hullwright, patcher, shaper, smith, tanner, webwright, wright, wyrm), and the word DIFFERS BETWEEN PEOPLES -- which is the second half of the reach question. It is still a label, not a capability: a settlement's artisan rung is named by its kind's lexicon whatever that settlement does, so every people carries one by construction and none can acquire or lose it. TWO of the 15 artisan words name this capability's practitioner -- the wood-elf's `bowyer` and the gnoll's `fletcher` -- so two peoples can be named for the arrow while no people can shoot one. INHERITED from `col-bone-tools` and `col-hafted-tools`: Henrich's phrase for the article is 'bone-tipped, barbed', and an arrow is a hafted point. The artisan-word observation is therefore evidence in this note and NOT a `disclosure`: nothing about it could have moved a verdict the weakest-demand rule fixes at `absent`. |
+| col-pottery | Ceramic vessel manufacture - Oceania, scattered losses | deferred | registry:TECH-2 |  | NOT BLIND, CHOSEN (a root), and the `deferred` is a POSITIVE claim this search produced rather than a default: `TECH-2` was found by reading the four `TECH-*` rows in full, and accepted under this family's rule 2 because pottery is the first of the row's own enumerated elements. The SELECTION of this item was blind of that row -- it is one of Rivers's three Oceanian losses as Henrich lists them -- but the verdict was not, and a reader who refuses `TECH-2` on breadth must also refuse it for `col-wheel-thrown-pottery`, `col-coinage` and `col-crucible-steel`, and refuse `TECH-3` for `col-stone-quarrying` and `BIO-8` for `col-horticulture` in the sibling column too. | THE ITEM THE SIBLING COLUMN COULD NOT SUPPLY, AND IT MOVES. `asimov-1989`'s `provenance` records that 'this corpus contains no pottery, storage or coinage item at all (the catalogue's pottery entry is in none of the three arcs, which is worth noting in a campaign named The Kiln)'. Rivers's Oceanian losses supply one, and `TECH-2` ('The pyrotechnology ladder -- pottery/ceramics gate storage->surplus->the culture rung ladder; kiln temperature gates smelting; metallurgy yields tools, weapons (MAP-9's war-cost damper), and coinage (SOC-1's exchange axis)', `raw`) names pottery as the FIRST of its own enumerated elements. THE ROW IS ACCEPTED UNDER THE SAME TEST THAT ACCEPTED IT NOWHERE IN THE SIBLING COLUMN, which is the point worth carrying: `asimov-1989` tested `TECH-2` against six items and refused all six, because in every one the metal was a DROPPED prerequisite and the item's own demand was a fitting, a propellant, a formation or mass reproduction. Here the item's own `introduces` token IS one of the row's enumerated elements, which is what this family's rule 2 requires. Breadth is not a refusal (`asimov-1989` accepts the broader `TECH-3` for `inv-coal-mining` and the broader `BIO-8` for `inv-turnplow`), and the row's elements are deliverables rather than assumptions by the test this family uses: another element of the same list, 'staple crop per biome', has shipped (`domains/climate/src/crops.rs`). CORROBORATED, NOT DOUBLE-ANCHORED: `CUL-13` (`raw`) independently names 'a crossed capability (pottery -> storage -> surplus, TECH-1/2)'. One anchor is cited; the second is recorded here. NOT `present`: no predicate in the 449-row concept registry names a vessel, and `MAT-object-genus` says the artifact branch's sole inhabitant is `hearth`. |
+| col-lime-plaster | Burnt-lime and lime-plaster production - Maya lowlands after c. 900 CE, and the western Roman lime industry after the 5th century | absent |  |  | NOT BLIND, CHOSEN (a root), AND THE VERDICT TURNS ENTIRELY ON A REFUSAL THIS SESSION CHOSE: `TECH-2` is titled 'The pyrotechnology ladder' and a lime kiln is pyrotechnology, so the item is `absent` only because this file reads a row's enumerated elements as its deliverables and its title as its framing. The refusal is stated in the note so it can be overturned, and overturning it moves `col-hydraulic-concrete` and changes `col-mortared-masonry` from inherited to chosen. `plaster` and `lime` return nothing relevant across 1,779 rows. | A KILN CAPABILITY IN A CAMPAIGN CALLED THE KILN, and it is `absent` rather than `deferred` on a deliberate refusal. `TECH-2` is titled 'The pyrotechnology ladder' and a lime kiln is pyrotechnology -- but the row's enumerated elements are pottery/ceramics, kiln-gated smelting, metallurgy's outputs and coinage, and lime is not among them. This family's rule is that a row must name the capability the item's own `introduces` token names; a row's TITLE is its framing and its list is its deliverables. Accepting the title here would make `TECH-2` an anchor for anything that has ever been fired, which is the wish-list failure decision 0095 forbids. The refusal is recorded so it can be argued against: a reader who reads 'the pyrotechnology ladder' as the deliverable should move this item to `deferred` on `TECH-2`, and `col-hydraulic-concrete` and `col-mortared-masonry` change character with it. SWEPT: `plaster`, `lime` and `mason` return nothing relevant across all 1,779 registry rows (`lime` hits only as a substring of `limed`/`sublime`-class words; `mason` hits `UNI-6` and `UNI-7`, both about an afterlife population whose 'memory economy runs on masonry'). |
+| col-hydraulic-concrete | Pozzolanic hydraulic concrete at imperial scale - the Roman west, after the 5th century | absent |  | yes |  | THE CANONICAL 'LOST TECHNOLOGY', AND THE CORPUS MARKS IT CONTESTED RATHER THAN LEADING WITH IT. What is well attested is that large-scale pozzolanic concrete construction ceased in the west; what is disputed is the 'lost recipe' framing, since Vitruvius's description was transmitted continuously and modern work reconstructs the hot-mixing process from the material rather than from a rediscovered secret. Under ledger #10 that distinction is kept visible instead of being flattened into the score. INHERITED from `col-lime-plaster`. NEAR-MISS, AND IT IS A WINDOW-SIDE ONE: `windows/vessel/src/fabric.rs` derives a `Fabric` of Stone, Timber, Cob or Thatch for a built cell, with Cob documented 'Cob or brick: deep soil, dry climate'. It is the nearest thing in the tree to a built material -- and it is not a committed fact (no `fabric` predicate exists in the 449-row concept registry), it lives in a WINDOW rather than a domain, and it is derived categorically from lithology, biome and the soil buffer. A building's material is computed from the rock underneath it at render time; no people knows it. CONTESTED BY: the technical literature on Roman cementitious materials, which treats the post-Roman gap as one of practice, industrial organisation and pozzolana supply rather than of a lost recipe -- Vitruvius's account having been transmitted continuously. |
+| col-greek-fire | Greek fire - Byzantium, the formula unrecovered after the 13th century | absent |  | yes | NOT BLIND, CHOSEN (a root). The search: `firearm`, `gunpowder` and `incendiar` return nothing; `siege` returns one row about political economy. The more interesting disclosure is that this session considered EXCLUDING the item, on the ground that a monopolised state secret is not a skill distribution, and kept it -- excluding an awkward case after seeing that it is awkward is selection by hand, so the awkwardness is marked in the note instead. | ADMITTED BECAUSE THE CAMPAIGN'S OWN DESIGN DOCUMENTS NAME IT, AND CONTESTED ON THE STRONGEST GROUND OF THE FOUR: a formula held as a state secret by a narrow group of specialists may never have been widely distributed in the population at all, which is the one shape Henrich's mechanism does not describe -- his loss is a skill DISTRIBUTION drifting below a self-sustaining threshold, and a deliberate monopoly is not a distribution. The item is kept, because excluding the awkward case after seeing that it is awkward is selection by hand; it is marked instead. PREREQUISITE DROPPED: the pressurised bronze siphon, which is a real prerequisite and an item of this corpus's subject matter (`col-copper-smelting`) only by a reading this note declines to assert. SWEPT: no row in the registry names an incendiary, a siege engine or a military technology; `siege` returns one row, about political economy. CONTESTED BY: the historiography of Byzantine military technology, which disputes whether the formula was ever broadly held rather than monopolised -- and therefore whether 'lost' names a population process at all. |
+| col-copper-smelting | Copper and copper-alloy smelting - Roman Britain, the skills gone in the generations around 400 CE | unmeasured | path:domains/history/src/record.rs |  | NOT BLIND, AND CARRYING AN INTERPRETIVE STEP THIS SESSION TOOK KNOWINGLY: Fleming's enumerated phrase is 'copper smelting' and this item reads it as copper-ALLOY metallurgy so that it matches `TechHorizon::Bronze`'s documented 'Bronze-working'. The step was taken by a session that already knew the rung existed and that campaign ledger #16 had named 'bronze-working, lost' as the exemplar it wanted -- which is precisely the kind of pressure a disclosure exists to expose. The note states the alternative reading and its cost (the reach-passing count falls from 2 to 1), so a reader can refuse the step without re-deriving anything. A root. | THE ITEM LEDGER #16 NAMED IN ADVANCE -- 'bronze-working, lost' -- AND IT REACHES ON AN INTERPRETIVE STEP THIS NOTE STATES RATHER THAN HIDES. `TechHorizon::Bronze` (`domains/history/src/record.rs:64`) carries the doc comment 'Bronze-working', so Hornvale names this capability and varies it between peoples exactly as it does iron (see `col-iron-smelting` for the mechanism, the predicate and the ratchet). THE STEP: Fleming's enumerated phrase is 'copper smelting', and this item reads that as copper-alloy metallurgy, i.e. bronze-working, because the Romano-British copper industry produced alloys rather than unalloyed copper. A READER WHO REFUSES THAT STEP should score this item `absent` -- Hornvale's ladder has no copper rung and `TechHorizon::Neolithic` is 'Stone-tool, pre-metal' -- and this corpus's count of reach-passing items falls from 2 to 1. The alternative is named because the step runs in a direction worth flagging: crediting Hornvale with reach CONTRADICTS this campaign's thesis that its technology model is impoverished, so the error it risks is self-undermining rather than self-serving, which is the opposite of the asymmetry campaign ledger #14 warns about. NOT `deferred` on `TECH-2`, although that row names smelting: under the pipeline a reach-passing item is not awaiting a plan. The row is moot here, not refused. KEPT DISTINCT FROM `col-monumental-bronze`, which is a separate capability (large hollow lost-wax casting) lost by a different people at a different date; if a reader collapses the two, that item becomes reach-passing too and the count rises to 3. ANCHOR ADDED AFTER FREEZE (campaign ledger #18): `unmeasured` now carries a MECHANISM anchor for its reach half, `path:domains/history/src/record.rs`, where `TechHorizon::Bronze` is defined at line 64. The ratified vocabulary gave `unmeasured` no anchor, which left the reach half of this verdict -- a positive, checkable claim that Hornvale models this technology -- resting on nobody's word but the author's, while K is the one number a reader quotes out of this instrument. The trajectory half is what stays unmeasured; that is what the verdict means. The line number is in this prose and NOT in the anchor, matching the sibling families' `path:` convention (`path:clients/game/core/src/spread.rs` and the rest carry no line), so the anchor survives an edit above it. |
+| col-geared-calculation | Geared astronomical calculation, Antikythera-class - the eastern Mediterranean, 1st century BCE onward | absent |  | yes | NOT BLIND, AND CHOSEN THOUGH NOT A ROOT -- one of the nine items in this corpus that a root-keyed disclosure check would have missed (campaign ledger #13). Its sole prerequisite `col-copper-smelting` is `unmeasured`, so nothing upstream forces the verdict; it rests on a search that found no row naming a machine, a mechanism or a gear, and on the judgement that `MAP-18` plans what a people KNOWS rather than what it builds. | CHOSEN, NOT INHERITED, AND THIS ITEM IS WHY THE DISTINCTION MATTERS HERE: its sole prerequisite `col-copper-smelting` is `unmeasured`, not `absent`, so nothing upstream forces this verdict -- it rests on a search of the repository, and it carries a `disclosure` even though a root-keyed check would have missed it. Campaign ledger #13 established that rule on exactly one counterexample in the sibling column; this corpus contains nine. The verdict is the weakest demand over the closure: the mechanism's own demand is a geared calculator, which nothing models, so `absent` stands whatever the metal does. CONTESTED on continuity: whether the tradition was lost or carried forward through Byzantine and Islamic geared astrolabes and calendar devices is genuinely open, and a tradition that continued elsewhere is a different claim from a capability a people gave up. SWEPT AND REFUSED: `MAP-18` is about a culture's calendrical KNOWLEDGE and is cited by `col-long-count`; it plans what a people knows, not a device it builds. No row names a machine, a mechanism or a gear. CONTESTED BY: historians of ancient and medieval astronomical instruments, who trace geared calendrical devices through Byzantine and Islamic workshops and therefore dispute that the tradition was lost rather than relocated. |
+| col-deep-water-voyaging | Deep-water voyaging and open-ocean wayfinding - East Polynesia, the 'long pause' | absent |  | yes |  | THE MOST HEAVILY CONTESTED ITEM IN THE CORPUS, and the contest is about the phenomenon and not only its cause: whether the long pause was a cessation of a held capability, a reduction in frequency, or an artefact of what the voyaging canoes could do under prevailing conditions is open, and the 'late-settlement' reading makes the pause a function of weather windows and sailing performance rather than of a lost skill. THE CAPABILITY IS DELIBERATELY SEPARATE FROM `col-sea-canoe`: building a craft and knowing where to point it are two capabilities, lost (if lost) by different mechanisms. The edge runs one way -- wayfinding presupposes a hull -- and the verdict is INHERITED through it. SWEPT AND REFUSED: the five `NAV-*` rows are all about the engine's own lattice and compass rendering (`NAV-north-up-needs-per-cell-position`, `NAV-square-occupancy-lattice`, `NAV-hex-above-the-walk-band`, `NAV-bias-correcting-resolution`, `NAV-two-frames-lattice-north-and-astronomical-north`); not one concerns a people's navigational knowledge. `navigat` returns five rows and none of them is about a navigator. CONTESTED BY: Atholl Anderson and the 'late-settlement' reading of the East Polynesian radiocarbon corpus, which makes the pause a function of sailing performance and climatic windows rather than of a capability given up. |
+| col-skin-boat | Skin-boat (kayak) construction - the Inughuit of northwest Greenland, lost before the 1820s, taught back in the 1860s | absent |  |  | NOT BLIND, CHOSEN (a root). `kayak`, `harbour`, `shipyard` and `dock` return zero rows across 1,779. The disclosure also covers a decision this session made about the LATTICE rather than the verdict: the hide-preparation edge to `col-tanning` was available and deliberately not asserted, which changes nothing here but would have changed this item from chosen to inherited -- so the edge decision and the disclosure accounting are coupled, and a reader auditing one should audit the other. | THE CORPUS'S CLEANEST FULL CYCLE -- held, lost, and demonstrably re-acquired by teaching from outside -- which is precisely the trajectory `lost` exists to name and precisely what `tech_for`'s monotonicity forbids. The Inughuit had forgotten how to build a kayak; a small band of Canadian Inuit settled in their territory in the 1860s and taught them to build kayaks, to hunt from kayaks, to fish with leisters and to hunt caribou with bows and arrows. Kept separate from `col-sea-canoe` because a hunting craft of skin over a frame and a plank or outrigger voyaging hull are different capabilities; merging them would hide a distinction the sources draw. SWEPT: `kayak`, `shipyard`, `dock` and `harbour` return ZERO rows across 1,779 and all 35 `raft` hits are substrings; `harbor` returns exactly one, `MAP-55`, refused on `col-sea-canoe` for planning a coastline-driven disposition rather than a craft. PREREQUISITE DROPPED: driftwood framing and hide preparation -- the latter is `col-tanning`, an item of this corpus, and the edge is NOT asserted because the Inughuit cover was sealskin prepared by a technique this corpus's tanning item (a Romano-British trade) does not name. An invented edge would corrupt the derived closure, which is the one thing decision 0386 buys. |
+| col-literacy | Literate record-keeping in a script a people's own readers can read - five peoples, c. 1900 BCE to c. 900 CE | deferred | registry:MAP-8 |  | NOT BLIND, CHOSEN (a root), AND THIS IS THE DISCLOSURE THE REST OF THE CAMPAIGN SHOULD READ FIRST. The `deferred` rests on `MAP-8`, which this session found by a keyword sweep of all 1,779 idea-registry rows for `writing` (17 hits, read in full). The sibling column scored the same capability `absent` without that row: `MAP-8` appears nowhere in `asimov-1989`. So this verdict is not merely non-blind, it is a claim that the other column's verdict is wrong -- and it was produced by a search whose own bound is stated in `provenance` (a 70-term keyword list, not 1,779 rows read). The de-duplication of five literacy instances into this one item was also this session's decision and it suppressed four flattering `absent` rows. | ONE ITEM, FIVE INSTANCES, AND THE DE-DUPLICATION IS LOAD-BEARING RATHER THAN TIDY: five writing systems score identically against Hornvale, so five items would have multiplied the `absent`-mass fivefold on one capability -- and a high count in this column is the FLATTERING direction for this campaign's thesis, so the de-duplication runs against the author's interest and is stated as the rule it is. `MAP-8` ('Writing as a culture acquiring its own ledger -- oral = phenomena, literate = freezing phenomena into facts; borrowed scripts as contact fossils', `elaborated`) names this capability outright, as its own and only content. It is not `shipped`, so `deferred` is available, and the item takes it. THIS VERDICT DISAGREES WITH THE SIBLING COLUMN, AND THE DISAGREEMENT IS A FINDING ABOUT THE INSTRUMENT RATHER THAN ABOUT THE WORLD (decision 0095: the output is a matrix and the disagreement between columns is the finding). `asimov-1989` scores `inv-writing` `absent`, having considered and refused `NARR-monument-writes-itself` -- correctly, on the argument that the row plans the RENDERING of an inscription and treats literacy as a gate it assumes. `MAP-8` appears nowhere in that file (`grep -c MAP-8` returns 0), and `inv-writing`'s own note states the condition `MAP-8` meets: 'WHAT WOULD CHANGE THE VERDICT: a committed fact that some peoples keep written records and others do not.' Its `disclosure` even anticipates the move -- 'a reader who reads that row as planning written records in the world rather than their RENDERING should move this item to `deferred` and the five items downstream of it with it.' This task does not edit a frozen artifact; the discrepancy is reported to the campaign instead. NEAR-MISSES, BOTH ALREADY RECORDED BY THE SIBLING AND BOTH WORTH CARRYING: `write` and `read` are registered concepts that 'render `Gap \| Gap` for every species in every world', and `Orthography` (`domains/language/src/typology.rs`) is a romanization convention for the reader rather than a script for the world. SWEPT AGAINST THE WHOLE REGISTRY (ledger #17, fix round 1), WHICH CLOSED THE CROSS-COLUMN DISAGREEMENT THIS NOTE REPORTED: `asimov-1989`'s `inv-writing` is now `deferred` on `MAP-8` too (ledger #17), so the two columns score the same row identically and the paragraph above records the history rather than a live disagreement. Also read in full and refused: `LANG-35` ('The self-writing Book -- the world documents itself, rendering its own Fact graph into surface prose [...] with zero authored surface text'), which is the PROJECT's rendering of its own ledger and not a people's; and `MEM-8`'s 'Inscribed rots (the unpaid scribe)', which assumes inscription as a channel rather than planning it. |
+| col-brick-drainage | Fired-brick urban drainage and sanitation - the Indus cities, after c. 1900 BCE | absent |  |  | NOT BLIND, CHOSEN (a root). `BIO-5`, `CUL-12` and `DOM-9` are the complete `sanitation` match set (3 of 1,779) and all three were read in full and both refused in the note for planning sanitation as a carrying-capacity term and a taboo generator rather than as constructed drainage. The `Fabric::Cob` near-miss ('Cob or brick') came from reading `windows/vessel/src/fabric.rs`, which a blind author would have had no reason to open. | A CAPABILITY WHOSE LOSS IS VISIBLE AS AN ABSENCE OF INFRASTRUCTURE RATHER THAN OF AN ARTEFACT: standardised fired brick, street drains and bathing platforms at urban scale do not recur in the subcontinent for well over a millennium. NEAR-MISS: `Fabric::Cob` is documented 'Cob or brick: deep soil, dry climate' (`windows/vessel/src/fabric.rs`) -- so brick exists in this repository as a window-side category derived from soil and climate, never as a thing a people learned to fire. SWEPT AND REFUSED: `BIO-5` ('Excretion, sanitation, purity -- sanitation as a carrying-capacity term; Douglas pollution grid generating latrine/taboo/caste; nightsoil as fertility input', `elaborated`) is the one row that plans sanitation, and it plans it as a CARRYING-CAPACITY TERM and a taboo generator -- a latrine as a pollution source, not a drain a people knows how to lay. `CUL-12` (`raw`) derives an untouchable stratum from the same material sanitation, and `DOM-9` (`elaborated`, the epidemiology crate) lists 'sanitation as a carrying-capacity term' among the halves of itself that 'remain unbuilt'. All three rows matching `sanitation` were read in full; none names a constructed drainage system, and all three treat sanitation as a term in a capacity equation rather than as something anyone builds. Recorded because the keyword match is strong and the reading is not. |
+| col-standard-weights | Standardised weights and measures - the Indus cities, after c. 1900 BCE | absent |  |  | NOT BLIND, CHOSEN (a root), and the search behind it is the cleanest negative in the corpus: `metrolog`, `standardis` and `standardiz` return ZERO rows across all 1,779, and all 23 `weights` hits are numerical weights inside models. The verdict also rests on a judgement about the item rather than the repository -- that a maintained agreement is a capability at all -- which is flagged in the note because it is the item most likely to be challenged on its own terms. | THE MOST INSTITUTIONAL CAPABILITY IN THE CORPUS: a weight standard is not a skill in a pair of hands but an agreement a population maintains, which makes it the item Henrich's distributional mechanism fits least comfortably and the one a reader should interrogate hardest. The chert cubes and their binary-decimal ratios are uniform across a territory for centuries and then are not. SWEPT: `metrolog`, `standardis` and `standardiz` return ZERO rows across all 1,779; `weights` returns 23, every one of them a numerical weight in a model (belief weights, raid weights, tech_weight). Nothing in this repository models a unit of measure a people agrees on. PREREQUISITE DROPPED: precision stone-working, outside the corpus. SWEPT AGAINST THE WHOLE REGISTRY (ledger #17, fix round 1): `LANG-44` ('Numeracy as a quantity register -- a per-species numeral-system rung gating comprehension', **shipped**, three of five rungs) is the one row that models quantity as a per-people capability, and it is refused twice: a numeral system is a PREREQUISITE of a weight standard rather than the standard, and a `shipped` row cannot support `deferred`. It is worth recording as the nearest thing in the tree to this item: a people can be unable to say 'eight' (`LANG-numeracy-gate`) and there is still no unit for it to say eight OF. |
+| col-palace-accounting | Palace-scale administrative accounting - the Mycenaean Aegean, after c. 1200 BCE | absent |  |  | NOT BLIND, AND CHOSEN THOUGH NOT A ROOT (`col-literacy` is `deferred`). The search found three near-matches and refused all three in the note: `CUL-6` and `LANG-30` use 'accounting' as the modeller's word, and `SOC-1` plans an exchange AXIS rather than a kept ledger. The `occ-function` comparison -- a seat with a purpose but no record of what passed through it -- was taken from the sibling column's `inv-library` note and re-derived against `domains/history/src/lib.rs` rather than cited on trust. | CHOSEN, NOT INHERITED: its sole prerequisite `col-literacy` is `deferred`, so no `absent` upstream forces this verdict and it rests on a search -- hence the `disclosure`. The verdict is still `absent`, because the weakest demand is its own: a sealing-and-tablet bureaucracy that tracks commodities, rations and personnel across a territory. SWEPT AND REFUSED: `CUL-6` (`raw`) changes the ACCOUNTING UNIT of culture from settlement to descent group -- the word 'accounting' there is the modeller's, not the world's. `LANG-30`'s 'capacity-floor accounting' is likewise a metric. `SOC-1` ('Social structure as orthogonal axes (authority / legitimacy / descent / exchange)', `elaborated`) plans an exchange AXIS rather than a ledger kept by scribes. `occ-function` commits `Trade` and `Cult` as occupation functions, which is a seat with a purpose and not a record of what passed through it -- the same distinction `asimov-1989` draws for `inv-library`, where community stores exist and holdings do not. SWEPT AGAINST THE WHOLE REGISTRY (ledger #17, fix round 1): `SOC-11` ('The institutional layer -- a mid-scale social structure between the community and the persona: a court, a BUREAUCRACY, a guild, a temple hierarchy, a slave system, an army', `raw`) names a bureaucracy among its own enumerated elements and is still refused, on the distinction this family has to hold: an institution with roles, a hierarchy and a function is a bureaucracy whether or not it keeps a record, and this item's demand is the RECORD. That is the same cut `asimov-1989` draws for `inv-library` -- a seat with a purpose is not a store of content -- and the two columns now apply it identically. `MEM-5` is refused for the same reason. |
+| col-iron-smelting | Iron smelting - Roman Britain, the skills gone in the generations around 400 CE | unmeasured | path:domains/history/src/record.rs |  | NOT BLIND IN THE STRONGEST SENSE AVAILABLE: this verdict exists BECAUSE the model was read. A blind author would have scored this `absent` with everything else; it is `unmeasured` because `TechHorizon::Iron` carries the doc comment 'Iron-working' at `domains/history/src/record.rs:66`, because `occ-tech` is a registered functional predicate, and because the per-community offset draw at `history_bake.rs:6577` makes the rung differ between peoples. A root, so nothing forces it. THE DIRECTION IS WORTH NOTING: this is the one kind of verdict that contradicts this campaign's thesis, so the non-blindness here risks a self-undermining error rather than a self-serving one. | ONE OF THE TWO ITEMS IN THIS CORPUS WHOSE CAPABILITY HORNVALE NAMES, AND THEREFORE ONE OF THE TWO WHOSE REACH PASSES. `TechHorizon::Iron` (`domains/history/src/record.rs:66`) carries the doc comment 'Iron-working'; the horizon is committed per occupation as the registered functional predicate `occ-tech` ('the occupation's technological horizon', `domains/history/src/lib.rs:142`); it is advanced per COMMUNITY by `tech_for(year + c.tech_offset)` (`windows/worldgen/src/history_bake.rs:4806`), and the offset is drawn per community at genesis from `pstream.range_u32(0, 300)` (`:6577`), so two peoples can genuinely sit on different rungs. That is the reach question met in both halves: a committed fact that can differ between two peoples. THE VERDICT IS `unmeasured` AND NOT A MEASURED VALUE, for a structural reason rather than a stylistic one: under the ratified pipeline a measured value (`grown`/`flat`/`lost`) requires a `doc:` anchor against a path `docs/generated-paths.txt` gives a generator, and no such generator exists in the repository as this file is committed. Spec S5.2a's sentence that 'under such a criterion today's world scores `flat`' is a PREDICTION about what a successor will measure, not a verdict this file is entitled to author. AND THE LOSS IS NOT MERELY UNMODELLED -- IT IS GUARDED AGAINST BY A COMPARISON. `Bake::touch` reads `if tech > c.tech { c.tech = tech; }`, and `tech_for`'s own doc comment says 'monotone in `year`, so tech only ever rises'. A community's horizon is a ratchet with an explicit one-way test in it. `roller_strength` (`:2923`) closes the last door: a people that has lost every community still has its strength reckoned from `tech_weight(tech_for(year + offset))`, so a homeless remnant's horizon keeps RISING while it holds nothing at all. WHAT A SUCCESSOR MUST MEASURE: the fraction of peoples holding iron-working at bake end against this item's band, and whether any people that held it at some year does not hold it at bake end. ANCHOR ADDED AFTER FREEZE (campaign ledger #18): `unmeasured` now carries a MECHANISM anchor for its reach half, `path:domains/history/src/record.rs`, where `TechHorizon::Iron` is defined at line 66. The ratified vocabulary gave `unmeasured` no anchor, which left the reach half of this verdict -- a positive, checkable claim that Hornvale models this technology -- resting on nobody's word but the author's, while K is the one number a reader quotes out of this instrument. The trajectory half is what stays unmeasured; that is what the verdict means. The line number is in this prose and NOT in the anchor, matching the sibling families' `path:` convention (`path:clients/game/core/src/spread.rs` and the rest carry no line), so the anchor survives an edit above it. |
+| col-sawn-timber | Sawn board and plank making - Roman Britain, c. 400-450 CE | absent |  |  | NOT BLIND, CHOSEN (a root). The `Fabric::Timber` near-miss came from reading `windows/vessel/src/fabric.rs` and `MAP-building-fabric`'s shipped row; `MAP-the-renewable-stock` was found by a `timber` sweep (3 hits, all read) and refused for planning the tree rather than the sawyer. Both reads were this session's and neither is inherited. | A capability whose loss is read from what stops appearing in the ground: converted timber -- boards and planks sawn to dimension -- rather than split and hewn wood. NEAR-MISS: `Fabric::Timber` is documented 'Timber: a forested, temperate place' (`windows/vessel/src/fabric.rs`) -- a building is timber because of the biome around it, not because anyone can convert a log. `MAP-building-fabric` is `shipped`, which makes this the strongest shipped near-miss in the corpus and still the wrong kind of fact: it is a window-side categorical derivation from lithology, biome and soil, it is not a registered concept, and nothing commits it. SWEPT AND REFUSED: `MAP-the-renewable-stock` (`elaborated`) names timber, and names it as an unbuilt room-scale STOCK -- 'game, fish, timber, pasture, ore and water are all unbuilt at room scale'. A row that plans the tree does not plan the sawyer. |
+| col-stone-quarrying | Stone quarrying - Roman Britain, c. 400-450 CE | deferred | registry:TECH-3 |  | NOT BLIND, CHOSEN (a root), AND THE `deferred` IS FORCED BY CONSISTENCY RATHER THAN CHOSEN HERE, which is itself worth disclosing: `TECH-3` is accepted because the sibling column accepts it for `inv-coal-mining` and records that breadth is not a refusal it applies. This session therefore had no freedom to refuse it, and the residual judgement -- that a row about ORE also covers BUILDING STONE -- is the seam, stated in the note so it can be pressed. | `TECH-3` ('Extraction & the underworld's ores -- mining/refinement needs the vertical terrain layer (MAP-10) plus ore as a terrain field; refining is a carrying-capacity sink and a contact-zone prize (MAP-9)', `raw`, with its own note recording 'Ore deposits shipped (The Lode, 2026-07-22); mining/refinement/tech-gating still deferred') names EXTRACTION as its own deliverable, and quarrying is extraction. THE ACCEPTANCE IS FORCED BY CONSISTENCY WITH THE SIBLING COLUMN RATHER THAN CHOSEN HERE: `asimov-1989` accepts this same row for `inv-coal-mining` on the ground that 'extraction is `inv-coal-mining`'s own demand rather than a prerequisite of it', and explicitly records that 'breadth alone is not a refusal this file applies: `TECH-3` is broader than `inv-coal-mining`'s demand and is accepted'. Refusing it here for breadth would make the two columns score the same row two ways, which is the defect 0136 clause 2 exists to prevent. THE ROW IS ABOUT ORE AND THIS ITEM IS ABOUT BUILDING STONE, which is the one seam in the acceptance; it is recorded so a reader can press on it. It is kept because the row's deliverable is named as 'mining/refinement' generally and its shipped half is 'ore deposits ... as a terrain field' -- a field over the rock, which building stone also is. |
+| col-butchery | Commercial butchery - Roman Britain, c. 400-450 CE | absent |  |  | NOT BLIND, CHOSEN (a root), and the disclosure is about a refusal rather than a finding: `ECON-livelihood` would plausibly have covered this item and several others, and refusing it is this session's application of decision 0095's no-backlog rule. `butcher` returns ZERO rows across 1,779, so nothing narrower was available to accept. | The capability is a specialised trade rather than a technique: carcass reduction to a standard pattern, at volume, for a market -- legible archaeologically as cut marks and as the disappearance of a consistent pattern. SWEPT AND REFUSED, AND THIS IS THE REFUSAL MOST WORTH STATING, because the tempting anchor is a generic one: `ECON-livelihood` (`raw`, 'A livelihood/economy layer that turns subsistence, surplus, trade, and inequality into population-scale constraints and individual work. Minted by The Murrain as the next major population consumer; no economy domain exists yet') would plausibly cover every trade in this corpus. Accepting it would anchor a mass of items on one generic row, which decision 0095 names as the move that turns a measurement into a wish list, and which this family's own `CLAUDE.md` forbids in terms. The row names no trade; it names the layer a trade would live in. `butcher` returns ZERO rows across all 1,779. SWEPT AGAINST THE WHOLE REGISTRY (ledger #17, fix round 1): `DOM-11` ('**economy** crate -- trade (Ricardo), markets, the clearing/allocation layer, surplus flows', `raw`) joins `ECON-livelihood` as a row that would cover every trade in this corpus and names none of them; both are refused under decision 0095's no-backlog rule, stated at length in `provenance`. |
+| col-horticulture | Horticulture - Roman Britain, c. 400-450 CE | deferred | registry:BIO-8 |  | NOT BLIND, CHOSEN (a root). `BIO-8` was accepted under the same test the sibling column used for `inv-turnplow` -- the row's element 'staple crop per biome' has shipped, so it enumerates deliverables -- and the judgement this session added is the split in the note: the shipped half is the biosphere field and the deferred half is the culture layer harnessing it. That split rests on having read `domains/climate/src/crops.rs` and `domains/culture/src/subsistence.rs`, so it is not available to a blind author. | `BIO-8` ('Domestication & agriculture -- the culture layer harnessing biosphere fields; staple crop per biome, the Boserup plough (SOC-2's input), nightsoil (BIO-5), famine as paleoclimate (MAP-6) x carrying capacity (MAP-7)', `raw`) names agriculture as the culture layer harnessing biosphere fields, which is this item's own demand: cultivation as something a people does, rather than fertility as something a place has. SAME ROW, SAME ACCEPTANCE AS THE SIBLING COLUMN: `asimov-1989` moved `inv-turnplow` to `deferred` on `BIO-8` after a sweep, and established there that the row enumerates DELIVERABLES rather than assumptions, because one of its elements -- 'staple crop per biome' -- has shipped as `domains/climate/src/crops.rs`. WHY THIS IS NOT `present` DESPITE THAT SHIPPED ELEMENT: `crops.rs` gives a place its crop, and `domains/culture/src/subsistence.rs` gives a settlement `Farming` as 'an exact function of its biome class and whether it reaches the coast'. Both are functions of place. The shipped half is the biosphere field; the deferred half is the culture layer harnessing it, which is the half this item demands. `horticult`, `orchard` and `garden` return nothing relevant across 1,779 rows; the anchor is the broader agricultural row, accepted on breadth per the rule above. |
+| col-tanning | Tanning - Roman Britain, c. 400-450 CE | absent |  |  | NOT BLIND, CHOSEN (a root). `CUL-12` was found by a `tann` sweep (1 hit) and refused on the input-assumption test, which this session applied by checking whether any of the row's own elements had shipped (none had). The bugbear's `tanner` artisan word came from reading `domains/language/src/lib.rs`, and it is the item where that near-miss is sharpest -- a people whose artisan rung is NAMED the tanner, in a world where no hide is tanned. | NEAR-MISS, AND IT IS THE SHARPEST SHAPE IN THIS COLUMN: `domains/language/src/lib.rs` gives each of 18 registered kinds an `artisan`-rung WORD (15 distinct: artificer, artisan, boneworker, bowyer, fletcher, glassblower, glassmith, hullwright, patcher, shaper, smith, tanner, webwright, wright, wyrm), and the word DIFFERS BETWEEN PEOPLES -- which is the second half of the reach question. It is still a label, not a capability: a settlement's artisan rung is named by its kind's lexicon whatever that settlement does, so every people carries one by construction and none can acquire or lose it. The bugbear's artisan word is `tanner`. A world can therefore commit a bugbear settlement whose artisan rung is called the tanner, in a world where no hide is ever tanned -- which is this corpus's thesis in one line, and a sharper form of the sibling column's observation that 'a smith's anvil is a noun in a room while no people in any world holds smithing', because the artisan word varies BY PEOPLE and the anvil is scene furniture. SWEPT AND REFUSED: `CUL-12` (`raw`, 'The pollution stratum from sanitation, not ideology -- attach purity/taboo rules to specific rungs (tanner, corpse-handler, nightsoil caste) so an untouchable stratum emerges from material sanitation') is the one row that names a tanner. It plans a TABOO attached to a rung and assumes the rung's occupant does the polluting work; the capability here is the work. Testing the input-assumption reading as this family requires: the row is `raw`, none of its own elements has shipped, and the things it cites as present (`BIO-5`, `SOC-7`) are inputs. The reading holds. `leather` returns ZERO rows across all 1,779. SWEPT AGAINST THE WHOLE REGISTRY (ledger #17, fix round 1): two further rows name an institution that could hold a craft -- `MEM-5` ('a durable commitment of surplus to a function (memory/legitimacy/exchange/SKILL)', `raw`) and `SOC-11` ('a guild', `raw`) -- and both are refused on the input-assumption test, because an institution committed to a skill presupposes the skill. `PSY-expertise-per-individual` (`elaborated`) settles the question from the other side: '`domains/person` is a seed plus an empty marker struct: no skill, expertise or trained competence anywhere in the workspace.' |
+| col-wheel-thrown-pottery | Wheel-thrown, kiln-fired pottery - Roman Britain, kiln-firing effectively over by c. 410 CE and the slow wheel abandoned by c. 420 | deferred | registry:TECH-2 |  | NOT BLIND, AND CHOSEN THOUGH NOT A ROOT (`col-pottery` is `deferred`). The anchor is taken on this item's OWN demand rather than inherited: `TECH-2` names both the ceramic and the kiln. The judgement this session added is the split from `col-pottery` -- that hand-building and wheel-and-kiln production are two capabilities -- which raises the item count by one and is stated in the note so a reader who disagrees can collapse them. | THE BEST-DATED LOSS IN THE CORPUS: manufacture winding down in most production centres before 400, very little evidence of kiln-firing after about 410, the slow wheel (tournette) abandoned by about 420, and locally hand-made friable fabrics in its place by about 500. A capability with a date range of two decades is a better test of a trajectory model than a millennium-long drift. CHOSEN, NOT INHERITED: its sole prerequisite `col-pottery` is `deferred`, not `absent`. `TECH-2` names BOTH halves of this item's own demand -- 'pottery/ceramics' and 'kiln temperature' -- so the anchor is the same row its prerequisite takes, for its own reasons rather than by inheritance. The potter's wheel is the one element of the demand the row does not name; the kiln and the ceramic do, and breadth is not a refusal. KEPT DISTINCT FROM `col-pottery` because the wheel and the kiln are separate technologies from hand-building, lost by a different people at a different date; a reader who collapses them should expect one item here and not two. |
+| col-mortared-masonry | Building in mortared stone at monumental scale - three peoples, c. 1200 BCE to c. 900 CE | absent |  |  |  | INHERITED: `col-lime-plaster` is `absent`, so the weakest demand fixes this verdict whatever the search finds, and no `disclosure` sits beside it (a refusal that could not have changed the outcome is evidence, not a choice). THE NEAR-MISS IS RECORDED ANYWAY, because it is the shipped one: `MAP-building-fabric` is `shipped` and `Fabric::Stone` is documented 'Vernacular stone. Its reflectance is DERIVED from the local bedrock, so a village on granite and one on basalt are visibly different' (`windows/vessel/src/fabric.rs`). A Hornvale village is built of stone when it stands on stone. The distance from there to this item is the whole campaign: the material is a function of the ground, it is computed in a WINDOW rather than committed by a domain, it is not a registered concept, and no people holds it. SWEPT AND REFUSED: `mason` returns two rows, `UNI-6` and `UNI-7`, both about an afterlife population whose 'memory economy runs on masonry' -- masonry there is a DECAY SUBSTRATE for ghosts' memories, not a craft. `MAP-impression` (`raw`) grades traces by durability and names 'foundations, the ruin itself' as durable finds; a ruin is what masonry leaves, not the knowledge that raised it. SWEPT AGAINST THE WHOLE REGISTRY (ledger #17, fix round 1): `EXP-6` ('Architecture -- layout as constraint satisfaction over body/environment/structure/threat') and `DOM-aesthetics` ('built space') both plan LAYOUT and expression rather than construction technique. Neither could have moved this verdict in any case, since `col-lime-plaster` is `absent`. |
+| col-coinage | Coin currency in circulation - Roman Britain, low-denomination coin out of use within a decade of 400 CE | deferred | registry:TECH-2 |  | NOT BLIND, AND CHOSEN THOUGH NOT A ROOT (`col-copper-smelting` is `unmeasured`). The `deferred` rests on `TECH-2`'s 'coinage' element, and the NOT-`present` half rests on a search this session ran rather than assumed: `coin`, `currency`, `money` and `mint` across `domains/` and `windows/worldgen/src/` return no model of exchangeable value, the 449-row concept registry carries no exchange predicate, and the default bake sets `ExchangeTreatment` to `Disabled`. | CHOSEN, NOT INHERITED: its prerequisite `col-copper-smelting` is `unmeasured`. `TECH-2` names 'coinage (SOC-1's exchange axis)' as the last of its own enumerated elements, which is this item's own demand, so the anchor is direct rather than inherited. The sibling column could not use this element of the row at all -- `asimov-1989` records that it 'contains no pottery, storage or coinage item'. Two of `TECH-2`'s four elements are discharged by items in THIS corpus and none by items in that one, which is the clearest single measurement of what the two columns see differently. NOT `present`, verified rather than assumed: `coin`, `currency` and `money` return no model of exchangeable value anywhere in `domains/` or `windows/worldgen/src/` (every hit is a coin FLIP, a dimensionless 'currency', or a linguistic coinage), and the concept registry's 449 rows carry no exchange predicate. `BakeConfig` carries an `ExchangeTreatment` and the default bake sets it `Disabled`. CORROBORATED: `SOC-1` ('Social structure as orthogonal axes (authority / legitimacy / descent / exchange)', `elaborated`) is the row `TECH-2` points at for the exchange axis; one anchor is cited and the second recorded, per the no-double-anchoring rule. |
+| col-long-count | Computed calendrical astronomy - the Maya lowlands, the Long Count lapsing after c. 900 CE | deferred | registry:MAP-18 |  | NOT BLIND, AND CHOSEN THOUGH NOT A ROOT (`col-literacy` is `deferred`). `MAP-18` was found by a `calendar`/`astronom` sweep (26 and 40 hits, the relevant ones read in full) and it names this capability with unusual precision, including its own rung ladder. The judgement this session added is the one that keeps the item out of `present`: Hornvale computes the astronomy and commits alignment facts (`SKY-stale-alignments` is `shipped`), but those are the sky's facts held on a people's behalf, and `LANG-50` records that `year-length-std` 'is ALSO not currently witnessed by any culture'. That argument required reading three rows and a shipped calendar API. | CHOSEN, NOT INHERITED (`col-literacy` is `deferred`), and `deferred` on a row that names this capability with unusual precision. `MAP-18` ('Calendrics as computed knowledge', `raw`): 'the sky's true periods (synodic month, year length) are exact almanac facts, but a culture *knows* them only at the precision it has attained, gated by its mathematical capability (TECH-1), its observation span ... and its method. The knowledge ladder is qualitative -> counted -> computed -> predictive: below arithmetic a people still holds a qualitative model ... an unlettered people counts "about thirty days," an astronomer-priesthood holds a Metonic cycle and eventually the saros.' That is a per-people capability with rungs, which is exactly this item's demand -- and the row goes further, making calendar-keeping 'differentiating knowledge WITHIN the culture'. THE DISTINCTION THAT KEEPS THIS OUT OF `present`, and it is the same distinction `asimov-1989` draws for `inv-alphabet`: Hornvale computes the astronomy itself to high precision and commits eclipse and alignment facts -- `Calendar::alignment_drift_deg` and the `alignments` worldgen stage shipped in The Long Count, per `SKY-stale-alignments` -- but those are the SKY's facts, held by the engine on a people's behalf. 'A capability the engine exercises on a people's behalf is not a capability the people holds.' `LANG-50` supplies the confirming detail from the other side: `year-length-std` 'is ALSO not currently witnessed by any culture (no `Observability` row)'. `MAP-18` IS NOT `shipped` -- it is `raw` -- so `deferred` is available, and the row's own dependency on `TECH-1` is noted rather than used: `TECH-1` names capability thresholds generically and is refused throughout this corpus (see `provenance`). |
+| col-hydraulic-works | Large-scale water-management engineering - Angkor after c. 1400 CE, and the Negev runoff-farming systems after the 7th century | absent |  |  | NOT BLIND, CHOSEN (a root), and the search behind it is the corpus's widest clean negative: `irrigat`, `aqueduct`, `canal` and `water manage` return ZERO rows across all 1,779, `reservoir` returns seven with none about water, and all twenty `dam` hits are substrings. Hornvale models water at length as terrain and climate -- drainage, aquifers, a flow graph -- and this session read enough of that to be sure the absence is of the MOVER rather than of the water, which is the judgement the verdict rests on. | A CAPABILITY THAT IS INSEPARABLE FROM ITS MAINTENANCE, which makes it the corpus's best instance of Henrich's mechanism in its institutional form: the works survive as earth and stone long after the population that could operate them, so the archaeology shows the capability lapsing while the artefact stands. SWEPT, AND THE RESULT IS A CLEAN ZERO: `irrigat`, `aqueduct`, `canal` and `water manage` return ZERO rows across all 1,779; `reservoir` returns seven, none about water; `dam` returns twenty, every one a substring. Hornvale models water extensively as terrain and climate -- drainage, aquifers, a flow graph -- and models nobody who moves it. PREREQUISITE DROPPED: earthworks and surveying, outside the corpus. SWEPT AGAINST THE WHOLE REGISTRY (ledger #17, fix round 1), AND THE ONE ROW THAT SURVIVED THE READ IS REFUSED ON THIS FILE'S OWN CUT. `SEQ-2` ('Hydrology is people-infrastructure, not land-refinement -- rivers are the skeleton of settlement, trade, borders, toponymy', status `shipped (settlement-siting slice)`) has a title that reads like this item's demand and an enumerated list that does not: the elements it names as still unbuilt are 'named rivers as entities, trade routes, borders, crossings/fords, bridges' -- crossings, not water management. Refusing it is the same cut this file makes against `TECH-2`'s title for `col-lime-plaster`, and a reader who accepts a row's framing over its list must accept both. Its partly-`shipped` status bars `deferred` in any case. `MAP-the-road-with-no-builder` (`elaborated`) was read in full and plans a culture's false BELIEF about derived infrastructure, not the building of any. |
+| col-ocean-fleet | Ocean-going fleet shipbuilding at state scale - Ming China after 1433 | absent |  | yes |  | INHERITED from `col-sawn-timber`: a plank-built ocean-going hull presupposes converted timber, and that prerequisite is `absent`. CONTESTED ON WHETHER IT IS A LOSS AT ALL, which is why it is marked: the voyages ended by policy, and a capability withdrawn by a state that could have kept it is a decision rather than a drift below a self-sustaining threshold. The case is retained because it is the clearest instance of a distinction this corpus must not blur -- Henrich's mechanism is demographic and unintentional, and a corpus that silently admitted policy cessations would be measuring something else. Kept distinct from `col-sea-canoe` (a craft type, and an Oceanian episode) and from `col-deep-water-voyaging` (the wayfinding, not the hull). CONTESTED BY: historians of Ming maritime policy, who read the cessation as a policy decision and a prohibition rather than as the loss of a shipbuilding capability -- the yards and the expertise being available for decades afterwards. |
+| col-firearms | Firearm manufacture and use - Tokugawa Japan, 17th to 19th centuries | absent |  | yes | NOT BLIND, AND CHOSEN THOUGH NOT A ROOT (`col-iron-smelting` is `unmeasured`). The search is a clean negative -- `firearm` and `gunpowder` return ZERO rows across 1,779 -- and the disclosure's substance is that this session kept an item whose central historical claim is disputed, rather than dropping it once the dispute was found. | CHOSEN, NOT INHERITED: its prerequisite `col-iron-smelting` is `unmeasured`, so nothing upstream forces this verdict. It is `absent` on its own demand -- a chemical propellant in a tube -- which nothing in the repository models: `firearm` and `gunpowder` return ZERO rows across all 1,779 registry rows, and `gun` returns six, all substrings. THE MOST CONTESTED ITEM IN TIER C, AND THE CONTEST IS ABOUT THE CENTRAL FACT: Perrin's thesis that Japan gave up the gun is disputed by historians who find firearm production and use continuing under shogunate monopoly and regulation, so 'lost' may name a change in who was permitted to hold a capability rather than whether anyone could. Retained and marked rather than excluded, because dropping a case after seeing that it is inconvenient is hand-picking at the level of the item. The same shape as `col-ocean-fleet` and `col-greek-fire`: a capability held narrowly or by licence is not a distribution drifting below a threshold, which is a limit on how much of this column Henrich's mechanism actually explains. CONTESTED BY: historians of Tokugawa military technology (against Perrin 1979), who find continued manufacture and use under shogunal monopoly and regulation -- making this a change in licence rather than in capability. |
+| col-crucible-steel | Crucible (wootz) steel production - south India and its trade, lapsed in the 19th century | deferred | registry:TECH-2 |  | NOT BLIND, AND CHOSEN THOUGH NOT A ROOT (`col-iron-smelting` is `unmeasured`). THIS IS THE MOST MODEL-DEPENDENT VERDICT IN THE CORPUS: `ALCH-7` names wootz steel BY NAME, and deciding that it does not make the item `present` required reading `ALCH-2`'s and `ALCH-6`'s own shipped measurements -- that the confound reaches appearance but not behaviour, and that 'every default-pin seed reaches all seven [productions] and between-world variance is ZERO'. A blind author could not have reached that conclusion, and a reader who doubts it should check those two rows before the item. The `deferred` on `TECH-2`'s 'kiln temperature gates smelting' is the residue. | CHOSEN, NOT INHERITED (`col-iron-smelting` is `unmeasured`), and `deferred` on `TECH-2`'s 'kiln temperature gates smelting' -- crucible steel is precisely a smelting process gated on temperature, so the row names this item's own demand and not merely a prerequisite of it. Refusing it for breadth is unavailable here for the reason given on `col-stone-quarrying`. THE ROW A READER WILL EXPECT INSTEAD, AND WHY IT IS NOT THE ANCHOR: `ALCH-7` (`shipped`) names this case BY NAME -- 'Historical anchor for the whole confound: **wootz steel**, a lost art whose recipe depended on trace vanadium in one ore body, which died when that body was exhausted and has never been reconstructed.' That sentence makes this the one item in either column whose real-world instance the idea registry cites explicitly. It cannot support `deferred`, because the row is `shipped` and `deferred` requires a row that is not; and what shipped is the latent-qualities/manifest-signs split, with wootz as its MOTIVATION rather than as a deliverable. NOR DOES IT SUPPORT `present`, AND THIS IS THE MEASUREMENT THAT SETTLES IT: `ALCH-6` records that 'four ubiquitous source categories cover the whole seven-entry table, so every default-pin seed reaches all seven and between-world variance is ZERO', and `ALCH-2`'s shipped half reaches 'APPEARANCE but not BEHAVIOUR -- ore grade moves causticity and causticity moves only `hue` ... sweeping every commodity across the full grade range leaves the admitted-production set invariant'. A production set that is invariant across every world cannot differ between two peoples, so the shipped alchemy layer fails the reach question's second half -- which is also why the registry's most precisely named lost art does not make this item `present`. `ALCH-4` (`raw`) says a world with an empty violation catalog 'still derives correspondence-thinking, false causes, rival schools, and lost arts', and two of those four elements have shipped (the confound, and the doctrine-of-signatures mechanism), so by this family's test it enumerates deliverables and DOES plan lost arts generically. It is refused as an anchor for the same reason `TECH-1` is: it names the phenomenon, not this capability. That refusal is the one a later reader is most likely to overturn. |
+| col-monumental-bronze | Monumental hollow lost-wax bronze casting - Latin Europe, c. 500-1100 CE, revived from 1412 | absent |  |  | NOT BLIND, AND CHOSEN THOUGH NOT A ROOT (`col-copper-smelting` is `unmeasured`). The verdict turns on a distinction this session drew between two metallurgical capabilities in order to score one `unmeasured` and the other `absent`, which is exactly the kind of convenient split a disclosure should expose: the note states the alternative (collapse them and the reach-passing count rises to 3) and the ground for the split (different peoples, different dates, and a rung that names the alloy rather than the casting technique). | CHOSEN, NOT INHERITED (`col-copper-smelting` is `unmeasured`). The verdict is `absent` on its own demand, and the line between the two items is the whole of it: smelting and alloying copper is a capability Hornvale names at the rung's grain ('Bronze-working'); casting a multi-metre hollow figure in one or several joined pours is a technique the rung does not name and conflates with the metallurgy underneath it -- and under this family's rule a label that bundles the demand with a neighbouring one, so that no world can hold one without the other, does not meet the demand. A READER WHO COLLAPSES THE TWO should score this `unmeasured` as well, taking this corpus's reach-passing count from 2 to 3; the consequence is stated so the reading can be chosen with its cost visible. THE INSTANCE IS ALSO THIS CORPUS'S THIRD DOCUMENTED RE-ACQUISITION, and the only one recovered by deliberate imitation of surviving foreign work rather than by teaching from a neighbouring population -- a second mechanism of recovery that Henrich's model, which runs on the size of the pool of available models, accommodates directly. SWEPT: `forge` returns twenty rows, nineteen of them substrings of 'forget'/'forgot'/'forged' and the twentieth 'forgeries'; `smith` returns one (`CUL-16`, which names a 'first smith-caste' as a datable cultural founding fact and therefore assumes smiths rather than planning smithing). SWEPT AGAINST THE WHOLE REGISTRY (ledger #17, fix round 1): `DOM-aesthetics` (`raw`, 'the generative output of expressive artifacts (text / image / music / built space) from a small per-culture vector') is the row the sibling column now cites for `inv-literature`, and it is refused here: it plans the EXPRESSION a culture generates, not the founding technique that realises it in metal. `EXP-6` ('Architecture -- layout as constraint satisfaction') is refused for the same reason. |
+| col-megalith-transport | Transport and erection of multi-tonne monoliths - Rapa Nui, after c. 1600 CE | absent |  | yes | NOT BLIND, AND CHOSEN THOUGH NOT A ROOT (`col-stone-quarrying` is `deferred`). Three monument rows were found and read in full (`NARR-monument-writes-itself`, `SKY-stale-alignments`, `MAP-impression`) and all three refused for being about monuments that already stand. The second half of the disclosure is historiographical rather than technical: this session found the collapse framing contested and marked it, rather than citing the cessation and importing the usual cause with it. | CHOSEN, NOT INHERITED (`col-stone-quarrying` is `deferred`), and `absent` on its own demand: an organised technique for moving and raising a multi-tonne carved block, with the labour organisation that implies. CONTESTED, AND ON THE FRAME RATHER THAN THE FACT: that carving and erection ceased is not in dispute; the collapse narrative that usually supplies its cause is, and the competing account puts demographic and cultural collapse after European contact rather than in prehistory. A corpus that cited the cessation and silently imported the ecocide story with it would be promoting a contested case to fact, which is the failure decision 0095 exists to prevent. SWEPT AND REFUSED: `NARR-monument-writes-itself` (`elaborated`) plans a monument whose text the world derives and whose readability is gated on literacy -- it assumes the monument is there. `SKY-stale-alignments` (`shipped`) dates a monument by the drift of its alignment, which is the sky's clock read off a standing stone rather than a people's ability to stand one up. `MAP-impression` (`raw`) grades the monument as a durable trace. Three rows about monuments, none about raising one. CONTESTED BY: Hunt and Lipo and the post-contact reading of Rapa Nui demography, which disputes the prehistoric-collapse framing usually attached to the end of moai construction. |

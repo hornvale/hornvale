@@ -57,6 +57,30 @@ use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+/// The two committed corpora' ids — what a caller types
+/// (`hornvale technologies report asimov-1989`), never a path. Unlike the
+/// sibling families' `CORPORA: &[&str]` (a path list, resolved with
+/// `--corpus <path>`), this family's CLI surface takes the corpus by its
+/// short id (Task 7's brief states the exact invocation); [`corpus_path`]
+/// derives the file path from the id and the fixed `technologies/
+/// <id>.technology.json` naming convention every corpus in this directory
+/// already follows (see [`cross_corpus_ruling_gaps`], which derives an id
+/// from a path the same way in reverse).
+/// type-audit: bare-ok(artifact)
+pub const CORPORA: &[&str] = &["asimov-1989", "henrich-2004-extended"];
+
+/// Resolve a corpus id (`asimov-1989`) to its file path. `None` for an id not
+/// in [`CORPORA`] — a caller should report this as an unknown corpus, never
+/// silently fall back to a default.
+/// type-audit: bare-ok(identifier-text: id), bare-ok(artifact: return)
+pub fn corpus_path(id: &str) -> Option<String> {
+    if CORPORA.contains(&id) {
+        Some(format!("technologies/{id}.technology.json"))
+    } else {
+        None
+    }
+}
+
 /// How one imported technology-capability item stands against Hornvale.
 ///
 /// Nine values: decision 0136's `present`/`refused`/`deferred`/`absent`/
@@ -1174,4 +1198,324 @@ pub fn cross_corpus_ruling_gaps(c: &Corpus, root: &Path) -> Vec<Finding> {
         }
     }
     gaps
+}
+
+// --- Rendering (Task 7) -------------------------------------------------
+//
+// `wrap`/`percent` are the same shape as `systems::wrap`/`systems::percent`
+// and `regularities::wrap`/`regularities::percent` — all three are private
+// to their own module, and this family is a deliberate sibling rather than a
+// member (decision 0135), so the pair is reimplemented here rather than
+// widened to `pub` for a sibling's convenience. Same reasoning as those two.
+
+/// Hard-wrap a prose paragraph at 76 columns on word boundaries, so a
+/// byte-ratcheted artifact keeps a single-word edit to a single-line diff.
+/// type-audit: bare-ok(prose: text), bare-ok(prose: return)
+fn wrap(text: &str) -> String {
+    let mut out = String::new();
+    let mut col = 0;
+    for word in text.split_whitespace() {
+        let w = word.chars().count();
+        if col > 0 && col + 1 + w > 76 && !word.starts_with('-') {
+            out.push('\n');
+            col = 0;
+        } else if col > 0 {
+            out.push(' ');
+            col += 1;
+        }
+        out.push_str(word);
+        col += w;
+    }
+    out
+}
+
+/// `n` of `total` as a whole percent, rounded half up. Integer arithmetic on
+/// purpose — decision 0033 keeps floats away from serialization boundaries,
+/// and this figure lands in a byte-ratcheted artifact.
+fn percent(n: usize, total: usize) -> usize {
+    if total == 0 {
+        0
+    } else {
+        (n * 200 + total) / (total * 2)
+    }
+}
+
+/// Where a corpus's committed report lives, derived from the corpus's own
+/// identifier so a caller cannot pair the wrong corpus with the wrong
+/// artifact.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn artifact_path(corpus: &Corpus) -> String {
+    format!("docs/audits/technology-coverage-{}.md", corpus.corpus)
+}
+
+/// The command that regenerates a report, for the header. Takes the corpus
+/// **id** the caller actually typed (`asimov-1989`), not a path — this
+/// family's CLI surface resolves a corpus by id (`hornvale technologies
+/// report <id>`), unlike the sibling families' `--corpus <path>`, so the
+/// printed command must match that syntax or a reader copying it would get
+/// "unknown mode" from `--corpus`.
+/// type-audit: bare-ok(identifier-text: corpus_id), bare-ok(identifier-text: return)
+pub fn regenerate_command(corpus_id: &str) -> String {
+    format!("hornvale technologies report {corpus_id}")
+}
+
+/// Coverage-verdict counts across `corpus` — the eight verdicts a completed
+/// scoring assigns, decision 0095's five plus this family's three measured
+/// additions (`grown`/`flat`/`lost`).
+///
+/// **`Unmeasured` is deliberately excluded from this array.** It is a
+/// lifecycle state (reach passed, trajectory not yet scored), never a
+/// coverage judgement (`technologies/CLAUDE.md`'s verdict table), and
+/// [`render`] must not fold it into the same percentage denominator these
+/// eight verdicts share — see [`unmeasured_count`] and [`coverage_total`],
+/// which is why this function returns eight entries, not nine.
+fn coverage_tally(corpus: &Corpus) -> [(Verdict, usize); 8] {
+    let count = |v: Verdict| corpus.items.iter().filter(|i| i.verdict == v).count();
+    [
+        (Verdict::Present, count(Verdict::Present)),
+        (Verdict::Refused, count(Verdict::Refused)),
+        (Verdict::Deferred, count(Verdict::Deferred)),
+        (Verdict::Absent, count(Verdict::Absent)),
+        (Verdict::Inapplicable, count(Verdict::Inapplicable)),
+        (Verdict::Grown, count(Verdict::Grown)),
+        (Verdict::Flat, count(Verdict::Flat)),
+        (Verdict::Lost, count(Verdict::Lost)),
+    ]
+}
+
+/// How many items in `corpus` are `unmeasured` right now.
+fn unmeasured_count(corpus: &Corpus) -> usize {
+    corpus
+        .items
+        .iter()
+        .filter(|i| i.verdict == Verdict::Unmeasured)
+        .count()
+}
+
+/// The denominator [`coverage_tally`]'s percentages are read against: every
+/// item that carries a genuine coverage verdict, excluding the `unmeasured`
+/// lifecycle state. An `unmeasured` item has not yet been judged, so
+/// counting it in this denominator would let a coverage percentage move
+/// simply because a trajectory got scored — the same "count moves for a
+/// reason unrelated to what it claims to measure" defect a null needs its
+/// own denominator to avoid.
+fn coverage_total(corpus: &Corpus) -> usize {
+    corpus.items.len() - unmeasured_count(corpus)
+}
+
+/// The two counts that make this family's per-corpus finding sayable
+/// (Task 7's brief): `reach` is how many items Hornvale's mechanism reaches
+/// AT ALL — `present` plus `unmeasured`, since both have passed the reach
+/// half of the pipeline (`technologies/CLAUDE.md`'s verdict table: an
+/// `unmeasured` item's reach is "exactly as checkable as a `present`
+/// verdict's") — and `lost` is how many of those `reach` items this corpus
+/// currently scores `lost`. For `asimov-1989`, `reach` is the individual-
+/// invention column's own answer (typically 0, since that corpus's items
+/// are `absent`/`deferred`); for `henrich-2004-extended`, `reach` is the
+/// number of documented losses Hornvale's history model can represent at
+/// all, and `lost` — always 0 today — is how many of those it can show were
+/// actually given up, which decision 0936's sibling scope note explains:
+/// `tech_for` (`windows/worldgen/src/history_bake.rs`) is monotone in
+/// `year`, so no world can yet exhibit a measured loss.
+/// type-audit: bare-ok(count: return)
+fn reach_and_loss(corpus: &Corpus) -> (usize, usize) {
+    let present = corpus
+        .items
+        .iter()
+        .filter(|i| i.verdict == Verdict::Present)
+        .count();
+    let reach = present + unmeasured_count(corpus);
+    let lost = corpus
+        .items
+        .iter()
+        .filter(|i| i.verdict == Verdict::Lost)
+        .count();
+    (reach, lost)
+}
+
+/// The derived demand set (decision 0386) for every item this corpus has not
+/// yet built — `absent` or `deferred` — as the report's one actionable
+/// output. **Never `refused` or `inapplicable`**: those are decided
+/// non-goals, not open demands, so listing them here would misstate a
+/// deliberate refusal as a backlog entry.
+///
+/// This is the family's answer to `technologies/CLAUDE.md`'s "the corpus is
+/// an instrument, never a roadmap" and the Repertoire's Critical finding
+/// Task 7's brief cites: printing the demand SET (what an item requires,
+/// derived by closure) rather than a table titled with a work-queue word is
+/// what keeps a measurement from reading as a plan.
+fn open_demands(corpus: &Corpus) -> Vec<(&Item, BTreeSet<String>)> {
+    corpus
+        .items
+        .iter()
+        .filter(|i| matches!(i.verdict, Verdict::Absent | Verdict::Deferred))
+        .map(|i| (i, derived_demands(corpus, &i.id)))
+        .collect()
+}
+
+/// Render the coverage report.
+///
+/// Order follows decision 0095 (provenance, the declared bias and the
+/// selection rule before any tally) with this family's own additions ahead
+/// of the tally, exactly where `technologies/CLAUDE.md` and Task 7's brief
+/// place them: the `present`/`unmeasured` weak-anchor caveat (0136's
+/// consequence clause) prints above the numbers it qualifies, never in a
+/// footnote below them.
+///
+/// `corpus_id` is the id the caller actually resolved (`asimov-1989`), so
+/// the regenerate command in the banner names a real invocation rather than
+/// a stem derived from `corpus.corpus` that might disagree with it.
+/// type-audit: bare-ok(identifier-text: corpus_id), bare-ok(prose: return)
+pub fn render(corpus: &Corpus, corpus_id: &str) -> String {
+    let mut s = String::new();
+    s.push_str(&format!(
+        "<!-- GENERATED FILE — do not edit. Regenerate with `{}`. -->\n\n",
+        regenerate_command(corpus_id)
+    ));
+    s.push_str("# Technology coverage\n\n## Provenance\n\n");
+    s.push_str(&format!("- **Corpus:** `{}`\n", corpus.corpus));
+    s.push_str(&format!("- **Source:** {}\n", wrap(&corpus.provenance)));
+    s.push_str(&format!("- **Frozen:** {}\n", wrap(&corpus.frozen)));
+
+    s.push_str("\n## Reading this report\n\n");
+    s.push_str(&wrap(
+        "This measures whether a PEOPLE acquires, holds, and loses one imported \
+         technology-capability catalogue, resolved against the per-people trajectory a \
+         census would report — an instrument with known bias (decision 0095), never a \
+         standard and never a verdict on the world. `present` and `unmeasured` are both \
+         only WEAKLY checked: a mechanism anchor that resolves (a real `test:`/`path:`) is \
+         not proof the capability is met, only that something at that location exists. \
+         `unmeasured` additionally means the trajectory itself has not been scored at all — \
+         reach passed, nothing about growth, flatness or loss has been measured yet — so an \
+         `unmeasured` count is not a weaker `present`, it is a different kind of claim. Both \
+         are printed here, above the tally they most affect, per 0136's consequence clause: \
+         a reader must pass this sentence before reaching a score.",
+    ));
+    s.push_str("\n\n");
+
+    let counts = coverage_tally(corpus);
+    let total = coverage_total(corpus);
+    s.push_str("## Tally\n\n");
+    s.push_str(&wrap(&format!(
+        "The eight coverage verdicts below are percentages of {total} — every item MINUS \
+         the ones still `unmeasured` (see the next section). An `unmeasured` item has not \
+         been judged, so counting it here would move a coverage percentage for a reason \
+         unrelated to what that percentage claims to measure.",
+    )));
+    s.push_str("\n\n");
+    for (v, n) in counts {
+        s.push_str(&format!(
+            "- {}: {n} ({}%)\n",
+            verdict_name(v),
+            percent(n, total)
+        ));
+    }
+    s.push_str(&format!("- **coverage total:** {total}\n"));
+
+    let unmeasured = unmeasured_count(corpus);
+    let (reach, lost) = reach_and_loss(corpus);
+    let present = reach - unmeasured;
+    s.push_str("\n## Unmeasured\n\n");
+    if unmeasured == 0 {
+        s.push_str("None — every item carries a coverage verdict.\n\n");
+    } else {
+        s.push_str(&wrap(&format!(
+            "{unmeasured} item(s), reported separately from the tally above and never folded \
+             into a percentage. Each has PASSED reach — Hornvale's mechanism for the \
+             capability exists and is cited by a `test:`/`path:` anchor exactly as a \
+             `present` verdict's would be — but its TRAJECTORY (does a people grow it, hold \
+             it flat, or lose it) is not yet scored. The reason is structural, not a \
+             backlog item: `tech_for` (`windows/worldgen/src/history_bake.rs`) is documented \
+             monotone in `year`, so no world this campaign can build yet exhibits a measured \
+             loss, and the family's live measurement wiring (comparing an authored \
+             trajectory against a fresh `meets()` computation over the census, mirroring \
+             `regularities::two_way`) is a successor campaign's work.",
+        )));
+        s.push_str("\n\n");
+        s.push_str("| id | title | anchor |\n|---|---|---|\n");
+        for item in corpus
+            .items
+            .iter()
+            .filter(|i| i.verdict == Verdict::Unmeasured)
+        {
+            s.push_str(&format!(
+                "| {} | {} | {} |\n",
+                item.id,
+                item.title.replace('|', "\\|"),
+                item.anchor.replace('|', "\\|")
+            ));
+        }
+        s.push('\n');
+    }
+    // The two-count finding this family's report exists to make sayable
+    // (Task 7's brief): a single tally cannot say "Hornvale can represent K
+    // of these at all, and of those K it can show none was ever lost" — that
+    // needs both `reach` and `lost` read together. Printed unconditionally,
+    // not only when `unmeasured > 0`: a corpus that reaches items through
+    // `present` rather than `unmeasured` makes the identical claim, and a
+    // `reach` of 0 (true of `asimov-1989` today) is itself part of the
+    // finding, not a case to suppress.
+    s.push_str(&wrap(&format!(
+        "THE FINDING THIS CORPUS MAKES SAYABLE: of the {} item(s) here, Hornvale's mechanism \
+         reaches {reach} of them at all ({present} `present`, {unmeasured} `unmeasured`) — \
+         and of those {reach}, it can currently represent the LOSS of exactly {lost}. A \
+         single tally has no way to say this; it takes both counts together.",
+        corpus.items.len(),
+    )));
+    s.push('\n');
+
+    // The actionable output (Task 7's brief, `technologies/CLAUDE.md`'s "the
+    // corpus is an instrument, never a roadmap"): the derived demand set for
+    // every `absent`/`deferred` item, never headed with a work-queue word.
+    let open = open_demands(corpus);
+    s.push_str("\n## Demand set\n\n");
+    s.push_str(&wrap(
+        "Not a backlog: this is what each item's own `presupposes` closure (decision 0386) \
+         names, derived on read and never authored by hand. An item's demand set always \
+         includes its own `introduces` token, so a root's set has one entry and a deep \
+         item's may have several. `refused` and `inapplicable` items are excluded — those \
+         are decided non-goals, not open demands.",
+    ));
+    s.push_str("\n\n");
+    if open.is_empty() {
+        s.push_str("None — no item scores `absent` or `deferred`.\n");
+    } else {
+        s.push_str("| id | title | verdict | demand set |\n|---|---|---|---|\n");
+        for (item, demands) in &open {
+            let joined = demands
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", ")
+                .replace('|', "\\|");
+            s.push_str(&format!(
+                "| {} | {} | {} | {} |\n",
+                item.id,
+                item.title.replace('|', "\\|"),
+                verdict_name(item.verdict),
+                joined
+            ));
+        }
+    }
+
+    s.push_str(
+        "\n## Items\n\n| id | title | verdict | anchor | contested | disclosure | note |\n\
+         |---|---|---|---|---|---|---|\n",
+    );
+    for item in &corpus.items {
+        s.push_str(&format!(
+            "| {} | {} | {} | {} | {} | {} | {} |\n",
+            item.id,
+            item.title.replace('|', "\\|"),
+            verdict_name(item.verdict),
+            item.anchor.replace('|', "\\|"),
+            match item.contested {
+                Some(true) => "yes",
+                Some(false) | None => "",
+            },
+            item.disclosure.as_deref().unwrap_or("").replace('|', "\\|"),
+            item.note.as_deref().unwrap_or("").replace('|', "\\|")
+        ));
+    }
+    s
 }

@@ -3,7 +3,7 @@
 
 use hornvale::{
     attest, audio, concepts, dictionary, flag_value, observations, phonology, proto, regularities,
-    repl, streams, systems, tropes,
+    repl, streams, systems, technologies, tropes,
 };
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{EntityId, Facet, FacetId, Seed, World, WorldTime, math};
@@ -136,6 +136,13 @@ usage:
                           `unmeasured` item — a read that asserts nothing and writes
                           nothing; default corpus:
                           regularities/sugarscape-1996.regularity.json)
+  hornvale technologies [report|check] [<corpus-id>]
+                          score a frozen technology-capability corpus against Hornvale's
+                          per-people trajectory — does a PEOPLE acquire, hold, and lose this
+                          capability? (report: render to stdout; check: run the audit and
+                          diff against the artifact committed for that corpus's id;
+                          <corpus-id> is a short id, not a path — asimov-1989 or
+                          henrich-2004-extended; default: asimov-1989)
   hornvale observations validate --manifest <PATH>
                           validate one internal observation episode manifest
   hornvale observations export --manifest <PATH> --out <DIR>
@@ -223,6 +230,7 @@ fn main() -> ExitCode {
         Some("tropes") => cmd_tropes(&args),
         Some("systems") => cmd_systems(&args),
         Some("regularities") => cmd_regularities(&args),
+        Some("technologies") => cmd_technologies(&args),
         Some("observations") => cmd_observations(&args),
         Some("streams") => cmd_streams(),
         Some("underworld") => cmd_underworld(&args),
@@ -1573,6 +1581,104 @@ fn load_census(
 ) -> Result<hornvale_lab::domesday::census::Census, String> {
     let dir = std::path::Path::new(hornvale_lab::CENSUS_GOLDENS_DIR).join(&corpus.population);
     hornvale_lab::domesday::census::load(&dir)
+}
+
+/// The Kiln: score a frozen `technologies/` corpus — does a PEOPLE acquire,
+/// hold, and lose this capability? (`technologies/CLAUDE.md`).
+///
+/// **Selected by a short id, not `--corpus <path>`.** The sibling families
+/// (`cmd_systems`, `cmd_regularities`) take a corpus by file path with a
+/// flag, because their `CORPORA` is a path list a caller might reasonably
+/// override with an arbitrary fixture. This family's two corpora are named
+/// things a caller types (`hornvale technologies report asimov-1989`), and
+/// `technologies::corpus_path` is the id-to-path lookup; there is no
+/// `--corpus` flag to scan past, so the mode/id parse is a plain positional
+/// read rather than the flag-aware scan `cmd_systems` needs.
+///
+/// **`technologies::parse` panics on malformed JSON rather than returning a
+/// `Result`** (see its own doc comment) — deliberately unlike
+/// `systems::load`/`regularities::load`. This command does not wrap that
+/// call in anything that would turn a panic into a clean error message; that
+/// is the family's own fail-loudly design, not an oversight here.
+fn cmd_technologies(args: &[String]) -> Result<(), String> {
+    let mode = args.get(1).map(String::as_str);
+    let corpus_id = args
+        .get(2)
+        .map(String::as_str)
+        .unwrap_or(technologies::CORPORA[0]);
+    let path = technologies::corpus_path(corpus_id).ok_or_else(|| {
+        format!(
+            "technologies: unknown corpus '{corpus_id}' (expected one of: {})",
+            technologies::CORPORA.join(", ")
+        )
+    })?;
+    let json = std::fs::read_to_string(&path).map_err(|e| format!("{path}: {e}"))?;
+    let corpus = technologies::parse(&json);
+    match mode {
+        Some("report") | None => {
+            // Prints to stdout. The committed artifact is written by the `>`
+            // redirect in `scripts/regenerate-artifacts.sh`, never by this
+            // command — running it bare regenerates nothing, and the drift
+            // check that follows then reports an empty diff that reads as
+            // "no drift" when nothing was rebuilt.
+            print!("{}", technologies::render(&corpus, corpus_id));
+            Ok(())
+        }
+        Some("check") => {
+            let root = std::path::Path::new(".");
+            // `audit_family`, not `audit` alone: the latter skips the
+            // cross-corpus ruling-completeness rule (`technologies/
+            // CLAUDE.md`'s "a row cited by ONE corpus must be ruled on by
+            // EVERY corpus"). A gate that called only `audit` would
+            // silently never enforce family law — exactly the shape
+            // `audit_family`'s own doc comment exists to foreclose.
+            let findings = technologies::audit_family(&corpus, root);
+            if !findings.is_empty() {
+                let listed: Vec<String> = findings
+                    .iter()
+                    .map(|f| match f {
+                        technologies::Finding::Unjustified { why, .. } => why.clone(),
+                        technologies::Finding::Dangling { why, .. } => why.clone(),
+                        technologies::Finding::StaleDeferred { why, .. } => why.clone(),
+                        technologies::Finding::Regressed { why, .. } => why.clone(),
+                        technologies::Finding::Novelty {
+                            corpus: c,
+                            baseline,
+                            found,
+                        } => format!(
+                            "{c}: the `absent` count rose from {baseline} to {found}. \
+                             Something that used to carry a verdict lost it — that is a \
+                             finding, not a formality, and `make rebaseline` must not paper \
+                             over it without saying why."
+                        ),
+                    })
+                    .collect();
+                return Err(format!(
+                    "technology coverage audit found {} finding(s) for `{}`:\n\n{}",
+                    findings.len(),
+                    corpus.corpus,
+                    listed.join("\n\n")
+                ));
+            }
+
+            let artifact = technologies::artifact_path(&corpus);
+            let committed =
+                std::fs::read_to_string(&artifact).map_err(|e| format!("{artifact}: {e}"))?;
+            let live = technologies::render(&corpus, corpus_id);
+            if live == committed {
+                Ok(())
+            } else {
+                Err(format!(
+                    "technology coverage drifted for `{}`; run `make rebaseline` and review \
+                     the diff",
+                    corpus.corpus
+                ))
+            }
+        }
+        Some(other) => Err(format!(
+            "technologies: unknown mode '{other}' (report|check)"
+        )),
+    }
 }
 
 /// The matrix over every corpus in `systems::CORPORA`.
