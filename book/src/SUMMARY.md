@@ -501,6 +501,7 @@
 - [The Observation Series](./chronicle/the-observation-series.md)
 - [The Vent](./chronicle/the-vent.md)
 - [The Planetarium](./chronicle/the-planetarium.md)
+- [The Orrery](./chronicle/the-orrery.md)
 - [The Living Vent](./chronicle/the-living-vent.md)
 - [Eclipse Rhythm and View](./chronicle/eclipse-rhythm-view.md)
 - [The Kiln](./chronicle/the-kiln.md)
