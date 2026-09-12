@@ -5,7 +5,7 @@ use std::fmt::{self, Write as _};
 use hornvale_kernel::{Facet, NearestVertexIndex, Seed, Vertex, World};
 use hornvale_terrain::{
     FacetAddress, FacetFieldSample, RealizedCurve, TerrainFacetInputs, WaterKind,
-    realize_channel_curves,
+    canonical_corner_sample, canonical_edge_sample, realize_channel_curves,
 };
 
 use crate::{GeneratedClimate, climate_from, sky_of, terrain_of};
@@ -30,7 +30,8 @@ pub struct SurfacePatch {
     pub revision: SurfaceRevision,
     /// Canonical Level-6 macro facet and any refinement below it.
     pub address: FacetAddress,
-    /// Continuous terrain and material samples in vertex order.
+    /// Corners 0..4, center 4, then the four dyadic edge splits 5..9.
+    /// The splits form a derived border ring used by mixed-LOD topology.
     pub samples: Vec<FacetFieldSample>,
     /// Stable inherited terrain curves clipped to this patch.
     pub curves: Vec<RealizedCurve>,
@@ -115,9 +116,9 @@ impl SurfaceConfiguration {
     const fn current() -> Self {
         Self {
             record_schema: "hornvale/surface-configuration/v2",
-            algorithm_version: "hornvale/surface-realization/v1",
+            algorithm_version: "hornvale/surface-realization/v2",
             globe_level: hornvale_terrain::GLOBE_LEVEL,
-            sample_topology: "quad-corners-then-centroid/fan-v1",
+            sample_topology: "quad-corners-center-dyadic-ring/world-space-fan-v2",
             material_channels: "bedrock,soil,sediment,wetland,fresh-water,salt-water,snow-ice,vegetation/v1",
             flow_half_saturation: 24.0,
             slope_half_saturation_m_per_rad: 80_000.0,
@@ -221,15 +222,10 @@ impl SurfaceRealizationContext {
             },
         )?;
 
-        let resolved = resolved_facet(address);
-        let mut positions = resolved.corners().to_vec();
-        positions.push(resolved.centroid());
-        let sample_weights = patch_sample_weights(address)?;
-        let macro_vertices = self.macro_vertices(address);
-        let mut samples = Vec::with_capacity(positions.len());
-        for (position, weights) in positions.into_iter().zip(sample_weights) {
-            samples.push(self.compose_sample(position, macro_vertices, weights)?);
-        }
+        let samples = patch_positions(address)
+            .into_iter()
+            .map(|position| self.sample_at(position))
+            .collect::<Result<Vec<_>, _>>()?;
 
         let curves = realize_channel_curves(
             TerrainFacetInputs {
@@ -249,18 +245,32 @@ impl SurfaceRealizationContext {
         })
     }
 
-    fn macro_vertices(&self, address: &FacetAddress) -> [Vertex; 4] {
-        address.macro_face.corners().map(|position| {
+    /// Choose interpolation inputs from the position alone, including at a
+    /// seam or corner. Neither the requesting patch nor its LOD enters this
+    /// calculation. The cube inverse includes the same warp as the forward
+    /// projection; chord midpoints must not be treated as dyadic midpoints.
+    fn sample_at(&self, position: [f64; 3]) -> Result<FacetFieldSample, SurfaceBuildError> {
+        let macro_face = Facet::containing(position, self.configuration.globe_level);
+        let lattice = macro_face.face_lattice();
+        let (_, a, b) = hornvale_kernel::locate(position);
+        let u = ((a + 1.0) * lattice.scale as f64 / 2.0 - lattice.x as f64).clamp(0.0, 1.0);
+        let v = ((b + 1.0) * lattice.scale as f64 / 2.0 - lattice.y as f64).clamp(0.0, 1.0);
+        let vertices = macro_face.corners().map(|position| {
             self.nearest
                 .nearest_to_position(self.terrain.geosphere(), position)
-        })
+        });
+        self.compose_sample(
+            position,
+            vertices,
+            [(1.0 - u) * (1.0 - v), u * (1.0 - v), u * v, (1.0 - u) * v],
+        )
     }
 
     fn compose_sample(
         &self,
         position: [f64; 3],
         vertices: [Vertex; 4],
-        weights: [u64; 4],
+        weights: [f64; 4],
     ) -> Result<FacetFieldSample, SurfaceBuildError> {
         let height_m = blend(vertices, weights, |vertex| {
             self.terrain.elevation_at(vertex).get()
@@ -373,6 +383,219 @@ impl SurfaceRealizationContext {
         validate_sample(&sample)?;
         Ok(sample)
     }
+}
+
+/// Replace the coarse fan at a one-level-finer neighbor with a split fan.
+///
+/// Returned indices address `coarse.samples` only and REPLACE its triangle
+/// list. Fine triangles remain unchanged. Either fine half returns the same
+/// replacement; installing it before stitching another edge preserves earlier
+/// splits. The border split is a child corner, not a chord midpoint. Curves,
+/// feature IDs and sample values are never edited.
+/// type-audit: bare-ok(index: return)
+pub fn stitch_transition(
+    coarse: &SurfacePatch,
+    fine: &SurfacePatch,
+) -> Result<Vec<[u32; 3]>, SurfaceBuildError> {
+    if coarse.revision != fine.revision {
+        return Err(SurfaceBuildError::RevisionMismatch(
+            "transition patches name different surfaces".into(),
+        ));
+    }
+    validate_patch(coarse)?;
+    validate_patch(fine)?;
+    let coarse_facet = resolved_facet(&coarse.address);
+    let mut fine_parent = resolved_facet(&fine.address);
+    if fine_parent.depth() != coarse_facet.depth() + 1 {
+        return Err(SurfaceBuildError::InvalidAddress(
+            "transition requires fine depth = coarse depth + 1".into(),
+        ));
+    }
+    fine_parent.path.pop();
+    if !coarse_facet.neighbors().contains(&fine_parent) {
+        return Err(SurfaceBuildError::InvalidAddress(
+            "fine patch is not in an adjacent facet".into(),
+        ));
+    }
+    let edge = (0..4)
+        .find(|&edge| {
+            let midpoint = coarse.samples[5 + edge].position;
+            let ends = [
+                coarse.samples[edge].position,
+                coarse.samples[(edge + 1) % 4].position,
+            ];
+            (0..4).any(|i| {
+                let fine_ends = [fine.samples[i].position, fine.samples[(i + 1) % 4].position];
+                fine_ends.contains(&midpoint) && ends.iter().any(|p| fine_ends.contains(p))
+            })
+        })
+        .ok_or_else(|| {
+            SurfaceBuildError::InvalidAddress("patches do not share a half edge".into())
+        })?;
+    let start = edge as u32;
+    let end = ((edge + 1) % 4) as u32;
+    let midpoint = (5 + edge) as u32;
+    let replacements = [[start, midpoint, 4], [midpoint, end, 4]];
+    let mut triangles = coarse.triangles.clone();
+    if let Some(index) = triangles.iter().position(|t| *t == [start, end, 4]) {
+        triangles.splice(index..=index, replacements);
+    } else if !replacements.iter().all(|t| triangles.contains(t)) {
+        return Err(SurfaceBuildError::InvalidAddress(
+            "coarse edge is not a surface fan".into(),
+        ));
+    }
+    Ok(triangles)
+}
+
+/// Restrict four immediate children to their parent's canonical sample sites.
+///
+/// Child samples coinciding at a parent site are averaged in address order,
+/// including all material and directional fields. Parent topology and semantic
+/// curves are retained because clipping is a sampling operation, not a new
+/// feature. For realized children this preserves unit vectors to 1e-12,
+/// metre-valued fields to 1e-7 m, and f32 weights to 1e-6.
+///
+/// # Panics
+/// Requires four distinct immediate children from the parent's revision, with
+/// valid complete sample rings. A partial/stale set cannot define restriction.
+pub fn aggregate_children(parent: &SurfacePatch, children: &[SurfacePatch]) -> SurfacePatch {
+    validate_patch(parent).expect("valid parent surface patch");
+    let mut ordered: Vec<_> = children.iter().collect();
+    ordered.sort_by(|a, b| a.address.cmp(&b.address));
+    assert!(
+        ordered.len() == 4
+            && ordered.iter().enumerate().all(|(digit, child)| {
+                child.address.macro_face == parent.address.macro_face
+                    && child.address.child_path.len() == parent.address.child_path.len() + 1
+                    && child
+                        .address
+                        .child_path
+                        .starts_with(&parent.address.child_path)
+                    && child.address.child_path.last() == Some(&(digit as u8))
+            }),
+        "aggregation requires four distinct immediate children"
+    );
+    for child in &ordered {
+        assert_eq!(
+            child.revision, parent.revision,
+            "aggregation requires one surface revision"
+        );
+        validate_patch(child).expect("valid child surface patch");
+    }
+    let mut aggregate = parent.clone();
+    for sample in &mut aggregate.samples {
+        let matches: Vec<_> = ordered
+            .iter()
+            .flat_map(|p| &p.samples)
+            .filter(|s| s.position == sample.position)
+            .collect();
+        assert!(
+            !matches.is_empty(),
+            "children must cover every parent sample"
+        );
+        *sample = average_samples(&matches, sample.position);
+    }
+    aggregate
+}
+
+fn average_samples(samples: &[&FacetFieldSample], position: [f64; 3]) -> FacetFieldSample {
+    let mean = |field: fn(&FacetFieldSample) -> f64| {
+        samples.iter().map(|s| field(s)).sum::<f64>() / samples.len() as f64
+    };
+    let vector = |field: fn(&FacetFieldSample) -> [f64; 3]| {
+        std::array::from_fn(|axis| {
+            samples.iter().map(|s| field(s)[axis]).sum::<f64>() / samples.len() as f64
+        })
+    };
+    FacetFieldSample {
+        position,
+        height_m: mean(|s| s.height_m),
+        normal: vector(|s| s.normal),
+        material_weights: std::array::from_fn(|i| {
+            (samples
+                .iter()
+                .map(|s| f64::from(s.material_weights[i]))
+                .sum::<f64>()
+                / samples.len() as f64) as f32
+        }),
+        shoreline_distance_m: mean(|s| s.shoreline_distance_m),
+        water_depth_m: mean(|s| s.water_depth_m),
+        flow_direction: vector(|s| s.flow_direction),
+        flow_strength: mean(|s| s.flow_strength),
+        channel_distance_m: mean(|s| s.channel_distance_m),
+        channel_width_m: mean(|s| s.channel_width_m),
+        floodplain_weight: mean(|s| f64::from(s.floodplain_weight)) as f32,
+        bank_weight: mean(|s| f64::from(s.bank_weight)) as f32,
+        terrace_weight: mean(|s| f64::from(s.terrace_weight)) as f32,
+        delta_weight: mean(|s| f64::from(s.delta_weight)) as f32,
+        ridge_direction: vector(|s| s.ridge_direction),
+        ridge_strength: mean(|s| f64::from(s.ridge_strength)) as f32,
+    }
+}
+
+fn patch_positions(address: &FacetAddress) -> [[f64; 3]; 9] {
+    let resolved = resolved_facet(address);
+    let lattice = resolved.face_lattice();
+    let x = 2 * lattice.x;
+    let y = 2 * lattice.y;
+    let scale = 2 * lattice.scale;
+    let splits = [(x + 1, y), (x + 2, y + 1), (x + 1, y + 2), (x, y + 1)];
+    std::array::from_fn(|i| match i {
+        0..4 => canonical_corner_sample(address, i as u8),
+        4 => resolved.centroid(),
+        _ => {
+            let (u, v) = splits[i - 5];
+            // This also works at the maximum address depth: the derived ring
+            // needs a dyadic coordinate, not an address beyond the depth cap.
+            hornvale_kernel::face_unit(
+                resolved.face as usize,
+                (2 * u - scale) as f64 / scale as f64,
+                (2 * v - scale) as f64 / scale as f64,
+            )
+        }
+    })
+}
+
+fn validate_patch(patch: &SurfacePatch) -> Result<(), SurfaceBuildError> {
+    FacetAddress::new(
+        patch.address.macro_face.clone(),
+        patch.address.child_path.clone(),
+    )
+    .map_err(|error| SurfaceBuildError::InvalidAddress(format!("{error:?}")))?;
+    let positions = patch_positions(&patch.address);
+    if patch.samples.len() != positions.len()
+        || patch
+            .samples
+            .iter()
+            .zip(positions)
+            .any(|(s, p)| s.position != p)
+        || patch
+            .triangles
+            .iter()
+            .flatten()
+            .any(|&i| i as usize >= positions.len())
+    {
+        return Err(SurfaceBuildError::InvalidAddress(
+            "patch lacks its canonical samples or valid triangle indices".into(),
+        ));
+    }
+    for sample in &patch.samples {
+        validate_sample(sample)?;
+    }
+    // Check the corner oracle against the canonical edge endpoint convention.
+    // Interior split coordinates deliberately remain dyadic, not chord t=0.5.
+    for edge in 0..4 {
+        let endpoints = [
+            canonical_edge_sample(&patch.address, edge, 0.0),
+            canonical_edge_sample(&patch.address, edge, 1.0),
+        ];
+        if !endpoints.contains(&patch.samples[edge as usize].position) {
+            return Err(SurfaceBuildError::InvalidAddress(
+                "corner and edge oracles disagree".into(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn surface_revision(world_bytes: &str, configuration: SurfaceConfiguration) -> SurfaceRevision {
@@ -566,49 +789,19 @@ fn resolved_facet(address: &FacetAddress) -> Facet {
     facet
 }
 
-fn patch_sample_weights(address: &FacetAddress) -> Result<[[u64; 4]; 5], SurfaceBuildError> {
-    let relative = Facet {
-        face: 0,
-        path: address.child_path.clone(),
-    }
-    .face_lattice();
-    let x = u64::try_from(relative.x)
-        .map_err(|_| SurfaceBuildError::Numeric("negative child lattice x".to_string()))?;
-    let y = u64::try_from(relative.y)
-        .map_err(|_| SurfaceBuildError::Numeric("negative child lattice y".to_string()))?;
-    let scale = u64::try_from(relative.scale)
-        .map_err(|_| SurfaceBuildError::Numeric("negative child lattice scale".to_string()))?;
-    Ok([
-        bilinear_weights(x, y, scale),
-        bilinear_weights(x + 1, y, scale),
-        bilinear_weights(x + 1, y + 1, scale),
-        bilinear_weights(x, y + 1, scale),
-        bilinear_weights(2 * x + 1, 2 * y + 1, 2 * scale),
-    ])
-}
-
-fn bilinear_weights(u: u64, v: u64, scale: u64) -> [u64; 4] {
-    [
-        (scale - u) * (scale - v),
-        u * (scale - v),
-        u * v,
-        (scale - u) * v,
-    ]
-}
-
-fn blend(vertices: [Vertex; 4], weights: [u64; 4], value: impl Fn(Vertex) -> f64) -> f64 {
-    let denominator = weights.iter().sum::<u64>() as f64;
+fn blend(vertices: [Vertex; 4], weights: [f64; 4], value: impl Fn(Vertex) -> f64) -> f64 {
+    let denominator = weights.iter().sum::<f64>();
     vertices
         .into_iter()
         .zip(weights)
-        .map(|(vertex, weight)| value(vertex) * weight as f64)
+        .map(|(vertex, weight)| value(vertex) * weight)
         .sum::<f64>()
         / denominator
 }
 
 fn blend_vector(
     vertices: [Vertex; 4],
-    weights: [u64; 4],
+    weights: [f64; 4],
     value: impl Fn(Vertex) -> [f64; 3],
 ) -> [f64; 3] {
     std::array::from_fn(|axis| blend(vertices, weights, |vertex| value(vertex)[axis]))
@@ -616,7 +809,7 @@ fn blend_vector(
 
 fn category_fraction(
     vertices: [Vertex; 4],
-    weights: [u64; 4],
+    weights: [f64; 4],
     predicate: impl Fn(Vertex) -> bool,
 ) -> f64 {
     blend(vertices, weights, |vertex| f64::from(predicate(vertex)))

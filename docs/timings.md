@@ -7318,3 +7318,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T23:18:19Z | gate-commit | 42.237 | 74.284 | 20.547 | 2.25 | 0 | d2f81666d | campaign/the-coherence | MacBookPro | 10 |
 | 2026-09-11T23:30:20Z | gate-commit | 37.423 | 50.403 | 6.209 | 1.51 | 0 | 58839bf25 | campaign/the-coherence | MacBookPro | 10 |
 | 2026-09-11T23:32:00Z | gate-commit | 73.760 | 115.198 | 36.722 | 2.06 | 0 | 58839bf25 | campaign/the-coherence | MacBookPro | 10 |
+| 2026-09-12T00:38:12Z | gate-commit | 14.884 | 16.999 | 3.974 | 1.41 | 0 | dc4ee71a1 | campaign/the-coherence | MacBookPro | 10 |
+| 2026-09-12T00:39:07Z | gate-commit | 34.359 | 26.387 | 2.970 | 0.85 | 0 | dc4ee71a1 | campaign/the-coherence | MacBookPro | 10 |
+| 2026-09-12T00:41:45Z | gate-commit | 133.090 | 447.486 | 41.195 | 3.67 | 0 | dc4ee71a1 | campaign/the-coherence | MacBookPro | 10 |
+| 2026-09-12T00:42:58Z | gate-commit | 56.216 | 126.642 | 21.772 | 2.64 | 0 | dc4ee71a1 | campaign/the-coherence | MacBookPro | 10 |
+| 2026-09-12T00:44:56Z | gate-commit | 39.424 | 72.831 | 19.557 | 2.34 | 0 | dc4ee71a1 | campaign/the-coherence | MacBookPro | 10 |
+| 2026-09-12T00:46:31Z | gate-commit | 38.898 | 72.650 | 19.628 | 2.37 | 0 | dc4ee71a1 | campaign/the-coherence | MacBookPro | 10 |

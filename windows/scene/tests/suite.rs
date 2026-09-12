@@ -18,6 +18,8 @@ mod common;
 
 #[path = "suite/astronomy_at.rs"]
 mod astronomy_at;
+#[path = "suite/facet_scene.rs"]
+mod facet_scene;
 #[path = "suite/golden.rs"]
 mod golden;
 #[path = "suite/illumination_hypotheses.rs"]

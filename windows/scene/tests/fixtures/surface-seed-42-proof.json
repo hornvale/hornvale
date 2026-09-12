@@ -1,0 +1,712 @@
+{
+  "cases": {
+    "coast_crossing": {
+      "patch": {
+        "address": {
+          "child_path": [],
+          "face": 4,
+          "macro_path": [
+            1,
+            0,
+            3,
+            1,
+            0,
+            0
+          ]
+        },
+        "feature_references": {
+          "channel_trunks": [
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 20156,
+              "ordinal": 0
+            },
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 20157,
+              "ordinal": 0
+            },
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 20159,
+              "ordinal": 0
+            }
+          ],
+          "coast": {
+            "depth": "water_depth_m",
+            "distance": "shoreline_distance_m",
+            "representation": "sample_field"
+          },
+          "first_rill": {
+            "kind": "channel_reach",
+            "macro_anchor": 20156,
+            "ordinal": 10
+          },
+          "ridge": {
+            "direction": "ridge_direction",
+            "representation": "sample_field",
+            "strength": "ridge_strength"
+          }
+        },
+        "samples": [
+          {
+            "fields": {
+              "bank_weight": 0.0,
+              "channel_distance_m": -34002.602,
+              "channel_width_m": 111.14496,
+              "delta_weight": 0.0,
+              "floodplain_weight": 0.0,
+              "flow_direction": [
+                -0.14345968,
+                -0.96206827,
+                0.232043
+              ],
+              "flow_strength": 0.04,
+              "height_m": -1734.9041,
+              "material_weights": [
+                0.65379089,
+                0.25101829,
+                0.016409032,
+                0.0039621284,
+                0.0,
+                0.0,
+                0.052322291,
+                0.022497339
+              ],
+              "normal": [
+                -0.53585196,
+                0.26400626,
+                0.80197467
+              ],
+              "position": [
+                -0.53572756,
+                0.26487001,
+                0.80177295
+              ],
+              "ridge_direction": [
+                0.83284872,
+                0.0092900403,
+                0.55342271
+              ],
+              "ridge_strength": 0.070937879,
+              "shoreline_distance_m": 95329.728,
+              "terrace_weight": 0.0,
+              "water_depth_m": 0.0
+            },
+            "index": 3
+          },
+          {
+            "fields": {
+              "bank_weight": 0.0,
+              "channel_distance_m": -75988.116,
+              "channel_width_m": 111.19996,
+              "delta_weight": 0.0,
+              "floodplain_weight": 0.0,
+              "flow_direction": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "flow_strength": 0.0,
+              "height_m": -1860.2915,
+              "material_weights": [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.86368412,
+                0.13631585,
+                0.0
+              ],
+              "normal": [
+                -0.53869927,
+                0.2445643,
+                0.80622044
+              ],
+              "position": [
+                -0.53869927,
+                0.2445643,
+                0.80622044
+              ],
+              "ridge_direction": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "ridge_strength": 0.0,
+              "shoreline_distance_m": -22388264.0,
+              "terrace_weight": 0.0,
+              "water_depth_m": 40.0
+            },
+            "index": 0
+          }
+        ]
+      }
+    },
+    "confluence": {
+      "downstream_feature": {
+        "kind": "channel_reach",
+        "macro_anchor": 180,
+        "ordinal": 0
+      },
+      "patch": {
+        "address": {
+          "child_path": [],
+          "face": 4,
+          "macro_path": [
+            1,
+            3,
+            3,
+            2,
+            2,
+            2
+          ]
+        },
+        "feature_references": {
+          "channel_trunks": [
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 180,
+              "ordinal": 0
+            },
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 702,
+              "ordinal": 0
+            },
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 12223,
+              "ordinal": 0
+            },
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 12243,
+              "ordinal": 0
+            }
+          ],
+          "coast": {
+            "depth": "water_depth_m",
+            "distance": "shoreline_distance_m",
+            "representation": "sample_field"
+          },
+          "first_rill": {
+            "kind": "channel_reach",
+            "macro_anchor": 2778,
+            "ordinal": 14425
+          },
+          "ridge": {
+            "direction": "ridge_direction",
+            "representation": "sample_field",
+            "strength": "ridge_strength"
+          }
+        },
+        "samples": [
+          {
+            "fields": {
+              "bank_weight": 0.0,
+              "channel_distance_m": 40829.425,
+              "channel_width_m": 110.94528,
+              "delta_weight": 0.0,
+              "floodplain_weight": 0.0,
+              "flow_direction": [
+                0.79142529,
+                -0.50808251,
+                0.33985023
+              ],
+              "flow_strength": 0.43529412,
+              "height_m": -354.2803,
+              "material_weights": [
+                0.40860468,
+                0.13762018,
+                0.075833626,
+                0.070356198,
+                0.17421238,
+                0.0,
+                0.13337293,
+                0.0
+              ],
+              "normal": [
+                -0.009081629,
+                0.5650474,
+                0.82500846
+              ],
+              "position": [
+                -0.010119223,
+                0.56570284,
+                0.82454708
+              ],
+              "ridge_direction": [
+                0.6112629,
+                0.65608232,
+                -0.44262134
+              ],
+              "ridge_strength": 0.059062883,
+              "shoreline_distance_m": 1118013.9,
+              "terrace_weight": 0.0,
+              "water_depth_m": 0.0
+            },
+            "index": 4
+          }
+        ]
+      },
+      "tributary": {
+        "feature": {
+          "kind": "channel_reach",
+          "macro_anchor": 702,
+          "ordinal": 0
+        },
+        "points": [
+          [
+            -0.020115423,
+            0.57285265,
+            0.8194115
+          ],
+          [
+            -0.020076693,
+            0.57285392,
+            0.81941156
+          ]
+        ],
+        "terminals": [
+          "continuation",
+          "confluence"
+        ],
+        "width_rad": [
+          0.000092007425,
+          0.000092151625
+        ]
+      }
+    },
+    "face_corner": {
+      "neighbor_addresses": [
+        {
+          "child_path": [],
+          "face": 3,
+          "macro_path": [
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ]
+        },
+        {
+          "child_path": [],
+          "face": 5,
+          "macro_path": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "patch": {
+        "address": {
+          "child_path": [],
+          "face": 0,
+          "macro_path": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "feature_references": {
+          "channel_trunks": [
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 8063,
+              "ordinal": 0
+            }
+          ],
+          "coast": {
+            "depth": "water_depth_m",
+            "distance": "shoreline_distance_m",
+            "representation": "sample_field"
+          },
+          "first_rill": {
+            "kind": "channel_reach",
+            "macro_anchor": 8064,
+            "ordinal": 1
+          },
+          "ridge": {
+            "direction": "ridge_direction",
+            "representation": "sample_field",
+            "strength": "ridge_strength"
+          }
+        },
+        "samples": [
+          {
+            "fields": {
+              "bank_weight": 0.0,
+              "channel_distance_m": -85056.117,
+              "channel_width_m": 125.19464,
+              "delta_weight": 0.0,
+              "floodplain_weight": 0.0,
+              "flow_direction": [
+                -0.30901699,
+                -0.80901699,
+                0.5
+              ],
+              "flow_strength": 0.04,
+              "height_m": 1173.8252,
+              "material_weights": [
+                0.6801284,
+                0.15044832,
+                0.0083388044,
+                0.0030432648,
+                0.0,
+                0.0,
+                0.1487319,
+                0.0093092723
+              ],
+              "normal": [
+                0.57692892,
+                -0.57845145,
+                -0.57666884
+              ],
+              "position": [
+                0.57735027,
+                -0.57735027,
+                -0.57735027
+              ],
+              "ridge_direction": [
+                -0.75576131,
+                -0.11026409,
+                -0.64549722
+              ],
+              "ridge_strength": 0.10385761,
+              "shoreline_distance_m": 2198654.3,
+              "terrace_weight": 0.0,
+              "water_depth_m": 0.0
+            },
+            "index": 0
+          }
+        ]
+      }
+    },
+    "terminal_basin": {
+      "patch": {
+        "address": {
+          "child_path": [],
+          "face": 0,
+          "macro_path": [
+            3,
+            1,
+            0,
+            1,
+            0,
+            3
+          ]
+        },
+        "feature_references": {
+          "channel_trunks": [
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 9,
+              "ordinal": 0
+            },
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 4722,
+              "ordinal": 0
+            },
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 9882,
+              "ordinal": 0
+            },
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 39476,
+              "ordinal": 0
+            }
+          ],
+          "coast": {
+            "depth": "water_depth_m",
+            "distance": "shoreline_distance_m",
+            "representation": "sample_field"
+          },
+          "first_rill": {
+            "kind": "channel_reach",
+            "macro_anchor": 4722,
+            "ordinal": 2
+          },
+          "ridge": {
+            "direction": "ridge_direction",
+            "representation": "sample_field",
+            "strength": "ridge_strength"
+          }
+        },
+        "samples": [
+          {
+            "fields": {
+              "bank_weight": 0.0,
+              "channel_distance_m": -7848.178,
+              "channel_width_m": 110.93511,
+              "delta_weight": 0.0,
+              "floodplain_weight": 0.0,
+              "flow_direction": [
+                0.0048258002,
+                0.99832644,
+                -0.057628444
+              ],
+              "flow_strength": 0.085714286,
+              "height_m": 1353.9864,
+              "material_weights": [
+                0.62338799,
+                0.18167731,
+                0.045932323,
+                0.0097290073,
+                0.0,
+                0.0,
+                0.11906698,
+                0.020206396
+              ],
+              "normal": [
+                0.86353518,
+                0.032227791,
+                0.50325775
+              ],
+              "position": [
+                0.86353574,
+                0.031805905,
+                0.50328363
+              ],
+              "ridge_direction": [
+                -0.50428634,
+                0.052194215,
+                0.86195769
+              ],
+              "ridge_strength": 0.033176716,
+              "shoreline_distance_m": 7509685.7,
+              "terrace_weight": 0.0,
+              "water_depth_m": 0.0
+            },
+            "index": 4
+          }
+        ]
+      },
+      "terminal": {
+        "feature": {
+          "kind": "channel_reach",
+          "macro_anchor": 9,
+          "ordinal": 0
+        },
+        "points": [
+          [
+            0.86262387,
+            0.021176227,
+            0.50540244
+          ],
+          [
+            0.8645741,
+            0.032907145,
+            0.50142672
+          ]
+        ],
+        "terminals": [
+          "continuation",
+          "lake"
+        ],
+        "width_rad": [
+          0.000049230643,
+          0.000049230643
+        ]
+      }
+    },
+    "unequal_lod": {
+      "coarse": {
+        "address": {
+          "child_path": [],
+          "face": 0,
+          "macro_path": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "feature_references": {
+          "channel_trunks": [
+            {
+              "kind": "channel_reach",
+              "macro_anchor": 8063,
+              "ordinal": 0
+            }
+          ],
+          "coast": {
+            "depth": "water_depth_m",
+            "distance": "shoreline_distance_m",
+            "representation": "sample_field"
+          },
+          "first_rill": {
+            "kind": "channel_reach",
+            "macro_anchor": 8064,
+            "ordinal": 1
+          },
+          "ridge": {
+            "direction": "ridge_direction",
+            "representation": "sample_field",
+            "strength": "ridge_strength"
+          }
+        },
+        "samples": [
+          {
+            "fields": {
+              "bank_weight": 0.0,
+              "channel_distance_m": -32369.061,
+              "channel_width_m": 125.19464,
+              "delta_weight": 0.0,
+              "floodplain_weight": 0.0,
+              "flow_direction": [
+                -0.31514812,
+                -0.8030397,
+                0.50577554
+              ],
+              "flow_strength": 0.04,
+              "height_m": 1041.6989,
+              "material_weights": [
+                0.7043969,
+                0.14947939,
+                0.0083145946,
+                0.0030003628,
+                0.0,
+                0.0,
+                0.12224265,
+                0.012566077
+              ],
+              "normal": [
+                0.5816059,
+                -0.58306826,
+                -0.5672442
+              ],
+              "position": [
+                0.58201606,
+                -0.58201606,
+                -0.56790371
+              ],
+              "ridge_direction": [
+                -0.75042272,
+                -0.11539631,
+                -0.65080675
+              ],
+              "ridge_strength": 0.10016837,
+              "shoreline_distance_m": 2188424.4,
+              "terrace_weight": 0.0,
+              "water_depth_m": 0.0
+            },
+            "index": 8
+          }
+        ]
+      },
+      "coarse_replacement_triangles": [
+        [
+          0,
+          1,
+          4
+        ],
+        [
+          1,
+          2,
+          4
+        ],
+        [
+          2,
+          3,
+          4
+        ],
+        [
+          3,
+          8,
+          4
+        ],
+        [
+          8,
+          0,
+          4
+        ]
+      ],
+      "fine_addresses": [
+        {
+          "child_path": [
+            2
+          ],
+          "face": 3,
+          "macro_path": [
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ]
+        },
+        {
+          "child_path": [
+            3
+          ],
+          "face": 3,
+          "macro_path": [
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ]
+        }
+      ]
+    }
+  },
+  "revision": {
+    "algorithm_version": "hornvale/surface-realization/v2",
+    "configuration_hash": [
+      58,
+      240,
+      139,
+      245,
+      56,
+      127,
+      214,
+      3,
+      10,
+      15,
+      14,
+      208,
+      4,
+      70,
+      73,
+      255,
+      197,
+      107,
+      54,
+      15,
+      114,
+      187,
+      146,
+      67,
+      81,
+      102,
+      211,
+      160,
+      81,
+      162,
+      66,
+      0
+    ],
+    "source_revision": "ab047c19d3c5f4ac2fd10dd66058abdfc43633fcefc127e1d42b6e3d42d6ccb0"
+  },
+  "schema": "hornvale/surface-proof/v1",
+  "seed": 42
+}
