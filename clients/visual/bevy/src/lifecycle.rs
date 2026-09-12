@@ -10,6 +10,7 @@ use bevy::{
     light::{Atmosphere, atmosphere::ScatteringMedium},
     prelude::*,
 };
+use hornvale_kernel::{Facet, FacetId, locate};
 use std::collections::BTreeMap;
 use std::sync::{Mutex, OnceLock};
 pub const KM_PER_UNIT: f64 = 1000.;
@@ -71,6 +72,7 @@ pub struct SceneCatalog {
     capture: bool,
     surface: CatalogSurfaceState,
     fallback_surface: Option<Entity>,
+    surface_radius_km: Option<f64>,
 }
 /// Application camera/viewport; source geometry always comes from the mirror.
 pub struct SceneTarget {
@@ -100,6 +102,7 @@ struct CatalogSurfaceState {
     pending: BTreeMap<(Binding, u64, u64), SurfacePatchCacheKey>,
     ready: Vec<ReadySurfacePatch>,
     retired: Vec<SurfacePatchCacheKey>,
+    retired_requests: BTreeMap<(Binding, u64, u64), SurfacePatchCacheKey>,
 }
 
 struct ReadySurfacePatch {
@@ -110,14 +113,6 @@ struct ReadySurfacePatch {
 }
 
 const MACRO_PATCH_DEPTH: usize = 6;
-const CUBE_FACES: [[[f64; 3]; 3]; 6] = [
-    [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
-    [[-1., 0., 0.], [0., -1., 0.], [0., 0., 1.]],
-    [[0., 1., 0.], [-1., 0., 0.], [0., 0., 1.]],
-    [[0., -1., 0.], [1., 0., 0.], [0., 0., 1.]],
-    [[0., 0., 1.], [1., 0., 0.], [0., 1., 0.]],
-    [[0., 0., -1.], [-1., 0., 0.], [0., 1., 0.]],
-];
 
 fn cache_key_order(key: &SurfacePatchCacheKey) -> (&str, u32, &[u8]) {
     (&key.revision, key.macro_face, &key.child_path)
@@ -132,7 +127,13 @@ fn packed_macro_face(face: usize, x: u32, y: u32) -> u32 {
     (pathword << 5) | face as u32
 }
 
-/// Select the camera-facing Level-6 macro patch and its bounded face-local ring.
+fn macro_facet(face: usize, x: u32, y: u32) -> Facet {
+    FacetId(u64::from(packed_macro_face(face, x, y)))
+        .unpack()
+        .expect("a Level-6 cube face address is valid")
+}
+
+/// Select the camera-facing Level-6 macro patch and its bounded globe-local ring.
 /// Integer address sorting makes repeated selection independent of reply order.
 pub fn visible_surface_patches(
     camera: &OrbitCamera,
@@ -140,10 +141,23 @@ pub fn visible_surface_patches(
     body_radius_km: f64,
     revision: &SurfacePatchRevision,
 ) -> Result<Vec<SurfacePatchCacheKey>, ViewError> {
+    visible_surface_patches_for_body(camera, body_position_km, None, body_radius_km, revision)
+}
+
+pub fn visible_surface_patches_for_body(
+    camera: &OrbitCamera,
+    body_position_km: [f64; 3],
+    body_to_frame: Option<[[f64; 3]; 3]>,
+    body_radius_km: f64,
+    revision: &SurfacePatchRevision,
+) -> Result<Vec<SurfacePatchCacheKey>, ViewError> {
     documents::validate_surface_patch_revision(revision)?;
     let eye = bevy::math::DVec3::from_array(camera.pose.eye_km);
     let center = bevy::math::DVec3::from_array(body_position_km);
-    let offset = eye - center;
+    let frame_offset = eye - center;
+    let offset = body_to_frame
+        .map(|columns| bevy::math::DMat3::from_cols_array_2d(&columns).transpose() * frame_offset)
+        .unwrap_or(frame_offset);
     if !body_radius_km.is_finite()
         || body_radius_km <= 0.0
         || !offset.is_finite()
@@ -154,42 +168,22 @@ pub fn visible_surface_patches(
         ));
     }
     let direction = offset.normalize().to_array();
-    let dot = |a: [f64; 3], b: [f64; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-    let (face, _) = CUBE_FACES
-        .iter()
-        .enumerate()
-        .map(|(face, [normal, _, _])| (face, dot(direction, *normal)))
-        .max_by(|left, right| left.1.total_cmp(&right.1))
-        .expect("cube has faces");
-    let [normal, u, v] = CUBE_FACES[face];
-    let normal_component = dot(direction, normal);
-    let unwarp = |value: f64| {
-        if value.abs() == 1.0 {
-            value
-        } else {
-            libm::atan(value) / std::f64::consts::FRAC_PI_4
-        }
-    };
+    let (face, a, b) = locate(direction);
     let scale = 1_u32 << MACRO_PATCH_DEPTH;
-    let coordinate = |axis: [f64; 3]| {
-        let parameter = unwarp(dot(direction, axis) / normal_component);
+    let coordinate = |parameter: f64| {
         (((parameter + 1.0) * 0.5 * f64::from(scale)).floor() as i64).clamp(0, i64::from(scale - 1))
     };
-    let (x, y) = (coordinate(u), coordinate(v));
+    let (x, y) = (coordinate(a) as u32, coordinate(b) as u32);
     let revision = revision.cache_token();
-    let mut selected = Vec::with_capacity(9);
-    for dy in -1..=1 {
-        for dx in -1..=1 {
-            let (nx, ny) = (x + dx, y + dy);
-            if (0..i64::from(scale)).contains(&nx) && (0..i64::from(scale)).contains(&ny) {
-                selected.push(SurfacePatchCacheKey {
-                    revision: revision.clone(),
-                    macro_face: packed_macro_face(face, nx as u32, ny as u32),
-                    child_path: Vec::new(),
-                });
-            }
-        }
-    }
+    let center = macro_facet(face, x, y);
+    let mut selected = std::iter::once(center.clone())
+        .chain(center.neighbors())
+        .map(|facet| SurfacePatchCacheKey {
+            revision: revision.clone(),
+            macro_face: facet.pack().expect("a Level-6 neighbor remains packable").0 as u32,
+            child_path: Vec::new(),
+        })
+        .collect::<Vec<_>>();
     selected.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
     Ok(selected)
 }
@@ -377,14 +371,15 @@ impl SceneCatalog {
         }
         desired.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
         desired.dedup();
-        self.surface.pending.retain(|_, key| {
-            if desired.contains(key) {
-                true
+        let pending = std::mem::take(&mut self.surface.pending);
+        for (identity, key) in pending {
+            if desired.contains(&key) {
+                self.surface.pending.insert(identity, key);
             } else {
                 self.surface.retired.push(key.clone());
-                false
+                self.surface.retired_requests.insert(identity, key);
             }
-        });
+        }
         self.surface.desired = desired;
         self.surface
             .retired
@@ -425,11 +420,12 @@ impl SceneCatalog {
             ));
         }
         let identity = (request.binding, request.request_id, request.generation);
-        if self.surface.pending.insert(identity, key).is_some() {
+        if self.surface.pending.contains_key(&identity) {
             return Err(ViewError::Binding(
                 "surface request ID is already scheduled for this binding".into(),
             ));
         }
+        self.surface.pending.insert(identity, key);
         Ok(())
     }
 
@@ -439,31 +435,62 @@ impl SceneCatalog {
         &mut self,
         world: &mut World,
         json: &str,
-    ) -> Result<Entity, ViewError> {
+    ) -> Result<Option<Entity>, ViewError> {
         let reply = documents::surface_reply(json)?;
         let key = reply.patch.cache_key();
         let identity = (reply.binding.clone(), reply.request_id, reply.generation);
-        if self.binding.as_ref() != Some(&reply.binding)
-            || self.generation != reply.generation
-            || self.surface.pending.get(&identity) != Some(&key)
-            || !self.surface.desired.contains(&key)
+        if reply.generation < self.generation {
+            return Ok(None);
+        }
+        if self.surface.retired_requests.get(&identity) == Some(&key) {
+            self.surface.retired_requests.remove(&identity);
+            return Ok(None);
+        }
+        if self.binding.as_ref() != Some(&reply.binding) || self.generation != reply.generation {
+            return Err(ViewError::Binding(
+                "surface reply corrupts the current catalog binding or generation".into(),
+            ));
+        }
+        if self.surface.pending.get(&identity) != Some(&key) || !self.surface.desired.contains(&key)
         {
             return Err(ViewError::Binding(
                 "surface reply belongs to a stale binding, request, generation, or patch".into(),
             ));
         }
         self.surface.pending.remove(&identity);
-        let mesh = world
-            .resource_mut::<Assets<Mesh>>()
-            .add(surface::surface_mesh(&reply.patch, None));
+        let anchor_transform = self
+            .fallback_surface
+            .and_then(|entity| world.get::<Transform>(entity).copied())
+            .unwrap_or(Transform::IDENTITY);
+        let radius_km = self
+            .surface_radius_km
+            .ok_or_else(|| ViewError::Binding("catalog has no anchor surface radius".into()))?;
+        let mut mesh = surface::surface_mesh(&reply.patch, None);
+        let positions = reply
+            .patch
+            .vertices
+            .iter()
+            .map(|vertex| {
+                let direction = Vec3::from_array(vertex.position.map(|value| value as f32));
+                let radius = (radius_km + vertex.height_m / 1000.0) / KM_PER_UNIT;
+                (direction * radius as f32).to_array()
+            })
+            .collect::<Vec<_>>();
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        let mesh = world.resource_mut::<Assets<Mesh>>().add(mesh);
+        let mut surface_material = surface::surface_material(&reply.patch);
+        // The fallback is one monolithic globe, so its covered region cannot be
+        // hidden independently. Keep it for uncovered pixels and give the ready
+        // patch deterministic depth precedence instead of drawing coplanar faces.
+        surface_material.depth_bias = -1.0;
         let material = world
             .resource_mut::<Assets<StandardMaterial>>()
-            .add(surface::surface_material(&reply.patch));
+            .add(surface_material);
         let entity = world
             .spawn((
                 Mesh3d(mesh.clone()),
                 MeshMaterial3d(material.clone()),
-                Transform::IDENTITY,
+                anchor_transform,
                 Visibility::Hidden,
                 SurfacePatchVisual {
                     binding: reply.binding,
@@ -509,11 +536,8 @@ impl SceneCatalog {
             for ready in &self.surface.ready {
                 world.entity_mut(ready.entity).insert(Visibility::Visible);
             }
-            if let Some(fallback) = self.fallback_surface {
-                world.entity_mut(fallback).insert(Visibility::Hidden);
-            }
         }
-        Ok(entity)
+        Ok(Some(entity))
     }
 
     pub fn fallback_surface_visible(&self, world: &World) -> bool {
@@ -678,6 +702,7 @@ impl SceneCatalog {
         self.atmosphere = None;
         self.surface = CatalogSurfaceState::default();
         self.fallback_surface = None;
+        self.surface_radius_km = None;
         self.binding = Some(mirror.initial().binding.clone());
         self.generation = mirror.generation();
         world.insert_resource(CaptureResult::default());
@@ -714,6 +739,7 @@ impl SceneCatalog {
             .find(|b| b.id == "anchor")
             .and_then(|b| b.radius_km)
             .ok_or_else(|| ViewError::Document("missing anchor radius".into()))?;
+        self.surface_radius_km = Some(radius);
         let medium = world
             .resource_mut::<Assets<ScatteringMedium>>()
             .add(ScatteringMedium::earth(256, 256).with_density_multiplier(0.18));

@@ -410,6 +410,92 @@ fn camera_patch_selection_is_bounded_canonical_and_repeatable() {
     );
 }
 
+#[test]
+fn camera_patch_neighbor_ring_crosses_cube_face_seams() {
+    // Catches clipping the 3x3 ring at the selected cube-face boundary.
+    let camera = OrbitCamera::new(CameraPose {
+        eye_km: [30_000.0, 30_000.0, 0.0],
+        target_km: [0.0; 3],
+        up: [0.0, 0.0, 1.0],
+        vertical_fov_radians: 0.7,
+        focus_distance_km: 40_000.0,
+    });
+    let revision = SurfacePatchRevision {
+        source_revision: "a".repeat(40),
+        algorithm_version: "hornvale/surface-realization/v2".into(),
+        configuration_hash_hex: "11".repeat(32),
+    };
+    let selected =
+        lifecycle::visible_surface_patches(&camera, [0.0; 3], 7_000.0, &revision).unwrap();
+    assert_eq!(selected.len(), 9);
+    assert!(
+        selected
+            .iter()
+            .map(|key| key.macro_face & 0x1f)
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            > 1
+    );
+}
+
+#[test]
+fn camera_patch_neighbor_ring_uses_canonical_cube_corner_adjacency() {
+    // Catches clipping both out-of-range coordinates into a four-facet face-local corner.
+    let camera = OrbitCamera::new(CameraPose {
+        eye_km: [30_000.0, 30_000.0, 30_000.0],
+        target_km: [0.0; 3],
+        up: [0.0, 0.0, 1.0],
+        vertical_fov_radians: 0.7,
+        focus_distance_km: 50_000.0,
+    });
+    let revision = SurfacePatchRevision {
+        source_revision: "a".repeat(40),
+        algorithm_version: "hornvale/surface-realization/v2".into(),
+        configuration_hash_hex: "11".repeat(32),
+    };
+    let selected =
+        lifecycle::visible_surface_patches(&camera, [0.0; 3], 7_000.0, &revision).unwrap();
+    let faces = selected
+        .iter()
+        .map(|key| key.macro_face & 0x1f)
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(selected.len(), 8, "a cube corner has seven neighbors");
+    assert_eq!(faces.len(), 3, "three cube faces meet at a corner");
+}
+
+#[test]
+fn camera_selection_transforms_frame_direction_into_rotating_body_local_space() {
+    // Catches selecting frame +Y instead of local +X for a quarter-turned body.
+    let revision = SurfacePatchRevision {
+        source_revision: "a".repeat(40),
+        algorithm_version: "hornvale/surface-realization/v2".into(),
+        configuration_hash_hex: "11".repeat(32),
+    };
+    let local_x_camera = OrbitCamera::new(CameraPose {
+        eye_km: [30_000.0, 0.0, 0.0],
+        target_km: [0.0; 3],
+        up: [0.0, 0.0, 1.0],
+        vertical_fov_radians: 0.7,
+        focus_distance_km: 30_000.0,
+    });
+    let frame_y_camera = OrbitCamera::new(CameraPose {
+        eye_km: [0.0, 30_000.0, 0.0],
+        ..local_x_camera.pose.clone()
+    });
+    let body_to_frame = Some([[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]);
+    let expected =
+        lifecycle::visible_surface_patches(&local_x_camera, [0.0; 3], 7_000.0, &revision).unwrap();
+    let selected = lifecycle::visible_surface_patches_for_body(
+        &frame_y_camera,
+        [0.0; 3],
+        body_to_frame,
+        7_000.0,
+        &revision,
+    )
+    .unwrap();
+    assert_eq!(selected, expected);
+}
+
 fn scene_catalog() -> (World, ObservationMirror, SceneCatalog) {
     let mut world = World::new();
     world.init_resource::<Assets<Mesh>>();
@@ -475,17 +561,31 @@ fn catalog_reply_moves_pending_to_ready_and_owns_bevy_assets() {
             &mut world,
             &catalog_reply(&mirror, 71, &patch_json(&revision)),
         )
+        .unwrap()
         .unwrap();
     let state = catalog.surface_patch_state();
     assert!(state.pending.is_empty());
-    assert_eq!(state.ready, vec![key]);
+    assert_eq!(state.ready, vec![key.clone()]);
     assert!(world.get_entity(entity).is_ok());
     assert_eq!(world.resource::<Assets<Mesh>>().len(), before_meshes + 1);
     assert_eq!(
         world.resource::<Assets<StandardMaterial>>().len(),
         before_materials + 1
     );
-    assert!(!catalog.fallback_surface_visible(&world));
+    assert!(catalog.fallback_surface_visible(&world));
+    assert_eq!(world.get::<Visibility>(entity), Some(&Visibility::Visible));
+    let material = world
+        .get::<MeshMaterial3d<StandardMaterial>>(entity)
+        .unwrap();
+    assert_eq!(
+        world
+            .resource::<Assets<StandardMaterial>>()
+            .get(&material.0)
+            .unwrap()
+            .depth_bias,
+        -1.0,
+        "the ready patch must have distinct raster depth without hiding uncovered fallback"
+    );
 }
 
 #[test]
@@ -514,7 +614,8 @@ fn stale_catalog_reply_is_rejected_before_asset_insertion() {
     assert!(
         catalog
             .apply_surface_reply(&mut world, &stale_reply)
-            .is_err()
+            .unwrap()
+            .is_none()
     );
     assert_eq!(
         before,
@@ -522,5 +623,194 @@ fn stale_catalog_reply_is_rejected_before_asset_insertion() {
             world.resource::<Assets<Mesh>>().len(),
             world.resource::<Assets<StandardMaterial>>().len()
         )
+    );
+}
+
+#[test]
+fn patch_spawn_uses_body_radius_and_preserves_metric_relief() {
+    // Catches publishing the source's unit sphere without physical scene scale.
+    let (mut world, mirror, mut catalog) = scene_catalog();
+    let revision = mirror.initial().binding.source_revision.clone();
+    let mut patch: serde_json::Value = serde_json::from_str(&patch_json(&revision)).unwrap();
+    patch["samples"][0]["height_m"] = serde_json::json!(1000.0);
+    let patch = patch.to_string();
+    let key = documents::surface_patch(&patch).unwrap().cache_key();
+    catalog
+        .set_desired_surface_patches(&mirror, vec![key.clone()])
+        .unwrap();
+    catalog
+        .schedule_surface_patch(key, catalog_request(&mirror, 81))
+        .unwrap();
+    let anchor_transform = Transform::from_translation(Vec3::new(3.0, 4.0, 5.0))
+        .with_rotation(Quat::from_rotation_z(0.4));
+    for mut transform in world
+        .query_filtered::<&mut Transform, With<Mesh3d>>()
+        .iter_mut(&mut world)
+    {
+        *transform = anchor_transform;
+    }
+    let entity = catalog
+        .apply_surface_reply(&mut world, &catalog_reply(&mirror, 81, &patch))
+        .unwrap()
+        .unwrap();
+    assert_eq!(*world.get::<Transform>(entity).unwrap(), anchor_transform);
+    let mesh_handle = world.get::<Mesh3d>(entity).unwrap();
+    let mesh = world
+        .resource::<Assets<Mesh>>()
+        .get(&mesh_handle.0)
+        .unwrap();
+    let Some(VertexAttributeValues::Float32x3(points)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+    else {
+        panic!("positions")
+    };
+    let anchor_radius_km = mirror
+        .current()
+        .unwrap()
+        .astronomy
+        .bodies
+        .iter()
+        .find(|body| body.id == "anchor")
+        .unwrap()
+        .radius_km
+        .unwrap();
+    let expected = ((anchor_radius_km + 1.0) / lifecycle::KM_PER_UNIT) as f32;
+    assert!((Vec3::from(points[0]).length() - expected).abs() < 1e-5);
+}
+
+#[test]
+fn ready_patch_overlays_visible_fallback_and_transition_retires_old_patch() {
+    // Catches hiding the monolithic globe when only one bounded region is ready.
+    let (mut world, mirror, mut catalog) = scene_catalog();
+    let revision = mirror.initial().binding.source_revision.clone();
+    let first = documents::surface_patch(&patch_json(&revision))
+        .unwrap()
+        .cache_key();
+    catalog
+        .set_desired_surface_patches(&mirror, vec![first.clone()])
+        .unwrap();
+    catalog
+        .schedule_surface_patch(first.clone(), catalog_request(&mirror, 82))
+        .unwrap();
+    let first_entity = catalog
+        .apply_surface_reply(
+            &mut world,
+            &catalog_reply(&mirror, 82, &patch_json(&revision)),
+        )
+        .unwrap()
+        .unwrap();
+    assert!(catalog.fallback_surface_visible(&world));
+    assert_eq!(
+        world.get::<Visibility>(first_entity),
+        Some(&Visibility::Visible)
+    );
+
+    let mut second_patch: serde_json::Value = serde_json::from_str(&patch_json(&revision)).unwrap();
+    second_patch["address"]["child_path"] = serde_json::json!([1]);
+    let second_patch = second_patch.to_string();
+    let second = documents::surface_patch(&second_patch).unwrap().cache_key();
+    catalog
+        .set_desired_surface_patches(&mirror, vec![second.clone()])
+        .unwrap();
+    assert_eq!(
+        world.get::<Visibility>(first_entity),
+        Some(&Visibility::Visible),
+        "the old covered region remains patched until its replacement set is complete"
+    );
+    let mut second_request: serde_json::Value =
+        serde_json::from_str(&catalog_request(&mirror, 84)).unwrap();
+    second_request["address"]["child_path"] = serde_json::json!([1]);
+    catalog
+        .schedule_surface_patch(second.clone(), second_request.to_string())
+        .unwrap();
+    let second_entity = catalog
+        .apply_surface_reply(&mut world, &catalog_reply(&mirror, 84, &second_patch))
+        .unwrap()
+        .unwrap();
+    assert!(world.get_entity(first_entity).is_err());
+    assert_eq!(
+        world.get::<Visibility>(second_entity),
+        Some(&Visibility::Visible)
+    );
+    assert!(catalog.fallback_surface_visible(&world));
+}
+
+#[test]
+fn duplicate_schedule_preserves_the_original_pending_key() {
+    // Catches BTreeMap::insert replacing the first request before returning Err.
+    let (_world, mirror, mut catalog) = scene_catalog();
+    let revision = mirror.initial().binding.source_revision.clone();
+    let first = documents::surface_patch(&patch_json(&revision))
+        .unwrap()
+        .cache_key();
+    let mut second = first.clone();
+    second.child_path = vec![1];
+    catalog
+        .set_desired_surface_patches(&mirror, vec![first.clone(), second.clone()])
+        .unwrap();
+    catalog
+        .schedule_surface_patch(first.clone(), catalog_request(&mirror, 83))
+        .unwrap();
+    let mut duplicate: serde_json::Value =
+        serde_json::from_str(&catalog_request(&mirror, 83)).unwrap();
+    duplicate["address"]["child_path"] = serde_json::json!([1]);
+    assert!(
+        catalog
+            .schedule_surface_patch(second, duplicate.to_string())
+            .is_err()
+    );
+    assert_eq!(catalog.surface_patch_state().pending, vec![first]);
+}
+
+#[test]
+fn retired_current_generation_reply_is_an_explicit_noop() {
+    // Catches reporting an expected late reply as current identity corruption.
+    let (mut world, mirror, mut catalog) = scene_catalog();
+    let revision = mirror.initial().binding.source_revision.clone();
+    let first = documents::surface_patch(&patch_json(&revision))
+        .unwrap()
+        .cache_key();
+    let mut second = first.clone();
+    second.child_path = vec![1];
+    catalog
+        .set_desired_surface_patches(&mirror, vec![first.clone()])
+        .unwrap();
+    catalog
+        .schedule_surface_patch(first, catalog_request(&mirror, 85))
+        .unwrap();
+    catalog
+        .set_desired_surface_patches(&mirror, vec![second])
+        .unwrap();
+    assert!(
+        catalog
+            .apply_surface_reply(
+                &mut world,
+                &catalog_reply(&mirror, 85, &patch_json(&revision)),
+            )
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
+fn malformed_current_generation_identity_is_not_swallowed_as_late() {
+    // Catches live treating every Binding error as an expected retired reply.
+    let (mut world, mirror, mut catalog) = scene_catalog();
+    let revision = mirror.initial().binding.source_revision.clone();
+    let key = documents::surface_patch(&patch_json(&revision))
+        .unwrap()
+        .cache_key();
+    catalog
+        .set_desired_surface_patches(&mirror, vec![key.clone()])
+        .unwrap();
+    catalog
+        .schedule_surface_patch(key, catalog_request(&mirror, 86))
+        .unwrap();
+    let mut corrupt: serde_json::Value =
+        serde_json::from_str(&catalog_reply(&mirror, 86, &patch_json(&revision))).unwrap();
+    corrupt["binding"]["source_id"] = serde_json::json!("wrong-current-source");
+    assert!(
+        catalog
+            .apply_surface_reply(&mut world, &corrupt.to_string())
+            .is_err()
     );
 }

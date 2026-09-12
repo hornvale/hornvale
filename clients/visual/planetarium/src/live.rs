@@ -425,11 +425,7 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
                 .and_then(|value| value["schema"].as_str().map(str::to_owned))
                 .is_some_and(|schema| schema == "visual/surface-reply/v1") =>
         {
-            if let Err(error) = l.catalog.apply_surface_reply(world, &reply)
-                && !matches!(error, hornvale_bevy_view::ViewError::Binding(_))
-            {
-                return Err(error.to_string());
-            }
+            finish_surface_reply(l.catalog.apply_surface_reply(world, &reply))?;
             false
         }
         Some(reply) => l
@@ -666,9 +662,10 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
                 .find(|body| body.id == "anchor")
         })
         .ok_or("accepted observation has no anchor body")?;
-    let desired_patches = lifecycle::visible_surface_patches(
+    let desired_patches = lifecycle::visible_surface_patches_for_body(
         &l.orbit,
         anchor.position_km,
+        anchor.body_to_frame,
         anchor.radius_km.ok_or("anchor body has no radius")?,
         &l.surface_revision,
     )
@@ -790,9 +787,30 @@ fn update_inner(world: &mut World, l: &mut Live) -> Result<(), String> {
     Ok(())
 }
 
+fn finish_surface_reply(
+    result: Result<Option<Entity>, hornvale_bevy_view::ViewError>,
+) -> Result<(), String> {
+    result.map(drop).map_err(|error| error.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn late_surface_reply_is_a_live_noop() {
+        // Catches turning the catalog's explicit stale-reply outcome into an error.
+        assert!(finish_surface_reply(Ok(None)).is_ok());
+    }
+
+    #[test]
+    fn current_surface_binding_error_reaches_the_live_update() {
+        // Catches swallowing every Binding error as though it were an expected late reply.
+        let result = finish_surface_reply(Err(hornvale_bevy_view::ViewError::Binding(
+            "current binding mismatch".into(),
+        )));
+        assert_eq!(result.unwrap_err(), "current binding mismatch");
+    }
 
     fn benchmark_app(output: PathBuf, remove_output: bool) -> App {
         let benchmark =
