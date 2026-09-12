@@ -50,6 +50,13 @@ fn body_frame_altitude(
     .to_degrees()
 }
 
+fn antipode(coord: crate::sky_position::EquatorialCoord) -> crate::sky_position::EquatorialCoord {
+    crate::sky_position::EquatorialCoord {
+        ra_deg: (coord.ra_deg + 180.0).rem_euclid(360.0),
+        dec_deg: -coord.dec_deg,
+    }
+}
+
 fn comet_nodes(
     comet: &Comet,
     from: f64,
@@ -58,6 +65,9 @@ fn comet_nodes(
 ) -> Option<Vec<(f64, crate::ephemeris::OrbitalState, [f64; 3])>> {
     let elements = comet.orbital_elements();
     let coplanar = math::sin(comet.inclination_deg.to_radians()).abs() < 1e-10;
+    if coplanar {
+        return None;
+    }
     let z = |t: f64| {
         let state = orbital_state_at(&elements, StdInstant(t))?;
         let position = comet.orient_vector(state.position);
@@ -101,6 +111,49 @@ fn comet_nodes(
         }
         left = right;
         left_z = right_z;
+    }
+    (!nodes.is_empty()).then_some(nodes)
+}
+
+fn coplanar_nodes(
+    system: &StarSystem,
+    comet: &Comet,
+    from: f64,
+    to: f64,
+) -> Option<Vec<(f64, crate::ephemeris::OrbitalState, [f64; 3])>> {
+    let elements = comet.orbital_elements();
+    let residual = |t: f64| {
+        let state = orbital_state_at(&elements, StdInstant(t))?;
+        let position = comet.orient_vector(state.position);
+        let longitude = math::atan2(position[1], position[0]);
+        let anchor = anchor_epoch_for_node(system, longitude, state.radius, f64::INFINITY)?;
+        Some(state.radius - anchor.1.radius)
+    };
+    let mut left = from;
+    let mut left_value = residual(left)?;
+    let mut nodes = Vec::new();
+    for index in 1..=CROSSING_SAMPLES {
+        let right = from + (to - from) * index as f64 / CROSSING_SAMPLES as f64;
+        let right_value = residual(right)?;
+        if left_value == 0.0 || left_value.signum() != right_value.signum() {
+            let mut lo = left;
+            let mut hi = right;
+            for _ in 0..64 {
+                let mid = (lo + hi) / 2.0;
+                let mid_value = residual(mid)?;
+                if left_value == 0.0 || left_value.signum() != mid_value.signum() {
+                    hi = mid;
+                } else {
+                    lo = mid;
+                    left_value = mid_value;
+                }
+            }
+            let state = orbital_state_at(&elements, StdInstant((lo + hi) / 2.0))?;
+            let position = comet.orient_vector(state.position);
+            nodes.push((math::atan2(position[1], position[0]), state, position));
+        }
+        left = right;
+        left_value = right_value;
     }
     (!nodes.is_empty()).then_some(nodes)
 }
@@ -283,12 +336,16 @@ pub fn debris_stream_from_comet(
         return Err(MeteorAbsence::InvalidOrbit);
     }
     let comet_epoch = comet.perihelion_epoch.get();
-    let nodes = comet_nodes(
-        comet,
-        comet_epoch,
-        comet_epoch + comet.period.get(),
-        system.anchor.orbit.get(),
-    )
+    let nodes = if math::sin(comet.inclination_deg.to_radians()).abs() < 1e-10 {
+        coplanar_nodes(system, comet, comet_epoch, comet_epoch + comet.period.get())
+    } else {
+        comet_nodes(
+            comet,
+            comet_epoch,
+            comet_epoch + comet.period.get(),
+            system.anchor.orbit.get(),
+        )
+    }
     .ok_or(MeteorAbsence::NoCrossing)?;
     let (crossing_epoch, anchor_state, comet_state) = nodes
         .into_iter()
@@ -390,12 +447,7 @@ pub fn meteor_shower_at(
             .map(|component| component * component)
             .sum::<f64>()
             .sqrt();
-    let planar_speed = (stream.relative_velocity_au_per_day[0]
-        * stream.relative_velocity_au_per_day[0]
-        + stream.relative_velocity_au_per_day[1] * stream.relative_velocity_au_per_day[1])
-        .sqrt();
-    if !planar_speed.is_finite() || planar_speed <= 0.0 || !duration.is_finite() || duration <= 0.0
-    {
+    if !duration.is_finite() || duration <= 0.0 {
         return Err(MeteorAbsence::InvalidStream);
     }
     let phase = ((instant.get() - stream.epoch.get()).rem_euclid(year)) / year;
@@ -412,7 +464,9 @@ pub fn meteor_shower_at(
     }
     let peak = StdInstant(instant.get() - signed);
     let ecliptic = EclipticCoord {
-        lon_deg: stream.radiant.lon_deg,
+        // Orbital-native longitude and the calendar sightline differ by the
+        // documented half-turn in the shared ephemeris frame.
+        lon_deg: stream.radiant.lon_deg + 180.0,
         lat_deg: stream.radiant.lat_deg,
     };
     let equatorial = equatorial_at(&ecliptic, system.forcing.obliquity_at(instant.get()), 0.0);
@@ -460,7 +514,7 @@ pub fn meteor_shower_at(
     }
     let sun = calendar.solar_equatorial(instant);
     let solar_altitude = calendar.local_day(instant).map_or_else(
-        || body_frame_altitude(system, instant, sun, observer),
+        || body_frame_altitude(system, instant, antipode(sun), observer),
         |(_, fraction)| {
             let hour = (std::f64::consts::TAU
                 * (fraction - 0.5)
@@ -793,8 +847,34 @@ mod tests {
             MeteorVisibility::Absent(MeteorAbsence::Daylight)
         );
         system.anchor.rotation = Rotation::Locked;
-        let locked = meteor_shower_at(&system, &stream, StdInstant(0.0), observer()).unwrap();
-        assert!(locked.altitude.get().is_finite());
+        let locked_day = meteor_shower_at(
+            &system,
+            &stream,
+            StdInstant(0.0),
+            MeteorObservation {
+                longitude: Degrees(0.0),
+                ..observer()
+            },
+        )
+        .unwrap();
+        let locked_night = meteor_shower_at(
+            &system,
+            &stream,
+            StdInstant(0.0),
+            MeteorObservation {
+                longitude: Degrees(180.0),
+                ..observer()
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            locked_day.visibility,
+            MeteorVisibility::Absent(MeteorAbsence::Daylight)
+        );
+        assert_ne!(
+            locked_night.visibility,
+            MeteorVisibility::Absent(MeteorAbsence::Daylight)
+        );
     }
 
     #[test]
@@ -912,10 +992,6 @@ mod tests {
                 ..valid
             },
             DebrisStream {
-                relative_velocity_au_per_day: [0.0, 0.0, 1.0],
-                ..valid
-            },
-            DebrisStream {
                 radiant: SkyRadiant {
                     lon_deg: f64::INFINITY,
                     lat_deg: 0.0,
@@ -928,6 +1004,14 @@ mod tests {
                 Err(MeteorAbsence::InvalidStream)
             );
         }
+        let vertical = DebrisStream {
+            relative_velocity_au_per_day: [0.0, 0.0, 1.0],
+            ..valid
+        };
+        assert_ne!(
+            meteor_shower_at(&system, &vertical, StdInstant(0.0), observer()),
+            Err(MeteorAbsence::InvalidStream)
+        );
         let sparse = debris_stream_from_comet(&system, &comet, Au(0.02), 0.0001).unwrap();
         let result = meteor_shower_at(&system, &sparse, StdInstant(0.0), observer()).unwrap();
         assert_eq!(
