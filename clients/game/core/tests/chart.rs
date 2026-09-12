@@ -93,10 +93,23 @@ fn the_fixture_cells_carry_colour_off_the_wire() {
 /// The reference picture for this fixture, straight from Hornvale's OWN
 /// canonical renderer for `scene/surrounds/v2`
 /// (`windows/scene/src/surrounds_ascii.rs::render_surrounds_ascii`, the
-/// "terrain"/"colour" lens — both draw identical glyphs for this fixture,
-/// since every one of its 31 cells shares the same `water: "river"` and
-/// the only mark sits on the `here` cell, so nothing is tinted) — NOT this
-/// crate's own logic. `hornvale-game-core` may not depend on
+/// "terrain"/"colour" lens — both draw identical glyphs for this fixture
+/// because NOTHING IN IT IS TINTED, which is the only property the identity
+/// actually needs) — NOT this crate's own logic.
+///
+/// **The old reason given here was a stale reading and is corrected rather
+/// than dropped** (The Tidemark, Task 3, fix round 3). It said "every one of
+/// its 31 cells shares the same `water: "river"`". The band is neither that
+/// size nor water: the capture's own disclosure lines report **53 of 81
+/// drawn, 28 occluded** and **0 tinted, 53 withheld**, at a room the same
+/// capture describes as "Tropical seasonal forest — buttressed canopy,
+/// sun-warmed, damp, on a rise". Read those counts off the capture, never
+/// from here — a count restated in prose goes stale every time placement
+/// moves, and this one had.
+///
+/// What makes the two lenses agree is the `0 tinted`, not the cover class
+/// behind it. Stated that way so the next placement change cannot falsify
+/// the sentence again. `hornvale-game-core` may not depend on
 /// `hornvale-scene` (the containment rule: no hornvale crate in this
 /// client's graph), so this is a golden, not a shared function call.
 ///
@@ -107,11 +120,22 @@ fn the_fixture_cells_carry_colour_off_the_wire() {
 /// vacuous — see the module doc's account of a plausible-looking wrong
 /// projection formula that once passed every other test in this file).
 /// `scripts/regenerate-artifacts.sh`'s `gen_chart_reference` now IS that
-/// rule: it types `map` at the flagship possession's opening room and
-/// keeps the five grid lines between the `sight:` caption and the
-/// `ways on:` footer, so a stale reference reddens the artifact drift
-/// check (`docs/generated-paths.txt`) instead of waiting for a human to
-/// notice. `make rebaseline` regenerates it.
+/// rule: it types `map` at the opening room of a
+/// `--target land-settlement` possession and keeps the grid lines between
+/// the `sight:` caption and the `ways on:` footer, so a stale reference
+/// reddens the artifact drift check (`docs/generated-paths.txt`) instead of
+/// waiting for a human to notice. `make rebaseline` regenerates it.
+///
+/// **The TARGET is named here, and the script passes it explicitly, because
+/// this comment said "the flagship" and that stopped being what the capture
+/// used** (The Tidemark, fix round 3). The flagship is `village_info`, the
+/// ledger's first settlement, which the marine peoples moved to an
+/// abyssal-elf hold; the capture takes the first NON-marine settlement. The
+/// two coincided for the life of this comment and no longer do. A fixture
+/// captured at whatever a default happens to resolve is a fixture that moves
+/// when the default moves — which is exactly what happened, invisibly,
+/// because the session fixture beside it is pinned to the same target and
+/// the shapes agreed anyway.
 ///
 /// If this ever needs to change, the first question is whether
 /// `chart::project`'s formula still matches `surrounds_ascii.rs`'s own

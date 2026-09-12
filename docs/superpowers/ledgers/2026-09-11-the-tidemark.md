@@ -831,9 +831,15 @@ successor needs to find it.
 `biosphere`/`habitat_realm`/`locomotion`/`fatigue_rise`/`sleep_grade`/`psyche`/
 `dispersion`/`society`/`perception`/`family_of`/`KIND_CONCEPTS`/
 `biome_affinity`/`pathogen_hosts`; `articulation_registry` and
-`lexicon_registry` in `domains/language`; accession **epoch 23** (one cohort,
-not six — and NOT folded into epoch 10 despite one member being an elf,
-because the rule is about arrival, not descent).
+`lexicon_registry` in `domains/language`; a new accession cohort, appended
+last (one cohort, not six — and NOT folded into the elf family's own cohort
+despite one member being an elf, because the rule is about arrival, not
+descent). Its epoch INDEX is deliberately not stated here or at the cohort:
+`campaign/underworld-peoples` appends one too and both claimed the same
+number, so whichever merges second takes the next. Nothing breaks either way
+— `concept_epoch` reads the position and no index is hardcoded — but a
+comment asserting a number it cannot guarantee would have become false at a
+merge nobody had done yet.
 
 Registry counts moved: biosphere 39 → 45, realm store 5 → 11, `Settled` 15 →
 20, `society_registry` 15 → **21** (merfolk), psyche/perception 18 → 24,

@@ -7273,3 +7273,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-12T01:17:01Z | rebaseline | 224.029 | 582.120 | 29.155 | 2.73 | 0 | 1aed3de3c | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-12T01:51:35Z | gate-commit | 124.856 | 126.806 | 41.264 | 1.35 | 0 | 1aed3de3c | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-12T01:55:03Z | gate-commit | 146.603 | 92.485 | 20.771 | 0.77 | 0 | 1aed3de3c | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:46:53Z | census-tail-chorus | 68.095 | 252.062 | 13.188 | 3.90 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:46:53Z | census-tail-domesday | 0.390 | 0.342 | 0.033 | 0.96 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:46:53Z | census-tail-anomalies | 0.318 | 0.268 | 0.034 | 0.95 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:47:09Z | rebaseline | 221.223 | 580.563 | 28.035 | 2.75 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:48:55Z | gate-commit | 79.797 | 200.343 | 51.697 | 3.16 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:50:01Z | gate-commit | 44.023 | 81.870 | 19.175 | 2.30 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |

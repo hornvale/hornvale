@@ -6982,7 +6982,9 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("snow-elf-kind", "a snow elf"),
     ("wood-elf-kind", "a wood elf"),
     // THE TIDEMARK (Task 3): the six obligate marine peoples. These six ids
-    // are what `domains/language/src/accession.rs`'s epoch-23 cohort lists;
+    // are what `domains/language/src/accession.rs`'s LAST cohort lists (its
+    // epoch index is that cohort's position in the array and is deliberately
+    // not restated here — see the comment there for why);
     // `cli/tests/accession.rs` checks the two agree in BOTH directions, and
     // commit `ee4e6a00` records that omitting the cohort also changes which
     // proto-root each concept draws. Glosses are authored, not derived from

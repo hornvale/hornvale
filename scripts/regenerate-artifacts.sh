@@ -407,10 +407,19 @@ gen_possession_carry() {
 # golden reads a committed artifact instead of the hand-pasted raw-string
 # literal it replaces — a replica of the sim's answer that only a doc comment
 # kept anyone re-deriving correctly. This reproduces exactly what that doc
-# comment already told a human to do by hand: type `map` at the flagship
-# possession's opening room and keep the five grid lines between the `sight:`
-# caption and the `ways on:` footer — the same "terrain"/"colour" render this
-# module's own comment already established as identical for this fixture.
+# comment already told a human to do by hand: type `map` at the opening room
+# of a `--target land-settlement` possession and keep the grid lines between
+# the `sight:` caption and the `ways on:` footer — the same "terrain"/"colour"
+# render this module's own comment already established as identical for this
+# fixture.
+#
+# THE TARGET IS PASSED EXPLICITLY, and this comment used to say "the flagship"
+# (The Tidemark, fix round 3). It relied on the no-flag default, which that
+# campaign moved from `Flagship` to `LandSettlement` — so the sentence became
+# false and the capture kept working, because the session fixture beside it
+# is pinned to the same target and the two shapes agreed anyway. A fixture
+# captured at whatever a default resolves to is a fixture that moves when the
+# default moves, silently. Name the target.
 #
 # Captured through a command substitution, which strips the trailing newline
 # `sed` leaves after its last printed line, so the fixture is byte-identical
@@ -425,7 +434,8 @@ gen_chart_reference() {
     local script_tmp shape
     script_tmp="$(mktemp)"
     printf 'map\n' >"$script_tmp"
-    shape="$(run -p hornvale -- possess --seed 42 --script "$script_tmp" |
+    shape="$(run -p hornvale -- possess --seed 42 --target land-settlement \
+        --script "$script_tmp" |
         sed -n '/^  sight:/,/^  ways on:/p' | sed '1d;$d')"
     printf '%s' "$shape"
     rm -f "$script_tmp"
