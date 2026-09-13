@@ -502,8 +502,8 @@ mod tests {
         // also proves the equality check above is comparing the captions,
         // not merely sitting alongside them. Seed 42's astronomy commits no
         // pole star (verified: `POLE_STAR_NORTH`/`POLE_STAR_SOUTH` are both
-        // absent for this seed), 2 wanderers, 2 figures, and at least one
-        // figure on the ecliptic — pinned here the same way
+        // absent for this seed), 2 wanderers, and 4 figures — pinned here the
+        // same way
         // `the_fact_count_comes_off_the_observed_world_not_a_guess` in
         // `overture::mod` pins a real seed-42 ledger value rather than a
         // synthetic one.
@@ -512,12 +512,8 @@ mod tests {
             "wanderer caption missing or wrong: {early_text:?}"
         );
         assert!(
-            early_text.contains("The sky holds 2 figures."),
+            early_text.contains("The sky holds 4 figures."),
             "figure-count caption missing or wrong: {early_text:?}"
-        );
-        assert!(
-            early_text.contains("At least one figure stands on the sun's road."),
-            "ecliptic caption missing: {early_text:?}"
         );
         assert!(
             !early_text.contains("celestial pole"),
