@@ -201,6 +201,7 @@ windows/worldgen/tests/suite/hollow_readout.rs	1	unmigrated:1
 windows/worldgen/tests/suite/insolation_probe.rs	2	unmigrated:2
 windows/worldgen/tests/suite/keeping_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/kinship_facts.rs	1	unmigrated:1
+windows/worldgen/tests/suite/land_settlement_realm.rs	1	identity:1
 windows/worldgen/tests/suite/lot_probe.rs	1	identity:1
 windows/worldgen/tests/suite/marine_ladder_vents.rs	1	artifacts:1
 # THE TIDEMARK, Task 3: M2/M7/W5/I4. Each needs a LIVE build — M2 reads

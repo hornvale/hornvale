@@ -228,7 +228,7 @@ counts are already the Coverage table above. 44 finding(s).
 ## The contested middle
 
 391 of the 829 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 148 of the 361 files parsed —
+the kind-adjacency markers above, across 149 of the 361 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
 where `FATIGUE_RISE` lived. 391 of them are declared.
 

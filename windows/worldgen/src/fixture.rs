@@ -57,14 +57,15 @@ const FIXTURE: &str = concat!(
     "/../../cli/tests/fixtures/world-seed-42.json"
 );
 
-/// The first settlement in ledger order whose own committed `biome` fact is
-/// not a marine class — [`hornvale_vessel::PossessTarget::LandSettlement`]'s
-/// resolution, and the walk fixtures' subject (The Tidemark, Task 3).
+/// The first settlement in ledger order whose occupying people resolves to
+/// [`hornvale_species::HabitatRealm::Surface`] —
+/// [`hornvale_vessel::PossessTarget::LandSettlement`]'s resolution, and the
+/// walk fixtures' subject (The Tidemark, Task 3).
 ///
 /// **Ledger order, exactly as the flagship's is**, so this is
 /// `hornvale_settlement::village_info` with one filter rather than a second
 /// ranking rule: a caller that asks for land gets the settlement it always
-/// got unless that settlement is in the water.
+/// got unless that settlement's people is not a surface one.
 ///
 /// # Why a caller must ask
 ///
@@ -80,36 +81,58 @@ const FIXTURE: &str = concat!(
 /// walk suite has gone strange, this is the paragraph you were looking for.**
 /// Adding ANY people reorders the ledger; choose the subject you mean.
 ///
+/// # Why the realm, not the biome
+///
+/// An earlier revision filtered on the settlement's own committed `biome`
+/// fact being non-marine (`!hornvale_climate::Biome::is_marine`). That
+/// predicate answers a narrower question than the one this function needs:
+/// `Biome::is_marine` is an explicit match over **surface** marine variants,
+/// and cannot see realm at all — a subterranean settlement commits its
+/// vertex's *surface* biome (a drow or duergar hold under a forest commits
+/// `"temperate forest"`), so it passed the old filter and was handed to a
+/// caller that asked for land. Four subterranean peoples (`kuo-toa`,
+/// `duergar`, `svirfneblin`, `mountain-dwarf`) landed on main in the recent
+/// absorb, making this reachable rather than hypothetical. Filtering on the
+/// occupying people's [`hornvale_species::HabitatRealm`] instead asks the
+/// positive question directly: is this a surface people, full stop — the
+/// same axis `Marine` peoples were added to distinguish, applied to its
+/// `Subterranean` sibling as well.
+///
 /// # Why it lives here
 ///
 /// It needs `hornvale_settlement`'s ledger accessor and
-/// `hornvale_climate::Biome` at once, and a domain may not depend on a
-/// sibling — so the composition root is the only place both are visible. It
-/// is the same constraint that put `axis_geometry`'s reconciliation here.
+/// `hornvale_species`'s habitat-realm registry at once, and a domain may not
+/// depend on a sibling — so the composition root is the only place both are
+/// visible. It is the same constraint that put `axis_geometry`'s
+/// reconciliation here.
 ///
-/// Reads the settlement's OWN committed `biome` fact rather than re-deriving
-/// a biome from terrain, so this and the room a walk then renders cannot
-/// disagree about which medium the subject stands in. A subject chosen by one
+/// Reads the settlement's own committed `peopled-by` fact
+/// (`hornvale_species::species_of`) rather than re-deriving a species from
+/// terrain or placement, so this and the room a walk then renders cannot
+/// disagree about which people occupies the subject. A subject chosen by one
 /// reading and rendered by another is the defect this function exists to
 /// remove, not a smaller version of it.
 ///
 /// `None` when the world holds no settlement, and when EVERY settlement is
-/// marine. Both are the honest answer; falling back to the flagship would
-/// hand a water subject to a caller that asked for land.
+/// non-surface (marine or subterranean). Both are the honest answer; falling
+/// back to the flagship would hand a non-land subject to a caller that asked
+/// for land.
 pub fn land_settlement(world: &World) -> Option<hornvale_settlement::VillageInfo> {
     hornvale_settlement::all_settlements(world)
         .into_iter()
         .find(|v| {
-            let Some(name) = world.ledger.text_of(v.id, hornvale_settlement::BIOME) else {
-                // A settlement with no committed biome is not evidence of
-                // land. Skip it: this function's value is that a `Some`
-                // answer is a settlement KNOWN to be dry.
+            let Some(species) = hornvale_species::species_of(world, v.id) else {
+                // A settlement with no committed `peopled-by` fact is not
+                // evidence of land. Skip it: this function's value is that a
+                // `Some` answer is a settlement KNOWN to house a surface
+                // people.
                 return false;
             };
-            hornvale_climate::Biome::catalog()
-                .iter()
-                .find(|b| b.name() == name)
-                .is_some_and(|b| !b.is_marine())
+            hornvale_species::habitat_realm_registry()
+                .get_by_label(&species)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+                == hornvale_species::HabitatRealm::Surface
         })
 }
 

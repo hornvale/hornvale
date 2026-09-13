@@ -1364,6 +1364,84 @@ count) and the right-censoring question (a hazard model, not Mann–Whitney over
 completed cases).
 
 
+## `land_settlement`'s biome filter could not see realm — execution record
+
+**Found by a board notice, not by review.** `land_settlement`
+(`windows/worldgen/src/fixture.rs`) — the demo-walk subject selector Task 3
+added — filtered on `!Biome::is_marine()` over a settlement's own committed
+`biome` fact. `Biome::is_marine` (`domains/climate/src/biome.rs`) is an
+explicit match over ten **surface** marine variants, and its own doc states
+the consequence directly: the underworld under a vertex is not marine and
+never will be, because it is a stratum beneath the vertex rather than the
+vertex's own biome. So a subterranean settlement commits its vertex's
+*surface* biome (a duergar hold under a forest commits `"temperate forest"`)
+and passed the filter clean — the same defect Task 3 replaced, one level
+down: "first settlement in ledger order" had become "first non-marine-**biome**
+settlement in ledger order", still ledger-order dependent, still a negation of
+the wrong axis. The Underworld Peoples campaign's four subterranean peoples
+(`kuo-toa`, `duergar`, `svirfneblin`, `mountain-dwarf`) landing on `main` in
+the recent absorb made this reachable rather than hypothetical.
+
+**The fix selects on the positive property**, using this campaign's own
+machinery: the settlement's occupying people (`hornvale_species::species_of`,
+reading the committed `peopled-by` fact) resolves through
+`hornvale_species::habitat_realm_registry()` to `HabitatRealm::Surface`
+(absence from the sparse registry defaults to `Surface`). `None` is preserved
+for "no settlement" and "every settlement is non-surface (marine or
+subterranean)" — falling back to the flagship would still hand a caller that
+asked for land something else.
+
+**The test this needed** (`windows/worldgen/tests/suite/land_settlement_realm.rs`)
+stands on a real generated world (seed 17) rather than a synthetic or pinned
+one, and finds its subterranean settlement by searching the committed ledger
+for one whose people resolves to `Subterranean` — never by pinning a vertex.
+Seed 17 was chosen by sweeping seeds 1-59 and checking which ones place a
+`Subterranean` settlement *earlier in ledger order* than every settlement of
+an alphabetically-prior Surface people (ledger order is essentially
+alphabetical by `KindId`, so a `bugbear`/`desert-dwarf`/`desert-elf`
+settlement placed before any `drow`/`duergar` one means the OLD filter would
+never reach the subterranean entry at all — nine of the fifty-nine seeds swept
+share the failing shape: 17, 18, 20, 22, 29, 39, 48, 54, 59).
+
+**Mutation-verified both ways.** The old `!is_marine()` body was temporarily
+restored in place (never via `mv`/`cp -p`, which would have left a stale
+compiled binary judged fresh against restored source — the exact hazard this
+campaign already hit once); `touch`ed to force a rebuild:
+
+```
+thread '...land_settlement_rejects_a_subterranean_occupant_the_old_biome_filter_could_not_see' panicked:
+assertion `left == right` failed: land_settlement returned Doadaodddo (10760661430244474893),
+whose people resolves to Some(Subterranean) rather than Surface ...
+  left: Some(Subterranean)
+ right: Some(Surface)
+test result: FAILED. 0 passed; 1 failed
+```
+
+Restored with `git checkout -- windows/worldgen/src/fixture.rs` (the file had
+uncommitted changes, so this first had to be re-applied from a saved copy
+rather than trusted blind — `git checkout --` reverts to the last COMMITTED
+state, not "whatever was here a minute ago") and `touch`ed again:
+
+```
+EVIDENCE: land_settlement(seed 17) -> id=10760661430244474906 name=Baqa vs the subterranean id=10760661430244474893 name=Doadaodddo
+test land_settlement_realm::land_settlement_rejects_a_subterranean_occupant_the_old_biome_filter_could_not_see ... ok
+```
+
+A different, Surface-realm settlement (`Baqa`) is returned once the fix is
+back in place — a value only the restored source can produce, not merely an
+exit code.
+
+**Confirmed unchanged:** `cargo run -p hornvale -- possess --seed 42 --script
+<empty>` still opens in Doaba, tropical seasonal forest, byte-identical to
+before the fix (Doaba's people is Surface-realm both ways, so the fixed
+selector agrees with the old one at seed 42 specifically — the defect only
+diverges from it on worlds carrying an earlier-alphabet all-non-marine
+subterranean people, which seed 42 does not). `windows/worldgen/tests/suite/
+fixture.rs::the_fixture_equals_a_live_build` still passes, so the fixture
+itself did not move. The three `windows/scene/src/surrounds.rs` inline test
+call sites and `windows/vessel`'s `possess_target.rs`/`the_roll.rs` suites all
+pass unchanged.
+
 ## Follow-ups
 
 - **The aerial realm is the empty fourth sibling.** `MAP-11`'s medium axis is
