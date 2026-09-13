@@ -7514,3 +7514,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-13T13:33:15Z | census-tail-anomalies | 1.335 | 1.188 | 0.147 | 1.00 | 0 | 1172e1069 |  | lefford | 40 |
 | 2026-09-13T13:33:46Z | census | 1579.024 | 47546.733 | 651.774 | 30.52 | 0 | 1172e1069 |  | lefford | 40 |
 | 2026-09-13T13:41:50Z | gnomon-injection | 478.433 | 5497.610 | 184.959 | 11.88 | 0 | 1172e1069 |  | lefford | 40 |
+| 2026-09-13T13:50:37Z | census-tail-chorus | 31.511 | 246.467 | 15.508 | 8.31 | 0 | 6b7d05eab | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T13:50:37Z | census-tail-domesday | 0.390 | 0.336 | 0.029 | 0.94 | 0 | 6b7d05eab | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T13:50:37Z | census-tail-anomalies | 0.328 | 0.266 | 0.031 | 0.91 | 0 | 6b7d05eab | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T13:50:51Z | rebaseline | 149.129 | 542.442 | 27.691 | 3.82 | 0 | 6b7d05eab | campaign/the-trencher | MacBookPro | 10 |
