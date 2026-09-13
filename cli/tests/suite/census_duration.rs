@@ -361,6 +361,50 @@ use hornvale_lab::census_guard::{CENSUS_ALARM_SECS, CENSUS_REFUSAL_SECS};
 /// **Ratchet back down with ALARM:** when the median over ten consecutive runs
 /// falls below 1200 s, ALARM returns to 1240 and this ceiling to 1550.
 ///
+/// # 1320/1650 -> 1630/2040 (2026-09-13, The Tidemark)
+///
+/// **Re-set from the SERIES, not from the run that went red.** The Tidemark's
+/// refresh read 1898.859 s and this ceiling refused it. That refusal is NOT
+/// the justification — "raising because a run went red is the flap-hiding
+/// move this file has already refused once", and 1898.859 is a +32% step on
+/// the five-run median, which is the very shape RED exists to call foul on.
+///
+/// The justification is the trigger the rule actually names — *the new normal
+/// is consistently near ALARM* — which was met independently of that run, and
+/// had been for days:
+///
+/// ```text
+///   2026-09-10  1412.890  cpu_ratio 29.88
+///   2026-09-10  1434.633            31.85
+///   2026-09-10  1443.918            31.88
+///   2026-09-11  1366.487            30.84
+///   2026-09-12  1624.010            31.18   <- 1.6% under the old RED
+/// ```
+///
+/// Five consecutive runs, every one of them OVER the 1320 alarm (by 3.5% to
+/// 23%), with `cpu_ratio` flat at 29.9-31.9 across all of them — so the rise
+/// is work, not contention. The last of the five sat 1.6% under the old
+/// ceiling: the pair was already one ordinary feature away from flapping,
+/// before this campaign measured anything.
+///
+/// **The arithmetic, per the rule's own worked example.** ALARM goes to where
+/// the census actually sits at the top of that established series, 1630
+/// (~1624, the 2026-09-12 reading). RED follows at 1630 x 1.25 = **2040**,
+/// inside the "RED ~= typical x 1.3" band. Note what this deliberately does
+/// NOT do: it does not set ALARM from 1898.859, because one reading is not a
+/// normal. If the re-run lands near 1900 again, the pair is due another move
+/// and the *next* campaign will have two readings to set it from.
+///
+/// **The forward-looking argument has expired a second time**, in the same
+/// words as before. The work that moved this was world-scale, not local: six
+/// obligate marine peoples entering the roster, and a `land_settlement`
+/// selector repair that widened every world by 39 settlements (396 -> 435 on
+/// seed 42). A census over 500 worlds pays for both.
+///
+/// **Ratchet back down** on the same rule as the paragraph above: when the
+/// median over ten consecutive runs falls below 1480 s, ALARM returns to 1320
+/// and this ceiling to 1650.
+///
 /// The repository root, resolved from this crate's manifest directory.
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))

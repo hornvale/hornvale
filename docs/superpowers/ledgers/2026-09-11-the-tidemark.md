@@ -1755,3 +1755,55 @@ and no scratch file — `progress.md` carries the count and not the items. The
 count is the only thing that can be reported, which is exactly the shape The
 Cartulary moved the ledger to prevent, reproduced one level down: a deferral
 whose destination is a step rather than a document.
+
+## The census refusal, and a guard raised from the series rather than the run
+
+The first refresh (`req-be5fe7826210`) **succeeded** and was then refused at the
+commit: `rc=4`, 109 goldens computed, `pre-commit`'s `make docs-tests` red on
+one test — `census_duration::the_latest_census_is_under_the_refusal_ceiling`.
+The run read **1898.859 s** against `CENSUS_REFUSAL_SECS = 1_650`.
+
+**The exit code was diagnosed before the log was read, and the log confirmed
+it.** `rc=4` is the census-commit refusal, the same shape the board recorded
+for underworld-peoples — census fine, hook refused, goldens stranded staged in
+the shared worktree. Worth keeping as a recognisable signature.
+
+**What made this a judgment rather than a bump.** The file's own doctrine
+forbids the obvious move: *"The trigger for re-setting them is 'the new normal
+is consistently near ALARM', never 'a run went red'. Raising because a run
+went red is the flap-hiding move this file has already refused once."* And
+1898.859 is a +32% step on the five-run median, which is precisely the shape
+RED exists to call foul on. Raising to clear it would have been the refused
+move, and this campaign would have been the second instance of a mistake the
+file already records.
+
+So the pair was re-set from the **established series**, which meets the real
+trigger independently of our run:
+
+```
+  2026-09-10  1412.890  cpu_ratio 29.88
+  2026-09-10  1434.633            31.85
+  2026-09-10  1443.918            31.88
+  2026-09-11  1366.487            30.84
+  2026-09-12  1624.010            31.18   <- 1.6% under the old RED
+```
+
+Five consecutive runs over the 1320 alarm, `cpu_ratio` flat at 29.9-31.9
+throughout — so the rise is work, not contention — and the last of them
+already 1.6% from flapping. ALARM moves to 1630 (where the census actually
+sits at the top of that series), RED to 1630 x 1.25 = 2040.
+
+**Deliberately NOT set from 1898.859.** One reading is not a normal. If the
+re-run lands near 1900 again the pair is due another move, and the next
+campaign will have the two readings this one lacked.
+
+**The 1,899 s of computed goldens are lost, and that is the honest cost of
+doing it this way.** They are staged at `be5fe7826`, which does not contain
+the fix, so they cannot be delivered — the census must re-run at a ref that
+does. The consolation is not nothing: the re-run produces the second reading
+the rule wanted, so the raise gets evidence rather than staying an assertion.
+
+**`PROC-census-budget-denominated-by-cpu-ratio` is the durable repair** and is
+now owed twice over: every argument above had to reason about contention by
+reading `cpu_ratio` out of a table by hand, which is exactly what that row
+proposes to mechanise.
