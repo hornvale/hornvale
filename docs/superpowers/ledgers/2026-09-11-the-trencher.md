@@ -2953,3 +2953,69 @@ Cartulary's committed ledger fixed this for the campaign that *writes* it; a
 folded-in campaign's scratch is still outside that guarantee.
 
 **Ideonomy passes / overturns:** none; a close-walk sweep.
+
+---
+
+## #35 [Ruling] — The ratio finding bumped up: pinned in the row, and filed as a class
+
+Nathan asked whether the ratio finding could be raised. It could, in two ways,
+and the first is smaller than the guard I declined to build in `#32`.
+
+### A. PINNING THE RATIO IS NOT A NEW GUARD — it is the file's own discipline
+
+`#32` said the repair was "not this campaign's call" because adding a guard to
+another campaign's calibration row changes what it checks. **That framing was
+wrong.** `gathering_calibration.rs`'s entire culture is *pin the value, re-pin
+it with a stated cause* — eleven entries do exactly that for the mean. The
+ratio was **the one quantity in the file that was stated and never pinned**,
+which is precisely why it drifted: it was outside the discipline every other
+number obeys.
+
+So pinning it adds no mechanism. It puts the last unpinned number under the
+rule the file already runs on. The assertion says so in those words, and says
+plainly that a new reading is a re-pin with a cause, **not** a failure — what
+it refuses is the silent case.
+
+**Proven to fire, not assumed.** Mutated the pin `1.8530 -> 1.9000`: **RED**.
+Restored by python rewrite (which stamps mtime — the safe row of the
+restore-verb table in `#33`'s sibling finding), re-ran: **PASS**, and the diff
+shows only the 25 added lines. Verified by the named PASS line, not an exit
+code.
+
+### B. The class is filed, with its own remedy's limits attached
+
+`PROC-prose-claims-no-assertion-checks`. Four instances measured in this one
+campaign, which is what makes it a class rather than an anecdote:
+
+1. `gathering_calibration.rs` — "better than 2x" stated **eleven** times,
+   asserted **zero**, false since before this campaign (`#32`).
+2. `reticence_calibration.rs` — a "Frozen before the code" line rewritten to
+   equal its own readout, during an honest and labelled re-pin of the
+   assertion beside it (`#28`).
+3. `artifacts.rs` — a comment claiming coverage its test provably lacks,
+   demonstrated by mutation (`#33`).
+4. My own instruction, restated four times on a measurement that had died two
+   world-moves earlier (`#27`).
+
+**The mechanism is not carelessness and the row says so.** In every case the
+author re-checked *what the assertion checks*, exactly as asked. The prose
+claim was a parenthetical nobody was assigned.
+
+**The candidate instrument is named WITH its limits rather than proposed.** A
+narrow grep — calibration sources carrying a prose `better than Nx` with no
+assertion naming N — is plausible and catches this family where margins are
+claimed. Its false-positive rate is **unmeasured**, and the general form
+("does this comment's claim follow from the assertions below it") is
+intractable. Worth building only after someone counts how often the narrow
+pattern occurs. Recorded that way so the next reader does not build first and
+measure after — the failure `#18`'s candidate instrument was filed to avoid.
+
+**The Idea cell overran the 600-character budget at 2,068 and again at 694
+before it fit at 541.** Worth noting because the waiver list only shrinks, so
+"grandfather it" was never available: the budget is a forcing function on
+whether a row states a shape or retells a story. Three drafts to say it in one
+sentence.
+
+**Ideonomy passes / overturns:** one overturn — `#32`'s "not this campaign's
+call," overturned by seeing that the repair was the file's existing rule rather
+than a new one.

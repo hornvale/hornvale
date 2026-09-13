@@ -241,6 +241,31 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
         "pop-weighted-abs-latitude mean {mean:.4} did not clear the preregistered \
          uniform-sphere baseline of {UNIFORM_SPHERE_BASELINE}"
     );
+    // THE MARGIN IS NOW PINNED, BECAUSE FOR ELEVEN CAMPAIGNS IT WAS STATED AND
+    // NEVER CHECKED. The history below says the claim "still clears the
+    // baseline by better than 2x" ELEVEN times. That stopped being true
+    // somewhere between 15.0340 (2.175x) and 17.2377 (1.897x) — before The
+    // Trencher, and before the three narrowings its entry tracks — and nothing
+    // caught it, because the assertion above pins the DIRECTION and nothing
+    // pinned the RATIO. Eleven authors each re-checked the directional claim
+    // exactly as this file asks, and each inherited the margin figure as a
+    // parenthetical nobody was asked to verify.
+    //
+    // This is NOT a new guard, and deliberately so: this file's whole culture
+    // is *pin the value, re-pin it with a stated cause*. The ratio was the one
+    // quantity here that was stated but not pinned, so it drifted the way an
+    // unpinned number always does. Pinning it puts it under the same
+    // discipline as every other number in this file — a move must now be
+    // deliberate and must say why, which is all the eleven restatements ever
+    // needed.
+    //
+    // A NEW READING IS NOT A FAILURE. Re-pin it with its cause, exactly as the
+    // mean below is re-pinned. What this refuses is the SILENT case.
+    let margin_ratio = UNIFORM_SPHERE_BASELINE / mean;
+    assert!(
+        (margin_ratio - 1.8530).abs() < 5e-4,
+        "the margin ratio moved: {margin_ratio:.4}x (pinned 1.8530x, mean          {mean:.4} against baseline {UNIFORM_SPHERE_BASELINE}). This is a          re-pin with a stated cause, not a failure — but do not restate a          margin in prose without moving this number, which is the mistake          eleven entries below made."
+    );
     // Pinned calibration row (measured 2026-07-13, same 200-seed
     // census-of-the-gathering fixture the gradient calibration above uses).
     //
