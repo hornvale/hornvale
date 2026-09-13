@@ -2150,3 +2150,89 @@ about to change. The measurement is committed, so absorbing is now safe —
 
 **Ideonomy passes / overturns:** none; a measurement acceptance, a self-caught
 prediction defect, and a finding that relocates Stage 4.
+
+---
+
+## #27 [Q] — CORRECTION: the §5.2 claim holds on THIS tree. I carried "it has stopped holding" through three entries without re-checking it.
+
+The Tidemark relayed decision 0959 and their power analysis. Checking it
+against my own tree produced a correction to **my** record, not theirs.
+
+**Entries #24, #25 and #26 each state that `survivorship_probe`'s §5.2 claim
+"has stopped holding (stratified z 1.371 vs pooled 6.464)."** On this tree,
+post-absorb, it **passes**:
+
+```
+PASS [ 136.560s] (6159/6161)
+  hornvale-worldgen::suite survivorship_probe::the_separation_survives_conditioning_on_tenure
+```
+
+The z figures came from Task 4's report, measured on Task 4's *pre-absorb*
+world. I repeated them three times, in three entries, each time as a live
+fact, and never re-ran the test after the world moved twice underneath it.
+**A measurement is a claim with a date**; I had the date and used the number
+anyway. The instruction "never re-pin this" was the right call and stays —
+but its stated reason was stale from the second repetition onward.
+
+### THE INTERESTING PART: THE VERDICT IS COMPOSITION-DEPENDENT
+
+Their tree reds; mine passes. The difference is roster composition:
+
+| tree | added kinds | conditioned verdict |
+|---|---|---|
+| The Tidemark's | 6 marine + 4 subterranean (49 kinds) | RED |
+| The Trencher's (here) | 4 subterranean | PASS |
+
+Neither campaign alone moved it — they measured both tips green separately —
+and the merged product reds. **That is the two-campaign interaction class
+CLAUDE.md names as the half nothing mechanizes**, and it is the first instance
+I have seen measured from both sides.
+
+Their diagnosis is that the conditioned statistic is decided by its thinnest
+cells: per stratum, breached n = 1, 3, 5, 4, 19; the two strata resting on 1
+and 3 carry 20% of the pair mass and hold the two most extreme AUCs (0.144,
+0.282). Pair-weighted AUC over strata with n >= 4 is 0.5635; over all five,
+0.4976. So "holds" and "does not hold" are both within the noise this panel
+can produce, and which one you see depends on which kinds happen to be in the
+roster. **My green is not evidence the claim is true.**
+
+### Their ruling, adopted as context for my close
+
+Decision 0959 rules it **unevaluated, not refuted** — `refuted` (0131) would
+assert a negative the data cannot carry. Their probe asserts the pooled
+separation (unambiguous at n=32) and *reports* the conditioned readout behind
+a **power gate that re-arms when every stratum reaches breached n >= 10**.
+Nobody has to remember to switch it back on.
+
+They also self-reported a flaw their own measurement exposed: pooled quintiles
+are dominated by the ordinary group (148 of 180 ended), so they are
+effectively ordinary-tenure quintiles and the breached pile into Q5. They
+**declined to re-cut**, on the grounds that re-cutting after a null to obtain
+a different null is fitting under another name. That restraint is the right
+call and worth recording as precedent.
+
+### WHAT THIS BINDS IN STAGE 4
+
+Stage 4 authors 8-20+ organisms. If any settle or dig, they widen the roster
+the same way the two peoples campaigns did, and this readout moves again —
+from a base that is already unevaluable.
+
+1. **Do not read a green here as support for the conditioned claim.** On their
+   tree it is green only when declining to assert; on mine it is green on a
+   panel too thin to decide. Neither is support.
+2. **Report the breach yield per seed in the close.** Measured 2.67
+   breaches/seed (32 across twelve). If my organisms push it UP, the power
+   gate closes sooner; DOWN, it stays shut longer. Either is a line in the
+   retrospective and the figure is cheap to read off the probe's output.
+3. **If my Stage 4 flips this test red, that is not a regression to repair.**
+   It is this campaign reproducing the interaction from the third side, and it
+   gets recorded, not fixed.
+
+**Extending the panel is The Winze's**, not theirs and not mine. The
+arithmetic: measured yield 2.67 breaches/seed; ~10 per stratum x 5 needs ~19
+seeds, ~20 needs ~38, ~30 needs ~56. The twelve-seed cap was right for the
+pooled claim and was never sized for the conditioned one. Posted to the board
+for them — no Winze session is on the wire.
+
+**Ideonomy passes / overturns:** none; a correction to my own record plus an
+adopted peer ruling.
