@@ -710,3 +710,76 @@ from "the control accuses the corpus of two").
 
 *Capture actions.* `provenance` states the measured recall; chronicle carries
 the four disagreements; follow-ups carry the registry-spoiler defect.
+
+---
+
+**#12 [G5] — Two anchor rules, adjudicated across all six scoring batches, and
+the 19 items they reopen are RE-SCORED rather than re-verdicted by the
+controller.**
+
+*The sweep.* 260 items scored by six independent agents: **absent 191,
+deferred 52, present 17**. A mechanical audit found no dangling registry row,
+no `deferred` citing a `shipped`/`ratified`/`rejected` row, no non-`absent`
+item with an empty anchor, and no `absent` carrying one. The defects were not
+mechanical; they were two anchors used past what they say.
+
+**R1 — an anchor into the history-bake / occupation-record / `TechHorizon`
+machinery cannot support `present`.** Eight items (`stone-tool`, `bronze`,
+`mexico`, `peru`, `siberia`, `east-indies`,
+`english-settlement-america`, `french-settlement-america`) were scored
+`present` on `occupation_records_round_trip_every_committed_field`,
+`brief_axis_probe`, `a_conquerors_abandoned_seat_is_not_a_climate_abandonment`
+and `path:windows/worldgen/src/history_bake.rs`. Ledger #6 settles it: that
+machinery DATES RUINS. `tech_for(year)` assigns a horizon by year alone, so
+"ruins of this era are labelled Bronze" is not "a people holds
+bronze-working", and this family's question is explicitly whether a **people**
+acquires, holds and loses a capability.
+
+**Two independent agents reproduced the exact error Nathan corrected in the
+controller at #6**, from the code alone, without either agent having seen that
+correction. That is evidence about the CODE, not about the agents: `TechHorizon`'s
+own definition is domain-neutral ("Stone-tool, pre-metal") and only its call
+sites reveal it is ruin-side. Three readers in one campaign have now been
+misled by it in the same direction. Carried to the retrospective.
+
+**R2 — `registry:TECH-1` cannot support `deferred`.** Eleven items cite it. Its
+entire text is *"Technology as capability thresholds, not a tech tree — a
+capability is crossed when biome resources x subsistence x surplus clear a bar;
+its consequence routes into demography and social structure, never a 'tech
+level' scalar."* It names **no capability**; it plans the acquisition
+MECHANISM. **An anchor that would license the same verdict for every item in
+the corpus distinguishes nothing.** Precedent is exact: The Kiln refused
+`MEM-8` as an anchor under the rule that a row planning a *prerequisite* of a
+demand does not discharge the demand.
+
+*`TECH-2` was examined under the same suspicion and SURVIVES* (9 citations).
+Its text names ceramics, kiln-gated smelting, metallurgy, tools, weapons and
+coinage — so `pottery`, `porcelain`, `copper`, `steel`, `coin`, `crossbow`,
+`cannon`, `artillery`, `mineralogy` sit inside its own words. Batch 2 drew the
+boundary correctly unprompted, admitting `porcelain` as a higher-temperature
+ceramic and refusing `glass-blowing` and `acetic-acid` as sharing "only a
+heat-based prerequisite".
+
+*Ruling on procedure, which is the part worth keeping.* **The 19 affected items
+are dispatched for an independent RE-SCORE under the two rules, not re-verdicted
+by the controller.** Rejecting an anchor does not decide a verdict — it reopens
+one. Had the controller written `absent` into those 19 slots directly, the
+corpus would carry 19 verdicts produced by the session that also set the rules,
+with no search behind them, inside an artifact whose entire worth is that its
+verdicts were searched for.
+
+*The directional honesty note, recorded because nothing else would catch it.*
+**Both rules move items toward `absent`, which ledger #12 of The Kiln
+established is THIS FAMILY'S FLATTERING RESULT.** The controller is aware it
+has authored two rules whose net effect favours the campaign's own thesis. Two
+counterweights, neither sufficient alone: the rules are grounded in prior
+rulings made for other reasons (#6, and The Kiln's `MEM-8` refusal), and the
+re-score is explicitly instructed that `absent` is not the expected answer and
+that a rejected anchor reopens rather than settles. The asymmetry is real and
+stated rather than argued away.
+
+*Ideonomy passes / overturns.* One (polarity, on the adjudication itself —
+which produced the directional-honesty paragraph above, not the rules).
+
+*Capture actions.* `provenance` records the two rules and the re-score;
+retrospective owes the `TechHorizon` three-readers finding.
