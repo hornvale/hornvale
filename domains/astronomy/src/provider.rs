@@ -556,6 +556,7 @@ mod tests {
                 declination: 0.0,
                 right_ascension: 0.0,
             }],
+            neighbor_catalog: vec![],
             forcing: crate::forcing::OrbitalForcing {
                 obliquity_mean: 0.0,
                 obliquity_amp: 0.0,
@@ -569,6 +570,7 @@ mod tests {
                 moon_phase_offsets: vec![0.0],
             },
             wanderers: vec![],
+            comets: vec![],
         };
         let sky = GeneratedSky::new(GenesisOutcome {
             value: system,
@@ -625,6 +627,7 @@ mod tests {
             },
             moons,
             neighbors,
+            neighbor_catalog: vec![],
             forcing: crate::forcing::OrbitalForcing {
                 obliquity_mean: obliquity,
                 obliquity_amp: 0.0,
@@ -638,6 +641,7 @@ mod tests {
                 moon_phase_offsets,
             },
             wanderers: vec![],
+            comets: vec![],
         };
         GeneratedSky::new(GenesisOutcome {
             value: system,

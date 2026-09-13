@@ -74,7 +74,19 @@ editing:
   `cli/tests/suite/sentence_corpus.rs` and nothing in `domains/language`
   reads a corpus file — and the same freeze-before-measurement discipline
   (decision 0016).
-- `regularities/` — the **fourth** sibling (decision 0936, The Seedbed), and
+- `repertory/` — the **fourth** sibling, founded by The Repertory, and the one
+  whose verdict comes from RUNNING THE THING: frozen, provenance-stamped
+  *scenes* resolved against a real `possess` snapshot, not against a registry
+  token, a declared demand or a hand-maintained list. **It is the only family
+  with no decision record opening it** — every other has one, and that absence
+  is why decision 0936 miscounted the families and why this entry was missing
+  from this list until The Kiln added it (campaign ledger #34). Same data/code
+  split as its siblings (0011), same freeze before measurement (0016); the
+  resolver is `cli/tests/suite/repertory_corpus.rs`. **It carries no
+  `repertory/CLAUDE.md`** — nor do `tropes/`, `systems/`, `sentences/` or
+  `regularities/`; `technologies/` is the only corpus family with one — so for
+  this family this bullet and that resolver are the whole map.
+- `regularities/` — the **fifth** sibling (decision 0936, The Seedbed), and
   the one whose verdict can DECAY. `tropes/` asks whether a world can
   represent a situation, `systems/` whether the program implements a
   capability, `sentences/` whether the grammar can produce an utterance —
@@ -91,6 +103,41 @@ editing:
   refused. Same data/code split as its siblings (0011), same freeze before
   measurement (0016) — made STRUCTURAL here by authoring the corpus in a
   task that runs before any evaluation code exists.
+- `technologies/` — the **sixth** sibling (decision 0986, The Kiln), and the
+  only one that can say a capability was GIVEN UP. Its question is whether a
+  **people** acquires, holds and loses a capability, resolving against the
+  per-people capability trajectory over the committed census — neither static
+  reach nor a macro-statistic. Two things are its own: demands derive by
+  transitive closure over a **prerequisite lattice** (0386's derived side,
+  wholly — no sibling has a lattice), and the verdict value **`lost`**, which
+  **names a scope and must**: *a people that held the capability no longer
+  holds it*, not one community and not the whole world. One `verdict` field,
+  not two — the vocabulary is a **pipeline**, so a measured value is reachable
+  only once reach has succeeded, and `unmeasured` therefore carries a MECHANISM
+  anchor for its reach half. **The honest counterargument is kept, not erased**:
+  this is closest to `regularities/` and shares its verdict machinery wholesale,
+  and a reviewer who calls it regularities with extra fields is making a
+  defensible argument — Nathan ratified the sixth family over it at G3. Family
+  law is `technologies/CLAUDE.md`; the resolver is
+  `cli/tests/suite/technology_corpus.rs`.
+- **THE ORDINALS ABOVE, MEASURED RATHER THAN COUNTED FROM MEMORY**, because
+  this list carried only FOUR families until The Kiln and one of them was
+  mis-numbered. From `git log --diff-filter=A` over each directory: `tropes/`
+  2026-07-31, `systems/` 2026-08-15, `sentences/` 2026-08-24, `repertory/`
+  2026-08-30, `regularities/` 2026-09-07, `technologies/` 2026-09-11.
+  **Decision 0936 calls `regularities/` a *fourth* family and it stands
+  uncorrected**: it is stamped `Accepted (2026-09-08)`, nine days after
+  `repertory/` was founded under a merged chronicle whose own words are *"This
+  campaign founds a fourth corpus family, `repertory/`"* — so it was false on
+  the day it was ratified, and `docs/CLAUDE.md`'s append-only boundary is
+  `main`, binding explicitly including "a correction of something that was
+  false the day it was written." The lesson, which is the durable part: **an
+  ordinal is a claim about a population, asserted by a document that cannot
+  see the population change.** 0936 counted correctly among the families its
+  author had in mind and wrongly among the families that existed. This list is
+  that population — add a family HERE in the same campaign that founds it, and
+  prefer *"a sibling family, founded by X"* to *"the Nth sibling"* in any new
+  prose, because the first cannot rot and the second must.
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 `make doctor` prints the live self-map — layering, gate targets, artifact

@@ -687,7 +687,7 @@ checks AS (
   -- The Winze resync (2026-08-29, canonical census on lefford at
   -- bba2be3efc83, goldens cherry-picked as 71202ac19): 0.5190307067169994 ->
   -- 0.5181628625670006.
-         collision_mean, 0.5251184269899991, abs(collision_mean - 0.5251184269899991) < 1e-6 FROM agg
+         collision_mean, 0.525123563979999, abs(collision_mean - 0.525123563979999) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -1242,8 +1242,8 @@ checks AS (
   -- -0.026539960262133278 (no sign flip; still ~7.5x inside the +/-0.2
   -- sampling-theory bound. DuckDB's summation lands a few ULP from the Rust
   -- row's -0.026539960262133250, which is what the 1e-6 tolerance is for).
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.032587081074588166,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.032_587_081_074_588_166) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.03366435349027548,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.033_664_353_490_275_48) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

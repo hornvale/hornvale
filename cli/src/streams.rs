@@ -360,6 +360,9 @@ mod tests {
         assert_eq!(
             rows,
             vec![
+                // Astronomy Deepening: fixed-cell physical candidates. lexicon: equal-area sky region
+                // The original sequential stream remains for version-one scenes.
+                "astronomy/starfield/cells v2", // lexicon: equal-area sky region
                 // The Deep Realm: the underworld chamber derivation. Born at
                 // v1, versioned from birth like `settlement/disposition v1`
                 // below, because its key (a ChamberAddr's vertex, entrance,

@@ -7,8 +7,9 @@
 //! explicitly the reference observer's; per-species figure catalogs are a
 //! deferred registry row.
 
+use crate::night_sky::{StarObserver, catalog_stars_at};
 use crate::sky_position::{EquatorialCoord, ecliptic_of};
-use crate::starfield::starfield;
+use crate::starfield::{SkyCell, StarId, background_stars, magnitude_class}; // lexicon: equal-area sky region, not a mesh vertex
 #[allow(unused_imports)]
 use crate::streams;
 use crate::system::StarSystem;
@@ -17,16 +18,17 @@ use hornvale_kernel::math;
 use std::collections::BTreeMap;
 
 /// Great-circle separation threshold (degrees) for single-link clustering:
-/// two stars closer than this join the same figure. Census-frozen (the
-/// `census-of-figures` study, 1000 seeds): median 6 figures per sky, 6.4%
-/// zero-figure worlds, 66.5% with at least one figure on the ecliptic.
+/// two stars closer than this join the same figure. Retained from the
+/// `census-of-figures` calibration; cell generation and modeled magnitudes // lexicon: equal-area sky region, not a mesh vertex
+/// deliberately change its population (Astronomy Deepening, Task 6).
 /// type-audit: pending(wave-1)
 /// plumb: pending(wave-1)
 pub const FIGURE_SEPARATION_DEG: f64 = 7.0;
 
-/// Magnitude-class floor (inclusive) admitted into figure clustering — the
+/// Apparent-magnitude limit (inclusive) admitted into figure clustering — the
 /// **reference-observer convention** (spec §4). Census-frozen alongside
 /// [`FIGURE_SEPARATION_DEG`] and [`FIGURE_MIN_MEMBERS`].
+/// Kept as a u8 for existing readers; selection compares physical magnitudes.
 /// type-audit: bare-ok(count)
 /// plumb: pending(wave-1)
 pub const FIGURE_MAGNITUDE_FLOOR: u8 = 4;
@@ -42,6 +44,8 @@ pub const FIGURE_MIN_MEMBERS: usize = 3;
 /// type-audit: bare-ok(count: member_count), pending(wave-1: span_deg), bare-ok(count: brightest_class), bare-ok(flag: on_ecliptic)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Figure {
+    /// Stable physical identities, in canonical identity order.
+    pub member_ids: Vec<StarId>,
     /// How many stars belong to this figure.
     pub member_count: usize,
     /// The figure's centroid: the normalized Cartesian mean of its members,
@@ -63,11 +67,11 @@ pub struct Figure {
     pub on_ecliptic: bool,
 }
 
-/// One unified bright-star entry feeding the clustering pass: either a
-/// notable neighbor (magnitude class 1 by definition) or a background
-/// starfield entry at or brighter than [`FIGURE_MAGNITUDE_FLOOR`].
+/// One modeled or background star admitted through the shared magnitude cut.
 #[derive(Debug, Clone, Copy)]
 struct BrightStar {
+    id: StarId,
+    apparent_magnitude: f64,
     magnitude_class: u8,
     ra_deg: f64,
     dec_deg: f64,
@@ -171,7 +175,10 @@ fn build_figure(stars: &[BrightStar], members: &[usize], obliquity_mean_deg: f64
     let ecliptic = ecliptic_of(&centroid, obliquity_mean_deg);
     let on_ecliptic = ecliptic.lat_deg.abs() <= span_deg / 2.0 + 8.0;
 
+    let mut member_ids: Vec<_> = members.iter().map(|&i| stars[i].id).collect();
+    member_ids.sort_unstable();
     Figure {
+        member_ids,
         member_count: members.len(),
         centroid,
         span_deg,
@@ -180,37 +187,47 @@ fn build_figure(stars: &[BrightStar], members: &[usize], obliquity_mean_deg: f64
     }
 }
 
-/// Cluster the unified bright-star catalog (notable neighbors, magnitude
-/// class 1 by definition, plus background starfield entries at or brighter
-/// than [`FIGURE_MAGNITUDE_FLOOR`]) into star figures via single-link
+/// Cluster modeled neighbors and lazy background entries at or brighter
+/// than [`FIGURE_MAGNITUDE_FLOOR`] into star figures via single-link
 /// clustering on the unit sphere: two stars join the same figure iff their
 /// great-circle separation is at most [`FIGURE_SEPARATION_DEG`]. Clusters
 /// smaller than [`FIGURE_MIN_MEMBERS`] are discarded. Deterministic: same
 /// seed and system, same output, in descending member-count order (ties
 /// broken by ascending centroid right ascension).
 pub fn figures(astronomy_seed: Seed, system: &StarSystem) -> Vec<Figure> {
-    let mut stars: Vec<BrightStar> = system
-        .neighbors
-        .iter()
-        .map(|n| BrightStar {
-            magnitude_class: 1,
-            ra_deg: n.right_ascension,
-            dec_deg: n.declination,
+    let observer = StarObserver {
+        limiting_magnitude: f64::from(FIGURE_MAGNITUDE_FLOOR),
+        ..StarObserver::default()
+    };
+    let catalog = catalog_stars_at(
+        system,
+        &crate::calendar::calendar_of(system),
+        crate::units::StdInstant(0.0),
+        &observer,
+    );
+    let background = background_stars(
+        astronomy_seed,
+        &SkyCell::all().collect::<Vec<_>>(), // lexicon: equal-area sky region, not a mesh vertex
+        &observer,
+    );
+    let mut stars: Vec<BrightStar> = catalog
+        .into_iter()
+        .chain(background)
+        .map(|star| BrightStar {
+            id: star.id,
+            apparent_magnitude: star.apparent_magnitude,
+            magnitude_class: magnitude_class(star.apparent_magnitude),
+            ra_deg: star.position.ra_deg,
+            dec_deg: star.position.dec_deg,
         })
         .collect();
-    stars.extend(starfield(astronomy_seed).into_iter().filter_map(|s| {
-        (s.magnitude_class <= FIGURE_MAGNITUDE_FLOOR).then_some(BrightStar {
-            magnitude_class: s.magnitude_class,
-            ra_deg: s.ra_deg,
-            dec_deg: s.dec_deg,
-        })
-    }));
 
     stars.sort_by(|a, b| {
-        a.magnitude_class
-            .cmp(&b.magnitude_class)
+        a.apparent_magnitude
+            .total_cmp(&b.apparent_magnitude)
             .then_with(|| a.ra_deg.total_cmp(&b.ra_deg))
             .then_with(|| a.dec_deg.total_cmp(&b.dec_deg))
+            .then_with(|| a.id.cmp(&b.id))
     });
 
     let n = stars.len();
@@ -293,6 +310,59 @@ mod tests {
     use crate::system::generate;
 
     #[test]
+    fn modeled_brightness_controls_figure_membership() {
+        let seed = Seed(42).derive(streams::ROOT);
+        let mut system = generate(Seed(42), &SkyPins::default()).unwrap().value;
+        // A compact, conspicuous physical group must join the figure input.
+        for (index, star) in system.neighbor_catalog.iter_mut().enumerate() {
+            star.right_ascension = 1.0 + index as f64 * 0.01;
+            star.declination = 0.0;
+            star.distance = crate::units::LightYears(0.01);
+        }
+        let bright = figures(seed, &system);
+        for star in &mut system.neighbor_catalog {
+            star.distance = crate::units::LightYears(1e12);
+        }
+        assert_ne!(bright, figures(seed, &system));
+    }
+
+    #[test]
+    fn figure_ids_survive_catalog_reordering_and_resolve_to_bright_stars() {
+        use crate::starfield::StarId;
+        let seed = Seed(42).derive(streams::ROOT);
+        let mut system = generate(Seed(42), &SkyPins::default()).unwrap().value;
+        for (i, star) in system.neighbor_catalog.iter_mut().enumerate() {
+            star.right_ascension = 1.0 + i as f64 * 0.01;
+            star.declination = 0.0;
+            star.distance = crate::units::LightYears(0.01);
+        }
+        let first = figures(seed, &system);
+        assert!(!first.is_empty());
+        for star in &system.neighbor_catalog {
+            assert!(
+                first
+                    .iter()
+                    .any(|f| f.member_ids.contains(&StarId::Catalog(star.id)))
+            );
+        }
+        for figure in &first {
+            assert_eq!(figure.member_count, figure.member_ids.len());
+            assert!(figure.member_ids.windows(2).all(|pair| pair[0] < pair[1]));
+        }
+        system.neighbor_catalog.reverse();
+        assert_eq!(first, figures(seed, &system));
+        for star in &mut system.neighbor_catalog {
+            star.distance = crate::units::LightYears(1e12);
+        }
+        assert!(
+            figures(seed, &system)
+                .iter()
+                .flat_map(|f| &f.member_ids)
+                .all(|id| matches!(id, StarId::Background(_)))
+        );
+    }
+
+    #[test]
     fn figures_are_deterministic() {
         let seed = Seed(42);
         let astronomy_seed = seed.derive(streams::ROOT);
@@ -349,7 +419,10 @@ mod tests {
     fn a_degenerate_member_sum_falls_back_to_the_first_members_seat() {
         let stars: Vec<BrightStar> = [0.0, 120.0, 240.0]
             .iter()
-            .map(|&ra_deg| BrightStar {
+            .enumerate()
+            .map(|(i, &ra_deg)| BrightStar {
+                id: StarId::Catalog(crate::neighborhood::CatalogStarId(i as u64)),
+                apparent_magnitude: 1.0,
                 magnitude_class: 1,
                 ra_deg,
                 dec_deg: 0.0,

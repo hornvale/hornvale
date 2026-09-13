@@ -1041,6 +1041,17 @@ spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report 
 spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
 spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
 spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
+# The technology coverage reports (The Kiln, Task 7). `technologies report`
+# is `spawn`ed here rather than run serially like `regularities report`
+# below: unlike that sibling, `technologies::render` reads only the corpus
+# JSON on disk — no census, no `RepoFacts` — so it carries none of the
+# stale-census-read hazard the comment above `regularities report` explains.
+# It is a pure, order-independent read exactly like `systems report` beside
+# it, so it belongs in this same untethered batch.
+spawn run -p hornvale -- technologies report asimov-1989 \
+  > docs/audits/technology-coverage-asimov-1989.md
+spawn run -p hornvale -- technologies report henrich-2004-extended \
+  > docs/audits/technology-coverage-henrich-2004-extended.md
 spawn gen_sentence_coverage
 # The Confidant, Task 7 reshape: world-invariant (builds its own internal
 # Seed(42), like `first_light` above), so it belongs in Group C alongside

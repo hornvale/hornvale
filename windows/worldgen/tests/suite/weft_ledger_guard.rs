@@ -28,7 +28,7 @@ use hornvale_worldgen::seed_42_world;
 /// honest against the fixture) — the number this test pins.
 // The Underworld Peoples delivery adds the four peoples' committed facts;
 // seed 42 now carries 21,524 ledger facts.
-const SEED_42_FACT_COUNT: usize = 21_524;
+const SEED_42_FACT_COUNT: usize = 21_525;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

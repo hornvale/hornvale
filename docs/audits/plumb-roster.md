@@ -13,7 +13,7 @@ of it has been judged; it does not guess a rung for anything.
 |------|-------|
 | Roots | `domains`, `windows` |
 | Default roots | `domains`, `windows` |
-| Files parsed | 362 |
+| Files parsed | 365 |
 | Constant types judged | every type except the non-quantities below |
 | Declared non-quantities | `str`, `String`, `bool`, `char`, `KindId`, `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`, `HabitatRealm`, `Transmission`, plus containers (generic, array, tuple, reference) and markers |
 | Directories pruned | `tests`, `examples`, `benches`, `target` |
@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 825 |
-| … file-level | 782 |
-| … associated (impl/trait) | 9 |
+| Quantity consts judged (the denominator) | 834 |
+| … file-level | 790 |
+| … associated (impl/trait) | 10 |
 | … inside a fn body | 34 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
-| Excluded: declared non-quantity type | 560 |
-| **Every `const` the walk touched** | **1558** |
+| Excluded: declared non-quantity type | 561 |
+| **Every `const` the walk touched** | **1568** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **748**: file-level
+nor the whole `file-level` row — it is **755**: file-level
 constants of those five types. The `file-level` row itself is
-**782**, and the denominator is **825**; the difference is
+**790**, and the denominator is **834**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -63,19 +63,19 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `Hazards` | 1 |
 | `LifeSchedule` | 1 |
 | `Locomotion` | 3 |
-| `Self` | 5 |
+| `Self` | 6 |
 | `Snowpack` | 1 |
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 613 |
+| `f64` | 616 |
 | `i32` | 7 |
 | `i64` | 8 |
-| `u16` | 1 |
-| `u32` | 83 |
+| `u16` | 2 |
+| `u32` | 85 |
 | `u64` | 18 |
 | `u8` | 8 |
-| `usize` | 58 |
+| `usize` | 60 |
 
 ### Excluded as non-quantity, by type
 
@@ -113,7 +113,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `Segment` | 3 |
 | `StreamLabel<…>` | 37 |
 | `Transmission` | 1 |
-| `[&str; …]` | 35 |
+| `[&str; …]` | 36 |
 | `[(…); …]` | 8 |
 | `[Accumulation; …]` | 1 |
 | `[Action; …]` | 1 |
@@ -157,7 +157,7 @@ bare count would hide a quantity someone had wrongly denied.
 
 | Verdict | Count |
 |---------|------:|
-| pending(wave-1) | 631 |
+| pending(wave-1) | 640 |
 | per-individual | 2 |
 | per-people | 1 |
 | per-species | 32 |
@@ -165,9 +165,9 @@ bare count would hide a quantity someone had wrongly denied.
 | universal | 153 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 825 |
+| _total_ | 834 |
 
-Declared: **825 of 825**. Undeclared is backlog; a malformed
+Declared: **834 of 834**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -225,10 +225,10 @@ counts are already the Coverage table above. 41 finding(s).
 
 ## The contested middle
 
-386 of the 825 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 147 of the 362 files parsed —
+388 of the 834 constants sit in a file mentioning one of
+the kind-adjacency markers above, across 148 of the 365 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
-where `FATIGUE_RISE` lived. 386 of them are declared.
+where `FATIGUE_RISE` lived. 388 of them are declared.
 
 **This is a reading aid, not a gate.** The markers are substrings, and
 `Body` is shared with astronomy's celestial bodies, so the set is loose
@@ -240,7 +240,7 @@ in the inclusive direction on purpose.
 |-------|---------:|-----------:|----------:|------:|
 | alchemy | 1 | 0 | 0 | 1 |
 | almanac | 3 | 0 | 0 | 3 |
-| astronomy | 41 | 0 | 0 | 41 |
+| astronomy | 50 | 0 | 0 | 50 |
 | book | 2 | 0 | 0 | 2 |
 | climate | 105 | 0 | 0 | 105 |
 | demography | 14 | 0 | 0 | 14 |

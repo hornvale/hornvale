@@ -3274,7 +3274,27 @@
         "subject": 10116603944055472128,
         "predicate": "figure-count",
         "object": {
-          "Number": 2.0
+          "Number": 4.0
+        },
+        "place": null,
+        "day": 0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 10116603944055472128,
+        "predicate": "figure-members",
+        "object": {
+          "Number": 6.0
+        },
+        "place": null,
+        "day": 0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 10116603944055472128,
+        "predicate": "figure-region",
+        "object": {
+          "Text": "northern sky"
         },
         "place": null,
         "day": 0,
@@ -3294,7 +3314,7 @@
         "subject": 10116603944055472128,
         "predicate": "figure-region",
         "object": {
-          "Text": "northern sky"
+          "Text": "the equator's road"
         },
         "place": null,
         "day": 0,
@@ -3304,17 +3324,7 @@
         "subject": 10116603944055472128,
         "predicate": "figure-region",
         "object": {
-          "Text": "the equator's road"
-        },
-        "place": null,
-        "day": 0,
-        "provenance": "astronomy"
-      },
-      {
-        "subject": 10116603944055472128,
-        "predicate": "figure-on-ecliptic",
-        "object": {
-          "Flag": true
+          "Text": "southern sky"
         },
         "place": null,
         "day": 0,

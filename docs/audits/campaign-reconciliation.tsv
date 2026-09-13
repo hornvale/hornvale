@@ -60,6 +60,7 @@ chronicle-the-book-polish	shipped	none		published chronicle				book/src/chronicl
 chronicle-the-branches	shipped	none		published chronicle				book/src/chronicle/the-branches.md	
 chronicle-the-brattice	shipped	none		published chronicle				book/src/chronicle/the-brattice.md	
 chronicle-the-burr	shipped	none		published chronicle				book/src/chronicle/the-burr.md	
+chronicle-the-cadastre	shipped	none		published chronicle				book/src/chronicle/the-cadastre.md	
 chronicle-the-cairn	shipped	none		published chronicle				book/src/chronicle/the-cairn.md	
 chronicle-the-cant	shipped	none		published chronicle				book/src/chronicle/the-cant.md	
 chronicle-the-cartographer	shipped	none		published chronicle				book/src/chronicle/the-cartographer.md	
@@ -162,6 +163,7 @@ chronicle-the-inquest	shipped	none		published chronicle				book/src/chronicle/th
 chronicle-the-interlinear	shipped	none		published chronicle				book/src/chronicle/the-interlinear.md	
 chronicle-the-isotherm	shipped	none		published chronicle				book/src/chronicle/the-isotherm.md	
 chronicle-the-keeping	shipped	none		published chronicle				book/src/chronicle/the-keeping.md	
+chronicle-the-kiln	shipped	none		published chronicle				book/src/chronicle/the-kiln.md	
 chronicle-the-kindling	shipped	none		published chronicle				book/src/chronicle/the-kindling.md	
 chronicle-the-lantern	shipped	none		published chronicle				book/src/chronicle/the-lantern.md	
 chronicle-the-latch	shipped	none		published chronicle				book/src/chronicle/the-latch.md	
@@ -715,6 +717,7 @@ retro-the-book-polish	shipped	none		committed retrospective					docs/retrospecti
 retro-the-branches	shipped	none		committed retrospective					docs/retrospectives/the-branches.md
 retro-the-brattice	shipped	none		committed retrospective					docs/retrospectives/the-brattice.md
 retro-the-burr	shipped	none		committed retrospective					docs/retrospectives/the-burr.md
+retro-the-cadastre	shipped	none		committed retrospective					docs/retrospectives/the-cadastre.md
 retro-the-cairn	shipped	none		committed retrospective					docs/retrospectives/the-cairn.md
 retro-the-cant	shipped	none		committed retrospective					docs/retrospectives/the-cant.md
 retro-the-cartographer	shipped	none		committed retrospective					docs/retrospectives/the-cartographer.md
@@ -817,6 +820,7 @@ retro-the-inquest	shipped	none		committed retrospective					docs/retrospectives/
 retro-the-interlinear	shipped	none		committed retrospective					docs/retrospectives/the-interlinear.md
 retro-the-isotherm	shipped	none		committed retrospective					docs/retrospectives/the-isotherm.md
 retro-the-keeping	shipped	none		committed retrospective					docs/retrospectives/the-keeping.md
+retro-the-kiln	shipped	none		committed retrospective					docs/retrospectives/the-kiln.md
 retro-the-kindling	shipped	none		committed retrospective					docs/retrospectives/the-kindling.md
 retro-the-lantern	shipped	none		committed retrospective					docs/retrospectives/the-lantern.md
 retro-the-latch	shipped	none		committed retrospective					docs/retrospectives/the-latch.md
@@ -1381,7 +1385,9 @@ the-grammar	active	none		BIO-3 substrate and SOC-2 successor contract complete; 
 the-wanderers	shipped	none		plan complete through Task 4; G6 close recorded; chronicle and retrospective landed	docs/superpowers/specs/2026-09-07-the-wanderers-design.md	docs/superpowers/plans/2026-09-07-the-wanderers.md		book/src/chronicle/the-wanderers.md	docs/retrospectives/the-wanderers.md
 spec-2026-09-09-the-wanderers-test-hardening	active	none		design approved; three test-hardening stages committed; focused tests, worldgen/vessel suites, and local commit gates green; awaiting Sluice verification	docs/superpowers/specs/2026-09-09-the-wanderers-test-hardening-design.md	docs/superpowers/plans/2026-09-09-the-wanderers-test-hardening.md			
 spec-2026-09-08-the-staple-r3-design	active	none		approved design; Task 1 implementation in progress	docs/superpowers/specs/2026-09-08-the-staple-r3-design.md				
+spec-2026-09-11-the-kiln-design	shipped	none		sixth corpus family ratified at G3 and shipped as decision 0986; all ten plan tasks complete; two corpora frozen before any evaluation code existed, resolver and two drift-checked reports committed, chronicle and retrospective written	docs/superpowers/specs/2026-09-11-the-kiln-design.md		docs/superpowers/ledgers/2026-09-11-the-kiln.md		
 plan-2026-09-08-the-staple-r3	active	none		Task 1 implementation in progress		docs/superpowers/plans/2026-09-08-the-staple-r3.md			
+plan-2026-09-11-the-kiln	shipped	none		all ten tasks executed; plan corrected mid-campaign for a missing ratchet condition and an id-less finding signature (ledger #26, #30)		docs/superpowers/plans/2026-09-11-the-kiln.md			
 the-soc-household	shipped	none		cohort-to-person/group substrate and The Lot projection shipped; stage gate pending refreshed close submission	docs/superpowers/specs/2026-09-07-soc-household-design.md	docs/superpowers/plans/2026-09-07-soc-household.md		book/src/chronicle/the-soc-household.md	docs/retrospectives/the-soc-household.md
 the-insulator	shipped	none		closed 2026-09-07; qualified rejection with committed measurement cell, baseline, candidate manifest, comparison, chronicle, and retrospective; Linux explicitly unrun after decisive Mac mismatch	docs/superpowers/specs/2026-09-06-the-insulator-design.md			book/src/chronicle/the-insulator.md	docs/retrospectives/the-insulator.md
 the-seedbed	active	none		fourth corpus family shipped; corpus frozen blind before any evaluation code existed; 8 tasks, 6 vacuous guards found by mutation, first measurement recorded (2 of 3 independent claims grew); decision 0936 ratified; chronicle and retrospective committed	docs/superpowers/specs/2026-09-07-the-seedbed-design.md	docs/superpowers/plans/2026-09-07-the-seedbed.md		book/src/chronicle/the-seedbed.md	docs/retrospectives/the-seedbed.md
@@ -1401,3 +1407,8 @@ eclipse-rhythm-view	shipped	none		Merged by Sluice at f22860af3 after all stage 
 the-vent	shipped	none		closed 2026-09-10; Waterworld pressure-test overlay landed at 1a830cc95 after green stage and merge gates	docs/superpowers/specs/2026-09-10-the-vent-design.md	docs/superpowers/plans/2026-09-10-the-vent.md	docs/superpowers/ledgers/2026-09-10-the-vent.md	book/src/chronicle/the-vent.md	docs/retrospectives/the-vent.md
 the-vent-succession	shipped	none		implementation, review, local gate, and Sluice stage gate complete	docs/superpowers/specs/2026-09-10-the-vent-succession-design.md	docs/superpowers/plans/2026-09-10-the-vent-succession.md	docs/superpowers/ledgers/2026-09-10-the-vent-succession.md	book/src/chronicle/the-living-vent.md	docs/retrospectives/the-living-vent.md
 the-coherent-ground	active	none		Implementation and independent review complete; rendered seed-42 proof records one ready patch, 44,831 narrow-feature entities, 1,136 causal feature pixels, regional fallback behavior, latency and OS peak-RSS measurements; close artifacts prepared; Sluice pending; Level-8 expansion and Living Surface deferred	docs/superpowers/specs/2026-09-11-the-coherent-ground-design.md,docs/superpowers/specs/2026-09-12-the-coherent-ground-design.md	docs/superpowers/plans/2026-09-11-the-coherent-ground.md,docs/superpowers/plans/2026-09-12-the-coherent-ground.md	docs/superpowers/ledgers/2026-09-11-the-coherent-ground.md,docs/superpowers/ledgers/2026-09-12-the-coherent-ground.md	book/src/chronicle/the-coherent-ground.md	docs/retrospectives/the-coherent-ground.md
+spec-2026-09-12-the-cadastre-design	shipped	none		ratified at G3 and shipped as decisions 0987 and 0988; all six plan tasks complete; asimov-1989 completed from a 41-item sample to its closed 301-item population (41 -> 301 items, 40 -> 401 edges, 0 cycles, 1 root), 260 items hand-scored by six independent agents with a held-out control reported at 4 of 6, chronicle and retrospective written	docs/superpowers/specs/2026-09-12-the-cadastre-design.md		docs/superpowers/ledgers/2026-09-12-the-cadastre.md		
+plan-2026-09-12-the-cadastre	shipped	none		all six tasks executed; Task 4 was discharged inside Task 3 because the cross-corpus gate spans both and they cannot occupy separate commits (ledger #13), and two spec requirements with no implementing step were closed by the plan self-review (ledger #8)		docs/superpowers/plans/2026-09-12-the-cadastre.md			
+astronomy-deepening	active	none		Implementation complete through `c604b8758`; origin/main merged; close artifacts prepared; Sluice merge pending	docs/superpowers/specs/2026-09-11-astronomy-deepening-design.md	docs/superpowers/plans/2026-09-11-astronomy-deepening.md			
+chronicle-the-orrery	active	none		campaign chronicle prepared				book/src/chronicle/the-orrery.md	
+retro-the-orrery	active	none		campaign retrospective prepared					docs/retrospectives/the-orrery.md

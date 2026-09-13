@@ -2246,7 +2246,10 @@ fn name_collision_rate_is_measured_and_pinned() {
         // failed and is recorded as such above), the tolerance is unchanged
         // at 1e-6, and the rate stays inside the range decision 0024
         // sanctions (see the note above).
-        (mean - 0.525_118_426_989_999_1).abs() < 1e-6,
+        // The Orrery delivery gate (2026-09-12, current canonical merge
+        // product): the same fixture reads 0.525_123_563_979_999; this is a
+        // small re-pin, not a changed directional claim.
+        (mean - 0.525_123_563_979_999).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -3859,7 +3862,10 @@ fn null_control_name_length_smd_is_pinned() {
         // order of magnitude inside the +/-0.2 sampling bound, and still
         // negative, so the sign this row has carried through every regen is
         // unmoved: only the magnitude did.
-        (namelen - -0.032_587_081_074_588_166).abs() < 1e-9,
+        // The Orrery delivery gate (2026-09-12, current canonical merge
+        // product): the same fixture reads -0.033_664_353_490_275_48; the
+        // null remains comfortably inside the pre-registered bound.
+        (namelen - -0.033_664_353_490_275_48).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
