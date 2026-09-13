@@ -337,6 +337,11 @@ impl Renderer {
             .set_cosmetic_clouds_visible(self.apps.main.world_mut(), visible);
     }
 
+    pub fn set_narrow_features_visible(&mut self, visible: bool) {
+        self.catalog
+            .set_narrow_features_visible(self.apps.main.world_mut(), visible);
+    }
+
     pub fn set_fallback_surface_visible(&mut self, visible: bool) {
         self.catalog
             .set_fallback_surface_visible(self.apps.main.world_mut(), visible);

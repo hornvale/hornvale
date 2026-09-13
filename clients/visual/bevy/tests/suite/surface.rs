@@ -826,8 +826,8 @@ fn patch_spawn_uses_body_radius_and_source_sea_level_datum() {
 }
 
 #[test]
-fn ready_patch_hides_fallback_and_transition_retires_old_patch() {
-    // The proof must report actual ECS visibility, not infer it from readiness.
+fn ready_patch_preserves_fallback_and_transition_retires_old_patch() {
+    // Patch coverage is regional; the fallback remains visible elsewhere.
     let (mut world, mirror, mut catalog) = scene_catalog();
     let revision = mirror.initial().binding.source_revision.clone();
     let first = documents::surface_patch(&patch_json(&revision))
@@ -846,7 +846,7 @@ fn ready_patch_hides_fallback_and_transition_retires_old_patch() {
         )
         .unwrap()
         .unwrap();
-    assert!(!catalog.fallback_surface_visible(&world));
+    assert!(catalog.fallback_surface_visible(&world));
     assert_eq!(
         world.get::<Visibility>(first_entity),
         Some(&Visibility::Visible)
@@ -879,7 +879,7 @@ fn ready_patch_hides_fallback_and_transition_retires_old_patch() {
         world.get::<Visibility>(second_entity),
         Some(&Visibility::Visible)
     );
-    assert!(!catalog.fallback_surface_visible(&world));
+    assert!(catalog.fallback_surface_visible(&world));
 }
 
 #[test]

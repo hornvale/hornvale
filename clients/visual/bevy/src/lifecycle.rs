@@ -657,7 +657,6 @@ impl SceneCatalog {
                     world.entity_mut(*entity).insert(Visibility::Visible);
                 }
             }
-            self.set_fallback_surface_visible(world, false);
         }
         Ok(Some(entity))
     }
@@ -708,6 +707,24 @@ impl SceneCatalog {
         let entities = world
             .query_filtered::<Entity, With<CosmeticCloud>>()
             .iter(world)
+            .collect::<Vec<_>>();
+        for entity in entities {
+            world.entity_mut(entity).insert(value);
+        }
+    }
+
+    pub fn set_narrow_features_visible(&self, world: &mut World, visible: bool) {
+        let value = if visible {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        let entities = self
+            .surface
+            .ready
+            .iter()
+            .flat_map(|patch| patch.feature_entities.iter())
+            .copied()
             .collect::<Vec<_>>();
         for entity in entities {
             world.entity_mut(entity).insert(value);

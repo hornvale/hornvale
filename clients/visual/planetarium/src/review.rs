@@ -473,7 +473,6 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
     renderer
         .apply(&mirror, &camera)
         .map_err(|error| format!("apply proof after scene: {error}"))?;
-    renderer.set_fallback_surface_visible(false);
     rss_peak = rss_peak.max(process_memory_bytes()?);
     let mesh_material_application_ms =
         (application_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
@@ -491,7 +490,13 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
         &revision.source_revision,
         renderer.surface_render_evidence(),
     )?;
-    let after = rendered_frame(&after_path, &after_metadata, Some(&before_path))?;
+    renderer.set_narrow_features_visible(false);
+    let featureless_path = output.join("after-without-narrow-features.png");
+    renderer
+        .capture(&featureless_path)
+        .map_err(|error| format!("capture proof featureless frame: {error}"))?;
+    renderer.set_narrow_features_visible(true);
+    let after = rendered_frame(&after_path, &after_metadata, Some(&featureless_path))?;
     let steady_start = Instant::now();
     renderer
         .capture(&output.join("steady.png"))
@@ -512,7 +517,7 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
 fn rendered_frame(
     path: &std::path::Path,
     metadata_path: &std::path::Path,
-    before_path: Option<&std::path::Path>,
+    featureless_path: Option<&std::path::Path>,
 ) -> Result<RenderedSurfaceFrame, String> {
     let bytes =
         std::fs::read(path).map_err(|error| format!("read rendered proof frame: {error}"))?;
@@ -522,8 +527,8 @@ fn rendered_frame(
         &std::fs::read(metadata_path).map_err(|e| format!("read frame metadata: {e}"))?,
     )
     .map_err(|e| format!("parse frame metadata: {e}"))?;
-    let narrow_feature_pixels = before_path.map_or(0, |before| {
-        feature_delta_pixels(before, path, metadata.evidence.narrow_feature_color).unwrap_or(0)
+    let narrow_feature_pixels = featureless_path.map_or(0, |featureless| {
+        feature_delta_pixels(featureless, path).unwrap_or(0)
     });
     Ok(RenderedSurfaceFrame {
         png_path: path.to_path_buf(),
@@ -555,29 +560,16 @@ fn write_frame_metadata(
 fn feature_delta_pixels(
     before: &std::path::Path,
     after: &std::path::Path,
-    feature_color: Option<[u8; 3]>,
 ) -> Result<usize, String> {
     let before = image::open(before).map_err(|e| e.to_string())?.to_rgba8();
     let after = image::open(after).map_err(|e| e.to_string())?.to_rgba8();
     if before.dimensions() != after.dimensions() {
         return Err("frame dimensions differ".into());
     }
-    let Some(feature_color) = feature_color else {
-        return Ok(0);
-    };
     Ok(before
         .pixels()
         .zip(after.pixels())
-        .filter(|(old, new)| {
-            old != new
-                && new.0[..3]
-                    .iter()
-                    .zip(feature_color)
-                    .map(|(actual, expected)| i32::from(*actual) - i32::from(expected))
-                    .map(|difference| difference * difference)
-                    .sum::<i32>()
-                    <= 40 * 40
-        })
+        .filter(|(old, new)| old != new)
         .count())
 }
 
@@ -1057,7 +1049,7 @@ mod review_tests {
     use super::*;
 
     #[test]
-    fn feature_delta_requires_feature_color_in_png() {
+    fn feature_delta_counts_causal_png_changes() {
         let directory = tempfile_dir();
         let before = directory.join("before.png");
         let after = directory.join("after.png");
@@ -1067,10 +1059,7 @@ mod review_tests {
         let mut pixels = image::RgbaImage::from_pixel(2, 1, image::Rgba([10, 10, 10, 255]));
         pixels.put_pixel(1, 0, image::Rgba([20, 40, 100, 255]));
         pixels.save(&after).unwrap();
-        assert_eq!(
-            feature_delta_pixels(&before, &after, Some([20, 40, 100])).unwrap(),
-            1
-        );
+        assert_eq!(feature_delta_pixels(&before, &after).unwrap(), 1);
     }
 
     #[test]

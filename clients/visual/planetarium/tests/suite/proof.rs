@@ -88,7 +88,9 @@ fn rendered_proof_reads_distinct_frames_and_patch_readiness() {
         proof.after.narrow_feature_pixels > 0,
         "feature geometry did not change PNG pixels: {proof:?}"
     );
-    assert!(!proof.after.fallback_visible);
+    // The fallback entity remains visible for uncovered regions; the ready
+    // patch's positive depth bias suppresses only its covered triangles.
+    assert!(proof.after.fallback_visible);
     assert_eq!(proof.before.camera_sha256, proof.after.camera_sha256);
     assert!(!proof.after.source_revision.is_empty());
     assert_eq!(proof.before.source_revision, proof.after.source_revision);
