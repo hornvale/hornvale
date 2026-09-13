@@ -1,5 +1,7 @@
 # The Cadastre — retrospective
 
+**Status:** merge gate passed, 2026-09-13.
+
 Process, not product. The product is in
 [the chronicle](../../book/src/chronicle/the-cadastre.md): a corpus completed
 from a forty-one-item sample to its closed three-hundred-and-one-item
@@ -169,7 +171,37 @@ have had to differ for it to disagree.** "A second fetch of the same page,
 parsed the same way" answers nothing. "A second scorer who could read the
 answer" answers nothing.
 
-## 6. Two smaller ones worth keeping
+## 6. A drift check compares the tree to the index, so an artifact nobody regenerated reads as clean
+
+Task 5 added two decision records and committed on a green `gate-commit` —
+546 tests, rc=0 — while `docs/digest/decisions-in-force.md`, a *generated and
+drift-checked* artifact, still ended at 0986. The campaign's own 0987 and 0988
+were missing from the index that exists to list them.
+
+The drift check reported no drift, correctly and uselessly:
+
+```
+git diff --exit-code -- $(... docs/generated-paths.txt ...)   # -> clean
+cargo run ... digest -- render decisions | diff - <committed>  # -> +2 lines
+```
+
+`git diff` asks whether the working tree differs from the index. It cannot ask
+what a generator would produce *now*. So the check only has an opinion after
+something regenerates, and `gate-commit` does not run `make rebaseline`. A
+task that ends at a green commit gate has therefore proven nothing about any
+generated artifact it should have moved.
+
+`CLAUDE.md` documents this hazard at length for the case of a *new* generated
+directory. This instance is narrower and easier to walk into: the path was
+already declared, already tracked, already drift-checked, and had been correct
+for its entire life. Nothing about the tree looked wrong.
+
+**The rule: a task that adds anything a generator reads owes `make rebaseline`
+in its own commit, not at the campaign close.** The close caught this one, by
+regenerating and diffing rather than by re-running the check — which is the
+only move that distinguishes "clean" from "unasked".
+
+## 7. Two smaller ones worth keeping
 
 **An estimate stated beside the decision not to measure it reads, later, as a
 measurement.** The predecessor's provenance says *"the full transitive closure

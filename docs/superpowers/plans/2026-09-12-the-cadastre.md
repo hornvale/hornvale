@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** all six tasks complete; merge gate passed. Task 4 was discharged inside Task 3 (campaign ledger #13).
+
 **Goal:** Complete `technologies/asimov-1989` from 41 items to its closed
 301-item population, so the corpus can compute the demand set it already
 claims, and ratify the closure rule that keeps every future corpus from

@@ -1,6 +1,6 @@
 # The Cadastre — design
 
-**Status:** draft, awaiting G3 · **Date:** 2026-09-12 ·
+**Status:** approved at G3 (Nathan, 2026-09-12); merge gate passed, shipped as decisions 0987 and 0988 · **Date:** 2026-09-12 · **Campaign:** The Cadastre ·
 **Ledger:** `docs/superpowers/ledgers/2026-09-12-the-cadastre.md`
 
 Complete `technologies/asimov-1989` from 41 items to **301**: the catalogue's
