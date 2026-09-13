@@ -3,185 +3,196 @@
 **Status:** draft, awaiting G3 · **Date:** 2026-09-12 ·
 **Ledger:** `docs/superpowers/ledgers/2026-09-12-the-cadastre.md`
 
-Widen `technologies/asimov-1989` from a 41-item cluster sample of the
-invention.cards catalogue to a **census of all 1,484 items**, carrying the
-catalogue's own `Built on` lattice, and report the result as a rate rather
-than a count.
+Complete `technologies/asimov-1989` from 41 items to **301**: the catalogue's
+three named arcs, union everything it attests before 1700, closed under its own
+`Built on` relation. Repairs a truncation The Kiln documented rather than hid,
+and ratifies the rule that makes the repair non-optional for every future
+corpus drawn from a linked source.
 
-## 1. What is actually being changed, in one sentence
+## 1. The defect this repairs
 
-A cluster sample becomes a census of the same population.
+Decision 0386: a corpus's demands are **derived** by transitive closure over
+`presupposes`, never written down. So what a corpus asserts is not its item
+list — it is the closure of its item list.
 
-That framing is the spec's organising idea and it is not decoration. The 41
-items are the union of the three story arcs invention.cards publishes; 1,484
-is every item it publishes. Every hazard below is a hazard some survey
-discipline has already met at exactly this transition, and the answers
-transfer: **when surveillance widens, the raw count jumps and the rate does
-not.**
+`presupposes` may name only in-corpus items. Any corpus drawn from a *subset*
+of a linked catalogue therefore loses its outside edges at authoring time,
+silently, before any resolver could see them. The Kiln states the damage
+plainly:
 
-## 2. Why now — the measured state
+> `presupposes` NAMES ITEMS IN THIS CORPUS AND NOTHING ELSE, WHICH DROPS REAL
+> PREREQUISITES ON PURPOSE. … The consequence is that the derived demand set
+> UNDER-DESCRIBES every such item's real prerequisites.
 
-The Kiln froze `asimov-1989` at 41 items and scored it **35 `absent`, 6
-`deferred`, 0 `present`**. Its spec §4.1 capped the corpus at 40–80 items with
-an explicit argument: *"A 1,500-item column against a four-token model
-produces ~1,496 identical cells — an expensive way to learn we have a clock."*
+`inv-printing-press` really is built on steel; the lattice says it is built on
+nothing. **The corpus cannot compute what it already claims.**
 
-That argument was about cost, and the cost was never measured. It has been
-now. A synthetic 1,484-item corpus was built from the real slug list, put in
-place of `asimov-1989`, run through the real resolver, and removed (tree
-restored byte-identical, `check` back to rc=0):
+This is structural, not an authoring slip, and it will recur in every family.
+Hence §7: the durable deliverable is the rule, not the 260 items.
 
-```
-                        41 items      1,484 items     factor
-report                  0.025 s       0.105 s           --
-check (anchors vs repo) ~0.03 s       0.19-0.26 s       --
-corpus JSON             113 KB        491 KB           4.3x
-generated audit         692 lines     3,578 lines      5.2x
-```
+## 2. What is NOT being claimed
 
-Compute is nil. The 5.2x on the artifact is not the 36x a per-item
-extrapolation predicts, because `note`, `disclosure`, `statistic`, `criterion`
-and `contested` are all `Option` in the deserializer — the mandatory set is
-`id`, `title`, `introduces`, `presupposes`, `verdict`, `anchor`, and `anchor`
-is the empty string for `absent`. Every one of those is mechanical from the
-slug plus its item page.
+**This is not a census.** A census of all 1,484 was specified, adopted at
+ledger #1, and withdrawn at #7. Two measurements killed it:
 
-**The spec's cap was therefore right about the clock and wrong about the
-price.** §2 of this document supersedes The Kiln's §4.1 size clause for this
-corpus only; it does not touch the clock finding, which stands and is this
-campaign's whole reason for expecting a flat column.
+- **It cannot be scored honestly at that size.** The cheap method — a keyword
+  sieve over the 1,787 idea-registry rows — was tested against the only answer
+  key that exists, The Kiln's 41 hand-scored items with their 6 `deferred`. It
+  recovered **3 of 6** while flagging 23 of 41 for adjudication. Every miss
+  lands on `absent`, which ledger #12 established is *this family's flattering
+  result*. An instrument whose error runs entirely toward the self-serving
+  answer is broken, not noisy. Tuning it against those 6 is refused too: 6
+  positives is the only key this campaign will ever have, and fitting to it
+  consumes the control.
+- **~1,400 of its cells could never move.** 43% of the catalogue is attested
+  1900 or later and 64% of it is filed under "Science". Those items score
+  `absent` today and under every model Hornvale will plausibly have. A
+  falsifier's worth is its power to separate the model we have from the model
+  we want; permanently-frozen cells have none.
 
-### 2.1 The catalogue is stable across three independent fetches
+The census keeps one good question — does the `absent` *fraction* differ
+between the arc sample and the whole population? — which survives as an
+idea-registry row, not a campaign.
 
-The Kiln recorded two fetches on 2026-09-11 (150,326 bytes; 1,484 distinct
-slugs after discarding the page's self-link; three arcs at 16/10/15). A third,
-issued 2026-09-12 for this spec, returned **150,326 bytes and the identical
-1,484 slugs** — `diff` against The Kiln's saved list is empty but for the
-self-link this fetch had not yet discarded.
-
-The third fetch also re-confirmed the arcs independently: `knights` 16,
-`republic-of-letters` 10, `steam-diffusion` 15, union **41**, and `diff`
-against The Kiln's saved arc union is empty. So every count that campaign
-recorded reproduces a day later from a separate session.
-
-Three fetches over two days is not a stability guarantee, and Task 1 re-fetches
-under its own provenance discipline regardless. It is enough to proceed.
-
-## 3. Scope — four acts, and this campaign runs three
-
-Widening decomposes into four separable acts with different freeze status.
-Later tasks are keyed to this decomposition.
+## 3. Scope — four acts, three of them in play
 
 ```
                         | blind? | in scope | why
 ------------------------+--------+----------+---------------------------
-1. enumerate            | yes    | YES      | selection-free by construction
-   (1,484 slugs)        |        |          |
+1. enumerate + close    | yes    | YES      | §4, the selection rule
 2. import the lattice   | yes    | YES      | the source's own edges
-   (Built on)           |        |          |
-3. score                | NO     | YES      | where every hazard lives
-   (verdicts)           |        |          |
+3. score                | NO     | YES      | 260 items, by hand
 4. band a criterion     | NO     | NO       | FORBIDDEN -- see below
 ```
 
-**Act 4 is closed to this campaign and to every future one.** Family law:
-*"Any session that has read the distribution a criterion bands is disqualified
-from re-banding that criterion… Band quality can only be improved before the
-first measurement."* Every session now alive has read `occ-tech`'s
-distribution. This campaign authors **no `criterion` and no `statistic` on any
-new item**, which is consistent anyway: those fields are `None` wherever an
-item carries no measurable claim, and an `absent` item carries none.
+**Act 4 is closed to this campaign and every future one.** Family law: any
+session that has read the distribution a criterion bands is disqualified from
+re-banding it, and band quality can only improve before first measurement.
+Every session now alive has read it. This campaign authors **no `criterion`
+and no `statistic`** on any new item — consistent anyway, since those are
+`None` wherever an item carries no measurable claim and an `absent` item
+carries none.
 
-## 4. Selection and the verdict vocabulary
+## 4. Selection — two blind rules, unioned, then closed
 
-### 4.1 The selection rule — the whole catalogue, stated before selecting
+> **Seed:** every item linked from the catalogue's three named story arcs,
+> plus every item the catalogue attests before **1700**.
+> **Then:** close the seed under the catalogue's own `Built on` relation.
+> Nothing is added or removed by hand at any point.
 
-> Every item invention.cards publishes at `/browse/`, with no filter of any
-> kind. Nothing is added; nothing is removed; no item is judged for fitness
-> before it is admitted.
+Measured: **301 items, 401 edges, 0 cycles, 1 root (`biped`)**. 260 new to
+score. The closure adds only 7 above the era cut (the steam chain), so the cut
+is very nearly self-closing.
 
-This is **strictly more blind than the rule it replaces**. The arc rule
-admitted three curated sequences someone at invention.cards chose; a census
-admits the population. It also repairs a fragility The Kiln recorded and could
-not fix: 41 sat one item above its own 40-item floor, and the widen branch was
-provably dead because three arcs is all the catalogue publishes, so a single
-arc edited upstream would have put the corpus below its floor with no
-mechanical remedy.
+### 4.1 Why two rules rather than one
 
-**"Appropriate to our scenario" is the one rule forbidden here.** Filtering to
-what a world of goblins, kobolds and drow plausibly does is selection keyed to
-Hornvale's own code, which makes the selection the measurement. The mechanism
-for *"Asimov is not owed a world"* operates per item after admission, never at
-the door.
+They are near-independent. Measured at the 500 CE cut where the comparison was
+first run: closure alone 77, era alone 98, **overlap 41**. Each catches what
+the other drops.
 
-### 4.2 No item is scored `inapplicable`
+Closure alone excludes `pottery` — which the idea registry's `TECH-2` names
+explicitly as *"the pyrotechnology ladder — pottery/ceramics gate
+storage→surplus"* — along with irrigation, calendar, law, medicine, coin,
+arch, aqueduct, sickle, fermentation. A rule that drops the capability this
+project's own registry most explicitly plans is not principled, whatever its
+pedigree.
 
-Most of the catalogue is 17th–20th century science and Hornvale's
-`TechHorizon` tops out at `Classical`. The tempting verdict for those items is
-`inapplicable` ("the world deliberately lacks a precondition"). **This corpus
-scores none, and `provenance` states the rule and its reason.**
+Era alone reintroduces the §1 truncation and is refused for that reason.
 
-Ledger #3 carries the full argument; the three loads it bears:
+### 4.2 Why `Built on` and not `Led to`
 
-1. **Observed sibling practice.** The Kiln's spec nominated `inapplicable` for
-   exactly this case and the corpus it produced scores **zero**. Precedent is
-   what a corpus did, not what its spec anticipated.
-2. **It asserts a design intent that does not exist.** No ratified decision
-   says Hornvale has no industrial era. The four-token model is an *unbuilt*
-   model, not a *declared* ceiling, and `inapplicable` would manufacture
-   deliberateness out of incompleteness.
-3. **It is the one unratcheted verdict.** 0136 deliberately does not ratchet
-   the `inapplicable` tally. Routing 1,200 items through the single verdict
-   nothing watches puts the campaign's whole mass where nothing watches it.
+Prerequisites terminate; consequences do not. `Built on` closure bottoms out at
+a single root, `biped`. `Led to` closure would propagate across a connected
+catalogue without limit. **Downward closure is the only direction that is both
+blind and finite**, which makes it a rule rather than a preference.
 
-**Both available verdicts are self-serving, in opposite directions, and that
-is why this needed deciding rather than defaulting.** Ledger #12 established
-that a high `absent` count is *this family's* flattering result — the thesis
-is that the model is impoverished. `inapplicable` flatters in the opposite
-direction, converting "we cannot" into "we needn't." Neither can be chosen for
-looking honest.
+`Led to` is also redundant: over the 179 item pages fetched for this spec it is
+the *exact* inverse of `Built on` — 210 comparable edges each way, **zero**
+present in one direction and absent in the other. Task 1 re-checks this over
+the full graph and records any disagreement; a site inconsistency silently
+unioned would launder the source's error into ours.
 
-## 5. The lattice, and the gate that must pass before authoring
+### 4.3 Why an era cut cannot flatter us
 
-`presupposes` edges are the catalogue's own `Built on` links, imported whole.
-Measured on the real site:
+Selection keyed to our own code makes the selection the measurement (The Kiln,
+ledger #7), and "items appropriate to our scenario" looks like exactly that.
+It is not, and the reason is §5: **there is no living-world technology model,
+so no item's verdict depends on its date.** Every item scores on the same
+basis whatever era it comes from. The cut changes *which capabilities are
+examined*, never *how well the world does on them* — the gaming vector is
+absent, not merely unlikely.
 
-- 40-item random sample: `Built on` present on **40/40**, mean **1.40**
-  edges/item, max 3. Projected full graph ~2,080 edges against the **40** the
-  corpus carries today.
-- BFS from 8 random seeds exhausted at **152 nodes / 201 edges, 0 cycles**,
-  roots `biped` and `law-of-octaves`.
+### 4.4 The threshold is a judgement, recorded as one
 
-**`parse` rejects a cycle in `presupposes` as a parse error**, so acyclicity
-is a precondition of the corpus existing at all, and 152 of 1,484 nodes is
-evidence rather than proof.
+1700 comes from the setting's intellectual reach as its author reads it —
+*"perhaps we've had a Descartes somewhere; I don't think we've had a
+Newton"* — with deliberate headroom. Stated plainly so no later reader mistakes
+it for a derivation:
 
-**Task 1 gate — a branch table, not a prediction:**
+`< 1700` **includes** Newton (`Calculus` 1669, `Laws of motion` and `Universal
+gravitation` 1687, 57 items in the 1650–1700 band). `< 1650` matches the phrase
+literally and yields 249 items. 1700 was kept deliberately: **a corpus that
+stops exactly where the world is thought to stop can never report that the
+world stops too early.** An `absent` on universal gravitation is a finding;
+excluding it is a decision that leaves no trace in the output.
 
-- Full graph is acyclic → proceed; record node and edge counts in `provenance`.
-- **A cycle is found → STOP and report.** Do not invent a tie-break mid-task.
-  Breaking a cycle is a selection decision; it must be stated before it is
-  applied, which means a spec amendment and a ledger entry, not an
-  implementer's call.
-- An item page is unreachable or has no `Built on` nav → record the item as a
-  root with the fetch failure noted; do not infer an edge.
+## 5. What the instrument is actually pointed at
 
-`Led to` links are **not** imported, and the reason is measured rather than
-assumed. Over the 179 item pages fetched for this spec, `Led to` is the
-**exact** inverse of `Built on`: 210 comparable `Built on` edges, 210 inverted
-`Led to` edges, **zero** edges present in one direction and absent in the
-other. So importing both would double every edge and leave the closure
-unchanged. Task 1 still re-checks the two directions over the full graph and
-records any disagreement it finds — a site inconsistency silently unioned into
-our data would launder the source's error into ours — but imports `Built on`
-only.
+`TechHorizon`'s four values date **discovered ruins**, not living peoples.
+Every consumer is occupation- or vestige-side:
 
-## 6. The cross-corpus obligation, and how it is discharged
+```
+domains/history/src/record.rs:142    OccupationRecord.tech
+domains/history/src/flesh.rs:644     occ.core.tech >= Iron
+windows/worldgen/src/vestige.rs:321  tech: TechHorizon::Iron
+domains/history/src/lib.rs:73        OCC_TECH = "occ-tech"
+windows/worldgen/src/history_bake.rs:2900  tech_for(year) -> a PAST occupation
+```
 
-The family's rule: *a row cited by one corpus must be ruled on by every
-corpus.* Verified rather than reasoned — one synthetic `deferred` item citing
-`registry:TECH-4` was added to `asimov-1989`, and auditing the **sibling**
-produced:
+**There is no living-world technology model at all.** This strengthens The
+Kiln's F2 finding rather than weakening it: it is not merely that the shipped
+model cannot express loss — the thing modelled is ruin-dating, and the living
+world has no capability state to lose in the first place.
+
+Two consequences bind this spec. It is why §4.3 holds. And it is why §6 scores
+no `inapplicable`: that verdict means the world **deliberately** lacks a
+precondition, and nothing here was decided.
+
+## 6. Verdicts
+
+`absent` unless an anchor exists. `deferred` where an idea-registry row plans
+the capability and is not `shipped`. **No `inapplicable` anywhere**, per §5 —
+and because 0136 deliberately leaves its tally unratcheted, so routing mass
+through it puts the campaign where nothing watches.
+
+Every item whose verdict is **chosen** — nothing `absent` anywhere in its
+`presupposes` closure forces it — carries a `disclosure` stating what its
+author knew of the model. Ledger #12 is binding here and runs against our
+interest: *an `absent` whose verdict turned on having read the model owes a
+disclosure.* Do not key this on roots; family law refuses that proxy
+explicitly, and the resolver computes the chosen set itself.
+
+**Scoring is by hand, in batches, and the 41 arc items are a held-out
+control.** Scoring agents receive the item pages and the registry, never the
+committed corpus, so they cannot see The Kiln's answers. If the sweep does not
+independently reproduce those 6 `deferred`, the sweep is unreliable and the
+report says so with the number.
+
+## 7. The durable deliverable — family law and a decision record
+
+> A corpus drawn from a source that carries its own dependency relation is
+> **closed under that relation**, in the direction that terminates. A corpus
+> that cannot close states the truncation and its size in `provenance`.
+
+This generalises past `technologies/` to every family whose source is
+graph-structured, and it is worth more than the 260 items. It lands as family
+law in `technologies/CLAUDE.md` and as a decision record.
+
+## 8. The cross-corpus obligation
+
+A row cited by one corpus must be ruled on by every corpus. Verified rather
+than reasoned — one synthetic `deferred` citing `registry:TECH-4` was added to
+`asimov-1989` and the **sibling** was audited:
 
 ```
 error: technology coverage audit found 1 finding(s) for `henrich-2004-extended`:
@@ -189,108 +200,79 @@ registry:TECH-4 is cited by asimov-1989's item inv-probe-xyz but is never
 mentioned anywhere in henrich-2004-extended ...
 ```
 
-So the cost that scales is **not item count** — it is the number of distinct
-`registry:` rows the widened corpus newly cites, and each one reddens a frozen
-sibling until that sibling rules on it in writing.
+So the scaling cost is distinct `registry:` citations, not items, and each
+reddens a frozen sibling until it rules.
 
 **Discharge: one written class refusal in `henrich-2004-extended`'s
-`provenance`,** naming every newly-cited row and the single demand none of
-them discharges — that corpus scores loss *trajectory*, and an invention-side
-reach row cannot discharge a trajectory demand. The rule's own text permits
-exactly this: *"refuse it in writing — in provenance or an item's note —
-naming the demand it does not discharge,"* and the check describes itself as
-*"a grep-level floor, not the judgement itself."*
+`provenance`,** naming each newly-cited row and the single demand none
+discharges — that corpus scores loss *trajectory*, and an invention-side reach
+row cannot discharge a trajectory demand. The rule's own text permits this
+("refuse it in writing… naming the demand it does not discharge") and calls
+itself "a grep-level floor, not the judgement itself."
 
-**This edits a frozen corpus, and that is the campaign's most contestable
-act.** The defence: the re-freeze prohibition is written about *criteria and
-bands* ("disqualified from re-banding"), and a written refusal that moves no
-verdict is not a band. Nothing in `henrich-2004-extended`'s items, verdicts,
-anchors, statistics or criteria changes. It wants a decision record of its own
-(§8) because it is the first time any corpus in any family has been edited
-after its freeze.
+**This edits a frozen corpus and is the campaign's most contestable act.** The
+defence: the re-freeze prohibition is written about criteria and bands, and a
+refusal that moves no verdict is not a band. No item, verdict, anchor,
+statistic or criterion in that file changes. It wants its own decision record.
 
-**If that defence is rejected at G3**, the fallback is act-1-and-2 only: a
-frozen source manifest carrying the enumeration and the lattice with no
-verdicts, which owes no sibling ruling because it cites no registry row. It is
-the cheap half of this campaign and it is recorded in the ledger's follow-ups.
+## 9. Reporting
 
-## 7. Reporting — the rate, and the sample kept recoverable
+**The 41 arc items keep their ids and arc attribution.** 0136 clause 2 forbids
+an instrument silently switching what it measures; the committed 35/6/0 reading
+stays comparable precisely because its population stays identifiable. The
+report renders both series.
 
-Two rules, both from §1's framing.
+**The headline is a rate, never the raw `absent` count.** `absent` rises
+because the denominator did. The comparable quantity is the fraction, and the
+finding is whether it *moved* between the arc sample and the completed corpus —
+a real question with a real answer in either direction, including "it did not."
 
-**The 41 arc items keep their ids and their arc attribution** inside the
-widened corpus. 0136 clause 2 forbids an instrument silently switching what it
-measures; the original 35/6/0 reading stays a comparable series precisely
-because its population is still individually identifiable. The report renders
-both: the census, and the arc sample within it.
+## 10. What moves
 
-**The headline is a rate, never the raw `absent` count.** `absent` will rise
-from 35 to something near 1,450, and that number is 36x more impressive while
-being exactly as informative — it is a denominator change. The `absent`
-*fraction* is the comparable quantity, and the finding worth reporting is
-whether it **moved** between sample and census. It is a real question with a
-real answer either way:
-
-- fraction unchanged → the arcs were representative; the clock finding
-  generalises from 41 to the whole catalogue.
-- fraction **rose** → the arcs were the catalogue's Hornvale-friendliest
-  corner (they are: knights, letters, steam), and the sample flattered us.
-- fraction **fell** → the arcs were unrepresentatively harsh; worth knowing
-  before the successor campaign uses either column as a falsifier.
-
-## 8. What moves in the repository
-
-- `technologies/asimov-1989.technology.json` — 41 → 1,484 items; `provenance`
-  and `frozen` restated for the census; the arc items unchanged in substance.
-- `technologies/henrich-2004-extended.technology.json` — `provenance` only,
-  the class refusal of §6. No item changes.
-- `cli/src/technologies.rs` — `novelty_baseline("asimov-1989")` moves off 35.
-  The baseline is a hardcoded function, deliberately, so moving it is a
-  reviewable act in source rather than a data edit.
-- `cli/tests/suite/technology_corpus.rs` — the two item-count assertions
-  (currently `41`).
+- `technologies/asimov-1989.technology.json` — 41 → 301 items; the dropped
+  edges restored and the per-item `note` apologies for them deleted, since they
+  will no longer be true; `ordered` stays `true`, so items are inserted in
+  attested-date order with every prerequisite preceding its dependent.
+- `technologies/henrich-2004-extended.technology.json` — `provenance` only (§8).
+- `cli/src/technologies.rs` — `novelty_baseline("asimov-1989")` off 35.
+- `cli/tests/suite/technology_corpus.rs` — the two item-count assertions.
 - `docs/audits/technology-coverage-asimov-1989.md` — regenerated; already
   declared in `docs/generated-paths.txt`.
-- `technologies/CLAUDE.md` — the census selection rule and the
-  no-`inapplicable` rule become family law.
-- A decision record for the post-freeze sibling edit (§6).
-- Chronicle entry, retrospective, freshness sweep, per project Definition of
-  Done.
+- `technologies/CLAUDE.md` — §7's rule, and §6's no-`inapplicable` rule.
+- Two decision records: §7's closure rule, §8's post-freeze sibling edit.
+- Chronicle, retrospective, freshness sweep.
 
-**This campaign is not prose-only** — it touches Rust, so it pays the full
-phase ladder at merge rather than skipping `clients` and `heavy`.
+**Not prose-only** — it touches Rust, so it pays the full phase ladder at merge.
 
-## 9. Success criteria
+## 11. Success criteria
 
-1. `hornvale technologies check asimov-1989` and `… check
-   henrich-2004-extended` both exit 0.
-2. The corpus parses with 1,484 items and an acyclic lattice; the item-count
-   assertions pin 1,484.
-3. Every one of the 41 arc items is still present, by id, with its arc named
-   in `source`.
-4. The report renders both series and states the `absent` fraction for each.
-5. No item carries `inapplicable`, `criterion`, or `statistic` that did not
-   carry it before.
-6. `make gate-commit` green; the merge passes the full ladder.
+1. `technologies check` exits 0 for both corpora.
+2. The corpus parses at 301 items with an acyclic lattice; the count
+   assertions pin 301.
+3. Every one of the 41 arc items is present by id with its arc named.
+4. Every `presupposes` edge the source states between two in-corpus items is
+   present — closure is complete, not approximated.
+5. The report renders both series and states each `absent` fraction.
+6. The held-out control (§6) is reported with its number, whatever it says.
+7. No item carries `inapplicable`, `criterion` or `statistic` that did not
+   before.
+8. `make gate-commit` green; the merge passes the full ladder.
 
-## 10. What would falsify the campaign's premise
+## 12. Stop conditions
 
-The premise is that a census of this catalogue measures the same flat column
-the sample did, more defensibly. It is falsified if the `absent` fraction
-moves materially between sample and census — and **that is a finding, not a
-failure.** Per project practice several campaigns ship the null as the
-headline; this one should ship the *movement* as the headline if there is any.
+- **A cycle in the full graph.** `parse` rejects one, so this stops authoring.
+  Breaking a cycle is a selection decision and must be stated before it is
+  applied — a spec amendment and a ledger entry, never an implementer's call.
+- **The held-out control fails badly.** If hand-scoring does not reproduce The
+  Kiln's 6 `deferred`, report the number and stop before scoring the remainder;
+  the method is the deliverable's foundation and a broken one invalidates the
+  rest.
 
-The premise is also falsified, in a way that stops the campaign rather than
-reporting it, if the full graph contains a cycle (§5).
+## 13. Out of scope
 
-## 11. Out of scope
-
-- **Replacing `tech_for` with an acquisition model** — `TECH-acquisition-model`
-  in the idea registry. That is the successor campaign; this one only makes
-  its falsifier bigger.
-- **Any criterion or band** (§3, act 4).
-- **A second source.** The census is of one catalogue.
-- **Reading the column as a roadmap.** Decision 0095: the corpus is an
-  instrument and cannot be a backlog. A 1,484-item artifact reads much more
-  like a backlog than a 41-item one, and `provenance` says so explicitly.
+- **Replacing `tech_for` with an acquisition model** (`TECH-acquisition-model`).
+  That is the successor campaign; this one sharpens its falsifier.
+- **Any criterion or band** (§3).
+- **A second source**, and **a census** (§2).
+- **Reading the column as a roadmap.** Decision 0095: an instrument with known
+  bias is never a standard and never a backlog. `provenance` says so.
