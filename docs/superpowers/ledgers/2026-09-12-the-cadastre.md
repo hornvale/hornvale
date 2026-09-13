@@ -536,3 +536,97 @@ finding against a controller-verified measurement.
 
 *Capture actions.* Spec §4 corrected; Task 2 Step 5 and Task 6 Step 3 inherit
 the correction; the retrospective owes the same-instrument lesson.
+
+**#10 [Task 2] — Five judgement calls the brief left open while rebuilding the
+corpus at its closed 301-item population.**
+
+*1. `henrich-2004-extended`'s frozen-size assertion is left at 41, untouched.*
+`cli/tests/suite/technology_corpus.rs` carries exactly two `assert_eq!(c.items
+.len(), 41)` lines — one loading `asimov-1989`, one loading
+`henrich-2004-extended` (misleadingly named
+`the_collapse_corpus_is_frozen_at_its_declared_size`, a pre-existing naming
+oddity this task did not touch). The brief's Step 7 says "both assertions
+currently read `41`" and shows one target line (`301`), which reads as
+ambiguous about whether both should change. Task 2's own interface note is
+explicit that only the asimov side is in scope this task ("Task 3 rescores;
+Task 4 discharges the sibling"), so only the `asimov-1989` assertion moved, to
+301. Changing `henrich-2004-extended`'s to anything but 41 would have been
+false — that corpus file is untouched — and reads as the brief describing the
+file's PRE-EDIT state (two literal `41`s) rather than instructing both to
+change.
+
+*2. New item ids are `"inv-" + slug`, verified against the existing
+convention rather than invented.* All 41 arc items' ids already equal
+`"inv-" + <the slug recovered from their own source string>`, checked
+programmatically before authoring a single new item. So every one of the 260
+new items gets `id = "inv-" + slug` too — stable, readable, and mechanically
+derivable from `population.json` with no judgement per item.
+
+*3. New items' `source` carries only the attested year, no person or place,
+matching the brief's own worked example exactly.* `population.json` (Task 1's
+interface) carries `{slug, title, year, field, built_on, led_to}` — no
+attributed person or place, unlike the original 41's hand-authored `source`
+strings. The brief's Step 4 example (`inv-pottery`) already reflects this:
+`"... invention.cards \`/pottery/\` (6,000 BCE)"`, with no attribution clause.
+Followed verbatim rather than re-scraping the 301 cached pages under
+`/tmp/cadastre/pages/` for attribution the interface doesn't carry (and which,
+checked directly, isn't even present in the cached static HTML — the site
+renders it client-side from a payload the static fetch doesn't capture).
+
+*4. The declared-bias re-count in `provenance` is geography for the original
+41, topic (`field`) for all 301 — not geography for all 301.* Family law
+requires the bias claim re-counted for the new population (Step 5, item 5).
+The original claim's evidence was geographic (26 of 41 in Europe, 0 in the
+Americas/Africa/Oceania). That count is unavailable for the 260 new items from
+either interface Task 1 handed off (`population.json` has no place field; the
+cached page HTML doesn't carry it either — checked directly on `pottery.html`,
+where the only `author` field is the SITE's author, not the invention's).
+Rather than fabricate a place count or silently drop the bias section,
+`provenance` states the geographic count as still true and unchanged for the
+41 arc items specifically, and adds a genuine re-count over all 301 using the
+one taxonomy the interface actually supports — the catalogue's own `field`
+tag (Science 95, General 47, Geography 36, Space 36, Culture 31, Math 29, War
+18, Design 9) — naming plainly that this is a narrower recount than the
+original claim's grain, not a claim that geographic bias has vanished.
+
+*5. `cli/tests/suite/technology_coverage.rs`'s three baseline-pinned tests
+moved with `novelty_baseline`, though the brief's file list didn't name this
+file.* Raising `novelty_baseline("asimov-1989")` from 35 to 295 (Step 7) is a
+change to a function this file's own tests pin directly:
+`the_two_baselines_match_the_committed_corpora` asserted the live baseline AND
+the live `absent` count both equalled 35; two more tests asserted the ratchet
+fires/passes at 34/35/36 around that baseline. All three would have failed
+after Step 7's edit landed — not a pre-existing failure, but one Task 2's own
+required change introduces — so fixing them (34/295/296, per the CLAUDE.md/
+global-instructions rule "never disable tests, fix them") is in scope even
+though the brief's Files list under-named it. `cli/tests/suite/
+technology_corpus.rs`'s own two frozen-size assertions were unaffected by this
+edit and needed no further change.
+
+*6. `inv-biped` (the population's sole root) needed an authored `disclosure`
+Step 4 says new items shouldn't carry, because the resolver's chosen/inherited
+rule is unconditional.* Step 4 says new items get no `disclosure` at this
+step. But `is_chosen` reads the closure, not authorship history:
+`inv-biped` has an empty `presupposes`, so it is trivially CHOSEN, and
+`disclosure_gaps` (correctly) flagged it as a finding until it carried one —
+confirmed by running the resolver per Step 8 ("let the resolver enumerate the
+real set... follow the finding, not this plan"). The disclosure authored is
+deliberately thin and says exactly that: `inv-biped`'s `absent` verdict is an
+unauthored Task 2 placeholder, not a search result, and Task 3 inherits and
+must revisit this disclosure if it changes the verdict. This does not
+contradict Step 4's "no disclosure" instruction in substance — it says the
+placeholder was NOT searched — it only satisfies the resolver's mechanical
+requirement that a `disclosure` field be present and non-empty for any
+CHOSEN item, honestly authored rather than left as a blocking finding.
+
+*Consequence for Task 3.* The audit run at the end of Task 2
+(`cargo run -p hornvale -- technologies check asimov-1989`) found exactly 17
+findings before repair: 16 items losing their disclosure (the arc items that
+became INHERITED once closure restored their real, `absent` ancestors) and 1
+item gaining one (`inv-biped`, newly CHOSEN as the population's sole root).
+The brief's own Step 3 list of "10, MEASURED" items undercounted by 6 —
+`inv-papyrus`, `inv-literature`, `inv-horse`, `inv-alphabet`, `inv-library`
+and `inv-parchment` were already CHOSEN non-roots in the 41-item corpus (per
+family law's own worked example about `inv-parchment`) and became INHERITED
+the same way the 10 named roots did. All 17 are now resolved; `technologies
+check asimov-1989` exits 0.

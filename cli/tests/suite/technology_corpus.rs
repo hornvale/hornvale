@@ -135,7 +135,7 @@ fn an_unknown_verdict_is_a_parse_error() {
 #[test]
 fn the_asimov_corpus_is_frozen_at_its_declared_size() {
     let c = load_asimov();
-    assert_eq!(c.items.len(), 41);
+    assert_eq!(c.items.len(), 301);
 }
 
 /// The freeze, for the second corpus. Same discipline, same derivation

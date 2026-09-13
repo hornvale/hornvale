@@ -767,8 +767,10 @@ fn anchor_matches_verdict(v: Verdict, a: &Anchor) -> bool {
 
 /// The NOVELTY ratchet's baseline (decision 0136): the `absent` count
 /// measured when this corpus's resolver was first written, derived from the
-/// committed files rather than guessed — `asimov-1989` at 35, `henrich-
-/// 2004-extended` at 31. `None` for a corpus with no baseline on record,
+/// committed files rather than guessed — `asimov-1989` at 295 (re-measured
+/// for The Cadastre's closed 301-item population, Task 2; the 41-item arc
+/// corpus's own figure was 35), `henrich-2004-extended` at 31. `None` for a
+/// corpus with no baseline on record,
 /// which [`audit`] treats as "nothing to ratchet against," never as a
 /// silent pass disguised as a baseline of zero.
 ///
@@ -780,7 +782,7 @@ fn anchor_matches_verdict(v: Verdict, a: &Anchor) -> bool {
 /// type-audit: bare-ok(identifier-text: corpus_id), bare-ok(count: return)
 pub fn novelty_baseline(corpus_id: &str) -> Option<usize> {
     match corpus_id {
-        "asimov-1989" => Some(35),
+        "asimov-1989" => Some(295),
         "henrich-2004-extended" => Some(31),
         _ => None,
     }
