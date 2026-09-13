@@ -397,6 +397,14 @@ pub fn realize_channel_curves(
     inputs: TerrainFacetInputs<'_>,
     address: &FacetAddress,
 ) -> Vec<RealizedCurve> {
+    let mut curves = Vec::new();
+    for source in channel_sources(inputs, address) {
+        clip_curve(&source, address, &mut curves);
+    }
+    curves
+}
+
+fn channel_sources(inputs: TerrainFacetInputs<'_>, address: &FacetAddress) -> Vec<RealizedCurve> {
     let facet = address.resolved();
     let center = facet.centroid();
     let radius = facet
@@ -406,7 +414,7 @@ pub fn realize_channel_curves(
         .fold(0.0, f64::max);
     let mut curves = Vec::new();
     for line in 0..inputs.channels.polylines.len() {
-        clip_curve(&trunk_curve(inputs, line), address, &mut curves);
+        curves.push(trunk_curve(inputs, line));
     }
     let cut = CatchmentCut::Drawn(inputs.globe.rill_partition_seed());
     // atan(diagonal / 2) <= diagonal / 2. Include the entire neighboring
@@ -422,17 +430,157 @@ pub fn realize_channel_curves(
             .iter()
             .map(|&p| angle(origin, p))
             .fold(square_radius, f64::max);
-        if angle(origin, center) > reach_radius + radius {
+        // Include the bank even when the centerline misses the patch.
+        let bank_radius =
+            channel_half_width(1.0, crate::channel::vertex_spacing(inputs.geo, vertex));
+        if angle(origin, center) > reach_radius + radius + bank_radius {
             continue;
         }
         for (index, rill) in rills_of(vertex, inputs.channels, inputs.geo, &cut)
             .iter()
             .enumerate()
         {
-            clip_curve(&rill_curve(inputs, rill, index), address, &mut curves);
+            curves.push(rill_curve(inputs, rill, index));
         }
     }
     curves
+}
+
+/// Realize complete source ribbons, then clip their footprints to the patch.
+/// Tessellation and transverse frames depend on the uncut feature alone, so
+/// adjacent patches and different LODs partition the same spherical triangles.
+pub fn realize_channel_strips(
+    inputs: TerrainFacetInputs<'_>,
+    address: &FacetAddress,
+    sampling: FeatureStripSampling,
+) -> Vec<FeatureStripLayout> {
+    clipped_feature_strips(&channel_sources(inputs, address), address, sampling)
+}
+
+fn clipped_feature_strips(
+    sources: &[RealizedCurve],
+    address: &FacetAddress,
+    sampling: FeatureStripSampling,
+) -> Vec<FeatureStripLayout> {
+    // One Level-6 sampling scale for all requesters, including across macro
+    // faces. A requesting LOD must not move the source ribbon's edges or bends.
+    let sampling_address = FacetAddress::new(
+        Facet {
+            face: 0,
+            path: vec![0; crate::GLOBE_LEVEL as usize],
+        },
+        vec![],
+    )
+    .expect("canonical sampling address");
+    let corners = address.resolved().corners();
+    let center = address.resolved().centroid();
+    let planes: [[f64; 3]; 4] = std::array::from_fn(|edge| {
+        let mut ends = [corners[edge], corners[(edge + 1) % 4]];
+        ends.sort_by(point_cmp);
+        cross(ends[0], ends[1])
+    });
+    let radius = corners
+        .iter()
+        .map(|&p| angle(center, p))
+        .fold(0.0, f64::max);
+    let mut output = Vec::new();
+    for source in sources {
+        // Conservative cap rejection includes the entire segment and width.
+        if !source.points.windows(2).enumerate().any(|(i, pair)| {
+            angle(center, pair[0])
+                <= radius + angle(pair[0], pair[1]) + source.width[i].max(source.width[i + 1]) * 0.5
+        }) {
+            continue;
+        }
+        for mut layout in
+            adaptive_feature_strips(std::slice::from_ref(source), &sampling_address, sampling)
+        {
+            let mut vertices = Vec::new();
+            let mut triangles = Vec::new();
+            for triangle in &layout.triangles {
+                let mut polygon = triangle.map(|i| layout.vertices[i as usize]).to_vec();
+                for plane in planes {
+                    polygon = clip_strip_polygon(&polygon, plane, dot(plane, center).signum());
+                }
+                for i in 1..polygon.len().saturating_sub(1) {
+                    let points = [polygon[0], polygon[i], polygon[i + 1]];
+                    let [a, b, c] = points.map(|v| v.position);
+                    if dot(a, cross(b, c)) <= 0.0 {
+                        continue;
+                    }
+                    let start = u32::try_from(vertices.len()).expect("feature strip exceeds u32");
+                    vertices.extend(points);
+                    triangles.push([start, start + 1, start + 2]);
+                }
+            }
+            if triangles.is_empty() {
+                continue;
+            }
+            layout.vertices = vertices;
+            layout.triangles = triangles;
+            let mut pieces = Vec::new();
+            clip_curve(source, address, &mut pieces);
+            if let (Some(first), Some(last)) = (pieces.first(), pieces.last()) {
+                layout.endpoints = [first.endpoints[0].clone(), last.endpoints[1].clone()];
+                layout.centerline = pieces
+                    .iter()
+                    .flat_map(|p| p.points.iter().copied())
+                    .collect();
+                layout.width_rad = pieces
+                    .iter()
+                    .flat_map(|p| p.width.iter().copied())
+                    .collect();
+            }
+            // A bank-only intersection retains the original source centerline
+            // and terminals; it must not invent a centerline boundary crossing.
+            output.push(layout);
+        }
+    }
+    output.sort_by_key(|a| a.feature);
+    output
+}
+
+fn clip_strip_polygon(
+    polygon: &[FeatureStripLayoutVertex],
+    plane: [f64; 3],
+    inside_sign: f64,
+) -> Vec<FeatureStripLayoutVertex> {
+    let mut output = Vec::new();
+    for i in 0..polygon.len() {
+        let a = polygon[i];
+        let b = polygon[(i + 1) % polygon.len()];
+        let da = dot(plane, a.position) * inside_sign;
+        let db = dot(plane, b.position) * inside_sign;
+        if da >= 0.0 {
+            output.push(a);
+        }
+        if (da < 0.0 && db > 0.0) || (da > 0.0 && db < 0.0) {
+            // Identical operand order on both sides of a seam, independent of
+            // triangle winding or which half-space the requester owns.
+            let (a, b) = if point_cmp(&a.position, &b.position).is_gt() {
+                (b, a)
+            } else {
+                (a, b)
+            };
+            let da = dot(plane, a.position);
+            let db = dot(plane, b.position);
+            let t = da / (da - db);
+            let signed_distance_rad =
+                a.signed_distance_rad + t * (b.signed_distance_rad - a.signed_distance_rad);
+            output.push(FeatureStripLayoutVertex {
+                position: interpolate(a.position, b.position, t),
+                side: if signed_distance_rad < 0.0 {
+                    -1
+                } else if signed_distance_rad > 0.0 {
+                    1
+                } else {
+                    0
+                },
+                signed_distance_rad,
+            });
+        }
+    }
+    output
 }
 
 /// Build deterministic patch-local ribbons independently of terrain vertices.
@@ -519,8 +667,8 @@ pub fn adaptive_feature_strips(
                 .flat_map(|index| {
                     let right = u32::try_from(index * 2).expect("feature strip exceeds u32");
                     [
-                        [right, right + 1, right + 2],
-                        [right + 1, right + 3, right + 2],
+                        [right, right + 2, right + 1],
+                        [right + 1, right + 2, right + 3],
                     ]
                 })
                 .collect();
@@ -762,6 +910,54 @@ pub fn bed_height_profile(curve: &RealizedCurve, terrain: &GeneratedTerrain) -> 
         profile.push(sample_height(&source, &heights, last));
     }
     profile
+}
+
+/// Retained source endpoints and settled elevations for one inherited rill.
+/// Derived geometry only: this carries no stream or save state.
+/// type-audit: pending(wave-1)
+pub struct RillBedInputs {
+    points: [[f64; 3]; 2],
+    heights: [f64; 2],
+}
+
+impl RillBedInputs {
+    /// Settle a vertex's existing partition once, in parent-before-child order.
+    /// The caller supplies the unchanged `rills_of` result for this vertex so
+    /// geometry and bed preparation share a single partition expansion.
+    pub fn for_rills(
+        terrain: &GeneratedTerrain,
+        vertex: Vertex,
+        rills: &[crate::Rill],
+    ) -> Vec<Self> {
+        let channels = terrain.channels();
+        let (line, _) = channels.trunk_vertex(vertex).expect("feature has a trunk");
+        let trunk = &channels.polylines[line].points;
+        let heights: Vec<_> = channels.run_vertices[line]
+            .iter()
+            .map(|&v| terrain.elevation_at(v).get())
+            .collect();
+        let slope = local_slope(terrain.globe(), terrain.geosphere(), vertex);
+        let mut beds: Vec<Self> = Vec::with_capacity(rills.len());
+        for rill in rills {
+            let mouth = match rill.parent {
+                Some(parent) => beds[parent].sample_at(rill.mouth),
+                None => sample_height(trunk, &heights, rill.mouth),
+            };
+            let normal = cross(rill.head, rill.mouth);
+            let length = math::atan2(dot(normal, normal).sqrt(), dot(rill.head, rill.mouth));
+            beds.push(Self {
+                points: [rill.head, rill.mouth],
+                heights: [mouth + slope * length, mouth],
+            });
+        }
+        beds
+    }
+
+    /// Evaluate the original bed projection, preserving exact endpoint heights.
+    /// type-audit: pending(wave-1)
+    pub fn sample_at(&self, position: [f64; 3]) -> f64 {
+        sample_height(&self.points, &self.heights, position)
+    }
 }
 
 fn sample_height(points: &[[f64; 3]], heights: &[f64], point: [f64; 3]) -> f64 {
@@ -1075,6 +1271,72 @@ fn nearest_segment(points: &[[f64; 3]], position: [f64; 3]) -> Option<NearestSeg
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// claim: structural(seed: none — exact boundary fixture) — parent/child
+    /// footprint partition, identity retention, and bank-only intersection
+    #[test]
+    fn clipped_ribbon_footprints_partition_bent_source_across_lods() {
+        let (address, _, [inside, boundary, outside]) = exact_boundary_fixture();
+        let curve = source_curve(
+            vec![inside, boundary, outside],
+            TerminalKind::Headwater,
+            TerminalKind::Ocean,
+        );
+        let sampling = FeatureStripSampling {
+            patch_divisions: 8,
+            width_step_multiplier: 8.0,
+            curvature_gain: 1.0,
+            max_subdivisions: 32,
+        };
+        let parent = clipped_feature_strips(std::slice::from_ref(&curve), &address, sampling);
+        let children = (0..4)
+            .flat_map(|child| {
+                let child = FacetAddress::new(address.macro_face.clone(), vec![child]).unwrap();
+                clipped_feature_strips(std::slice::from_ref(&curve), &child, sampling)
+            })
+            .collect::<Vec<_>>();
+        let area = |strips: &[FeatureStripLayout]| {
+            strips
+                .iter()
+                .flat_map(|s| {
+                    s.triangles.iter().map(|t| {
+                        let [a, b, c] = t.map(|i| s.vertices[i as usize].position);
+                        let determinant = dot(a, cross(b, c));
+                        assert!(determinant > 0.0, "clipped triangle must face outward");
+                        2.0 * math::atan2(determinant, 1.0 + dot(a, b) + dot(b, c) + dot(c, a))
+                    })
+                })
+                .sum::<f64>()
+        };
+        assert!(!parent.is_empty() && !children.is_empty());
+        assert!(
+            (area(&parent) - area(&children)).abs() < 1e-14,
+            "children must partition the same footprint without lost or duplicated area"
+        );
+        for strip in &children {
+            assert_eq!(strip.feature, curve.feature);
+        }
+        // The centerline is outside this child, but its bank still overlaps it.
+        let corner = address.resolved().corners()[0];
+        let offset = normalize(std::array::from_fn(|i| corner[i] * 1.01 - inside[i] * 0.01));
+        let halo = source_curve(
+            vec![
+                offset,
+                normalize(std::array::from_fn(|i| {
+                    offset[i] + 0.00001 * (boundary[i] - inside[i])
+                })),
+            ],
+            TerminalKind::Headwater,
+            TerminalKind::Ocean,
+        );
+        let mut centers = Vec::new();
+        clip_curve(&halo, &address, &mut centers);
+        assert!(centers.is_empty());
+        assert!(
+            !clipped_feature_strips(&[halo], &address, sampling).is_empty(),
+            "a footprint crossing without its centerline still belongs to the patch"
+        );
+    }
 
     /// Cross a facet edge whose great-circle plane evaluates to exactly zero
     /// at the authored middle vertex, rather than a near-boundary crossing.

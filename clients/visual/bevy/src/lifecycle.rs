@@ -1110,6 +1110,16 @@ pub(crate) fn apply_pending_scene(world: &mut World) {
             *t = transforms["anchor"];
         }
     }
+    for (feature, mut t) in world
+        .query::<(&SurfaceFeatureVisual, &mut Transform)>()
+        .iter_mut(world)
+    {
+        if (feature.binding.clone(), feature.generation) == patch_identity
+            && !feature.key.revision.is_empty()
+        {
+            *t = transforms["anchor"];
+        }
+    }
     for mut t in world
         .query_filtered::<&mut Transform, With<CosmeticCloud>>()
         .iter_mut(world)

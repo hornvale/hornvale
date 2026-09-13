@@ -145,6 +145,63 @@ fn output_path() -> std::path::PathBuf {
         std::process::id()
     ))
 }
+
+#[test]
+fn surface_features_follow_subsequent_anchor_transforms_only_for_current_identity() {
+    let (mut world, mirror, mut catalog) = setup();
+    let visual = SurfaceFeatureVisual {
+        feature: SurfaceFeatureId {
+            kind: "channel_reach".into(),
+            macro_anchor: 1,
+            ordinal: 0,
+        },
+        binding: mirror.initial().binding.clone(),
+        generation: mirror.generation(),
+        key: SurfacePatchCacheKey {
+            revision: "current".into(),
+            macro_face: 1 << 17,
+            child_path: vec![],
+        },
+    };
+    let current = world.spawn((visual.clone(), Transform::IDENTITY)).id();
+    let mut stale = visual;
+    stale.generation += 1;
+    let stale = world.spawn((stale, Transform::IDENTITY)).id();
+    let camera = world.spawn(Transform::IDENTITY).id();
+    let pose = CameraPose {
+        eye_km: [30000., 0., 0.],
+        target_km: [0.; 3],
+        up: [0., 0., 1.],
+        vertical_fov_radians: 0.7,
+        focus_distance_km: 30000.,
+    };
+    for angle in [0.4, 0.8] {
+        catalog
+            .apply(
+                &mut world,
+                &mirror,
+                &pose,
+                SceneTarget {
+                    camera,
+                    width: 1920,
+                    height: 1080,
+                },
+            )
+            .unwrap();
+        let expected = Transform::from_translation(Vec3::new(3., 4., 5.))
+            .with_rotation(Quat::from_rotation_z(angle));
+        world
+            .resource_mut::<PendingScene>()
+            .0
+            .as_mut()
+            .unwrap()
+            .transforms
+            .insert("anchor".into(), expected);
+        apply_pending_scene(&mut world);
+        assert_eq!(*world.get::<Transform>(current).unwrap(), expected);
+        assert_eq!(*world.get::<Transform>(stale).unwrap(), Transform::IDENTITY);
+    }
+}
 #[test]
 fn capture_preconditions_do_not_poison_but_actual_failure_requires_rebuild() {
     let (mut world, m, mut c) = setup();

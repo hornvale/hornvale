@@ -207,6 +207,56 @@ fn strip_protocol_accepts_finite_signed_geometry_and_rejects_malformed_edges() {
 }
 
 #[test]
+fn finite_render_overflow_is_rejected_before_any_asset_or_request_mutation() {
+    for field in ["strip_height", "sample_height", "strip_position"] {
+        let (mut world, mirror, mut catalog) = scene_catalog();
+        let revision = mirror.initial().binding.source_revision.clone();
+        let valid = patch_with_strip_json(&revision);
+        let key = documents::surface_patch(&valid).unwrap().cache_key();
+        catalog
+            .set_desired_surface_patches(&mirror, vec![key.clone()])
+            .unwrap();
+        catalog
+            .schedule_surface_patch(key, catalog_request(&mirror, 74))
+            .unwrap();
+        let mut patch: serde_json::Value = serde_json::from_str(&valid).unwrap();
+        match field {
+            "strip_height" => {
+                patch["strips"][0]["vertices"][0]["height_m"] = serde_json::json!(1e300)
+            }
+            "sample_height" => patch["samples"][0]["height_m"] = serde_json::json!(1e300),
+            _ => patch["strips"][0]["vertices"][0]["position"][0] = serde_json::json!(1e300),
+        }
+        let before = (
+            world.resource::<Assets<Mesh>>().len(),
+            world.resource::<Assets<StandardMaterial>>().len(),
+            world.entities().len(),
+        );
+        assert!(
+            catalog
+                .apply_surface_reply(&mut world, &catalog_reply(&mirror, 74, &patch.to_string()))
+                .is_err(),
+            "accepted {field}"
+        );
+        assert_eq!(
+            before,
+            (
+                world.resource::<Assets<Mesh>>().len(),
+                world.resource::<Assets<StandardMaterial>>().len(),
+                world.entities().len()
+            )
+        );
+        assert!(
+            catalog
+                .apply_surface_reply(&mut world, &catalog_reply(&mirror, 74, &valid))
+                .unwrap()
+                .is_some(),
+            "rejection consumed the pending request"
+        );
+    }
+}
+
+#[test]
 fn surface_reply_requires_complete_validated_envelope() {
     let patch = patch_json(&"a".repeat(40));
     let reply = surface_reply(7, &patch);

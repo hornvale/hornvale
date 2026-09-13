@@ -5,8 +5,8 @@ use std::fmt::{self, Write as _};
 use hornvale_kernel::{Facet, NearestVertexIndex, Seed, Vertex, World};
 use hornvale_terrain::{
     FacetAddress, FacetFieldSample, FeatureEndpoint, FeatureId, FeatureStripSampling,
-    RealizedCurve, TerrainFacetInputs, WaterKind, adaptive_feature_strips, canonical_corner_sample,
-    canonical_edge_sample, realize_channel_curves,
+    RealizedCurve, TerrainFacetInputs, WaterKind, canonical_corner_sample, canonical_edge_sample,
+    realize_channel_curves, realize_channel_strips,
 };
 
 use crate::{GeneratedClimate, climate_from, sky_of, terrain_of};
@@ -124,6 +124,7 @@ pub struct SurfaceRealizationContext {
     planet_radius_m: f64,
     relief_noise: hornvale_terrain::SphereFbm,
     configuration: SurfaceConfiguration,
+    rill_candidates: RillCandidates,
 }
 
 /// Every authored calibration consumed by surface realization, held once so
@@ -179,7 +180,7 @@ impl SurfaceConfiguration {
     const fn current() -> Self {
         Self {
             record_schema: "hornvale/surface-configuration/v4",
-            algorithm_version: "hornvale/surface-realization/v6",
+            algorithm_version: "hornvale/surface-realization/v7",
             globe_level: hornvale_terrain::GLOBE_LEVEL,
             sample_topology: "quad-corners-center-dyadic-ring/world-space-fan-v2",
             material_channels: "bedrock,soil,sediment,wetland,fresh-water,salt-water,snow-ice,vegetation/v1",
@@ -327,6 +328,7 @@ impl SurfaceRealizationContext {
             configuration.relief_octaves,
         );
 
+        let rill_candidates = rill_candidates(&terrain);
         Ok(Self {
             revision: revision.clone(),
             expected_revision: revision,
@@ -336,6 +338,7 @@ impl SurfaceRealizationContext {
             planet_radius_m,
             relief_noise,
             configuration,
+            rill_candidates,
         })
     }
 
@@ -381,8 +384,12 @@ impl SurfaceRealizationContext {
             },
             address,
         );
-        let strips = adaptive_feature_strips(
-            &curves,
+        let strips = realize_channel_strips(
+            TerrainFacetInputs {
+                globe: self.terrain.globe(),
+                geo: self.terrain.geosphere(),
+                channels: self.terrain.channels(),
+            },
             address,
             FeatureStripSampling {
                 patch_divisions: self.configuration.strip_patch_divisions,
@@ -397,22 +404,16 @@ impl SurfaceRealizationContext {
                 .vertices
                 .iter()
                 .map(|vertex| {
-                    let surface = samples
-                        .iter()
-                        .min_by(|left, right| {
-                            angular_distance(left.position, vertex.position)
-                                .total_cmp(&angular_distance(right.position, vertex.position))
-                        })
-                        .expect("a realized patch has canonical samples");
-                    SurfaceFeatureStripVertex {
+                    let surface = self.sample_at(vertex.position)?;
+                    Ok(SurfaceFeatureStripVertex {
                         position: vertex.position,
                         height_m: surface.height_m,
                         normal: surface.normal,
                         side: vertex.side,
                         signed_distance_rad: vertex.signed_distance_rad,
-                    }
+                    })
                 })
-                .collect();
+                .collect::<Result<Vec<_>, SurfaceBuildError>>()?;
             Ok(SurfaceFeatureStrip {
                 feature: layout.feature,
                 centerline: layout.centerline,
@@ -544,7 +545,9 @@ impl SurfaceRealizationContext {
         let trunk = channel_reading
             .zip(channel_bed)
             .map(|(reading, bed)| (reading.signed_distance, bed));
-        let channel = rill_bed_at(&self.terrain, position, trunk).or(trunk);
+        let channel =
+            rill_bed_from_candidates(&self.terrain, &self.rill_candidates, position, trunk)
+                .or(trunk);
         let ambient_height = macro_height_m + relief_m;
         let height_m = match channel {
             Some((distance, bed)) => {
@@ -1124,6 +1127,303 @@ struct ChannelBed {
 /// Read uncut, source-owned rills before composing the surface. Candidate
 /// selection depends only on position, never the requesting patch or LOD.
 /// Trunk beds retain authority; outside them the nearer supported rill wins.
+#[derive(Clone, Copy)]
+struct RillCandidate {
+    vertex: Vertex,
+    origin: [f64; 3],
+    radius: f64,
+    slope: f64,
+    spacing: f64,
+}
+
+struct RillCandidates {
+    candidates: Vec<RillCandidate>,
+    index: RillCandidateNode,
+    // Dense candidate identity owns its expansion for the context's lifetime.
+    // Lazy construction avoids expanding the whole globe for a local request;
+    // OnceLock also preserves sharing when callers sample concurrently.
+    expanded: Vec<std::sync::OnceLock<ExpandedRills>>,
+}
+
+struct ExpandedRills {
+    rills: Vec<ExpandedRill>,
+    index: RillCandidateNode,
+}
+
+struct ExpandedRill {
+    curve: RealizedCurve,
+    edges: [f64; 4],
+    bed: hornvale_terrain::RillBedInputs,
+}
+
+struct RillBounds {
+    lower: [f64; 3],
+    upper: [f64; 3],
+}
+
+/// Cartesian bounds avoid pole/face seams. On a unit sphere chord distance
+/// never exceeds angular distance, so origin ± angular radius encloses the
+/// entire supported cap. Padding covers normalization and bound roundoff;
+/// the original angular predicate remains the final authority.
+struct RillCandidateNode {
+    lower: [f64; 3],
+    upper: [f64; 3],
+    contents: RillCandidateContents,
+}
+
+enum RillCandidateContents {
+    Leaf(Vec<usize>),
+    Branch(Box<[RillCandidateNode; 2]>),
+}
+
+impl RillCandidateNode {
+    fn build(bounds: &[RillBounds], mut indices: Vec<usize>) -> Self {
+        let mut lower = [f64::INFINITY; 3];
+        let mut upper = [f64::NEG_INFINITY; 3];
+        for &index in &indices {
+            for axis in 0..3 {
+                lower[axis] = lower[axis].min(bounds[index].lower[axis]);
+                upper[axis] = upper[axis].max(bounds[index].upper[axis]);
+            }
+        }
+        let contents = if indices.len() <= 8 {
+            RillCandidateContents::Leaf(indices)
+        } else {
+            let axis = (0..3)
+                .max_by(|&a, &b| (upper[a] - lower[a]).total_cmp(&(upper[b] - lower[b])))
+                .expect("three axes");
+            indices.sort_unstable_by(|&a, &b| {
+                (bounds[a].lower[axis] + bounds[a].upper[axis])
+                    .total_cmp(&(bounds[b].lower[axis] + bounds[b].upper[axis]))
+                    .then(a.cmp(&b))
+            });
+            let right = indices.split_off(indices.len() / 2);
+            RillCandidateContents::Branch(Box::new([
+                Self::build(bounds, indices),
+                Self::build(bounds, right),
+            ]))
+        };
+        Self {
+            lower,
+            upper,
+            contents,
+        }
+    }
+
+    fn lookup(&self, position: [f64; 3], indices: &mut Vec<usize>) {
+        if (0..3).any(|axis| position[axis] < self.lower[axis] || position[axis] > self.upper[axis])
+        {
+            return;
+        }
+        match &self.contents {
+            RillCandidateContents::Leaf(leaf) => indices.extend_from_slice(leaf),
+            RillCandidateContents::Branch(children) => {
+                for child in children.iter() {
+                    child.lookup(position, indices);
+                }
+            }
+        }
+    }
+
+    fn at(&self, position: [f64; 3]) -> Vec<usize> {
+        let mut indices = Vec::new();
+        self.lookup(position, &mut indices);
+        // Both levels must preserve the original strict-nearer tie winner.
+        indices.sort_unstable();
+        indices
+    }
+}
+
+impl RillCandidates {
+    fn new(candidates: Vec<RillCandidate>) -> Self {
+        let bounds = candidates
+            .iter()
+            .map(|candidate| {
+                let radius = candidate.radius + 1e-12;
+                RillBounds {
+                    lower: candidate.origin.map(|v| v - radius),
+                    upper: candidate.origin.map(|v| v + radius),
+                }
+            })
+            .collect::<Vec<_>>();
+        let index = RillCandidateNode::build(&bounds, (0..candidates.len()).collect());
+        let expanded = (0..candidates.len())
+            .map(|_| std::sync::OnceLock::new())
+            .collect();
+        Self {
+            candidates,
+            index,
+            expanded,
+        }
+    }
+
+    fn at(&self, position: [f64; 3]) -> Vec<usize> {
+        self.index.at(position)
+    }
+}
+
+fn rill_candidates(terrain: &hornvale_terrain::GeneratedTerrain) -> RillCandidates {
+    let geo = terrain.geosphere();
+    let channels = terrain.channels();
+    let square_radius = (hornvale_terrain::vertex_catchment(geo) / 2.0).sqrt();
+    RillCandidates::new(
+        geo.vertices()
+            .filter_map(|vertex| {
+                let (line, index) = channels.trunk_vertex(vertex)?;
+                let origin = geo.position(vertex);
+                let points = &channels.polylines[line].points;
+                let reach = points[index.saturating_sub(1)..=index + 1]
+                    .iter()
+                    .map(|&point| angular_distance(origin, point))
+                    .fold(square_radius, f64::max);
+                // A branch drains at most this vertex's unit catchment. Include its
+                // entire terrace in the cap, not just the centerline's support.
+                let neighbors = geo.neighbors(vertex);
+                let spacing = neighbors
+                    .iter()
+                    .map(|&neighbor| {
+                        hornvale_kernel::math::acos(
+                            dot(origin, geo.position(neighbor)).clamp(-1.0, 1.0),
+                        )
+                    })
+                    .sum::<f64>()
+                    / neighbors.len() as f64;
+                let slope = hornvale_terrain::local_slope(terrain.globe(), geo, vertex);
+                let maximum_edges = hornvale_terrain::band_edges(1.0, slope, spacing);
+                Some(RillCandidate {
+                    vertex,
+                    origin,
+                    radius: reach + maximum_edges[3],
+                    slope,
+                    spacing,
+                })
+            })
+            .collect(),
+    )
+}
+
+fn rill_bed_from_candidates(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    candidates: &RillCandidates,
+    position: [f64; 3],
+    trunk: Option<(f64, ChannelBed)>,
+) -> Option<(f64, ChannelBed)> {
+    if trunk.is_some_and(|(distance, bed)| distance.abs() <= bed.edges[0]) {
+        return None;
+    }
+    let mut nearest = trunk.map_or(f64::INFINITY, |(distance, _)| distance.abs());
+    let mut winner = None;
+    for index in candidates.at(position) {
+        let RillCandidate {
+            origin,
+            radius,
+            slope,
+            ..
+        } = candidates.candidates[index];
+        #[cfg(test)]
+        tests::RILL_CANDIDATE_VISITS.with(|visits| visits.set(visits.get() + 1));
+        if angular_distance(origin, position) > radius {
+            continue;
+        }
+        let rills = candidates.expanded[index]
+            .get_or_init(|| expand_rill_candidate(terrain, candidates.candidates[index]));
+        for index in rills.index.at(position) {
+            let rill = &rills.rills[index];
+            #[cfg(test)]
+            tests::RILL_SEGMENT_VISITS.with(|visits| visits.set(visits.get() + 1));
+            let (distance, _) = hornvale_terrain::feature_sample(&rill.curve, position);
+            if distance.abs() < nearest && distance.abs() < rill.edges[3] {
+                nearest = distance.abs();
+                winner = Some((distance, rill, slope));
+            }
+        }
+    }
+    winner.map(|(distance, rill, slope)| {
+        (
+            distance,
+            ChannelBed {
+                height_m: rill.bed.sample_at(position),
+                grade_m_per_rad: slope,
+                edges: rill.edges,
+                terminal_progress: 0.0,
+            },
+        )
+    })
+}
+
+fn expand_rill_candidate(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    candidate: RillCandidate,
+) -> ExpandedRills {
+    use hornvale_terrain::{EndpointSide, FeatureEndpoint, FeatureId, FeatureKind, TerminalKind};
+
+    let RillCandidate {
+        vertex,
+        slope,
+        spacing,
+        ..
+    } = candidate;
+    let geo = terrain.geosphere();
+    let unit = hornvale_terrain::vertex_catchment(geo);
+    let cut = hornvale_terrain::CatchmentCut::Drawn(terrain.globe().rill_partition_seed());
+    let rills = hornvale_terrain::rills_of(vertex, terrain.channels(), geo, &cut);
+    let beds = hornvale_terrain::RillBedInputs::for_rills(terrain, vertex, &rills);
+    let rills: Vec<_> = rills
+        .iter()
+        .zip(beds)
+        .enumerate()
+        .map(|(index, (rill, bed))| {
+            let edges = hornvale_terrain::band_edges(rill.catchment / unit, slope, spacing);
+            let feature = FeatureId::new(
+                FeatureKind::ChannelReach,
+                vertex,
+                u32::try_from(index + 1).expect("rill ordinal exceeds feature identity"),
+            );
+            let curve = RealizedCurve {
+                feature,
+                points: vec![rill.head, rill.mouth],
+                width: vec![2.0 * edges[0]; 2],
+                endpoints: [
+                    FeatureEndpoint {
+                        feature,
+                        side: EndpointSide::Upstream,
+                        boundary: None,
+                        terminal: TerminalKind::Headwater,
+                    },
+                    FeatureEndpoint {
+                        feature,
+                        side: EndpointSide::Downstream,
+                        boundary: None,
+                        terminal: TerminalKind::Confluence,
+                    },
+                ],
+            };
+            ExpandedRill { curve, edges, bed }
+        })
+        .collect();
+    let bounds = rills
+        .iter()
+        .map(|rill| {
+            let [a, b] = [rill.curve.points[0], rill.curve.points[1]];
+            let normal = cross(a, b);
+            let length = hornvale_kernel::math::atan2(dot(normal, normal).sqrt(), dot(a, b));
+            // The short great-circle arc lies within length²/8 of its chord.
+            // Expand the endpoint box by that sagitta bound and the entire terrace.
+            // acos(dot) can round tiny distances to zero; sqrt(epsilon) padding
+            // retains those near-boundary winners for the unchanged exact sampler.
+            let padding = length * length / 8.0 + rill.edges[3] + 4.0 * f64::EPSILON.sqrt();
+            RillBounds {
+                lower: std::array::from_fn(|axis| a[axis].min(b[axis]) - padding),
+                upper: std::array::from_fn(|axis| a[axis].max(b[axis]) + padding),
+            }
+        })
+        .collect::<Vec<_>>();
+    let index = RillCandidateNode::build(&bounds, (0..rills.len()).collect());
+    ExpandedRills { rills, index }
+}
+
+// Frozen pre-cache evaluator for the equivalence regression.
+#[cfg(test)]
 fn rill_bed_at(
     terrain: &hornvale_terrain::GeneratedTerrain,
     position: [f64; 3],
@@ -1528,6 +1828,222 @@ fn normalized_or_zero(vector: [f64; 3]) -> [f64; 3] {
 mod tests {
     use super::*;
 
+    thread_local! {
+        pub(super) static RILL_CANDIDATE_VISITS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; // lexicon: std::cell::Cell is an interior-mutability counter, not a spatial area
+        pub(super) static RILL_SEGMENT_VISITS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; // lexicon: std::cell::Cell is an interior-mutability counter, not a spatial area
+    }
+
+    #[test]
+    fn expanded_rill_lookup_examines_only_nearby_segments() {
+        let context = fixture_context();
+        let cut =
+            hornvale_terrain::CatchmentCut::Drawn(context.terrain.globe().rill_partition_seed());
+        let mut maximum_visits = 0;
+        for candidate in context.rill_candidates.candidates.iter().step_by(700) {
+            let rills = hornvale_terrain::rills_of(
+                candidate.vertex,
+                context.terrain.channels(),
+                context.terrain.geosphere(),
+                &cut,
+            );
+            for rill in rills.iter().take(2) {
+                let position =
+                    normalized_or_zero(std::array::from_fn(|i| rill.head[i] + rill.mouth[i]));
+                // Repeat a real supported position to exercise retained geometry.
+                for _ in 0..2 {
+                    RILL_SEGMENT_VISITS.with(|visits| visits.set(0));
+                    rill_bed_from_candidates(
+                        &context.terrain,
+                        &context.rill_candidates,
+                        position,
+                        None,
+                    );
+                    let visits = RILL_SEGMENT_VISITS.with(|visits| visits.get());
+                    maximum_visits = maximum_visits.max(visits);
+                    assert!(
+                        visits <= 256,
+                        "one sample examined {visits} expanded segments (budget 256)"
+                    );
+                }
+            }
+        }
+        assert!(maximum_visits > 0);
+        eprintln!("expanded rill lookup: at most {maximum_visits} segments examined");
+    }
+
+    #[test]
+    fn rill_lookup_does_not_scan_the_globe_per_sample() {
+        let context = fixture_context();
+        let mut maximum_visits = 0;
+        for position in context
+            .terrain
+            .geosphere()
+            .vertices()
+            .step_by(641)
+            .map(|vertex| context.terrain.geosphere().position(vertex))
+        {
+            RILL_CANDIDATE_VISITS.with(|visits| visits.set(0));
+            // Exercise the lookup without trunk suppression hiding its cost.
+            rill_bed_from_candidates(&context.terrain, &context.rill_candidates, position, None);
+            let visits = RILL_CANDIDATE_VISITS.with(|visits| visits.get());
+            maximum_visits = maximum_visits.max(visits);
+            assert!(
+                visits <= 256,
+                "one position examined {visits} rill candidates (budget 256)"
+            );
+        }
+        eprintln!(
+            "rill lookup: at most {maximum_visits} of {} candidates examined",
+            context.rill_candidates.candidates.len()
+        );
+    }
+
+    #[test]
+    fn rill_index_preserves_cap_boundaries_and_scan_order() {
+        let mut points = vec![
+            [1.0, 0.0, 0.0],
+            [-1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, -1.0],
+        ];
+        for face in 0..6 {
+            points.extend(
+                Facet {
+                    face,
+                    path: vec![0; 6],
+                }
+                .corners(),
+            );
+        }
+        let candidates = RillCandidates::new(
+            points
+                .iter()
+                .flat_map(|&origin| {
+                    // Duplicate origins and different support radii exercise ties and
+                    // caps spanning split planes, poles and cube-face boundaries.
+                    [0.0, 0.005, 0.04, 0.5, std::f64::consts::PI].map(|radius| RillCandidate {
+                        vertex: Vertex(0),
+                        origin,
+                        radius,
+                        slope: 0.0,
+                        spacing: 0.0,
+                    })
+                })
+                .collect(),
+        );
+        for candidate in &candidates.candidates {
+            let axis = if candidate.origin[2].abs() < 0.9 {
+                [0.0, 0.0, 1.0]
+            } else {
+                [1.0, 0.0, 0.0]
+            };
+            let tangent = normalized_or_zero(cross(candidate.origin, axis));
+            for angle in [
+                candidate.radius - 1e-13,
+                candidate.radius,
+                candidate.radius + 1e-13,
+            ] {
+                points.push(normalized_or_zero(std::array::from_fn(|i| {
+                    candidate.origin[i] * hornvale_kernel::math::cos(angle)
+                        + tangent[i] * hornvale_kernel::math::sin(angle)
+                })));
+            }
+        }
+        for position in points {
+            let supports = |&i: &usize| {
+                let candidate = candidates.candidates[i];
+                angular_distance(candidate.origin, position) <= candidate.radius
+            };
+            let expected = (0..candidates.candidates.len())
+                .filter(supports)
+                .collect::<Vec<_>>();
+            let actual = candidates
+                .at(position)
+                .into_iter()
+                .filter(supports)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                actual, expected,
+                "cap membership/order changed at {position:?}"
+            );
+        }
+        assert!(
+            RillCandidates::new(Vec::new())
+                .at([1.0, 0.0, 0.0])
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn indexed_rill_samples_are_bit_exact_with_full_scan() {
+        let mut context = fixture_context();
+        let cut =
+            hornvale_terrain::CatchmentCut::Drawn(context.terrain.globe().rill_partition_seed());
+        let mut points = Vec::new();
+        for candidate in context.rill_candidates.candidates.iter().step_by(1400) {
+            for rill in hornvale_terrain::rills_of(
+                candidate.vertex,
+                context.terrain.channels(),
+                context.terrain.geosphere(),
+                &cut,
+            )
+            .iter()
+            .take(2)
+            {
+                points.extend([
+                    rill.head,
+                    rill.mouth,
+                    normalized_or_zero(std::array::from_fn(|i| rill.head[i] + rill.mouth[i])),
+                ]);
+            }
+        }
+        assert!(!points.is_empty());
+        let bits = |result: Option<(f64, ChannelBed)>| {
+            result.map(|(distance, bed)| {
+                (
+                    distance.to_bits(),
+                    bed.height_m.to_bits(),
+                    bed.grade_m_per_rad.to_bits(),
+                    bed.edges.map(f64::to_bits),
+                    bed.terminal_progress.to_bits(),
+                )
+            })
+        };
+        let mut supported = 0;
+        for position in points {
+            let expected = rill_bed_at(&context.terrain, position, None);
+            supported += usize::from(expected.is_some());
+            assert_eq!(
+                bits(rill_bed_from_candidates(
+                    &context.terrain,
+                    &context.rill_candidates,
+                    position,
+                    None
+                )),
+                bits(expected)
+            );
+            let sample = context.sample_at(position).unwrap();
+            // Force the same production composition through a full scan to
+            // compare every emitted field, including height/normal/materials.
+            let index = std::mem::replace(
+                &mut context.rill_candidates.index,
+                RillCandidateNode {
+                    lower: [f64::NEG_INFINITY; 3],
+                    upper: [f64::INFINITY; 3],
+                    contents: RillCandidateContents::Leaf(
+                        (0..context.rill_candidates.candidates.len()).collect(),
+                    ),
+                },
+            );
+            let full_scan_sample = context.sample_at(position).unwrap();
+            context.rill_candidates.index = index;
+            assert_eq!(sample, full_scan_sample);
+        }
+        assert!(supported > 0, "oracle must exercise winning rills");
+    }
+
     fn fixture_context() -> SurfaceRealizationContext {
         let world = crate::seed_42_world();
         SurfaceRealizationContext::build(&world).unwrap()
@@ -1543,6 +2059,78 @@ mod tests {
             fine.path[6..].to_vec(),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn strip_heights_and_normals_use_position_evaluation_at_every_lod() {
+        let context = fixture_context();
+        let point = context.terrain.channels().polylines[0].points[0];
+        let macro_face = Facet::containing(point, 6);
+        for path in [vec![], vec![0], vec![1], vec![2], vec![3]] {
+            let patch = context
+                .realize(&FacetAddress::new(macro_face.clone(), path).unwrap())
+                .unwrap();
+            for vertex in patch.strips.iter().flat_map(|strip| &strip.vertices) {
+                let sample = context.sample_at(vertex.position).unwrap();
+                assert_eq!(
+                    vertex.height_m, sample.height_m,
+                    "strip height must not depend on nearest patch sample"
+                );
+                assert_eq!(vertex.normal, sample.normal);
+            }
+        }
+    }
+
+    #[test]
+    fn retained_rill_candidates_preserve_position_based_bed_evaluation() {
+        let context = fixture_context();
+        let candidates = rill_candidates(&context.terrain);
+        for point in context.terrain.channels().polylines[0]
+            .points
+            .iter()
+            .take(2)
+        {
+            let actual = rill_bed_from_candidates(&context.terrain, &candidates, *point, None);
+            let expected = rill_bed_at(&context.terrain, *point, None);
+            assert_eq!(
+                actual.map(|(d, b)| (d, b.height_m, b.edges)),
+                expected.map(|(d, b)| (d, b.height_m, b.edges))
+            );
+        }
+    }
+
+    #[test]
+    fn strip_footprints_stay_inside_the_requested_patch() {
+        let context = fixture_context();
+        let point = context.terrain.channels().polylines[0].points[0];
+        let macro_face = Facet::containing(point, 6);
+        let mut checked = 0;
+        for path in [vec![], vec![0], vec![1], vec![2], vec![3]] {
+            let address = FacetAddress::new(macro_face.clone(), path).unwrap();
+            let patch = context.realize(&address).unwrap();
+            let corners = (0..4)
+                .map(|i| canonical_corner_sample(&address, i))
+                .collect::<Vec<_>>();
+            for vertex in patch.strips.iter().flat_map(|strip| &strip.vertices) {
+                checked += 1;
+                for edge in 0..4 {
+                    let a = corners[edge];
+                    let b = corners[(edge + 1) % 4];
+                    let normal = [
+                        a[1] * b[2] - a[2] * b[1],
+                        a[2] * b[0] - a[0] * b[2],
+                        a[0] * b[1] - a[1] * b[0],
+                    ];
+                    let dot = |p: [f64; 3]| normal.iter().zip(p).map(|(n, p)| n * p).sum::<f64>();
+                    assert!(
+                        dot(vertex.position) * dot(patch.samples[4].position).signum() >= -1e-15,
+                        "ribbon footprint escapes patch at edge {edge}: {:?}",
+                        vertex.position
+                    );
+                }
+            }
+        }
+        assert!(checked > 0);
     }
 
     #[test]

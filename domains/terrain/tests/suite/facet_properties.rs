@@ -526,6 +526,20 @@ fn strip_sampling_adapts_to_width_and_preserves_feature_endpoints() {
     );
     assert!(strips[0].centerline.len() > strips[1].centerline.len());
     for (strip, curve) in strips.iter().zip(curves) {
+        for triangle in &strip.triangles {
+            let [a, b, c] = triangle.map(|i| strip.vertices[i as usize].position);
+            let ab: [f64; 3] = std::array::from_fn(|i| b[i] - a[i]);
+            let ac: [f64; 3] = std::array::from_fn(|i| c[i] - a[i]);
+            let normal = [
+                ab[1] * ac[2] - ab[2] * ac[1],
+                ab[2] * ac[0] - ab[0] * ac[2],
+                ab[0] * ac[1] - ab[1] * ac[0],
+            ];
+            assert!(
+                normal.iter().zip(a).map(|(n, p)| n * p).sum::<f64>() > 0.0,
+                "ribbon triangle must face an observer outside the sphere: {triangle:?}"
+            );
+        }
         assert_eq!(strip.feature, curve.feature);
         assert_eq!(strip.endpoints, curve.endpoints);
         assert_eq!(strip.vertices.len(), strip.centerline.len() * 2);

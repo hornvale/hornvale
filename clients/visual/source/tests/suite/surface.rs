@@ -88,6 +88,29 @@ fn patch_bytes(reply: &str) -> String {
 }
 
 #[test]
+fn valid_observe_surface_completes_within_bounded_timeout() {
+    let (send, receive) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let (mut source, initial) = source_and_initial();
+        let reply = source
+            .observe_surface(&request(
+                &initial["binding"],
+                &initial["surface_revision"],
+                104,
+                &[1],
+            ))
+            .unwrap();
+        send.send(reply).unwrap();
+    });
+    let reply = receive
+        .recv_timeout(std::time::Duration::from_secs(30))
+        .expect("valid observe_surface, including source setup, must complete within 30 seconds");
+    let reply: Value = serde_json::from_str(&reply).unwrap();
+    assert_eq!(reply["request_id"], 104);
+    assert!(!reply["patch"]["strips"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn initial_bootstraps_surface_revision_matching_binding() {
     let (mut source, initial) = source_and_initial();
     let binding = &initial["binding"];
@@ -109,7 +132,7 @@ fn initial_bootstraps_surface_revision_matching_binding() {
     assert_eq!(revision["source_revision"], binding["source_revision"]);
     assert_eq!(
         revision["algorithm_version"],
-        "hornvale/surface-realization/v6"
+        "hornvale/surface-realization/v7"
     );
     assert_eq!(
         revision["configuration_hash_hex"].as_str().unwrap().len(),

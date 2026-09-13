@@ -198,7 +198,13 @@ pub struct SurfacePatchCacheKey {
 }
 
 fn valid_surface_number(value: f64) -> bool {
-    value.is_finite()
+    value.is_finite() && (value as f32).is_finite()
+}
+
+fn valid_surface_height(value: f64) -> bool {
+    // Mesh bounds and culling square f32 coordinates. Reserve headroom for
+    // the datum/radius conversion as well as the cast itself.
+    valid_surface_number(value) && value.abs() <= f64::from(f32::MAX.sqrt())
 }
 
 const MAX_SURFACE_CHILD_DEPTH: usize = 23;
@@ -337,6 +343,7 @@ pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<
     check(
         document.vertices.iter().all(|vertex| {
             valid_unit_vector(vertex.position, false)
+                && valid_surface_height(vertex.height_m)
                 && valid_unit_vector(vertex.normal, false)
                 && vertex.material_weights.iter().copied().all(valid_weight)
                 && (vertex.material_weights.iter().sum::<f64>() - 1.0).abs() <= WEIGHT_TOLERANCE
@@ -413,7 +420,7 @@ pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<
             valid_feature_kind(&strip.feature.kind)
                 && strip.centerline.len() >= 2
                 && strip.centerline.len() == strip.width_rad.len()
-                && strip.vertices.len() == strip.centerline.len() * 2
+                && strip.vertices.len() >= 3
                 && strip
                     .centerline
                     .iter()
@@ -426,29 +433,20 @@ pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<
                 && strip.semantic_mask.iter().any(|weight| *weight > 0.0)
                 && valid_endpoint(&strip.endpoints[0], &strip.feature, "upstream")
                 && valid_endpoint(&strip.endpoints[1], &strip.feature, "downstream")
-                && strip
-                    .vertices
-                    .chunks_exact(2)
-                    .enumerate()
-                    .all(|(index, pair)| {
-                        pair[0].side == -1
-                            && pair[1].side == 1
-                            && pair[0].signed_distance_rad < 0.0
-                            && pair[1].signed_distance_rad > 0.0
-                            && (pair[0].signed_distance_rad.abs() - strip.width_rad[index] * 0.5)
-                                .abs()
-                                <= UNIT_TOLERANCE
-                            && (pair[1].signed_distance_rad.abs() - strip.width_rad[index] * 0.5)
-                                .abs()
-                                <= UNIT_TOLERANCE
-                            && pair.iter().all(|vertex| {
-                                valid_unit_vector(vertex.position, false)
-                                    && valid_unit_vector(vertex.normal, false)
-                                    && vertex.height_m.is_finite()
-                                    && vertex.signed_distance_rad.is_finite()
-                            })
-                    })
-                && strip.triangles.len() == (strip.centerline.len() - 1) * 2
+                && strip.vertices.iter().all(|vertex| {
+                    valid_unit_vector(vertex.position, false)
+                        && valid_unit_vector(vertex.normal, false)
+                        && valid_surface_height(vertex.height_m)
+                        && vertex.signed_distance_rad.is_finite()
+                        && vertex.signed_distance_rad.abs() <= std::f64::consts::PI * 0.5
+                        && match vertex.side {
+                            -1 => vertex.signed_distance_rad < 0.0,
+                            0 => vertex.signed_distance_rad == 0.0,
+                            1 => vertex.signed_distance_rad > 0.0,
+                            _ => false,
+                        }
+                })
+                && !strip.triangles.is_empty()
                 && strip.triangles.iter().all(|triangle| {
                     triangle
                         .iter()

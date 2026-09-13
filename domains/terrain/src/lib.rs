@@ -60,9 +60,9 @@ pub use delve::{
 pub use facet::{
     BoundaryParameter, ChannelCrossSection, EndpointSide, FacetAddress, FacetFieldSample,
     FeatureEndpoint, FeatureId, FeatureKind, FeatureStripLayout, FeatureStripLayoutVertex,
-    FeatureStripSampling, RealizedCurve, TerminalKind, TerrainFacetInputs, adaptive_feature_strips,
-    bed_height_profile, canonical_corner_sample, canonical_edge_sample, channel_endpoint_kind,
-    feature_sample, realize_channel_curves,
+    FeatureStripSampling, RealizedCurve, RillBedInputs, TerminalKind, TerrainFacetInputs,
+    adaptive_feature_strips, bed_height_profile, canonical_corner_sample, canonical_edge_sample,
+    channel_endpoint_kind, feature_sample, realize_channel_curves, realize_channel_strips,
 };
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
