@@ -101,3 +101,39 @@ names" into "derive the class from the source".
 - The duration pair on main (1320/1650) is now behind campaign/the-tidemark's
   re-derived pair (1630/2040), which lands with their delivery. Nothing to do,
   but a reader comparing the two before that merge will see a discrepancy.
+
+## Follow-up found by using the tooling (2026-09-13, after the commit above)
+
+**`box_is_busy()` in `scripts/sluice-drain.sh` has a blind spot, and it is the
+one that function exists to close.** It asks `census-run.sh status` and greps
+`running:` — which reads the CLAIM FILE at `/tmp/hv-census.claim`. But a census
+DELIVERY holds the box lock while re-authoring the gnomon arms and deliberately
+writes no claim file for that window; its own log says so: *"holds the box lock
+for the arms after 0s queued (no claim file — see the header)"*.
+
+So during the arms phase the box is busy and every claim-file-based check says
+free. Observed twice within ten minutes on 2026-09-13:
+
+- a probe waiting on `census-run.sh status` started a heavy build at 20:37
+  while campaign/the-trencher's census was still in its arms phase, and had to
+  be stopped by hand;
+- the merge drainer claimed `tooling/the-stilling`, marked the row `running`,
+  and then sat in `flock -w 7200 9` — which is exactly the ghost-`running`-row
+  unreadability `box_is_busy` was written to prevent.
+
+Nothing is corrupted by this: the `flock` still serializes, no row runs twice,
+and `sluice-run.sh` touches the shared worktree only under the lock. It is a
+reporting-honesty defect, not a safety one.
+
+**The fix is to ask the LOCK, not the file** — the same correction this
+campaign's sibling made about drainers (a lock cannot go stale; a file can be
+absent or left behind). A non-blocking `flock -n` probe on
+`/tmp/hv-census.lock` answers "is the box busy" for every holder, claim file or
+not. Deliberately not done in this commit: it is a third subject, and the
+function is advisory — being wrong costs readability, never correctness.
+
+**The transferable half:** I wrote `box_is_busy` from the interface that was
+there (`census-run.sh status`) rather than from the invariant I wanted (is the
+lock held). The interface answers a narrower question than its name suggests,
+and the narrowing is documented in a log line nobody reads until they are
+already confused.
