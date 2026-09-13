@@ -1,5 +1,11 @@
 # The Trencher — what the world grows, and what can eat it
 
+**Status:** SHIPPED 2026-09-13 — Stages 0-3 (the supply half) merged; the merge
+gate passed. **Stage 4 (the biota) was CUT by Nathan mid-campaign** and deferred to a
+successor: no kind weights any metabolite axis, so this ships a producer with no
+consumer. See [the chronicle](../../../book/src/chronicle/the-trencher.md) and
+[the retrospective](../../retrospectives/the-trencher.md).
+
 **Campaign:** The Trencher. Rung 1 of the food-system program; successor to
 The Ceiling, whose branch it continues rather than merges.
 

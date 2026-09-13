@@ -506,6 +506,7 @@
 - [Eclipse Rhythm and View](./chronicle/eclipse-rhythm-view.md)
 - [The Kiln](./chronicle/the-kiln.md)
 - [The Cadastre](./chronicle/the-cadastre.md)
+- [The Trencher](./chronicle/the-trencher.md)
 
 # Appendix: The Frontier
 

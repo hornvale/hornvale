@@ -1630,7 +1630,11 @@ board notices plus a scope collision confirmed against the branch list.
 
 ---
 
-## #22 [R] — Task 3 executed: the four metabolite resource axes
+## #22a [R] — Task 3 executed: the four metabolite resource axes
+
+*(Numbering collision resolved at close: written as `#22`, which my own
+acceptance below also took. Suffixed rather than renumbered so no citation
+moves; content unchanged.)*
 
 Ruling #20's corrections applied in full: `v1_basis()` extended, the
 sequence pin in `the_basis_ids_are_append_only` widened to
@@ -2504,7 +2508,12 @@ it. Delegating the mechanical half with the ruling attached.
 **Ideonomy passes / overturns:** none; a blocked task correctly refused, plus
 a refinement to my own sequencing rule.
 
-## #31 [G5] — The twelve re-pinned and read rather than inferred: 26 drifted values behind 12 failures, and three corrections to #30
+## #31a [G5] — The twelve re-pinned and read rather than inferred: 26 drifted values behind 12 failures, and three corrections to #30
+
+*(Numbering collision resolved at close: written as `#31`, which my
+reaction-yields entry below also took, and which #32 and #33 cite meaning that
+one. Suffixed rather than renumbered so those citations stay correct; content
+unchanged.)*
 
 #30's ruling executed. **All twelve are class-1 literal drift, and that is now
 READ rather than inferred** — #30 classified two directly and ten from their
@@ -2882,3 +2891,65 @@ than editing it themselves — which is the right boundary.
 
 **Ideonomy passes / overturns:** none; a task acceptance and a self-inflicted
 prose defect caught by an independent reader.
+
+---
+
+## #34 [Ruling] — The close walk, and three things it found in this campaign's own record
+
+### A. The ledger had DUPLICATE ENTRY NUMBERS — two `#22`, two `#31`
+
+Found by reading the ledger end to end, which is step 2B's whole point: a
+ledger is committed at write time but **nobody has read it just because git
+has a copy**. Two entries were written `#22` and two `#31`, by different
+authors appending at different moments.
+
+This is the duplicate-`TOOL-24` shape that CLAUDE.md records travelling
+through a spec, a plan, a study JSON and a decision before anyone noticed —
+arriving here in the campaign's own ledger.
+
+**Resolved by SUFFIX, not renumber**: `#22a` and `#31a`. `#32` and `#33` both
+cite `#31` meaning the reaction-yields entry, so renumbering would have
+silently repointed two live citations. Suffixing fixes uniqueness and moves
+nothing. Each carries a one-line note saying what happened; content unchanged.
+
+### B. #32's "three accelerating narrowings" is PARTLY UNWOUND by the absorb
+
+`#32` recorded the latitude row's three consecutive narrowings — `+0.2055,
++0.2042, +0.4631` — as accelerating. **The largest step belonged to this
+branch's own census delivery, which the absorb of `origin/main` did not
+keep.** Post-merge the value is `17.6474`, not `18.1105`.
+
+**What survives, and it is the part that mattered:** the ratio is `1.853x`,
+still short of the "better than 2x" this file claims **eleven times**, and the
+crossing still predates this campaign — `15.0340` read `2.175x`. The lapsed
+claim is real; the acceleration was partly an artifact of a delivery that has
+since been superseded.
+
+Recorded as a correction rather than edited into `#32`, because `#32` was true
+when written and the interesting fact is that a finding can be unwound by a
+later merge.
+
+### C. The Ceiling's deferred minors, routed before the worktree is recycled
+
+`.superpowers/sdd/2026-09-11-the-ceiling/progress.md` is **git-ignored scratch
+from the folded-in campaign** and dies when this worktree is next taken. Two
+deferred minors sat in it, ledgered nowhere:
+
+1. *"exact-value pin should be direction-only, matching
+   `subterranean_energy_probe.rs`'s falsified-prediction style"* — both marked
+   `deferred -> folded into Task 3`.
+2. *"`MaxOfSeven`'s doc comment says 'composition-preserving extreme',
+   inheriting the spec's inverted rationale."*
+
+**Both are moot and that is their disposition, not an evasion.** The Ceiling's
+`MaxOfSeven` arm does not exist in this tree — the campaign closed unmerged
+and only its *measurements* were folded into The Trencher, not its code. There
+is no doc comment to correct and no pin to re-style.
+
+**The process lesson is the part worth keeping**, and it goes in the
+retrospective: those two minors lived only in git-ignored scratch belonging to
+a campaign that never merged, and would have evaporated silently. The
+Cartulary's committed ledger fixed this for the campaign that *writes* it; a
+folded-in campaign's scratch is still outside that guarantee.
+
+**Ideonomy passes / overturns:** none; a close-walk sweep.

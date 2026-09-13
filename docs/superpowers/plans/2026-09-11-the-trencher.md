@@ -2,6 +2,12 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** SHIPPED 2026-09-13 — Stages 0-3 (the supply half) merged; the merge
+gate passed. **Stage 4 (the biota) was CUT by Nathan mid-campaign** and deferred to a
+successor: no kind weights any metabolite axis, so this ships a producer with no
+consumer. See [the chronicle](../../../book/src/chronicle/the-trencher.md) and
+[the retrospective](../../retrospectives/the-trencher.md).
+
 **Goal:** Make the vocabulary creatures eat with as fine as the vocabulary the world grows with, then populate the underworld with things that use the difference.
 
 **Architecture:** Four stages in a forced order. Stage 1 splits `TrophicMode` into its three real axes, which is what makes the fantasy tier a *value* rather than a new mechanism. Stage 2 replaces the mean-of-seven with per-metabolite sums and moves two non-foods out of the food vocabulary. Stage 3 builds the metaphysics gate that does not yet exist and puts `thaumic` behind it. Stage 4 authors the biota.

@@ -1670,6 +1670,37 @@ distinction will have to lean on the axes that do vary continuously with
 depth (temperature, moisture, the energy term's own magnitude) rather than
 on rock type alone.
 
+*Re-scored by [The Trencher](./chronicle/the-trencher.md) (2026-09-13), which
+moved the one axis this passage told a successor to lean on.*
+
+**The energy term's magnitude was the compressed axis, and the compression was
+the reduction rather than the rock.** The paragraph above tells a stratum-only
+distinction to lean on the scalars that vary continuously with depth —
+"temperature, moisture, the energy term's own magnitude" — after finding rock
+chemistry sorts into roughly three near-constant categories. At the time that
+advice was sound and the energy term was the weakest of the three crutches it
+offered: derived by averaging seven reactions, it never once reached the
+corpus band for `fed` at any rung on any of twelve seeds, with a maximum
+anywhere of `0.424277` against bands at `0.75` and `1.0`. An axis pinned below
+its own second band cannot carry a distinction.
+
+It is now a **sum of four named metabolites** rather than a mean of seven mixed
+quantities, projected onto the ruler so it still shares units with the authored
+corpus. Per-rung medians read `0.501 / 0.568 / 0.666 / 0.677 / 0.677` — inside
+the `fed` band, monotone with depth. So "the energy term's own magnitude" is
+no longer one compressed scalar; it is four magnitudes that vary independently,
+and a chamber rich in hydrogen is now distinguishable from one rich in reduced
+sulphur, which the mean could not express at all.
+
+**Two things this does NOT resolve, and the bet stays open on both.** Three of
+the four metabolites discriminate spatially; methane is dim by construction —
+roughly a fourteenth the axis hydrogen is — so the usable count is three, not
+four. And **no kind in the world weights any of them yet**: the discriminating
+power is available, not exercised. Mountain-dwarf and Duergar can now be given
+different food; nothing has given it to them. The biome-vocabulary half this
+passage names is likewise untouched.
+
+
 **A finding about the contest, not about elves, and it is new.** Two peoples
 authored to share a mass and an affinity row have capacity fields that are
 **bit-identical** over eleven to nineteen thousand land cells — and they settle on
