@@ -95,9 +95,21 @@ fn hoisted_terrain_equals_the_re_derived_terrain_under_pins() {
         supercontinent: Some(true),
         globe_level: None,
         continents: Some(5),
-        // The metaphysics gate (The Ground §8) rides this claim too: a
-        // charged world that re-derived as an inert one would be a lossy
-        // round trip of exactly the kind this test exists to catch.
+        // The metaphysics gate (The Ground §8) is pinned here so a new field
+        // cannot silently default, but THIS TEST CANNOT CATCH A LOSSY
+        // METAPHYSICS ROUND TRIP and an earlier version of this comment
+        // claimed it could. `projection` above compares `elevation_at` and
+        // `is_ocean` only, and the gate moves neither: measured charged-vs-
+        // inert at seed 42 level 6, `thaumic` moves 12,512 of 40,962 vertices
+        // while elevation, is_ocean, rock and every `MaterialBuffer` axis move
+        // ZERO. So a charged world re-deriving as inert is invisible here by
+        // construction.
+        //
+        // Demonstrated rather than argued (Task 8): with `metaphysics` dropped
+        // from `pin_strings`, all six `artifacts::` tests PASS while
+        // `metaphysics_gate::a_charged_world_re_derives_from_its_ledger_as_
+        // charged` fails at 12,512 vertices. That test is where the round-trip
+        // claim actually lives; this one keeps the pin exhaustive.
         metaphysics: Some(Metaphysics::Thaumic),
     };
     let a = build_world_to_with_artifacts(

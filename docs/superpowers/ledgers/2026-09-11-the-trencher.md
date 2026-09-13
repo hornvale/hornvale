@@ -2795,3 +2795,90 @@ output rather than trusting the exit code.
 
 **Ideonomy passes / overturns:** none; an escalation chased into a lapsed
 claim.
+
+---
+
+## #33 [G5] — Task 8: the gate fires, the author's own claim survived an independent check, and a comment this campaign wrote claimed coverage its test cannot give
+
+Commit `0e6052e2c`, plus `windows/worldgen/tests/suite/metaphysics_gate.rs` —
+**two tests in the ORDINARY TIER, not `#[ignore]`d**, 0.481 s each. A two-way
+control that only runs by hand is half-armed, and this one does not have that
+problem.
+
+### The table, measured from the composition root by a second implementer
+
+Seed 42, level 6 (40,962 vertices), both arms through
+`build_world_to_with_artifacts`:
+
+```
+thaumic            12512 moved   0.305454      (charged: 3479 on land, 24 saturated,
+silica/grain/induration/carbonate/            max 1.0, mean 0.413285; inert: 0)
+metamorphic_grade/porosity/margin/
+soil_depth/basement/elevation/is_ocean/rock
+                       0 moved   0.000000
+```
+
+**The claim I told them to distrust survived.** The gate's author measured "0
+vertices moved on any other buffer axis"; the check was redone from a
+different entry point (composition root rather than `assemble_material`) and
+**widened past the buffer** to `elevation`, `is_ocean` and `rock`. It holds.
+
+### The instrument was proven to go red — three mutations, each restored
+
+| mutation | fires-and-moves-nothing-else | round trip |
+|---|---|---|
+| `+1e-12` leak into `silica` | **RED** (40962/40962) | green |
+| charged branch of `thaumic_at` neutralised | **RED** | **RED** |
+| `metaphysics` dropped from `pin_strings` | green *(correct — the build uses pins directly)* | **RED** (12,512 disagree) |
+
+Mutation 1 earns the test its place on its own: **the pre-existing inert guard
+could not have caught it**, because a `+1e-12` leak stays inside `[0,1]` and
+that guard checks bounds and `thaumic == 0.0`, not sibling-axis stability.
+
+### Two honest observations, correctly filed as NOT defects
+
+- **72% of charged ground is seafloor** — the ley term keys off plate
+  boundaries, which are mostly submarine. Nobody claimed otherwise; worth
+  knowing before anyone builds on charged ground.
+- **`thaumic` has zero production consumers**, so "moves nothing else" is
+  **structurally guaranteed today** — there is exactly one production read of
+  `metaphysics`. The implementer said so plainly rather than banking the
+  result: the test is *a control against the first consumer landing*, not
+  evidence about today's code.
+
+That is the third appearance of this campaign's own signature defect —
+`#26` (metabolite axes, no consumer), `#31` (methane, dim by construction),
+and now the gate. **The Trencher's deliverable is a set of capabilities, and
+every measurement that looks like a result is really a baseline for whoever
+adds the first consumer.** The chronicle says that once, plainly.
+
+### THE FINDING, AND IT IS AGAINST THIS CAMPAIGN'S OWN COMMIT
+
+The gate commit (`1488148b0`) added to `artifacts.rs`:
+
+> a charged world that re-derived as an inert one would be a lossy round trip
+> of exactly the kind this test exists to catch.
+
+**It cannot.** `projection` (`artifacts.rs:58`) returns
+`(elevation_at, is_ocean)` — and the table above shows the gate moves **zero**
+of both. A charged world re-deriving as inert is invisible to that test by
+construction.
+
+**Demonstrated, not argued:** with `metaphysics` dropped from `pin_strings`,
+**all six `artifacts::` tests PASS** while the new
+`a_charged_world_re_derives_from_its_ledger_as_charged` fails at 12,512
+vertices.
+
+This is `prose and its own exemplar disagree`, authored by this campaign three
+commits ago, and it is the *dangerous* direction: a comment that tells the next
+reader a guarantee exists where none does. **Corrected in place** — the comment
+now states what the test cannot do, names the measurement, names the mutation
+that proves it, and points at the test where the round-trip claim actually
+lives. The pin stays, because keeping `TerrainPins` exhaustive is a real job.
+
+**Ruling: accept.** The implementer did not touch the other campaign's test
+code, closed the gap beside it, and reported the comment for correction rather
+than editing it themselves — which is the right boundary.
+
+**Ideonomy passes / overturns:** none; a task acceptance and a self-inflicted
+prose defect caught by an independent reader.
