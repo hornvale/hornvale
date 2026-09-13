@@ -20,6 +20,14 @@
 set -u
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# EXPORTED, not merely assigned. Every script this one invokes
+# (sluice-queue.sh, sluice-run.sh, sluice-census.sh) resolves the same default
+# independently, so an unexported value agrees with them only by coincidence --
+# and a test or operator who redirects it would move this loop's view of the
+# queue without moving its children's. Exporting the resolved value is a no-op
+# in the default case and the difference between working and silently
+# half-redirected in every other.
+export HV_SLUICE_DIR="${HV_SLUICE_DIR:-$HOME/.local/state/hornvale/sluice}"
 
 # --- the two decision rules, extracted so they can be tested ----------------
 
@@ -93,6 +101,149 @@ dispatch_for() {
     esac
 }
 
+# --- the drainer registry --------------------------------------------------
+#
+# WHAT THIS IS FOR. `flock` on /tmp/hv-census.lock serializes the WORK; nothing
+# serialized the LOOPS that feed it. On 2026-09-13 two sessions each left a
+# drain loop running against the same queue. The mutex did its job perfectly --
+# one holder, one waiter, no row run twice, the shared worktree untouched -- and
+# the queue was still incoherent, because the two loops had different POLICIES:
+# one deliberately refused to auto-drain merges and the other drained three. A
+# mutex orders work and has no opinion about which work should exist.
+#
+# WHY A LOCK AND NOT A PIDFILE. A pidfile lies in both directions: it outlives a
+# SIGKILLed drainer, and a drainer killed before its cleanup leaves a file
+# asserting life. An flock cannot -- the kernel releases it when the holder
+# dies, so "is it held" and "is it alive" are the same question. This repository
+# already learned that in windows/lab/src/census_claim.rs; a pidfile here would
+# be a second, worse derivation of a solved problem. The registration FILE below
+# exists only to put a human-readable label on a lock; the LOCK is the truth,
+# and a reader who finds a file whose lock is free has found a corpse, which
+# `sluice-status` reports as STALE rather than believing.
+#
+# WHY PER KIND, AND NOT ONE LOCK PER BOX. "One drainer per box" is the wrong
+# invariant, and the session that found this bug is the counterexample: a
+# merge-only dispatcher running beside a stage/census loop was CORRECT and
+# useful. The right invariant is "no two loops claiming the same kinds", which
+# one lock per kind expresses exactly -- disjoint policies coexist, overlapping
+# ones refuse -- with no policy strings to canonicalise or compare.
+
+# The closed set of queue kinds. scripts/sluice-queue.sh's validate_kind is the
+# authority; this mirrors it so a policy can be checked without sourcing it, and
+# `the_kind_set_matches_the_queues` in the test suite fails if the two drift.
+DRAIN_KNOWN_KINDS="merge stage census"
+
+# Fixed file descriptors, one per kind. bash 3.2 (what macOS ships, and what
+# scripts/check-bash32.sh holds this file to) has no `exec {fd}>` form, so a
+# dynamic fd is not available. The kind set is closed, so three constants cost
+# nothing and read more plainly than the allocation would.
+lock_fd_for() {
+    if [ "${1:-}" = merge ];  then echo 21
+    elif [ "${1:-}" = stage ];  then echo 22
+    elif [ "${1:-}" = census ]; then echo 23
+    else echo ""
+    fi
+}
+
+# Does this policy claim this kind? Policies are comma-separated kind lists.
+policy_admits() {
+    local policy="${1:-}" kind="${2:-}" k
+    [ -n "$kind" ] || return 1
+    local IFS=,
+    for k in $policy; do
+        if [ "$k" = "$kind" ]; then return 0; fi
+    done
+    return 1
+}
+
+# Every kind named by a policy must be one the queue actually has. A typo like
+# `--kinds=merges` would otherwise produce a loop that locks nothing, claims
+# nothing, and looks healthy -- the silent-no-op shape this whole change exists
+# to stop.
+policy_is_valid() {
+    local policy="${1:-}" k known ok
+    [ -n "$policy" ] || return 1
+    # SPLIT WITH `tr`, NOT `local IFS=,`. The obvious version sets IFS to a
+    # comma to split the policy -- and that IFS is still in force for the INNER
+    # loop over $DRAIN_KNOWN_KINDS, which is space-separated. It then iterates
+    # once over the single word "merge stage census", matches nothing, and
+    # refuses EVERY policy including the real ones. Its four "refuses a bad
+    # policy" assertions all passed while it did so; only the positive control
+    # ("real policies validate") caught it.
+    for k in $(printf '%s' "$policy" | tr ',' ' '); do
+        ok=0
+        for known in $DRAIN_KNOWN_KINDS; do
+            if [ "$k" = "$known" ]; then ok=1; fi
+        done
+        if [ "$ok" = 0 ]; then return 1; fi
+    done
+    return 0
+}
+
+# Who holds the lock for this kind, as a human-readable line? Read from the
+# registration file, which is a label and may be stale -- callers must have
+# established that the lock is actually held before quoting this.
+registration_line() {
+    local kind="${1:-}" f="$HV_SLUICE_DIR/drainers/${1:-}"
+    if [ -r "$f" ]; then
+        tr '\n' ' ' < "$f"
+    else
+        printf '%s' "(no registration file; the holder did not write one)"
+    fi
+}
+
+# Take the lock for every kind in the policy, or take none and refuse.
+#
+# ALL-OR-NOTHING ON PURPOSE. A partial acquisition would leave this process
+# holding some kinds while another loop holds the rest, which is precisely the
+# split-policy state the locks exist to prevent -- and it would do it while
+# reporting a refusal, so nobody would go looking.
+acquire_policy_locks() {
+    local policy="$1" mode="$2" k fd taken=""
+    mkdir -p "$HV_SLUICE_DIR/drainers" || return 2
+    local IFS=,
+    for k in $policy; do
+        fd="$(lock_fd_for "$k")"
+        if [ -z "$fd" ]; then
+            echo "sluice-drain: no lock fd for kind '$k' -- refusing rather than draining unprotected" >&2
+            release_policy_locks "$taken"
+            return 2
+        fi
+        eval "exec $fd>\"$HV_SLUICE_DIR/drainer-$k.lock\"" || { release_policy_locks "$taken"; return 2; }
+        if ! flock -n "$fd"; then
+            echo "sluice-drain: REFUSING -- another drainer already claims kind '$k'." >&2
+            echo "sluice-drain:   holder: $(registration_line "$k")" >&2
+            echo "sluice-drain:   This is not a lock you should force. Either wait for that loop," >&2
+            echo "sluice-drain:   narrow this one with --kinds= to the kinds it does not claim, or" >&2
+            echo "sluice-drain:   stop it deliberately. See 'make sluice-status' for every drainer." >&2
+            eval "exec $fd>&-"
+            release_policy_locks "$taken"
+            return 3
+        fi
+        taken="$taken${taken:+,}$k"
+        {
+            echo "pid=$$"
+            echo "host=$(hostname)"
+            echo "kinds=$policy"
+            echo "mode=$mode"
+            echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        } > "$HV_SLUICE_DIR/drainers/$k"
+    done
+    DRAIN_HELD_KINDS="$taken"
+    return 0
+}
+
+release_policy_locks() {
+    local held="${1:-}" k fd
+    [ -n "$held" ] || return 0
+    local IFS=,
+    for k in $held; do
+        fd="$(lock_fd_for "$k")"
+        rm -f "$HV_SLUICE_DIR/drainers/$k"
+        if [ -n "$fd" ]; then eval "exec $fd>&-" 2>/dev/null || true; fi
+    done
+}
+
 # --- the drain -------------------------------------------------------------
 
 run_one() {
@@ -159,7 +310,7 @@ run_one() {
 
     git -C "$repo_root" fetch --quiet origin 2>/dev/null
     AFTER="$(git -C "$repo_root" rev-parse --short origin/main)"
-    LOG=$(find "$HOME/.local/state/hornvale/sluice/" -maxdepth 1 \
+    LOG=$(find "$HV_SLUICE_DIR/" -maxdepth 1 \
               -name "*${SHA:0:12}*.log" -printf '%T@ %p\n' 2>/dev/null \
           | sort -rn | head -1 | cut -d' ' -f2-)
 
@@ -216,35 +367,184 @@ census_note() {
     fi
 }
 
-main() {
-    local max="${1:-5}" i row rc claim_out
-    for ((i = 1; i <= max; i++)); do
-        # STDOUT AND STDERR ARE CAPTURED TOGETHER, AND THE RC IS CHECKED
-        # BEFORE the output is trusted as a row (fix round 2, Critical F1).
-        # `claim` now REFUSES (exit 3) rather than building on demand when
-        # its binary is missing, and this loop used to discard stderr
-        # (`2>/dev/null`) and treat any empty stdout — including empty
-        # stdout from a rc=3 refusal — as "drained". That read a build
-        # failure as "queue drained after 0 run(s)": a wrong answer, with
-        # the one line that would have explained it thrown away. On success
-        # `claim` writes nothing to stderr, so folding the streams together
-        # costs the success path nothing.
-        claim_out="$(cd "$repo_root" && bash scripts/sluice-queue.sh claim "launched by the drain loop" 2>&1)"
-        rc=$?
-        if [ "$rc" -ne 0 ]; then
-            echo "sluice-drain: claim failed (rc=$rc) — cannot tell drained from broken, so NOT reporting 'queue drained'." >&2
-            printf '%s
-' "$claim_out" >&2
+# Claim and run exactly one row. Exit status is the LOOP's instruction:
+#   0  a row was claimed and run (its own rc is recorded in the queue row)
+#   1  the queue holds nothing claimable right now
+#   2  claim itself failed -- cannot tell drained from broken, so stop
+drain_once() {
+    local label="${1:-1}" row rc claim_out
+    # STDOUT AND STDERR ARE CAPTURED TOGETHER, AND THE RC IS CHECKED
+    # BEFORE the output is trusted as a row (fix round 2, Critical F1).
+    # `claim` now REFUSES (exit 3) rather than building on demand when
+    # its binary is missing, and this loop used to discard stderr
+    # (`2>/dev/null`) and treat any empty stdout -- including empty
+    # stdout from a rc=3 refusal -- as "drained". That read a build
+    # failure as "queue drained after 0 run(s)": a wrong answer, with
+    # the one line that would have explained it thrown away. On success
+    # `claim` writes nothing to stderr, so folding the streams together
+    # costs the success path nothing.
+    claim_out="$(cd "$repo_root" && bash scripts/sluice-queue.sh claim "launched by the drain loop" 2>&1)"
+    rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo "sluice-drain: claim failed (rc=$rc) -- cannot tell drained from broken, so NOT reporting 'queue drained'." >&2
+        printf '%s\n' "$claim_out" >&2
+        return 2
+    fi
+    row="$claim_out"
+    if [ -z "${row//[[:space:]]/}" ]; then
+        return 1
+    fi
+    echo "=== [$label] $(printf '%s' "$row" | cut -f3) kind=$(printf '%s' "$row" | cut -f6) sha=$(printf '%s' "$row" | cut -f4 | cut -c1-12) ==="
+    run_one "$row"
+}
+
+# The kind of the row at the head of the queue, or empty if nothing is queued.
+head_queued_kind() {
+    (cd "$repo_root" && bash scripts/sluice-queue.sh list 2>/dev/null) \
+        | awk -F'\t' '$5=="queued"{print $6; exit}'
+}
+
+# Is the canonical box already working? A drainer that claims a row while the
+# box is busy marks that row `running` and then blocks on the flock, so
+# `make sluice-status` shows a job as running for as long as the wait lasts.
+# That is not wrong, but it is unreadable, and a human reading the queue during
+# a long census would conclude two jobs were running at once. Waiting to claim
+# costs nothing -- the row is not going anywhere -- and keeps the queue's own
+# report honest, which is this change's whole subject.
+box_is_busy() {
+    (cd "$repo_root" && bash scripts/census-run.sh status 2>&1) | grep -q "running:"
+}
+
+# Watch the queue and drain the kinds this policy claims, until stopped.
+#
+# THE LOOP LIVES HERE, AND THAT IS THE POINT. Until now it did not: operators
+# wrote `while true; do sluice-drain.sh 1; sleep; done` into a session
+# scratchpad, which is exactly where the DISPATCH logic lived before it caused
+# two defects in one night and was moved into this file (see the header). The
+# watching half stayed outside and reproduced the identical failure: untested
+# code doing real gating work, invisible to every instrument, outliving the
+# session that started it because an orphan reparents to pid 1.
+#
+# It also cannot work anywhere else. A lock taken INSIDE a one-shot drain is
+# released when that drain exits, so two scratchpad loops calling this script
+# would take turns and never see each other. A registration that does not span
+# the loop's own sleeps is not a registration.
+# Has this process been orphaned — its parent gone, reparented to init?
+#
+# THIS IS THE ORIGINAL COMPLAINT, NOT A NEW ONE. The drainer that started all
+# this outlived the session that launched it: the session ended, init adopted
+# the loop, and it kept draining for hours with nothing able to see it. The
+# locks above make such a loop VISIBLE; this makes it STOP. Both are wanted —
+# visibility is what a reader needs, and exiting is what the box needs.
+#
+# A deliberately daemonised drainer (nohup, systemd, a detached runner) has
+# ppid 1 legitimately and must not be killed by this, so it is opt-out. The
+# DEFAULT is to exit, because the documented way to run this is in the
+# foreground, and the failure this guards is far more common than the
+# daemon case.
+is_orphaned() {
+    [ "$(ps -o ppid= -p $$ 2>/dev/null | tr -d ' ')" = "1" ]
+}
+
+watch_loop() {
+    local policy="$1" max="$2" idle="$3" i=0 kind rc
+    echo "sluice-drain: watching kinds=$policy (max-jobs=${max:-unlimited}, idle=${idle}s), pid $$"
+    while :; do
+        if [ "$max" -gt 0 ] && [ "$i" -ge "$max" ]; then
+            echo "sluice-drain: reached max-jobs=$max -- stopping"
+            return 0
+        fi
+        if [ "${DRAIN_ALLOW_ORPHAN:-0}" != 1 ] && is_orphaned; then
+            echo "sluice-drain: my parent is gone and I have been reparented to init." >&2
+            echo "sluice-drain:   Exiting rather than draining on as an orphan nobody can see they" >&2
+            echo "sluice-drain:   are competing with. Pass --allow-orphan if you meant to daemonise." >&2
+            return 0
+        fi
+        kind="$(head_queued_kind)"
+        if [ -z "$kind" ]; then
+            sleep "$idle"; continue
+        fi
+        if ! policy_admits "$policy" "$kind"; then
+            # Somebody else's kind is at the head. Do NOT reach past it: the
+            # queue is FIFO and jumping the line is exactly the incoherence
+            # this change exists to prevent.
+            sleep "$idle"; continue
+        fi
+        if box_is_busy; then
+            sleep "$idle"; continue
+        fi
+        i=$((i + 1))
+        drain_once "$i"; rc=$?
+        if [ "$rc" = 2 ]; then
+            echo "sluice-drain: stopping -- claim is broken, not drained" >&2
             return 1
         fi
-        row="$claim_out"
-        if [ -z "${row//[[:space:]]/}" ]; then
-            echo "queue drained after $((i - 1)) run(s)"
-            break
+        if [ "$rc" = 1 ]; then
+            i=$((i - 1))   # nothing was claimed; do not spend a job slot on it
+            sleep "$idle"
         fi
-        echo "=== [$i] $(printf '%s' "$row" | cut -f3) kind=$(printf '%s' "$row" | cut -f6) sha=$(printf '%s' "$row" | cut -f4 | cut -c1-12) ==="
-        run_one "$row" || break
     done
+}
+
+usage() {
+    cat >&2 <<'USAGE'
+usage:
+  sluice-drain.sh [--kinds=<csv>] [N]        drain up to N rows, then exit (default 5)
+  sluice-drain.sh watch [--kinds=<csv>]      drain continuously until stopped
+                        [--max-jobs=N] [--idle=SECS]
+
+  --allow-orphan
+            keep running after the parent process exits. Off by default: an
+            orphaned drainer outliving its session is the failure this whole
+            mechanism exists to stop.
+
+  --kinds   which queue kinds this drainer claims (merge,stage,census).
+            Defaults to all three. A lock is taken per kind for the life of the
+            run, so two drainers with overlapping kinds cannot both start, and
+            two with disjoint kinds can.
+USAGE
+}
+
+main() {
+    local mode=one_shot policy="merge,stage,census" max="" idle=45 arg
+    for arg in "$@"; do
+        case "$arg" in
+            watch)        mode=watch ;;
+            --kinds=*)    policy="${arg#--kinds=}" ;;
+            --max-jobs=*) max="${arg#--max-jobs=}" ;;
+            --idle=*)     idle="${arg#--idle=}" ;;
+            --allow-orphan) DRAIN_ALLOW_ORPHAN=1 ;;
+            -h|--help)    usage; return 0 ;;
+            *[!0-9]*)     echo "sluice-drain: unrecognised argument '$arg'" >&2; usage; return 2 ;;
+            *)            max="$arg" ;;
+        esac
+    done
+    if [ "$mode" = one_shot ]; then max="${max:-5}"; else max="${max:-0}"; fi
+
+    if ! policy_is_valid "$policy"; then
+        echo "sluice-drain: --kinds='$policy' names something outside the queue's kinds ($DRAIN_KNOWN_KINDS)." >&2
+        echo "sluice-drain:   Refusing: a policy that matches no kind would loop forever draining nothing." >&2
+        return 2
+    fi
+
+    DRAIN_HELD_KINDS=""
+    acquire_policy_locks "$policy" "$mode" || return $?
+    # shellcheck disable=SC2064  # expand DRAIN_HELD_KINDS now, not at trap time
+    trap "release_policy_locks '$DRAIN_HELD_KINDS'" EXIT INT TERM
+
+    local i rc
+    if [ "$mode" = watch ]; then
+        watch_loop "$policy" "$max" "$idle"
+    else
+        for ((i = 1; i <= max; i++)); do
+            drain_once "$i"; rc=$?
+            if [ "$rc" = 2 ]; then return 1; fi
+            if [ "$rc" = 1 ]; then
+                echo "queue drained after $((i - 1)) run(s)"
+                break
+            fi
+        done
+    fi
     git -C "$repo_root" fetch -q origin 2>/dev/null
     echo "main: $(git -C "$repo_root" rev-parse --short origin/main)"
 }
