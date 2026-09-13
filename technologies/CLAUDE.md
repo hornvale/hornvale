@@ -68,6 +68,36 @@ lattice and named in the item's `note`. Do not invent an item to satisfy an
 edge and do not point outside the file — **Task 4's resolver must red** on a
 dangling reference.
 
+## A corpus is closed under its source's dependency relation (decision 0987)
+
+**The consequence of the previous section, stated as a rule so it cannot be
+rediscovered as a bug.** `presupposes` naming only in-corpus items means any
+corpus authored from a *subset* of a source that itself carries a dependency
+relation loses every edge crossing the subset's boundary, silently, at
+authoring time — the field that would carry the missing edge does not exist
+to carry it. The Kiln's own words on the resulting damage: "the derived
+demand set UNDER-DESCRIBES every such item's real prerequisites." A corpus
+that admits `inv-printing-press` without admitting steel says it is built on
+nothing, when the source it was drawn from says otherwise.
+
+**The rule:** a corpus drawn from a source that carries its own dependency
+relation is closed under that relation, in the direction that terminates. A
+corpus that cannot close states the truncation and its size in `provenance`.
+For this family, that direction is `Built on` (prerequisites terminate; the
+source's own `Led to` — consequences — does not, and closing under it would
+reconstruct the connected catalogue rather than select a corpus from it).
+
+**This is family law inherited from a decision that binds every corpus
+family whose source is graph-structured**, not a `technologies/`-only rule —
+see decision 0987. `asimov-1989` is its first application: closing the
+three-arc-plus-pre-1700 seed under `Built on` grew it from 41 items / 40
+edges to **301 items / 401 edges**, terminating at one root (`biped`), zero
+cycles. A corpus authored here that admits a proper subset of a
+graph-structured source without running this closure is not selecting a
+sample — it is silently truncating a relation the corpus exists to expose,
+and must instead close first or declare the truncation's size in
+`provenance`.
+
 ## The freeze (decision 0016), made structural
 
 A corpus is frozen **before the code that would move it exists**, which is the
@@ -179,6 +209,33 @@ success that does not exist.
 `doc:` anchors are admissible **only against a path
 `docs/generated-paths.txt` gives a generator** (0936's rule). Hand-written
 prose is refused.
+
+## No `inapplicable` without a ratified decision to cite
+
+The table above lists `inapplicable`'s anchor as `reason:` prose. **That prose
+must name a ratified decision, or the verdict is not available at all.**
+`inapplicable` asserts that the world *deliberately* lacks a precondition —
+and Hornvale has no living-world technology model to have made that choice
+about. `TechHorizon`'s four values date **discovered ruins**
+(`OccupationRecord.tech`, vestige placement, occupation fleshing — every
+consumer is occupation- or vestige-side, never a living community's own
+capability state), so there is no ceiling anywhere in the tree that a ratified
+decision has drawn, and nothing about the model's incompleteness was decided
+on purpose. An `inapplicable` verdict here would manufacture a deliberate
+choice out of an unbuilt one.
+
+**The second reason is independent of the first and would hold even if a
+ceiling existed:** decision 0136 deliberately leaves `inapplicable`'s tally
+unratcheted — it is the one verdict in the whole family's vocabulary that no
+guard watches. Routing mass through it is routing mass to the place nothing
+checks.
+
+**Both live corpora score zero `inapplicable` items**, and this is a
+precedent, not a coincidence: The Cadastre's spec explicitly nominated the
+value for the ~1,200 items the shipped model has no ceiling for, and refused
+it for exactly these two reasons (spec §5, §6). A future item that looks like
+a candidate for `inapplicable` is `absent` — the honest red — unless and
+until a decision record actually draws the ceiling it would assert.
 
 ## A row cited by ONE corpus must be ruled on by EVERY corpus
 
