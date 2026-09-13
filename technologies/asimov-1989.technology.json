@@ -13,7 +13,8 @@
       "presupposes": [],
       "verdict": "absent",
       "anchor": "",
-      "disclosure": "NOT BLIND, IN THE NARROW SENSE THE FAMILY'S RULE STILL DEMANDS: `inv-biped` is a ROOT \u2014 no `presupposes` \u2014 the sole root of the closed 301-item population (Task 1 verified exactly one). Nothing upstream forces its verdict, so the family's chosen/inherited rule (`technologies/CLAUDE.md`) requires a disclosure regardless of how the verdict was reached. THIS VERDICT IS A TASK 2 PLACEHOLDER, NOT AN AUTHORED ONE, and that is the honest thing to disclose: Task 2 (The Cadastre) adds every one of the 260 new items at `absent` per its own brief's Step 4 (\"An absent here is a placeholder that Task 3 must confirm or replace\") and performs no repository search for any of them, this one included. Task 3 owes the real search this disclosure cannot honestly claim was already run, and if Task 3 changes this item's verdict it inherits this disclosure and must revisit it rather than leave a placeholder's reasoning attached to an authored verdict."
+      "disclosure": "NOT BLIND: `inv-biped` is a ROOT -- no `presupposes` -- the sole root of the closed 301-item population (Task 1 verified exactly one). Nothing upstream forces its verdict, so the family's chosen/inherited rule (`technologies/CLAUDE.md`) requires a disclosure regardless of how the verdict was reached. THE PLACEHOLDER IS NOW RESOLVED: Task 3 (The Cadastre, 2026-09-12) ran the real repository search this disclosure previously admitted had not happened. Species body plans are authored at genesis (`SpeciesDef`) with no locomotion/posture axis and no hominid-evolution model, so bipedalism as an acquired trait cites no registry row or decision -- search covered idea-registry: bipedal, hominid, free hands, brain capacity, species evolve; source: `SpeciesDef` fields for locomotion/posture; decisions: hominid, evolution. The verdict stays `absent`, now as a searched finding rather than an unauthored placeholder. FORMER DISCLOSURE (kept for its search record; superseded by Task 3, 2026-09-12): \"NOT BLIND, IN THE NARROW SENSE THE FAMILY'S RULE STILL DEMANDS: `inv-biped` is a ROOT \u2014 no `presupposes` \u2014 the sole root of the closed 301-item population (Task 1 verified exactly one). Nothing upstream forces its verdict, so the family's chosen/inherited rule (`technologies/CLAUDE.md`) requires a disclosure regardless of how the verdict was reached. THIS VERDICT IS A TASK 2 PLACEHOLDER, NOT AN AUTHORED ONE, and that is the honest thing to disclose: Task 2 (The Cadastre) adds every one of the 260 new items at `absent` per its own brief's Step 4 (\"An absent here is a placeholder that Task 3 must confirm or replace\") and performs no repository search for any of them, this one included. Task 3 owes the real search this disclosure cannot honestly claim was already run, and if Task 3 changes this item's verdict it inherits this disclosure and must revisit it rather than leave a placeholder's reasoning attached to an authored verdict.\"",
+      "note": "Species body plans are authored at genesis (SpeciesDef) with no locomotion/posture axis and no hominid-evolution model, so bipedalism as an acquired trait has no registry row or decision. Search covered idea-registry: bipedal, hominid, free hands, brain capacity, species evolve; source: SpeciesDef fields for locomotion/posture; decisions: hominid, evolution."
     },
     {
       "id": "inv-stone-tool",
@@ -24,7 +25,8 @@
         "inv-biped"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row plans lithic/stone-tool crafting specifically; TechHorizon::Neolithic only dates ruins (R1) and TECH-1 names no capability (R2-analog), so nothing specific survives. Search covered idea-registry: stone tool, lithic, flint, knapping, Neolithic; decisions: lithic/stone-tool/flint (no hits); source: TechHorizon (ruins-only, domains/history/src/record.rs, flesh.rs)."
     },
     {
       "id": "inv-fire",
@@ -35,7 +37,8 @@
         "inv-biped"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No domain models fire-making/control as a capability distinct from the alchemy/kiln machinery, and no registry row names it. Search covered idea-registry: fire, wildfire, hearth, controlled fire, kiln; TECH-2 (names pottery/kiln/metallurgy, not fire-taming itself)."
     },
     {
       "id": "inv-ceremonial-burial",
@@ -46,7 +49,8 @@
         "inv-biped"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "UNI-10 (venerated dead) and UNI-6 (haunting) model what happens after death is already known, not the acquisition of burial/funerary rites themselves, and no row names burial custom directly. Search covered idea-registry: burial, funeral, mortuary, grave, tomb, UNI-6, UNI-10, MAP-69."
     },
     {
       "id": "inv-art",
@@ -57,7 +61,8 @@
         "inv-ceremonial-burial"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans representational/ceremonial art-making as a people capability; EXP-3a and CLIENT-set-pieces are about colour lexicon and client ornament, not an in-world art capability. Search covered idea-registry: art, painting, carving, sculpture, ornament, symbolic, EXP-3a, CLIENT-set-pieces."
     },
     {
       "id": "inv-bow",
@@ -68,7 +73,8 @@
         "inv-stone-tool"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "MAP-9's war-cost damper is a generic contact/exchange mechanic; no row names bow-and-arrow or ranged weaponry specifically as its own capability. Search covered idea-registry: bow, arrow, ranged weapon, projectile, archer, MAP-9, TECH-2 weapons clause."
     },
     {
       "id": "inv-oil-lamp",
@@ -79,7 +85,8 @@
         "inv-fire"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No lighting-technology capability is planned anywhere in the registry. Search covered idea-registry: lamp, light source, torch, illumination."
     },
     {
       "id": "inv-animal-dom",
@@ -107,8 +114,9 @@
       "presupposes": [
         "inv-animal-dom"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:BIO-8",
+      "note": "BIO-8 (raw) plans domestication & agriculture directly -- staple crop per biome, subsistence surplus -- naming this item's own capability. Search covered idea-registry: agriculture, domestication, BIO-8, TECH-1, BIO-subsistence-feeds-capacity."
     },
     {
       "id": "inv-pottery",
@@ -118,8 +126,9 @@
       "presupposes": [
         "inv-biped"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "TECH-2 (raw) names pottery/ceramics explicitly as the pyrotechnology ladder's floor rung gating storage->surplus. Search covered idea-registry: pottery, ceramic, kiln, TECH-2."
     },
     {
       "id": "inv-fish-nets",
@@ -130,7 +139,8 @@
         "inv-stone-tool"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Cached page's true subject is Linen (flax-fiber cordage enabling nets/cloth); no textile/weaving/cordage capability is planned in the registry. Search covered cached page text (title=Linen); idea-registry: textile, weave, flax, linen, cordage, LANG-7 (language contact, not textiles)."
     },
     {
       "id": "inv-raft",
@@ -141,7 +151,8 @@
         "inv-stone-tool"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "MAP-55's maritime-vs-continental cultural axis is a settlement/politics driver from coastline complexity, not a watercraft-building capability; nothing names raft/boat construction. Search covered idea-registry: raft, boat, watercraft, vessel, MAP-55."
     },
     {
       "id": "inv-sickle",
@@ -153,7 +164,8 @@
         "inv-stone-tool"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "BIO-8 plans domestication/agriculture broadly but names no harvesting-tool capability; nothing else matches. Search covered idea-registry: sickle, harvest, reaping tool, BIO-8."
     },
     {
       "id": "inv-irrigation",
@@ -164,7 +176,8 @@
         "inv-agriculture"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans irrigation/water-management infrastructure for farming; SOC-surplus-discharge-siting's \"hydraulics\" is a metaphor for institutional relief valves, not literal irrigation. Search covered idea-registry: irrigation, canal, water management, hydraulic, SOC-surplus-discharge-siting."
     },
     {
       "id": "inv-scale",
@@ -175,7 +188,8 @@
         "inv-stone-tool"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans a weighing/measurement-standard capability. Search covered idea-registry: scale, weight, weighing, balance, trade weight, measurement standard."
     },
     {
       "id": "inv-copper",
@@ -186,8 +200,9 @@
         "inv-fire",
         "inv-stone-tool"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "TECH-2 (raw) names kiln-temperature-gated smelting and metallurgy yielding tools/weapons, the capability copper working requires; TechHorizon has no pre-Bronze metal rung. Search covered idea-registry: copper, smelting, metallurgy, TECH-2, TECH-3; source: TechHorizon enum (no copper rung)."
     },
     {
       "id": "inv-simple-sundial",
@@ -198,7 +213,8 @@
         "inv-stone-tool"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans an intraday timekeeping device; SKY-equation-of-time is about true-vs-mean noon physics, not a sundial artifact a people builds. Search covered idea-registry: sundial, timekeeping, gnomon, shadow clock, SKY-equation-of-time."
     },
     {
       "id": "inv-bronze",
@@ -208,8 +224,9 @@
       "presupposes": [
         "inv-copper"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "TECH-2's pyrotechnology ladder names metallurgy explicitly (\"metallurgy yields tools, weapons... and coinage\"), bronze-working being a species of it; status raw, not shipped. Search covered idea-registry: bronze, metallurgy, alloy, smelting -> TECH-2; decisions: bronze/metallurgy (no hits); source: TechHorizon::Bronze (ruins-only, rejected under R1)."
     },
     {
       "id": "inv-cart",
@@ -237,8 +254,9 @@
       "presupposes": [
         "inv-agriculture"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:BIO-8",
+      "note": "BIO-8 (raw) names \"the Boserup plough (SOC-2's input)\" explicitly as part of the domestication/agriculture capability it plans. Search covered idea-registry: plow, plough, BIO-8, SOC-2."
     },
     {
       "id": "inv-river-boat",
@@ -249,7 +267,8 @@
         "inv-raft"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans riverine watercraft; same search as raft turned up only the coastline-complexity/culture driver MAP-55, which names no boat-building capability. Search covered idea-registry: river boat, boat, watercraft, MAP-55."
     },
     {
       "id": "inv-writing",
@@ -278,7 +297,8 @@
         "inv-agriculture"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Settlement growth (SOC-staple-ladder, shipped) and settlement tiers (SOC-settlement-tiers, raw) model city growth, not supra-community political unification into a nation-state; no row names that capability. Search covered idea-registry: nation, city-state, polity, state formation, SOC-settlement-tiers, SOC-staple-ladder, SOC-dense-settlement."
     },
     {
       "id": "inv-candle",
@@ -290,7 +310,8 @@
         "inv-oil-lamp"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No lighting-technology capability is planned in the registry (same gap as oil-lamp). Search covered idea-registry: candle, wax, lighting."
     },
     {
       "id": "inv-papyrus",
@@ -320,8 +341,9 @@
         "inv-simple-sundial",
         "inv-writing"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-18",
+      "note": "MAP-18 (raw) plans calendrics as computed knowledge a culture holds at a precision it has attained (counted -> computed -> predictive), a maintained MEM-4 artifact -- this item's own capability. Search covered idea-registry: calendar, calendrics, MAP-18, MEM-4."
     },
     {
       "id": "inv-stone-monument",
@@ -332,8 +354,9 @@
         "inv-ceremonial-burial",
         "inv-nation"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:NARR-monument-writes-itself",
+      "note": "NARR-monument-writes-itself (elaborated) plans a monument as placed content whose commemorative text the world derives -- directly naming this item's capability, unbuilt per NARR-placed-content (raw). Search covered idea-registry: monument, tomb, NARR-monument-writes-itself, NARR-placed-content."
     },
     {
       "id": "inv-glass",
@@ -344,7 +367,8 @@
         "inv-fire"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans glassmaking; ALCH-3's quality-bundle substances are a general materials model, not glass specifically. Search covered idea-registry: glass, glassmaking, ALCH-3."
     },
     {
       "id": "inv-literature",
@@ -373,7 +397,8 @@
         "inv-nation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans imperial-scale conquest/political structure beyond settlement/community mechanics already shipped. Search covered idea-registry: empire, imperial, hegemon, tributary, MAP-16, SOC-self-conquest."
     },
     {
       "id": "inv-horse",
@@ -402,7 +427,8 @@
         "inv-agriculture"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans fermentation/brewing as a capability. Search covered idea-registry: fermentation, brew, wine, beer, yeast, ALCH-1..7."
     },
     {
       "id": "inv-numbers",
@@ -412,8 +438,9 @@
       "presupposes": [
         "inv-writing"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:LANG-numeracy-gate",
+      "note": "LANG-numeracy-gate (raw) names exactly this gap: the shipped numeracy module caps comprehension at one/two/many and \"cannot say eight,\" the arithmetic capability this item introduces. Search covered idea-registry: numeral, number system, LANG-44 (shipped, capped at few/many), LANG-numeracy-gate, LANG-47."
     },
     {
       "id": "inv-law",
@@ -425,7 +452,8 @@
         "inv-writing"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans a codified/written legal system; hits were incidental (a physics \"law,\" an eponym named for a law's author). Search covered idea-registry: law code, codify, legal system, jurisprudence, Hammurabi."
     },
     {
       "id": "inv-medicine",
@@ -437,7 +465,8 @@
         "inv-writing"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "LANG-49 (shipped row) states proto-medicine has ZERO substrate today and needs a whole new domain before the idea even applies -- not a concrete plan, and the row itself cannot back deferred since it ships. Search covered idea-registry: medicine, disease, herb, healing, LANG-49."
     },
     {
       "id": "inv-alphabet",
@@ -484,7 +513,8 @@
         "inv-literature"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "domains/religion/src/lib.rs derives a pantheon per observed phenomenon with an optional presiding high-god (henotheism-like), but no row or mechanism plans consolidating to a single deity, and CUL-founding-order-religion confirms membership/count is never varied by society. Search covered idea-registry/frontier/decisions: monotheism, henotheism, single deity, pantheon; source: domains/religion/src/lib.rs (HIGH_GOD, pantheon genesis)."
     },
     {
       "id": "inv-dye",
@@ -495,7 +525,8 @@
         "inv-art"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans dye-making or pigment technology. Search covered idea-registry: dye, pigment, colorfast, indigo, madder."
     },
     {
       "id": "inv-sea-navigation",
@@ -506,7 +537,8 @@
         "inv-river-boat"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "MAP-55 plans a maritime-vs-continental cultural axis (a settlement/politics driver from coastline complexity), not open-sea navigation technique itself. Search covered idea-registry: navigation, seafaring, MAP-55, MAP-65."
     },
     {
       "id": "inv-steel",
@@ -516,8 +548,9 @@
       "presupposes": [
         "inv-bronze"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "TechHorizon caps at Iron with no separate steel rung; TECH-2 (raw) names kiln-gated smelting and metallurgy as the still-unbuilt capability chain steel-making needs. Search covered idea-registry: steel, smelting, metallurgy, TECH-2, TECH-3; source: TechHorizon enum (Iron is the ceiling short of Classical)."
     },
     {
       "id": "inv-arch",
@@ -528,7 +561,8 @@
         "inv-stone-monument"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans structural/architectural arch construction technique. Search covered idea-registry: arch, architectural, vault, keystone, dome."
     },
     {
       "id": "inv-aqueduct",
@@ -540,7 +574,8 @@
         "inv-stone-monument"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans water-conveyance engineering. Search covered idea-registry: aqueduct, water supply, hydraulic engineering, plumbing."
     },
     {
       "id": "inv-saddle",
@@ -569,7 +604,8 @@
         "inv-simple-sundial"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same gap as simple-sundial: no row plans a timekeeping device. Search covered idea-registry: sundial, gnomon, hour, timekeeping."
     },
     {
       "id": "inv-zoo",
@@ -579,8 +615,9 @@
       "presupposes": [
         "inv-animal-dom"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-9c",
+      "note": "MAP-9c (elaborated) names menageries directly -- a caged captive as prestige display, observed differently by each species -- this item's own capability. Search covered idea-registry: zoo, menagerie, captive animal, MAP-9c."
     },
     {
       "id": "inv-coin",
@@ -592,8 +629,9 @@
         "inv-scale",
         "inv-writing"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "TECH-2 (raw) names coinage explicitly as a consequence of metallurgy tied to SOC-1's exchange axis. Search covered idea-registry: coin, currency, coinage, TECH-2, SOC-1."
     },
     {
       "id": "inv-library",
@@ -623,8 +661,9 @@
         "inv-calendar",
         "inv-numbers"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "present",
+      "anchor": "test:hornvale-worldgen::a_crisis_has_a_predicted_and_an_actual_day_and_its_culture_holds_a_doctrine",
+      "note": "The Corrigendum campaign ships a priesthood that extrapolates a taught eclipse day from past darkenings via crisis_from, with the real day diverging and a live prediction crisis rendered -- eclipse prediction is demonstrably modeled. Search covered idea-registry: eclipse, LANG-48/49/50/51/52, MAP-63; book/src/chronicle/the-corrigendum.md; source: domains/astronomy/src/eclipses.rs, windows/worldgen/src/chorus.rs crisis_from, windows/worldgen/tests/suite/diachronic.rs."
     },
     {
       "id": "inv-water-element",
@@ -635,7 +674,8 @@
         "inv-sea-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "ALCH-3's quality-bundle substance model (shipped) does not encode classical single-element natural philosophy, and no row plans it. Search covered idea-registry: element, four elements, elemental theory, ALCH-1..7."
     },
     {
       "id": "inv-irrational-numbers",
@@ -646,7 +686,8 @@
         "inv-numbers"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans mathematical concepts beyond the numeracy comprehension ladder. Search covered idea-registry: irrational number, Pythagoras, LANG-44, LANG-numeracy-gate."
     },
     {
       "id": "inv-realistic-maps",
@@ -658,7 +699,8 @@
         "inv-writing"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "The engine's own cartographic rendering (Orrery/Cartographer, MAP-60/62/65) is an observation-layer tool, not a people's in-world map-making capability; no row plans the latter. Search covered idea-registry: cartography, map-making, realistic map, EXP-14, MAP-60, MAP-62."
     },
     {
       "id": "inv-abacus",
@@ -669,7 +711,8 @@
         "inv-numbers"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No row plans a calculation device beyond the numeracy comprehension ladder. Search covered idea-registry: abacus, calculating device, computation aid, LANG-44."
     },
     {
       "id": "inv-cadaver",
@@ -680,7 +723,8 @@
         "inv-medicine"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No herb/disease/healing/anatomy substrate exists anywhere in the domains per LANG-49's own note, and no row plans dissection specifically. Search covered idea-registry: dissection, anatomy, cadaver, LANG-49."
     },
     {
       "id": "inv-ocean-navigation",
@@ -692,7 +736,8 @@
         "inv-sea-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same gap as sea-navigation: no row plans open-ocean navigation technique. Search covered idea-registry: ocean navigation, deep sea, Phoenician, MAP-55."
     },
     {
       "id": "inv-venus-named",
@@ -703,7 +748,8 @@
         "inv-writing"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture identifying/naming celestial bodies exists; LANG-49's proto-astronomy ceiling is explicitly unbuilt and SKY-star-class-ontology argues for deleting Earth star-taxonomy from the world rather than modeling it. Search covered idea-registry: venus, planet naming, star-class-ontology, LANG-49; decisions: none found."
     },
     {
       "id": "inv-dream-interpretation",
@@ -714,7 +760,8 @@
         "inv-literature"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture developing/revising a theory of dreams; falls under LANG-49's proto-philosophy arc, which is shipped only for eclipse-prediction falsification, not general doctrine revision. Search covered idea-registry: dream, divination, omen; domains/religion for divination; LANG-49."
     },
     {
       "id": "inv-atom",
@@ -725,7 +772,8 @@
         "inv-water-element"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture theorizing matter as discrete particles; ALCH-3 models substances as continuous quality bundles (the opposite approach), and LANG-49's proto-philosophy ceiling is unbuilt. Search covered idea-registry: atom, particle, five elements, ALCH-3; LANG-49."
     },
     {
       "id": "inv-epilepsy",
@@ -736,7 +784,8 @@
         "inv-medicine"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "LANG-49 states explicitly that proto-medicine has ZERO substrate in the domains (no herb/disease/healing concept exists), so a culture theorizing disease causes is unbuilt. Search covered idea-registry: epilepsy, disease, humor, LANG-49; domains/epidemiology for disease-theory capability."
     },
     {
       "id": "inv-catapult",
@@ -748,7 +797,8 @@
         "inv-numbers"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "TECH-2's pyrotechnology ladder names metallurgy yielding generic weapons, not siege-engine mechanics (torsion/lever engineering), so it doesn't name this item's own capability. Search covered idea-registry: catapult, siege, war-cost, TECH-2, MAP-9."
     },
     {
       "id": "inv-university",
@@ -758,8 +808,9 @@
       "presupposes": [
         "inv-library"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MEM-5",
+      "note": "MEM-5 (raw) generalizes an institution's founding->neglect->death lifecycle across functions including 'skill', which is the capability a school/academy exercises, though the row is a broad institutions-in-general capture rather than education-specific. Search covered idea-registry: university, school, academy, institution, MEM-5; LANG-49's transmission-as-tradition note."
     },
     {
       "id": "inv-animal-classification",
@@ -770,7 +821,8 @@
         "inv-animal-dom"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No taxonomic/biological-classification capability is planned anywhere; species domain has no cultural classification mechanic. Search covered idea-registry: classification, taxonomy, species; domains/species for a classification concept."
     },
     {
       "id": "inv-five-elements",
@@ -781,7 +833,8 @@
         "inv-atom"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture theorizing elemental composition of matter; ALCH-3's quality-bundle model is a different (non-classical-element) approach and LANG-49's proto-philosophy ceiling is unbuilt. Search covered idea-registry: five elements, ALCH-3, LANG-49."
     },
     {
       "id": "inv-heliocentric-theory",
@@ -792,7 +845,8 @@
         "inv-writing"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture producing a cosmological model of the universe; MAP-18 is about precision of already-true sky periods, not model choice, and LANG-49's proto-astronomy ceiling is unbuilt. Search covered idea-registry: heliocentric, geocentric, MAP-18, LANG-49, SKY-authored-sky."
     },
     {
       "id": "inv-logic",
@@ -803,7 +857,8 @@
         "inv-numbers"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture inventing a formal system of reasoning; UNI-1's inference thesis is agent-belief caching (The Surmise), not a cultural logic system, and LANG-49's proto-philosophy ceiling is unbuilt. Search covered idea-registry: logic, UNI-1, reasoning, LANG-49."
     },
     {
       "id": "inv-spherical-earth",
@@ -814,7 +869,8 @@
         "inv-ocean-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture deducing the shape of the world from observation exists anywhere in the registry or source. Search covered idea-registry: spherical, earth shape, geodesy; terrain/astronomy domains for a world-shape-knowledge concept."
     },
     {
       "id": "inv-star-maps",
@@ -825,7 +881,8 @@
         "inv-realistic-maps"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture cataloguing/mapping stars; SKY-star-class-ontology argues for deleting Earth star-taxonomy rather than modeling cultural star cataloguing, and LANG-49's ceiling is unbuilt. Search covered idea-registry: star maps, SKY-star-class-ontology, LANG-49."
     },
     {
       "id": "inv-botany",
@@ -836,7 +893,8 @@
         "inv-university"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture cataloguing plant species exists; LANG-49's proto-philosophy/science ceiling is unbuilt and no botany/herbalism concept exists in domains. Search covered idea-registry: botany, plant classification, herbal; domains/species."
     },
     {
       "id": "inv-paved-road",
@@ -848,7 +906,8 @@
         "inv-stone-monument"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "MAP-betweenness/MAP-the-road-with-no-builder model roads as emergent, uncommissioned desire paths, the opposite of this item's deliberate paved-infrastructure-for-logistics capability; no deliberate-construction road capability is planned. Search covered idea-registry: road, infrastructure, MAP-betweenness-is-one-quantity, MAP-the-road-with-no-builder."
     },
     {
       "id": "inv-arteries-veins",
@@ -859,7 +918,8 @@
         "inv-cadaver"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "LANG-49 states proto-medicine (including anatomy) has ZERO substrate in the domains. Search covered idea-registry: arteries, veins, anatomy, LANG-49."
     },
     {
       "id": "inv-geometry",
@@ -871,7 +931,8 @@
         "inv-university"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture developing an axiomatic mathematical system; LANG-49's proto-mathematics ceiling is unbuilt. Search covered idea-registry: geometry, algebra, proto-mathematics, LANG-49."
     },
     {
       "id": "inv-tides",
@@ -882,7 +943,8 @@
         "inv-ocean-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "MAP-44 confirms tides exist only as a name today, with no magnitude field, and is itself a landform-feature prerequisite, not a plan for a culture's scientific observation/description of tides. Search covered idea-registry: tides, MAP-44; climate/astronomy domains for a tidal-observation concept."
     },
     {
       "id": "inv-brain-areas",
@@ -893,7 +955,8 @@
         "inv-cadaver"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "LANG-49 states proto-medicine (including anatomy) has ZERO substrate in the domains. Search covered idea-registry: brain, spinal, anatomy, LANG-49."
     },
     {
       "id": "inv-lighthouse",
@@ -906,7 +969,8 @@
         "inv-stone-monument"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for coastal-navigation-aid infrastructure exists in the registry or source tree. Search covered idea-registry: lighthouse, beacon, navigation, MAP-55/56 coastline ideas."
     },
     {
       "id": "inv-moon-sun-size",
@@ -918,7 +982,8 @@
         "inv-heliocentric-theory"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture measuring/estimating celestial body sizes; LANG-49's proto-astronomy ceiling is unbuilt beyond its narrow eclipse-prediction floor. Search covered idea-registry: moon size, sun size, LANG-49, MAP-18."
     },
     {
       "id": "inv-water-clock",
@@ -930,7 +995,8 @@
         "inv-sundial"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture inventing a timekeeping device; WorldTime/ticks are an engine-internal representation, not a modeled cultural artifact. Search covered idea-registry: water clock, timekeeping, sundial, calendar; kernel WorldTime."
     },
     {
       "id": "inv-lever-math",
@@ -942,7 +1008,8 @@
         "inv-university"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture developing mathematical mechanics (levers, buoyancy, pi); LANG-49's proto-mathematics ceiling is unbuilt. Search covered idea-registry: lever, buoyancy, pi, proto-mathematics, LANG-49."
     },
     {
       "id": "inv-earth-size",
@@ -954,7 +1021,8 @@
         "inv-river-boat"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture measuring planetary circumference (geodesy) exists; LANG-49's proto-astronomy ceiling is unbuilt. Search covered idea-registry: earth size, geodesy, LANG-49, MAP-18."
     },
     {
       "id": "inv-year-number",
@@ -965,7 +1033,8 @@
         "inv-calendar"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture reconciling disparate regnal year-counts into one chronological timeline; MEM-2's floating gap is about memory decay, not chronology synchronization, and is a different capability. Search covered idea-registry: year numbering, chronology, MEM-2, MAP-18."
     },
     {
       "id": "inv-great-wall",
@@ -975,8 +1044,9 @@
       "presupposes": [
         "inv-stone-monument"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-the-toll-is-the-inverse-desire-path",
+      "note": "This row (elaborated, unshipped) plans fortification construction as an institution converting a chokepoint's detour cost into rent, which is this item's core defensive-wall-building capability, though at castle rather than border-wall scale. Search covered idea-registry: wall, fortification, siege, chokepoint, MAP-the-toll-is-the-inverse-desire-path, MAP-33/34."
     },
     {
       "id": "inv-parchment",
@@ -1006,7 +1076,8 @@
         "inv-river-boat"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture computing celestial distances via trigonometry/parallax exists; LANG-49's proto-astronomy/mathematics ceiling is unbuilt. Search covered idea-registry: moon distance, parallax, trigonometry, LANG-49."
     },
     {
       "id": "inv-star-maps-better",
@@ -1017,7 +1088,8 @@
         "inv-star-maps"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same capability as star-maps (cultural star cataloguing), refined; not planned anywhere. Search covered idea-registry: star maps, magnitude catalogue, LANG-49, SKY-star-class-ontology."
     },
     {
       "id": "inv-glass-blowing",
@@ -1028,7 +1100,8 @@
         "inv-glass"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "TECH-2's pyrotechnology ladder names only pottery/ceramics and metallurgy as its outputs; glassmaking is a distinct material category it does not name, and the alchemy production table has no glass-specific production. Search covered idea-registry: glass, TECH-2; domains/alchemy/src/production.rs for a glass production."
     },
     {
       "id": "inv-wooden-stirrup",
@@ -1057,7 +1130,8 @@
         "inv-cart"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for harnessing water/wind as mechanical power is planned; TECH-4 only discusses steam/electricity as a far-future rung of an unspecified power ladder, not water/wind mills. Search covered idea-registry: water wheel, mill, windmill, TECH-4."
     },
     {
       "id": "inv-julian-calendar",
@@ -1067,8 +1141,9 @@
       "presupposes": [
         "inv-year-number"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-18",
+      "note": "MAP-18 (raw) plans calendrics as computed knowledge on a qualitative->counted->computed->predictive precision ladder gated by a culture's mathematical capability; the Julian leap-year correction is exactly a 'computed'-tier calendar achievement. Search covered idea-registry: calendar, julian, leap year, MAP-18."
     },
     {
       "id": "inv-climactic-zone",
@@ -1080,7 +1155,8 @@
         "inv-spherical-earth"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture theorizing latitude-based climate zones; MAP-63's climate falsification ladder is about seasonal/weather prediction, a different capability, and is itself raw/unbuilt for climate. Search covered idea-registry: climatic zone, climate theory, MAP-63, LANG-49."
     },
     {
       "id": "inv-basic-steam-engine",
@@ -1109,7 +1185,8 @@
         "inv-medicine"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "LANG-49 states explicitly that proto-medicine has ZERO substrate in the domains today (no herb/disease/healing concept exists anywhere). Search covered idea-registry: medicinal plants, pharmacology, herbal, LANG-49."
     },
     {
       "id": "inv-paper",
@@ -1138,7 +1215,8 @@
         "inv-star-maps-better"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same capability gap as heliocentric-theory: no capability for a culture producing any cosmological model of the universe. Search covered idea-registry: geocentric, cosmology, MAP-18, LANG-49, SKY-authored-sky."
     },
     {
       "id": "inv-spinal-cord",
@@ -1149,7 +1227,8 @@
         "inv-medicine"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "LANG-49 states proto-medicine (including anatomy) has ZERO substrate in the domains. Search covered idea-registry: spinal cord, anatomy, nerves, LANG-49."
     },
     {
       "id": "inv-algebra",
@@ -1160,7 +1239,8 @@
         "inv-geometry"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture developing symbolic algebra exists; LANG-49's proto-mathematics ceiling is unbuilt. Search covered idea-registry: algebra, proto-mathematics, LANG-49."
     },
     {
       "id": "inv-tea",
@@ -1171,7 +1251,8 @@
         "inv-agriculture"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability ties a cultural practice (boiling water for tea) to reduced infection; BIO-5's sanitation term is about waste disposal, a different mechanism, and epidemiology's shipped disease fields have no water-boiling behavior. Search covered idea-registry: tea, sanitation, boiling, BIO-5, DOM-9 epidemiology."
     },
     {
       "id": "inv-alchemy",
@@ -1181,8 +1262,9 @@
       "presupposes": [
         "inv-five-elements"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "present",
+      "anchor": "test:hornvale-alchemy::every_production_balances_mass",
+      "note": "domains/alchemy's shipped production grammar (Calcine/Distil/Ferment/Amalgamate over a latent QualityVector, mass-balance admissibility) is exactly the recorded-alchemy capability this item describes (pottery from clay, metals from ore, chemical change intuitively understood), per ALCH-1/ALCH-2/ALCH-3 (all shipped). Search covered idea-registry: alchemy, ALCH-1..7; domains/alchemy/src/production.rs, quality.rs."
     },
     {
       "id": "inv-metal-stirrup",
@@ -1212,7 +1294,8 @@
         "inv-steel"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for lever-action cart/wheel tools is planned anywhere in the registry or source. Search covered idea-registry: wheelbarrow, cart, wheel, lever."
     },
     {
       "id": "inv-dome",
@@ -1224,7 +1307,8 @@
         "inv-geometry"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for architectural construction technique (domes/vaulting) is planned; MAP-building-fabric is about dungeon-wall material, not civilizational architecture. Search covered idea-registry: dome, vault, architecture, MAP-building-fabric."
     },
     {
       "id": "inv-silk-europe",
@@ -1235,7 +1319,8 @@
         "inv-paved-road"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for textile/sericulture technology or its cross-cultural transfer is planned anywhere. Search covered idea-registry: silk, textile, sericulture, TECH-2."
     },
     {
       "id": "inv-turnplow",
@@ -1266,7 +1351,8 @@
         "inv-catapult"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a chemical incendiary weapon is planned; TECH-2's weapons clause derives generic arms from metallurgy, not a distinct chemical-weapon capability, and the alchemy production table has no such weaponized output. Search covered idea-registry: greek fire, incendiary weapon, TECH-2; domains/alchemy/src/production.rs."
     },
     {
       "id": "inv-block-printing",
@@ -1294,8 +1380,9 @@
       "presupposes": [
         "inv-pottery"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "TECH-2 (raw) explicitly names 'pottery/ceramics gate storage->surplus...; kiln temperature gates [firing]' as the capability; porcelain is a higher-temperature ceramic squarely within that named pottery/ceramics capability. Search covered idea-registry: porcelain, pottery, ceramics, kiln, TECH-2 (same row the brief cites for pottery)."
     },
     {
       "id": "inv-acetic-acid",
@@ -1306,7 +1393,8 @@
         "inv-fermentation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "The alchemy production table has a generic 'distil-spirit' process but no substance/output modeling vinegar or a specific acid; this named chemistry is not covered by the shipped generic distillation mechanic. Search covered idea-registry: acetic acid, distillation, ALCH rows; domains/alchemy/src/production.rs Process::Distil."
     },
     {
       "id": "inv-high-backed-saddle",
@@ -1375,7 +1463,8 @@
         "inv-algebra"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No capability for a culture inventing a positional numeral system/zero exists; LANG-49's proto-mathematics ceiling is unbuilt. Search covered idea-registry: zero, numeral, proto-mathematics, LANG-49."
     },
     {
       "id": "inv-iceland-settled",
@@ -1386,7 +1475,8 @@
         "inv-ocean-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "The shipped Migrated/Departure mechanic (domains/history) models relocation onto vacant ground within the known world (climate eviction or conquest), not transoceanic exploration and settlement of previously unreached land, which is this item's distinguishing capability. Search covered idea-registry: migration, colonization, overseas, exploration, SOC-contact; domains/history/src/flesh.rs Departure enum."
     },
     {
       "id": "inv-coffee",
@@ -1396,8 +1486,9 @@
       "presupposes": [
         "inv-agriculture"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:BIO-9",
+      "note": "BIO-9 plans psychoactive/sacred substances gated by metabolism and the purity grid as a ritual/cultural phenomena source, which is the capability a culturally-adopted stimulant beverage crop needs; status raw, unbuilt. Search covered idea-registry: coffee, stimulant, beverage crop, psychoactive, domestication, staple crop (BIO-8); decisions: none."
     },
     {
       "id": "inv-arctic-circle",
@@ -1408,7 +1499,8 @@
         "inv-ocean-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is long-distance sea exploration reaching a named extreme latitude; no navigation/seafaring/exploration domain or registry row exists. Search covered idea-registry: exploration, navigation, seafaring, voyage, arctic, polar; domains/windows dirs; decisions: none."
     },
     {
       "id": "inv-horse-collar",
@@ -1438,7 +1530,8 @@
         "inv-iceland-settled"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is overseas colonization reached by sea voyage of a distant landmass; no seafaring/colonization-by-sea mechanic exists anywhere in the registry or domains. Search covered idea-registry: colonize, settle overseas, migration by sea, island settlement; domains/settlement, domains/history; decisions: none."
     },
     {
       "id": "inv-newfoundland",
@@ -1449,7 +1542,8 @@
         "inv-greenland-viking"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is discovery plus failed overseas colonization via sea voyage; same absence as greenland-viking, no matching mechanism. Search covered idea-registry: discovery, colony failure, overseas settlement; decisions: none."
     },
     {
       "id": "inv-optics",
@@ -1461,7 +1555,8 @@
         "inv-glass-blowing"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a culture's scientific understanding of vision enabling corrective lenses; EXP-3/EXP-3a model innate per-species photoreceptor perception, not an invented optical science or device. Search covered idea-registry: EXP-3, EXP-3a, lens, vision, optics; domains/species perception; decisions: none."
     },
     {
       "id": "inv-crossbow",
@@ -1473,8 +1568,9 @@
         "inv-lever-math",
         "inv-steel"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "TECH-2's pyrotechnology/metallurgy ladder names 'weapons' (MAP-9's war-cost damper) as an unbuilt output category a mechanized weapon like the crossbow would fall under; status raw. Search covered idea-registry: TECH-2, weapons, metallurgy, MAP-9 war-cost; decisions: none."
     },
     {
       "id": "inv-new-star",
@@ -1484,8 +1580,9 @@
       "presupposes": [
         "inv-writing"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-guest-stars",
+      "note": "SKY-guest-stars explicitly plans 'a nova or supernova drawn over deep time', the once-ever transient event this item names as 'creation of new star witnessed'; status raw. Search covered idea-registry: SKY-guest-stars, nova, supernova, new star; domains/astronomy source for nova/supernova; decisions: none."
     },
     {
       "id": "inv-bright-comet",
@@ -1495,8 +1592,9 @@
       "presupposes": [
         "inv-writing"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-10",
+      "note": "SKY-10 states plainly 'No comets or meteors \u2014 no aperiodic or long-period spectacular events'; status raw, the exact missing capability this item names. Search covered idea-registry: SKY-10, comet, meteor; domains/astronomy grep for comet/nova (none found); decisions: none."
     },
     {
       "id": "inv-fork",
@@ -1507,7 +1605,8 @@
         "inv-paved-road"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a specific cultural eating-utensil artifact; no material-culture/object catalogue at this granularity exists in the registry. Search covered idea-registry: utensil, fork, dining, material culture; decisions: none."
     },
     {
       "id": "inv-flying-buttress",
@@ -1518,7 +1617,8 @@
         "inv-dome"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is an architectural/structural-engineering technique enabling taller buildings; no architecture or building-engineering domain or registry row models this. Search covered idea-registry: architecture, buttress, building technique, structural engineering; windows/vessel structure dir (game room structure, not architectural history); decisions: none."
     },
     {
       "id": "inv-compass",
@@ -1528,8 +1628,9 @@
       "presupposes": [
         "inv-ocean-navigation"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-magnetic-north",
+      "note": "SKY-magnetic-north plans a lodestone/magnetic north distinct from celestial north as a genuine in-world discovery, the exact capability magnetic navigation needs; status elaborated, not shipped. Search covered idea-registry: SKY-magnetic-north, SKY-dynamo-and-the-null, magnetism, compass, navigation; decisions: none."
     },
     {
       "id": "inv-windmill",
@@ -1540,7 +1641,8 @@
         "inv-water-wheel"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a wind-powered mechanical device for surplus production; TECH-1 deliberately declines to model individual technologies as tree nodes, and no row names wind power or milling specifically. Search covered idea-registry: TECH-1, TECH-2, windmill, wind power, milling, mechanical device; decisions: none."
     },
     {
       "id": "inv-spitsbergen",
@@ -1551,7 +1653,8 @@
         "inv-ocean-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is sea-voyage discovery of an unreached island; no navigation/exploration mechanic exists. Search covered idea-registry: exploration, island discovery, Spitsbergen; decisions: none."
     },
     {
       "id": "inv-arab-numbers",
@@ -1563,7 +1666,8 @@
         "inv-zero"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is adoption of a positional written numeral notation replacing another; LANG-44 (shipped, 3 rungs) models per-species numeral COMPREHENSION precision (subitizing/counting/decimals), not written numeral notation, and writing systems are explicitly named as unbuilt future work in LANG-prosody-needs-a-stated-transcription-convention. Search covered idea-registry: LANG-44 numeracy, writing system, orthography, numeral notation; decisions: none."
     },
     {
       "id": "inv-coal-mining",
@@ -1592,7 +1696,8 @@
         "inv-ocean-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a ship-steering technology; no naval/vessel-craft domain exists (windows/vessel is the possession-game window, unrelated). Search covered idea-registry: rudder, ship, naval, steering; windows/vessel (unrelated); decisions: none."
     },
     {
       "id": "inv-eyeglass",
@@ -1603,7 +1708,8 @@
         "inv-optics"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is an invented corrective-lens device for a vision deficiency; no craft/device-invention mechanic for optics exists (EXP-3 is innate species perception, not invented correction). Search covered idea-registry: EXP-3, lens, eyeglasses, vision correction; decisions: none."
     },
     {
       "id": "inv-gunpowder",
@@ -1615,7 +1721,8 @@
         "inv-paper"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a synthesized explosive chemical compound; alchemy's shipped production grammar has a combustion production (burn-fuel, Combustibility axis) but nothing modeling an explosive/detonating substance or weaponization of one. Search covered idea-registry: TECH-2, ALCH-1 productions; domains/alchemy production.rs (burn-fuel, Causticity); decisions: none."
     },
     {
       "id": "inv-planetary-tables",
@@ -1625,8 +1732,9 @@
       "presupposes": [
         "inv-geocentric-universe"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "present",
+      "anchor": "test:hornvale-astronomy::conjunction_hides_but_does_not_remove_a_body",
+      "note": "The shipped wanderer ephemeris (SKY-9/SKY-wanderer-calendar) computes synodic periods, conjunctions and retrograde loops deterministically, which is exactly the predictive apparatus a planetary table encodes. Search covered idea-registry: SKY-9, SKY-wanderer-calendar; domains/astronomy/src/ephemeris.rs synodic_rate/conjunction; decisions: none."
     },
     {
       "id": "inv-magnetic-pole",
@@ -1636,8 +1744,9 @@
       "presupposes": [
         "inv-compass"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-magnetic-north",
+      "note": "Same capability as compass \u2014 SKY-magnetic-north plans a magnetic pole distinct from the spin pole, drawn and reversing over deep time; status elaborated, not shipped. Search covered idea-registry: SKY-magnetic-north, SKY-dynamo-and-the-null, magnetic pole; decisions: none."
     },
     {
       "id": "inv-mirror",
@@ -1649,7 +1758,8 @@
         "inv-steel"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is clear-glass manufacture plus metal backing; alchemy's eight quality axes have no transparency/clarity dimension and no glassmaking-specific production. Search covered idea-registry: glass, mirror, clarity; domains/alchemy quality.rs (8 axes, no clarity); decisions: none."
     },
     {
       "id": "inv-far-east",
@@ -1660,7 +1770,8 @@
         "inv-paved-road"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a distant, largely-unreached culture/place functioning as an aspirational goal for explorers; no geography-of-the-unreached or exploration-aspiration mechanic exists. Search covered idea-registry: unreached land, exploration goal, MAP-13 prophecy (unrelated); decisions: none."
     },
     {
       "id": "inv-longbow",
@@ -1689,7 +1800,8 @@
         "inv-lever-math"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a fiber-to-thread textile-production device; no textile/weaving/fiber-processing row exists (BIO-8 covers staple-crop agriculture and the plough only). Search covered idea-registry: BIO-8, textile, weaving, spinning, loom, fiber; decisions: none."
     },
     {
       "id": "inv-distillation",
@@ -1700,8 +1812,9 @@
         "inv-alchemy",
         "inv-fermentation"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "present",
+      "anchor": "test:hornvale-alchemy::every_production_balances_mass",
+      "note": "The shipped alchemy production table literally includes 'ferment-must' and 'distil-spirit' (Process::Ferment / Process::Distil) as named productions, the exact fermentation-then-distillation chain this item describes. Search covered idea-registry: ALCH-1; domains/alchemy/src/production.rs (distil-spirit, ferment-must); decisions: none."
     },
     {
       "id": "inv-pike",
@@ -1730,7 +1843,8 @@
         "inv-acetic-acid"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is deliberate synthesis of a strongly caustic industrial substance; Causticity is a modeled but purely LATENT quality axis never touched as an output by any of the 7 shipped productions, so a people cannot craft causticity today; ALCH-2 names a future causticity-gated production as unscheduled inside an already-shipped row, so it cannot back a deferred anchor. Search covered idea-registry: ALCH-2, ALCH-7 (causticity-gated production, unscheduled); domains/alchemy/src/production.rs (no production touches Causticity); decisions: none."
     },
     {
       "id": "inv-comet-painting",
@@ -1741,8 +1855,9 @@
         "inv-art",
         "inv-bright-comet"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-10",
+      "note": "A realistic depiction of a comet presupposes comets existing in the sky at all; SKY-10 (raw) is the row that would need to ship first. Search covered idea-registry: SKY-10 comets; art/rendering rows for astronomical realism (none); decisions: none."
     },
     {
       "id": "inv-canary-islands",
@@ -1753,7 +1868,8 @@
         "inv-ocean-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is sea-voyage discovery/settlement of a named island group; no navigation/exploration mechanic exists. Search covered idea-registry: exploration, island discovery; decisions: none."
     },
     {
       "id": "inv-anatomy",
@@ -1764,7 +1880,8 @@
         "inv-cadaver"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a culture's advancing medical/scientific understanding of the body via dissection; no medical-science or anatomical-knowledge-progression mechanic exists (windows/vessel/body.rs is gameplay body mechanics, not in-world science). Search covered idea-registry: anatomy, medicine, dissection, body science; windows/vessel body.rs; decisions: none."
     },
     {
       "id": "inv-mechanical-clock",
@@ -1775,7 +1892,8 @@
         "inv-water-clock"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is an invented mechanical timekeeping device (weight-driven, public clock towers); no instrument-invention mechanic exists distinct from the cosmic/environmental calendar machinery. Search covered idea-registry: clock, timekeeping, SKY-equation-of-time (sundial, raw, not a clock-invention row); decisions: none."
     },
     {
       "id": "inv-cannon",
@@ -1786,8 +1904,9 @@
         "inv-catapult",
         "inv-gunpowder"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "Same weapons-via-metallurgy capability as crossbow/artillery; TECH-2 names 'weapons' (MAP-9's war-cost damper) as an unbuilt output of the metallurgy ladder; status raw. Search covered idea-registry: TECH-2, weapons, metallurgy; decisions: none."
     },
     {
       "id": "inv-quarantine",
@@ -1799,7 +1918,8 @@
         "inv-medicine"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a deliberate policy response (isolating strangers) to curb disease spread; the shipped epidemiology model (pathogen catalogue, connected-host persistence, outbreak arithmetic) has no intervention/policy mechanism, and DOM-9's named unbuilt gaps are sanitation and zombie conversion, not quarantine specifically. Search covered idea-registry: DOM-9, quarantine, isolation, public health policy; domains/epidemiology/src/lib.rs (wave_reach is passive graph spread, no cut-edge intervention); decisions: none."
     },
     {
       "id": "inv-indian-ocean",
@@ -1810,7 +1930,8 @@
         "inv-ocean-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a naval expedition to a distant ocean/region; no navigation/exploration mechanic exists. Search covered idea-registry: expedition, naval exploration; decisions: none."
     },
     {
       "id": "inv-madeira",
@@ -1821,7 +1942,8 @@
         "inv-compass"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is overseas settlement of a previously-uninhabited island plus a cash-crop industry; no seafaring/colonization mechanic exists. Search covered idea-registry: colonize, overseas settlement, cash crop; decisions: none."
     },
     {
       "id": "inv-azores",
@@ -1832,7 +1954,8 @@
         "inv-madeira"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same overseas-discovery-and-settlement capability as madeira; absent for the same reason. Search covered idea-registry: colonize, overseas settlement, island discovery; decisions: none."
     },
     {
       "id": "inv-perspective",
@@ -1844,7 +1967,8 @@
         "inv-paper"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is an artistic technique (linear perspective drawing) authored and disseminated by a culture; no art-technique-invention mechanic exists. Search covered idea-registry: perspective, art technique, drawing; RENDER-* rows (rendering pipeline, not in-world art history); decisions: none."
     },
     {
       "id": "inv-artillery",
@@ -1854,8 +1978,9 @@
       "presupposes": [
         "inv-cannon"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "An organizational/technical escalation of cannon technology; falls under the same unbuilt metallurgy-to-weapons capability TECH-2 names; status raw. Search covered idea-registry: TECH-2, weapons, metallurgy, MAP-9 war-cost; decisions: none."
     },
     {
       "id": "inv-arquebus",
@@ -1904,7 +2029,8 @@
         "inv-eyeglass"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same optics/corrective-lens capability as eyeglass; no invented-device optics mechanic exists distinct from innate species perception (EXP-3). Search covered idea-registry: EXP-3, lens, vision correction; decisions: none."
     },
     {
       "id": "inv-printing-press",
@@ -1936,8 +2062,9 @@
         "inv-optics",
         "inv-star-maps-better"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-10",
+      "note": "Scientific tracking of comet trajectories presupposes comets existing; SKY-10 (raw, no comets or meteors) is the prerequisite row. Search covered idea-registry: SKY-10 comets; UNI-1 inference mechanism (general, not comet-specific); decisions: none."
     },
     {
       "id": "inv-cape-good-hope",
@@ -1949,7 +2076,8 @@
         "inv-rudder"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is naming/rounding a geographic cape opening a new sea trade route; no navigation/exploration mechanic exists. Search covered idea-registry: exploration, trade route by sea, cape; decisions: none."
     },
     {
       "id": "inv-magnetic-declination",
@@ -1959,8 +2087,9 @@
       "presupposes": [
         "inv-magnetic-pole"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-magnetic-north",
+      "note": "SKY-magnetic-north explicitly plans declination as 'a genuine discovery' from the separation between celestial and magnetic north; status elaborated, not shipped \u2014 the closest and most literal match in the batch. Search covered idea-registry: SKY-magnetic-north, declination; decisions: none."
     },
     {
       "id": "inv-new-world",
@@ -1972,7 +2101,8 @@
         "inv-rudder"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is transoceanic discovery of an entire unknown continent; no navigation/exploration mechanic exists. Search covered idea-registry: exploration, new continent, discovery; decisions: none."
     },
     {
       "id": "inv-syphilis",
@@ -1982,8 +2112,9 @@
       "presupposes": [
         "inv-quarantine"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "present",
+      "anchor": "test:hornvale::h_m1_binds_catalogue_rows_and_uses_the_monotonicity_grid",
+      "note": "The shipped epidemiology/pathogen-registry model (named pathogens, transmission mode, outbreak arithmetic with deaths) is the general disease-outbreak capability this item needs, even though sexual transmission specifically is not one of the four modeled routes. Search covered idea-registry: DOM-9 epidemiology; domains/species/src/lib.rs Transmission enum (FecalOral/Respiratory/Vector/FleaContact, no sexual route); domains/epidemiology outbreak(); decisions: none."
     },
     {
       "id": "inv-india-water-route",
@@ -1994,7 +2125,8 @@
         "inv-cape-good-hope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a sea voyage establishing a new trade route around a landmass to a distant region; no navigation/exploration mechanic exists. Search covered idea-registry: exploration, sea trade route; decisions: none."
     },
     {
       "id": "inv-america",
@@ -2006,7 +2138,8 @@
         "inv-paved-road"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is recognizing a newly-discovered landmass as a distinct continent via comparative reports; no exploration/geography-of-discovery mechanic exists. Search covered idea-registry: exploration, continent, discovery; decisions: none."
     },
     {
       "id": "inv-hand-watch",
@@ -2018,7 +2151,8 @@
         "inv-steel"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is a miniaturized spring-driven (mainspring) timekeeping device; same absence as mechanical-clock, no instrument-invention mechanic exists. Search covered idea-registry: clock, mainspring, watch, timekeeping device; decisions: none."
     },
     {
       "id": "inv-pacific-ocean",
@@ -2029,7 +2163,8 @@
         "inv-america"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "The capability is a culture discovering unmapped geography by exploration, and nothing in the registry or source models a people's geographic-discovery process (the connection graph and Mercator map are engine/render concerns, not a people's capability). Search covered idea-registry: exploration, cartography, navigation, circumnavigation, unexplored, frontier expansion, MAP-61 connection graph; decisions: none."
     },
     {
       "id": "inv-florida",
@@ -2040,7 +2175,8 @@
         "inv-pacific-ocean"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Capability is sea-voyage discovery/settlement of a specific region; no navigation/exploration mechanic exists. Search covered idea-registry: exploration, settlement by sea; decisions: none."
     },
     {
       "id": "inv-mexico",
@@ -2052,8 +2188,9 @@
         "inv-horse",
         "inv-pacific-ocean"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SOC-contact",
+      "note": "Spain's destruction of the Aztec polity and centuries of colonial rule is the \"persons survive, peoplehood dies\" quadrant SOC-contact names as colonization, its one explicitly unbuilt cell (displacement/attrition/genocide are shipped; colonization is not); status raw. Search covered idea-registry: conquest, colonization, contact-zone, Mexico, Aztec -> SOC-contact; decisions: conquest/colonization (no hits); source: history_bake conquest-displacement mechanism (relocate/WAR_LOSS/VIABLE_MIN) covers a different quadrant."
     },
     {
       "id": "inv-around-earth",
@@ -2064,7 +2201,8 @@
         "inv-pacific-ocean"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Circumnavigation confirming a spherical, sailable world has no modeled capability \u2014 no registry row or code addresses a culture's global sea-navigation or world-shape confirmation. Search covered idea-registry: navigation, circumnavigation, sailing, exploration; decisions: none."
     },
     {
       "id": "inv-peru",
@@ -2076,8 +2214,9 @@
         "inv-horse",
         "inv-pacific-ocean"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SOC-contact",
+      "note": "Spain's conquest and 3-century colonial holding of the Inca is the same unbuilt colonization quadrant SOC-contact names (persons survive, peoplehood dies), distinct from the shipped conquest-displacement mechanism; status raw. Search covered idea-registry: conquest, colonization, Peru, Inca, contact-zone -> SOC-contact; decisions: conquest/colonization (no hits)."
     },
     {
       "id": "inv-cubic-equations",
@@ -2088,7 +2227,8 @@
         "inv-algebra"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Symbolic algebraic solution methods go well beyond the shipped numeracy ladder (LANG-44, capped at Subitizing/FullCounting/Decimals) and no registry row plans abstract algebra. Search covered idea-registry: numeracy, arithmetic, mathematics, algebra, LANG-44/LANG-47; decisions: none."
     },
     {
       "id": "inv-comet-tails",
@@ -2098,8 +2238,9 @@
       "presupposes": [
         "inv-comet-tracking"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-10",
+      "note": "SKY-10 (raw) is exactly 'no comets or meteors \u2014 no aperiodic or long-period spectacular events', the capability comet-tails observation needs and the sim currently lacks. Search covered idea-registry: comet, SKY-10, SKY-18, SKY-guest-stars; source: domains/astronomy (no comet code found)."
     },
     {
       "id": "inv-mississipi-river",
@@ -2110,7 +2251,8 @@
         "inv-america"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "River exploration/discovery by a culture is not modeled; the world's rivers are generated terrain facts, not objects a people 'discovers' in a tracked sense. Search covered idea-registry: exploration, river, cartography; decisions: none."
     },
     {
       "id": "inv-amazon-river",
@@ -2121,7 +2263,8 @@
         "inv-america"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same as mississipi-river \u2014 no discovery/exploration capability modeled for geographic features. Search covered idea-registry: exploration, river; decisions: none."
     },
     {
       "id": "inv-heliocentric-practice",
@@ -2132,8 +2275,9 @@
         "inv-geometry",
         "inv-heliocentric-theory"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-18",
+      "note": "MAP-18 (raw) plans a culture's astronomical computational capability (a knowledge ladder gated by mathematical capability, rising to 'computed'/'predictive' knowledge of the sky) as the framework this refined orbital math would occupy; it is currently unbuilt. Search covered idea-registry: heliocentric, MAP-18, astronomy math, TECH-1; decisions: none."
     },
     {
       "id": "inv-illustrated-anatomy",
@@ -2145,7 +2289,8 @@
         "inv-art"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "LANG-49 explicitly finds proto-medicine has ZERO substrate in the domains today (no herb/disease/healing concept exists anywhere), so systematic anatomical study is unplanned, not merely unbuilt. Search covered idea-registry: medicine, anatomy, physician, LANG-49 proto-medicine; decisions: none."
     },
     {
       "id": "inv-negative-numbers",
@@ -2156,7 +2301,8 @@
         "inv-algebra"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "The shipped numeracy ladder (LANG-44) has no signed-number rung and no registry row plans negative-number representation. Search covered idea-registry: numeracy, negative, LANG-44/LANG-47; decisions: none."
     },
     {
       "id": "inv-surgery",
@@ -2167,7 +2313,8 @@
         "inv-anatomy"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "medicine/surgery has zero substrate per LANG-49's explicit finding \u2014 no herb/disease/healing concept exists in any domain. Search covered idea-registry: surgery, medicine, physician; decisions: none."
     },
     {
       "id": "inv-planetary-tables-better",
@@ -2177,8 +2324,9 @@
       "presupposes": [
         "inv-planetary-tables"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-18",
+      "note": "An improved predictive model of planetary motion is the 'predictive' rung of MAP-18's raw astronomical-knowledge ladder. Search covered idea-registry: planetary tables, MAP-18, astronomy; decisions: none."
     },
     {
       "id": "inv-trig-tables",
@@ -2189,8 +2337,9 @@
         "inv-geometry",
         "inv-irrational-numbers"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-18",
+      "note": "Trigonometric tables built specifically to ease astronomy calculations are an instance of MAP-18's raw 'computed' astronomical-knowledge rung. Search covered idea-registry: trigonometry, MAP-18, numeracy; decisions: none."
     },
     {
       "id": "inv-eustacian-tubes",
@@ -2201,7 +2350,8 @@
         "inv-illustrated-anatomy"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Anatomical discovery \u2014 zero substrate per LANG-49 (no anatomy/medicine domain exists). Search covered idea-registry: anatomy, medicine; decisions: none."
     },
     {
       "id": "inv-northeast-passage",
@@ -2212,7 +2362,8 @@
         "inv-arctic-circle"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Geographic exploration/discovery of a sea route is not modeled by any registry row or code. Search covered idea-registry: exploration, navigation, passage; decisions: none."
     },
     {
       "id": "inv-homologies",
@@ -2224,7 +2375,8 @@
         "inv-animal-classification"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Comparative anatomy documentation \u2014 no anatomy/biology-classification substrate exists (LANG-49's zero-substrate finding applies) and no evolution-observation mechanic covers this. Search covered idea-registry: anatomy, evolution, BIO-4; decisions: none."
     },
     {
       "id": "inv-mineralogy",
@@ -2234,8 +2386,9 @@
       "presupposes": [
         "inv-coal-mining"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-2",
+      "note": "TECH-2 (raw) is the pyrotechnology ladder \u2014 kiln temperature gating smelting, metallurgy yielding tools/weapons/coinage \u2014 the capability threshold a systematic mining/metallurgy science would sit on; it is unbuilt (MAP-39's lithology/ore-deposit fields model the world's geology, not a culture's mining capability). Search covered idea-registry: mineralogy, mining, TECH-2, MAP-39 lithology; source: domains for mineralogy/metallurgy code."
     },
     {
       "id": "inv-tobacco",
@@ -2245,8 +2398,9 @@
       "presupposes": [
         "inv-america"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:BIO-8",
+      "note": "BIO-8 (raw) 'Domestication & agriculture \u2014 staple crop per biome' is the capability threshold a newly domesticated/traded plant crop like tobacco would cross; unbuilt today (registry admits only plant domestication in the abstract, animal domestication explicitly refused elsewhere). Search covered idea-registry: tobacco, domestication, agriculture, BIO-8, BIO-animal-domestication; decisions: none."
     },
     {
       "id": "inv-scientific-societies",
@@ -2276,7 +2430,8 @@
         "inv-arquebus"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Gunpowder small arms are far beyond the shipped tech horizon (TECH-acquisition-model notes the current model tops out at Bronze/Iron and is monotone with no prerequisites), and no registry row names firearms specifically; TECH-2's 'weapons' output is early metallurgy (edged/armor), not gunpowder. Search covered idea-registry: musket, gunpowder, firearm, weapon, TECH-2, TECH-acquisition-model; decisions: none."
     },
     {
       "id": "inv-world-maps",
@@ -2288,7 +2443,8 @@
         "inv-realistic-maps"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A people's own cartographic capability (inventing a projection) is not modeled; the shipped Mercator world map (MAP-fogged-world-map-mercator) is a client rendering choice for the player, not an in-world culture's achievement. Search covered idea-registry: cartography, Mercator, MAP-fogged-world-map-mercator, MAP-62 The Cartographer; decisions: none."
     },
     {
       "id": "inv-supernova",
@@ -2299,8 +2455,9 @@
         "inv-moon-distance",
         "inv-new-star"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-guest-stars",
+      "note": "SKY-guest-stars (raw) is precisely the once-ever nova/supernova transient event this item needs, unbuilt today. Search covered idea-registry: supernova, nova, SKY-guest-stars, SKY-10; source: domains/astronomy (no nova/supernova code found)."
     },
     {
       "id": "inv-greenland",
@@ -2311,7 +2468,8 @@
         "inv-northeast-passage"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Geographic re-discovery/exploration is not a modeled capability. Search covered idea-registry: exploration, rediscovery, MAP-61 isolation/rediscovery (about sailing-lane connectivity, not a people's discovery act); decisions: none."
     },
     {
       "id": "inv-comet-distance",
@@ -2321,8 +2479,9 @@
       "presupposes": [
         "inv-comet-tracking"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-10",
+      "note": "Comet-distance is a comet-observation capability (measuring parallax to a comet), which needs SKY-10's raw comet mechanism to exist at all before it could be measured. Search covered idea-registry: comet, parallax, SKY-10; source: domains/astronomy."
     },
     {
       "id": "inv-drake-strait",
@@ -2333,7 +2492,8 @@
         "inv-around-earth"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Geographic exploration/discovery of a sea passage is not modeled. Search covered idea-registry: exploration, strait, passage; decisions: none."
     },
     {
       "id": "inv-pendulum",
@@ -2344,7 +2504,8 @@
         "inv-mechanical-clock"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "mechanical/pendulum timekeeping by a culture is not modeled; WorldTime is the sim's own exact tick clock (kernel), unrelated to an in-world people inventing a clock. Search covered idea-registry: clock, timekeeping, pendulum; decisions: 0186/0188 (WorldTime itself, not a cultural instrument)."
     },
     {
       "id": "inv-siberia",
@@ -2355,8 +2516,9 @@
         "inv-compass",
         "inv-horse"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SOC-contact",
+      "note": "Russia's conquest and colonial absorption of Siberia's khanates/peoples is the colonization quadrant SOC-contact names as unbuilt; status raw. Search covered idea-registry: colonization, expansion, contact-zone, Siberia -> SOC-contact; decisions: colonization (no hits)."
     },
     {
       "id": "inv-gregorian-calendar",
@@ -2366,8 +2528,9 @@
       "presupposes": [
         "inv-julian-calendar"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-18",
+      "note": "MAP-18 (raw) explicitly scores a culture's calendar constants against the almanac's true values, with intercalation drift as the visible failure \u2014 exactly the capability a Gregorian-style leap-year correction would exercise; unbuilt today. Search covered idea-registry: calendar, MAP-18, intercalation, TOOL-2; decisions: none."
     },
     {
       "id": "inv-hydrostatics",
@@ -2395,8 +2558,9 @@
       "presupposes": [
         "inv-arab-numbers"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "present",
+      "anchor": "path:domains/language/src/numeracy.rs",
+      "note": "LANG-44 ships a per-species numeracy rung whose top rung, Decimals, is exactly a culture's capability to express/comprehend quantities to sub-integer decimal precision (rendered 'about X.Y') \u2014 the underlying capability positional decimal notation needs. Search covered idea-registry: LANG-44 numeracy, decimals, positional notation; source: domains/language/src/numeracy.rs NumeracyRung::Decimals."
     },
     {
       "id": "inv-cryptanalysis",
@@ -2408,7 +2572,8 @@
         "inv-empire"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "codebreaking/cryptography is not modeled by any registry row or domain. Search covered idea-registry: cryptanalysis, code, cipher; decisions: none."
     },
     {
       "id": "inv-falling-motion",
@@ -2420,7 +2585,8 @@
         "inv-scale"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A culture's discovery of the physical law of falling bodies has no modeled capability or registry row. Search covered idea-registry: physics, falling motion, gravity, experimental science; decisions: none."
     },
     {
       "id": "inv-stocking-frame",
@@ -2431,7 +2597,8 @@
         "inv-lever-math"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Mechanical textile manufacturing is not modeled; no loom/weaving/textile-technology row exists in the registry. Search covered idea-registry: loom, textile, weaving, knitting; decisions: none."
     },
     {
       "id": "inv-microscope",
@@ -2442,7 +2609,8 @@
         "inv-eyeglass"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Optical-instrument invention (compound lenses) is not modeled by any registry row or domain code. Search covered idea-registry: microscope, optics, lens, telescope; decisions: none."
     },
     {
       "id": "inv-algebraic-symbol",
@@ -2453,7 +2621,8 @@
         "inv-algebra"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Symbolic algebraic notation is beyond the shipped numeracy ladder and no registry row plans it. Search covered idea-registry: algebra, notation, LANG-44/LANG-47; decisions: none."
     },
     {
       "id": "inv-thermometer",
@@ -2465,7 +2634,8 @@
         "inv-hydrostatics"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Quantified temperature measurement instruments are not modeled as a cultural capability (climate/temperature is a world field the sim computes, not a device a people builds and uses to measure it). Search covered idea-registry: thermometer, temperature, measurement instrument, CLIM-greenhouse; decisions: none."
     },
     {
       "id": "inv-east-indies",
@@ -2475,8 +2645,9 @@
       "presupposes": [
         "inv-ocean-navigation"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SOC-contact",
+      "note": "The Dutch overseas empire's founding factory is the start of a colonial relationship (persons survive, peoplehood dies over time) SOC-contact names as its unbuilt colonization quadrant; status raw. Search covered idea-registry: colonization, overseas empire, trade factory, contact-zone -> SOC-contact; decisions: colonization/trade (no hits)."
     },
     {
       "id": "inv-pi-accuracy",
@@ -2487,7 +2658,8 @@
         "inv-lever-math"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "High-precision numerical computation of a mathematical constant is beyond the shipped numeracy ladder; no registry row plans it. Search covered idea-registry: pi, precision, numeracy, LANG-44; decisions: none."
     },
     {
       "id": "inv-chemistry-textbook",
@@ -2498,7 +2670,8 @@
         "inv-sulfuric-acid"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Proto-chemistry (acid preparation) is not modeled; TECH-2's pyrotechnology ladder covers kiln/metallurgy, not chemical preparations, and no registry row addresses alchemy/chemistry. Search covered idea-registry: chemistry, alchemy, TECH-2; decisions: none."
     },
     {
       "id": "inv-earth-magnet",
@@ -2508,8 +2681,9 @@
       "presupposes": [
         "inv-magnetic-declination"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-magnetic-north",
+      "note": "SKY-magnetic-north (elaborated, unbuilt) names 'declination' \u2014 the separation between celestial and magnetic north \u2014 as 'a genuine discovery' a culture could make; this is the capability Gilbert's Earth-as-magnet finding needs, and no magnetism code exists yet (checked domains/astronomy for 'magnet': none). Search covered idea-registry: magnet, magnetism, SKY-11, SKY-magnetic-north, SKY-dynamo-and-the-null; source: grep 'magnet' in domains/astronomy and windows (none)."
     },
     {
       "id": "inv-vein-valves",
@@ -2520,7 +2694,8 @@
         "inv-spinal-cord"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Anatomical discovery \u2014 zero substrate per LANG-49's explicit finding. Search covered idea-registry: anatomy, medicine, circulation; decisions: none."
     },
     {
       "id": "inv-english-settlement-america",
@@ -2530,8 +2705,9 @@
       "presupposes": [
         "inv-america"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SOC-contact",
+      "note": "Jamestown is a founding colonial settlement on already-occupied land, the colonization outcome SOC-contact names and marks unbuilt; status raw. Search covered idea-registry: colonization, settlement founding, contact-zone -> SOC-contact; decisions: colonial settlement (no hits)."
     },
     {
       "id": "inv-french-settlement-america",
@@ -2541,8 +2717,9 @@
       "presupposes": [
         "inv-english-settlement-america"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SOC-contact",
+      "note": "Quebec is the same colonial-founding capability as Jamestown, covered by SOC-contact's named-but-unbuilt colonization quadrant; status raw. Search covered idea-registry: colonization, settlement founding, contact-zone -> SOC-contact; decisions: colonial settlement (no hits)."
     },
     {
       "id": "inv-telescope",
@@ -2554,7 +2731,8 @@
         "inv-microscope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Optical-instrument invention is not modeled by any registry row or domain code. Search covered idea-registry: telescope, optics, lens, microscope; decisions: none."
     },
     {
       "id": "inv-elliptical-orbits",
@@ -2565,8 +2743,9 @@
         "inv-planetary-tables-better",
         "inv-trig-tables"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-18",
+      "note": "A culture discovering that orbits are elliptical (Kepler) is a predictive astronomical-knowledge achievement, the top rung of MAP-18's raw knowledge ladder; the sim's own orbits already draw eccentricity (SKY-2, shipped physics) but nothing models a culture KNOWING this. Search covered idea-registry: elliptical orbits, Kepler, MAP-18, SKY-2 eccentricity; source: domains/astronomy forcing.rs (eccentricity is world physics, not cultural knowledge)."
     },
     {
       "id": "inv-milky-way",
@@ -2578,7 +2757,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Resolving the Milky Way into individual stars via telescope is beyond any modeled capability \u2014 telescopes are unmodeled (see telescope) and no registry row addresses stellar-density/deep-sky discovery. Search covered idea-registry: Milky Way, telescope, star field, deep sky; decisions: none."
     },
     {
       "id": "inv-moon",
@@ -2588,8 +2768,9 @@
       "presupposes": [
         "inv-telescope"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "present",
+      "anchor": "test:hornvale-scene::surface_class_table_is_normative",
+      "note": "windows/scene models per-moon cratering and maria_fraction driving a surface_class (heavily-cratered/maria-rich/cratered-highland), the exact capability Galileo's telescopic mountains-on-the-Moon observation names. Search covered idea-registry: moon, telescope, lens, optic; source: domains/astronomy/src/moons.rs, windows/scene/src/lib.rs (cratering/maria); decisions: none needed once source found."
     },
     {
       "id": "inv-jupiter-moons",
@@ -2601,7 +2782,8 @@
         "inv-moon"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Wanderer sibling planets (domains/astronomy/src/wanderers.rs) carry no moons of their own, and no registry row plans satellites of a non-anchor planet. Search covered idea-registry: jupiter, moon, wanderer, satellite; source: wanderers.rs, moons.rs; decisions: none."
     },
     {
       "id": "inv-sunspots",
@@ -2611,8 +2793,9 @@
       "presupposes": [
         "inv-telescope"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-13",
+      "note": "SKY-13 names exactly this gap \u2014 'the star is luminosity-constant forever... the star never does anything' \u2014 as the planned stellar-variability/activity capability; status raw, not shipped. Search covered idea-registry: sunspot, stellar activity, starspot, variability; source: domains/astronomy/src/star.rs (no activity field)."
     },
     {
       "id": "inv-venus-phases",
@@ -2624,7 +2807,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Wanderers have no illuminated-fraction/phase computation (only moons do), so a culture cannot observe an inner planet cycling through phases; no registry row plans it. Search covered idea-registry: venus, phase, wanderer, heliocentric; source: illuminant.rs, wanderers.rs, night_sky.rs."
     },
     {
       "id": "inv-andromeda-nebula",
@@ -2635,7 +2819,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No deep-sky object (nebula/galaxy) exists beyond neighbor stars and wanderers; no registry row plans one. Search covered idea-registry: nebula, deep sky, andromeda; source: domains/astronomy/src/starfield.rs, neighborhood.rs."
     },
     {
       "id": "inv-logarithms",
@@ -2646,7 +2831,8 @@
         "inv-negative-numbers"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row or mechanism plans a culture acquiring pure-mathematical tools like logarithms; MAP-18's 'mathematical capability' gate is only ever cited abstractly, never elaborated as a math-invention ladder. Search covered idea-registry: logarithm, mathematics, arithmetic, numeracy, TECH-1."
     },
     {
       "id": "inv-metabolism",
@@ -2658,7 +2844,8 @@
         "inv-scale"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "LANG-49 (shipped) states proto-medicine 'has ZERO substrate today \u2014 no herb/disease/healing concept exists anywhere in the domains'; biological metabolism-as-discovered-science has no home. Search covered idea-registry: metabolism, physiology, BIO-4; LANG-49's proto-medicine ceiling note."
     },
     {
       "id": "inv-baffin-bay",
@@ -2669,7 +2856,8 @@
         "inv-greenland"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row plans a culture's exploration/expansion of its known-world map; MAP-61/MAP-62/MAP-65 are render/topology tooling, not a culture capability. Search covered idea-registry: exploration, cartography, frontier, discovery of new lands."
     },
     {
       "id": "inv-tierra-del-fuego",
@@ -2680,7 +2868,8 @@
         "inv-drake-strait"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same gap as baffin-bay \u2014 no culture-side geographic-exploration capability exists. Search covered idea-registry: exploration, cartography, south pole, strait."
     },
     {
       "id": "inv-scientific-method",
@@ -2690,8 +2879,9 @@
       "presupposes": [
         "inv-scientific-societies"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "present",
+      "anchor": "test:hornvale-worldgen::two_consecutive_misses_read_a_live_crisis",
+      "note": "LANG-49's shipped floor (The Corrigendum) gives a culture a naive, falsifiable predictive model that enters a live crisis on repeated misses and is revised from fresh evidence \u2014 the empirical hypothesize/test/revise loop Bacon's method names. Search covered idea-registry: scientific method, empiricism, UNI-1, LANG-49; source: windows/worldgen/src/chorus.rs crisis_from."
     },
     {
       "id": "inv-stagecoach",
@@ -2701,8 +2891,9 @@
       "presupposes": [
         "inv-paved-road"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-61",
+      "note": "MAP-61 explicitly lists 'built roads (society's historical marks)' as deferred to a later slice of the connection graph, the overland-transport-infrastructure capability a stagecoach service needs. Search covered idea-registry: road, wagon, carriage, transport, MAP-61 connection graph."
     },
     {
       "id": "inv-refraction",
@@ -2714,7 +2905,8 @@
         "inv-optics"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No optics/light-physics capability (lens, refraction) exists anywhere in the registry or domains. Search covered idea-registry: refraction, optics, lens, light."
     },
     {
       "id": "inv-slide-rules",
@@ -2726,7 +2918,8 @@
         "inv-logarithms"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No mechanism or registry row plans mechanical calculation aids; same gap as logarithms. Search covered idea-registry: slide rule, calculation, mathematics."
     },
     {
       "id": "inv-gas",
@@ -2756,7 +2949,8 @@
         "inv-agriculture"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "domains/demography/src/coexist.rs explicitly documents that its predator-prey shadow coupling is designed to never drive a wild species to true zero ('extinction is a settlement-scale event this vertex-local coupling must not cause'), so overhunting-driven wildlife extinction is deliberately unmodeled, and no decision record ratifies that as a refusal. Search covered idea-registry: extinction, species, aurochs; source: coexist.rs SHADOW_FLOOR comment; docs/decisions/ (no matching decision)."
     },
     {
       "id": "inv-planetary-tables-even-better",
@@ -2767,8 +2961,9 @@
         "inv-elliptical-orbits",
         "inv-logarithms"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:MAP-18",
+      "note": "MAP-18 plans exactly this \u2014 a culture's knowledge ladder reaching the 'predictive' rung, scored by the diff between its calendar/astronomical constants and the almanac's true values (TOOL-2 wrongness measure); status raw. Search covered idea-registry: planetary tables, ephemeris, calendrics, predictive astronomy."
     },
     {
       "id": "inv-blood-circulation",
@@ -2780,7 +2975,8 @@
         "inv-vein-valves"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same proto-medicine gap LANG-49 names as having zero substrate. Search covered idea-registry: circulation, anatomy, physiology, medicine."
     },
     {
       "id": "inv-science-vs-religion",
@@ -2790,8 +2986,9 @@
       "presupposes": [
         "inv-heliocentric-practice"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "present",
+      "anchor": "test:hornvale-language::conflict_states_cover_the_preregistered_grid",
+      "note": "LANG-39 (shipped) names 'the Galileo cell where heresy fires' directly; windows/book renders it as DoctrineSection.annotations, the disclosure law's Contested counter-lines, and domains/language/src/schemas.rs proves the Contested state for a verifiable folk/doctrine mismatch. Search covered idea-registry: heresy, galileo, doctrine conflict, LANG-39; source: windows/book/src/lib.rs Galileo cell, domains/language/src/schemas.rs Contested."
     },
     {
       "id": "inv-magnetic-declination-variation",
@@ -2801,8 +2998,9 @@
       "presupposes": [
         "inv-magnetic-declination"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:SKY-magnetic-north",
+      "note": "SKY-magnetic-north explicitly plans this: 'a lodestone north whose separation [from celestial north] varies with position, making declination a genuine discovery... the pole wanders within living memory \u2014 a committed fact that later goes false.' Status elaborated, not shipped. Search covered idea-registry: magnet, compass, declination, lodestone."
     },
     {
       "id": "inv-analytic-geometry",
@@ -2813,7 +3011,8 @@
         "inv-algebra"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row or mechanism plans a culture's acquisition of coordinate/algebraic geometry. Search covered idea-registry: geometry, algebra, cartesian, coordinate."
     },
     {
       "id": "inv-fermat-last-theorem",
@@ -2824,7 +3023,8 @@
         "inv-algebra"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No mathematical-discovery capability of this kind is planned anywhere. Search covered idea-registry: fermat, number theory, theorem, mathematics."
     },
     {
       "id": "inv-cross-hairs",
@@ -2836,7 +3036,8 @@
         "inv-optics"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "An instrument-precision refinement with no optics/surveying capability underneath it in Hornvale. Search covered idea-registry: cross hairs, surveying, telescope, reticle, optics."
     },
     {
       "id": "inv-adding-machine",
@@ -2848,7 +3049,8 @@
         "inv-steel"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No mechanical-calculation capability is planned; TECH-2's pyrotechnology ladder covers metallurgy/tools but not precision calculating mechanisms. Search covered idea-registry: calculator, adding machine, mechanism, TECH-2."
     },
     {
       "id": "inv-quinine",
@@ -2860,7 +3062,8 @@
         "inv-ocean-navigation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same proto-medicine/pharmacology gap (LANG-49, BIO-9 covers only psychoactive/sacred substances, not medicinal cures). Search covered idea-registry: quinine, medicine, pharmacopoeia, BIO-9, LANG-49."
     },
     {
       "id": "inv-south-pacific",
@@ -2871,7 +3074,8 @@
         "inv-compass"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same exploration/mapping-of-new-lands gap as baffin-bay and tierra-del-fuego. Search covered idea-registry: exploration, discovery, cartography, south pacific."
     },
     {
       "id": "inv-barometer",
@@ -2920,7 +3124,8 @@
         "inv-gas"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No barometric-pressure or atmospheric-physics-as-discovered-science capability exists; DOM-air (atmospheric composition crate) is itself unbuilt and about composition, not pressure-altitude science. Search covered idea-registry: air pressure, barometer, altitude, DOM-air."
     },
     {
       "id": "inv-biblical-age-of-earth",
@@ -2931,7 +3136,8 @@
         "inv-monotheism"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row addresses a culture's belief about the world's age/deep-time origin versus the true genesis date; MAP-18 covers only calendar-period precision, not chronology depth. Search covered idea-registry: age of the world, creation date, deep time belief, chronology, MAP-18."
     },
     {
       "id": "inv-double-star",
@@ -2942,7 +3148,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No binary/companion-star modeling exists in domains/astronomy; neighbor stars and wanderers are each single bodies. Search covered idea-registry: binary star, double star, companion; source: domains/astronomy/src/star.rs, neighborhood.rs."
     },
     {
       "id": "inv-names-on-moon",
@@ -2953,7 +3160,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Moon surface features carry only an aggregate surface_class descriptor, not individually named craters/features; no naming-of-lunar-features mechanism exists. Search covered idea-registry: moon naming, lunar cartography, SKY-neighbor-names (stars only); source: windows/scene/src/lib.rs."
     },
     {
       "id": "inv-lymphatic-vessels",
@@ -2964,7 +3172,8 @@
         "inv-vein-valves"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same proto-medicine/anatomy gap as blood-circulation. Search covered idea-registry: lymphatic, anatomy, physiology."
     },
     {
       "id": "inv-air-pressure",
@@ -2993,7 +3202,8 @@
         "inv-cryptanalysis"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row plans a culture's acquisition of probability theory as mathematics. Search covered idea-registry: probability, mathematics, statistics."
     },
     {
       "id": "inv-pendulum-clock",
@@ -3004,7 +3214,8 @@
         "inv-pendulum"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No precision-timekeeping-mechanism capability for a culture is planned; kernel/vessel clock rows are implementation-internal, not a modeled cultural technology. Search covered idea-registry: clock, pendulum, timekeeping, TOOL-vessel-clock rows."
     },
     {
       "id": "inv-saturn-ring",
@@ -3015,7 +3226,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Wanderer sibling planets carry no rings; no registry row plans planetary rings. Search covered idea-registry: ring, saturn, wanderer; source: wanderers.rs."
     },
     {
       "id": "inv-falling-motion-experiment",
@@ -3027,7 +3239,8 @@
         "inv-falling-motion"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No proto-physics/mechanics-discovery capability (gravity, kinematics) is modeled or planned for a culture. Search covered idea-registry: falling motion, gravity, kinematics, physics."
     },
     {
       "id": "inv-red-blood-cells",
@@ -3038,7 +3251,8 @@
         "inv-microscope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same proto-medicine/microscopy gap as blood-circulation and cell. Search covered idea-registry: blood cells, microscope, anatomy."
     },
     {
       "id": "inv-syrtis-major",
@@ -3049,7 +3263,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Wanderers carry no surface-feature detail; same gap as jupiter-red-spot. Search covered idea-registry: mars, surface feature, wanderer; source: wanderers.rs."
     },
     {
       "id": "inv-capillaries",
@@ -3060,7 +3275,8 @@
         "inv-blood-circulation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same proto-medicine/microscopy gap. Search covered idea-registry: capillaries, anatomy, microscope."
     },
     {
       "id": "inv-static-electricity",
@@ -3070,8 +3286,9 @@
       "presupposes": [
         "inv-fire"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:TECH-4",
+      "note": "TECH-4 explicitly names 'natural electrical phenomena (lightning, bioelectricity) as a possible future field/phenomenon' as a planned, unshipped (raw) capability. Search covered idea-registry: electricity, static, TECH-4."
     },
     {
       "id": "inv-acid-base",
@@ -3082,7 +3299,8 @@
         "inv-epilepsy"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same proto-medicine/physiology gap; domains/alchemy models material qualities but not a culture's physiological acid-base knowledge. Search covered idea-registry: acid, base, physiology; source: domains/alchemy/src/quality.rs."
     },
     {
       "id": "inv-chemical-elements",
@@ -3093,7 +3311,8 @@
         "inv-alchemy"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "domains/alchemy models ground-truth substance qualities and a fallible practitioner's inference (ALCH-5), but nothing ties a culture's alchemical-vs-true-chemistry accuracy to an acquirable technology; no registry row plans that specific transition. Search covered idea-registry: chemistry, element, alchemy, ALCH-5, Boyle; source: domains/alchemy/src/lib.rs, quality.rs."
     },
     {
       "id": "inv-boyles-law",
@@ -3122,7 +3341,8 @@
         "inv-scientific-societies"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row plans a secular scientific institution; the only institutional-knowledge rows (MAP-18's astronomer-priesthood, CUL-priesthood-as-proposal-bias) are explicitly religious, not a Royal-Society-style academy. Search covered idea-registry: royal society, academy, institution, scientific society."
     },
     {
       "id": "inv-jupiter-red-spot",
@@ -3133,7 +3353,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Wanderer sibling planets carry no persistent-storm/surface-feature data; no registry row plans planetary weather features on a sibling planet. Search covered idea-registry: jupiter, storm, surface feature, wanderer; source: wanderers.rs."
     },
     {
       "id": "inv-cell",
@@ -3144,7 +3365,8 @@
         "inv-microscope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same proto-medicine/microscopy gap; no cellular-biology-as-discovered-science capability. Search covered idea-registry: cell, microscope, biology, LANG-49."
     },
     {
       "id": "inv-light-diffraction",
@@ -3155,7 +3377,8 @@
         "inv-optics"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No optics/light-physics capability exists anywhere in Hornvale. Search covered idea-registry: diffraction, light, optics, wave."
     },
     {
       "id": "inv-planet-rotations",
@@ -3166,7 +3389,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Wanderer sibling planets carry orbit/period/albedo/brightness but no rotation field; no registry row plans measuring a sibling planet's rotation. Search covered idea-registry: rotation, wanderer, planet; source: wanderers.rs (no rotation field)."
     },
     {
       "id": "inv-light-spectrum",
@@ -3177,7 +3401,8 @@
         "inv-telescope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Same optics gap as refraction/diffraction; no prism/spectrum capability modeled. Search covered idea-registry: spectrum, prism, light, optics."
     },
     {
       "id": "inv-conservation-momentum",
@@ -3188,7 +3413,8 @@
         "inv-falling-motion-experiment"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A conserved-quantity physics law over collisions; no domain models a culture discovering or holding mechanics theorems. Search covered idea-registry: momentum, physics, mechanics, conservation; decisions: none; domains: kernel/domains physics."
     },
     {
       "id": "inv-no-spontaneous-generation",
@@ -3199,7 +3425,8 @@
         "inv-chemical-elements"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A controlled-experiment biological finding; no domain or registry row plans a life-science or experimental-method capability. Search covered idea-registry: spontaneous generation, biology, experiment, controlled; LANG-49 (proto-philosophy falsification) considered, too narrow (astronomy-only, shipped floor)."
     },
     {
       "id": "inv-reflecting-telescope",
@@ -3211,8 +3438,9 @@
         "inv-refraction",
         "inv-telescope"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:UNI-38",
+      "note": "Building/using an optical instrument to extend observation is exactly the \"instruments, recorded observation\" TECH-1 seam UNI-38 names by name; in code, `Requirement::Instrumental` (domains/language/src/account.rs) is unconditionally resolved Lost/BeyondCapability, so no culture can ever cross it; status raw. Search covered idea-registry: telescope, optics, lens, instrument -> UNI-38; source: Requirement::Instrumental in account.rs/schemas.rs (always Lost, never verifiable); decisions: telescope/optics (no hits)."
     },
     {
       "id": "inv-blood-color",
@@ -3223,7 +3451,8 @@
         "inv-arteries-veins"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A specific anatomical/physiological observation; no domain models a people's medical or physiological discovery capability. Search covered idea-registry: blood, physiology, anatomy; domains/person, domains/species."
     },
     {
       "id": "inv-calculus",
@@ -3234,7 +3463,8 @@
         "inv-analytic-geometry"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row plans abstract/advanced mathematics as a cultural capability; the numeracy ladder (LANG-44 shipped, LANG-47 raw) tops out at counting/Decimals, well short of calculus, and nothing names differential/integral methods. Search covered idea-registry: calculus, differential, integral, Newton, Leibniz, mathematics capability -> LANG-44/LANG-47/MAP-18/TECH-1 (none name it); decisions: calculus (no hits, incidental match only)."
     },
     {
       "id": "inv-double-refraction",
@@ -3245,7 +3475,8 @@
         "inv-optics"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "An optics phenomenon (birefringence); no domain or registry row addresses optical science as a capability. Search covered idea-registry: optics, refraction, light, crystal; decisions: none."
     },
     {
       "id": "inv-fossils",
@@ -3256,7 +3487,8 @@
         "inv-mineralogy"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "The epistemic recognition that fossils are organic remains; DOM-taphonomy plans only the physical fossilization process, not a people's interpretive/scientific capability. Search covered idea-registry: fossil, taphonomy, paleontology, DOM-taphonomy (physical decay engine, not epistemic); rejected as mismatch."
     },
     {
       "id": "inv-phosphorus",
@@ -3267,7 +3499,8 @@
         "inv-chemical-elements"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Chemical-element discovery; no domain models chemistry or alchemy-to-chemistry transition as a capability beyond the existing alchemy domain's own scope. Search covered idea-registry: phosphorus, chemistry, element, alchemy; domains/alchemy."
     },
     {
       "id": "inv-diabetes",
@@ -3278,7 +3511,8 @@
         "inv-metabolism"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Medical diagnosis capability; LANG-49 explicitly says proto-medicine has 'ZERO substrate today (no herb/disease/healing concept exists anywhere in the domains)' and is 'named as a direction, not designed', and its row status leads with shipped. Search covered idea-registry: medicine, diagnosis, disease, LANG-49 (proto-medicine ceiling, found and rejected: unscoped, shipped-status row)."
     },
     {
       "id": "inv-saturn-satellites",
@@ -3288,8 +3522,9 @@
       "presupposes": [
         "inv-telescope"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:UNI-38",
+      "note": "Discovering Saturn's moons via telescope is an Instrumental-class observation, the same unbuilt \"instruments, recorded observation\" capability UNI-38 names; status raw. Search covered idea-registry: telescope, astronomical observation, moons -> UNI-38; source: Requirement::Instrumental (never satisfiable)."
     },
     {
       "id": "inv-mars-distance",
@@ -3299,8 +3534,9 @@
       "presupposes": [
         "inv-planetary-tables-even-better"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:UNI-38",
+      "note": "Parallax-based distance measurement is an instrumented, cross-site observation beyond naked-eye/pooled sky-capability; falls under UNI-38's named, unbuilt instrument seam (Requirement::Instrumental never satisfiable); status raw. Search covered idea-registry: parallax, distance measurement, instrument, astronomy -> UNI-38; source: Requirement::CrossReferential/Instrumental."
     },
     {
       "id": "inv-saturn-rings",
@@ -3310,8 +3546,9 @@
       "presupposes": [
         "inv-reflecting-telescope"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:UNI-38",
+      "note": "Resolving a ring division telescopically is the same Instrumental-observation capability UNI-38 names as unbuilt; status raw. Search covered idea-registry: telescope, rings, observation -> UNI-38; source: Requirement::Instrumental."
     },
     {
       "id": "inv-speed-of-light",
@@ -3322,8 +3559,9 @@
         "inv-eclipse",
         "inv-reflecting-telescope"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:UNI-38",
+      "note": "Roemer's estimate used telescope-timed eclipses of Jupiter's moons across sites/seasons \u2014 Instrumental + CrossReferential observation, the capability UNI-38 names as unbuilt; status raw. Search covered idea-registry: speed of light, eclipse timing, instrument -> UNI-38; source: Requirement::Instrumental/CrossReferential (never verifiable)."
     },
     {
       "id": "inv-microorganisms",
@@ -3334,7 +3572,8 @@
         "inv-microscope"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Microscope-enabled discovery of small life forms; no domain or registry row plans microbiology or lens-instrument-based biological observation. Search covered idea-registry: microscope, lens, animalcule, microorganism; domains/species."
     },
     {
       "id": "inv-light-as-wave",
@@ -3345,7 +3584,8 @@
         "inv-optics"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A physics/optics theoretical debate (particle vs wave); no domain or registry row addresses physical-theory capability. Search covered idea-registry: light, wave, optics, aether; decisions: none."
     },
     {
       "id": "inv-southern-stars",
@@ -3356,8 +3596,9 @@
         "inv-india-water-route",
         "inv-reflecting-telescope"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:UNI-38",
+      "note": "A telescopic star catalog from a specific vantage (Halley at St. Helena) is Instrumental+recorded observation, UNI-38's named unbuilt seam; status raw. Search covered idea-registry: star catalog, telescope, observation, southern sky -> UNI-38; source: Requirement::Instrumental."
     },
     {
       "id": "inv-pressure-cooker",
@@ -3387,7 +3628,8 @@
         "inv-lever-math"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Biomechanical modeling of anatomy as levers; no domain models a people's physiological/mechanical theorizing capability. Search covered idea-registry: biomechanics, anatomy, kinetics, lever; domains/person, domains/species."
     },
     {
       "id": "inv-dodo-extinction",
@@ -3398,7 +3640,8 @@
         "inv-india-water-route"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Recognition of an anthropogenic species extinction; no registry row or domain models a culture's capability to notice/record extinction. Search covered idea-registry: extinct, extinction, species loss; domains/species."
     },
     {
       "id": "inv-plant-sexuality",
@@ -3409,7 +3652,8 @@
         "inv-botany"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A botanical discovery (plant reproductive organs); no domain or registry row plans botanical/natural-history science capability. Search covered idea-registry: plant, botany, pollen, sexuality; domains/species."
     },
     {
       "id": "inv-bacteria",
@@ -3420,7 +3664,8 @@
         "inv-microorganisms"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Further lens-enabled microbiology discovery; same gap as microorganisms, no substrate anywhere in the domains. Search covered idea-registry: bacteria, microscope, lens, animalcule."
     },
     {
       "id": "inv-earth-size-accurate",
@@ -3430,8 +3675,9 @@
       "presupposes": [
         "inv-reflecting-telescope"
       ],
-      "verdict": "absent",
-      "anchor": ""
+      "verdict": "deferred",
+      "anchor": "registry:UNI-38",
+      "note": "A telescope-refined geodetic measurement is again Instrumental observation, covered by UNI-38's named unbuilt seam; status raw. Search covered idea-registry: geodesy, Earth radius, instrument, telescope -> UNI-38; source: Requirement::Instrumental."
     },
     {
       "id": "inv-imaginary-numbers",
@@ -3442,7 +3688,8 @@
         "inv-negative-numbers"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row plans complex/abstract number systems; LANG-44's numeracy ladder is about counting/quantity comprehension (subitizing through decimals), not algebraic number systems. Search covered idea-registry: complex numbers, imaginary numbers, complex plane, algebra, numeracy -> no specific row; decisions: none."
     },
     {
       "id": "inv-meteorological-map",
@@ -3454,7 +3701,8 @@
         "inv-world-maps"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Global wind-pattern cartography from atmospheric science; no domain or registry row plans a people's meteorological-mapping capability (domains/climate models the world's weather, not a culture's science of it). Search covered idea-registry: trade winds, meteorology, wind map; domains/climate."
     },
     {
       "id": "inv-plant-species-classified",
@@ -3465,7 +3713,8 @@
         "inv-animal-classification"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Large-scale botanical taxonomy; no domain or registry row plans a culture's natural-history classification capability. Search covered idea-registry: taxonomy, classification, botany, species; domains/species."
     },
     {
       "id": "inv-laws-motion",
@@ -3476,7 +3725,8 @@
         "inv-elliptical-orbits"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Newton's three laws \u2014 a foundational physics-theory capability; no domain or registry row plans a culture discovering physical law systems. Search covered idea-registry: laws of motion, physics, mechanics, Newton; decisions: none."
     },
     {
       "id": "inv-universal-gravitation",
@@ -3487,7 +3737,8 @@
         "inv-laws-motion"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Newton's inverse-square gravitation law; no domain or registry row plans a culture's fundamental-physics-theory capability. Search covered idea-registry: gravitation, gravity, physics theory; decisions: none."
     },
     {
       "id": "inv-shape-of-earth",
@@ -3498,7 +3749,8 @@
         "inv-universal-gravitation"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Oblate-earth measurement via pendulum/gravity variance and Newtonian theory; distinct from the sky-observation TECH-1 seam (this is terrestrial geodesy/gravity theory, not celestial observation), and no other row covers it. Search covered idea-registry: oblate, earth shape, pendulum, gravity, TECH-1 (rejected as mismatch \u2014 instrument seam is celestial, not terrestrial-gravity theory)."
     },
     {
       "id": "inv-plate-glass",
@@ -3509,7 +3761,8 @@
         "inv-glass-blowing"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A glass-manufacturing technique; no domain, decision, or registry row addresses glassmaking as a capability. Search covered idea-registry: glass, mirror, manufacture; domains/thing, TECH-1/TECH-2 (pyrotechnology ladder is pottery/ceramics-specific, no glass mention)."
     },
     {
       "id": "inv-animal-classification-improved",
@@ -3520,7 +3773,8 @@
         "inv-animal-classification"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "Zoological taxonomy by anatomical trait; same gap as plant-species-classified, no natural-history classification capability planned anywhere. Search covered idea-registry: taxonomy, classification, zoology, animal; domains/species."
     },
     {
       "id": "inv-calculating-machines",
@@ -3531,7 +3785,8 @@
         "inv-adding-machine"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row plans mechanical computing instruments (an abacus/Step-Reckoner-class device); this is a distinct capability from the numeracy-comprehension ladder LANG-44/47 model and from UNI-38's sky-observation instrument seam. Search covered idea-registry: mechanical calculator, abacus, automaton, computation device -> no specific row; decisions: mechanical/calculating (no hits)."
     },
     {
       "id": "inv-mortality-tables",
@@ -3542,7 +3797,8 @@
         "inv-probability"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "No registry row plans a culture's capability to construct actuarial/statistical life tables; BIO-survivorship-curve/BIO-senescence-onset model ground-truth biological lifespan facts of a kind, not a people's epistemic/statistical capability to compute a cohort life table from records. Search covered idea-registry: mortality table, life table, actuarial, survivorship, demography as knowledge -> BIO-survivorship-curve/BIO-senescence-onset (ground-truth biology, not a capability); decisions: mortality/actuarial (no hits)."
     },
     {
       "id": "inv-miners-friend",
@@ -3572,7 +3828,8 @@
         "inv-india-water-route"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A voyage undertaken purely for scientific measurement (magnetic declination mapping); no registry row plans exploration-for-science as a distinct cultural capability. Search covered idea-registry: voyage, exploration, magnetic declination, science expedition; MAP rows on travel/contact are about trade/raiding, not science."
     },
     {
       "id": "inv-gas-volume-temperature",
@@ -3602,7 +3859,8 @@
         "inv-steel"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A specific metallurgical fuel refinement (coke smelting); distinct from the coarse TechHorizon::Iron era label already present in windows/worldgen/src/history_bake.rs, which models no fuel-source or smelting-efficiency mechanics. Search covered idea-registry: coke, smelting, iron, metallurgy; source: history_bake.rs TechHorizon (present but too coarse to represent this specific capability \u2014 title-match rejected)."
     },
     {
       "id": "inv-newcomen-steam-engine",
@@ -3634,7 +3892,8 @@
         "inv-thermometer"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A precision temperature-measurement instrument; no domain or registry row plans thermometry or standardized measurement instruments. Search covered idea-registry: thermometer, temperature instrument, mercury; domains/climate (models temperature as a field, not measurement instruments)."
     },
     {
       "id": "inv-heat-capacity",
@@ -3646,7 +3905,8 @@
         "inv-mercury-thermometer"
       ],
       "verdict": "absent",
-      "anchor": ""
+      "anchor": "",
+      "note": "A thermodynamic property discovery (specific heat); no domain or registry row plans thermodynamic theory as a cultural capability. Search covered idea-registry: heat capacity, specific heat, thermodynamics, calorimetry; decisions: none."
     },
     {
       "id": "inv-latent-heat",

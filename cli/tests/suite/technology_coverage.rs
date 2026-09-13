@@ -481,7 +481,7 @@ fn novelty_baseline_is_none_for_an_unbaselined_corpus() {
 fn the_two_baselines_match_the_committed_corpora() {
     assert_eq!(
         hornvale::technologies::novelty_baseline("asimov-1989"),
-        Some(295)
+        Some(231)
     );
     assert_eq!(
         hornvale::technologies::novelty_baseline("henrich-2004-extended"),
@@ -497,7 +497,7 @@ fn the_two_baselines_match_the_committed_corpora() {
         .iter()
         .filter(|i| i.verdict == hornvale::technologies::Verdict::Absent)
         .count();
-    assert_eq!(asimov_absent, 295, "asimov-1989's live absent count moved");
+    assert_eq!(asimov_absent, 231, "asimov-1989's live absent count moved");
     assert_eq!(
         henrich_absent, 31,
         "henrich-2004-extended's live absent count moved"
@@ -527,18 +527,18 @@ fn corpus_with_n_absent_items(corpus_id: &str, n: usize) -> Corpus {
 /// NOVELTY fires on a RISE: one more `absent` item than the baseline.
 #[test]
 fn novelty_fires_when_absent_rises_above_the_asimov_baseline() {
-    let c = corpus_with_n_absent_items("asimov-1989", 296);
+    let c = corpus_with_n_absent_items("asimov-1989", 232);
     let f = audit(&c, &workspace_root());
     assert!(
         matches!(
             f.as_slice(),
             [Finding::Novelty {
-                baseline: 295,
-                found: 296,
+                baseline: 231,
+                found: 232,
                 ..
             }]
         ),
-        "expected NOVELTY(295 -> 296), got {f:?}"
+        "expected NOVELTY(231 -> 232), got {f:?}"
     );
 }
 
@@ -547,7 +547,7 @@ fn novelty_fires_when_absent_rises_above_the_asimov_baseline() {
 /// not the one it punishes.
 #[test]
 fn novelty_passes_when_absent_falls_below_the_asimov_baseline() {
-    let c = corpus_with_n_absent_items("asimov-1989", 294);
+    let c = corpus_with_n_absent_items("asimov-1989", 230);
     let f = audit(&c, &workspace_root());
     assert!(
         f.is_empty(),
@@ -558,7 +558,7 @@ fn novelty_passes_when_absent_falls_below_the_asimov_baseline() {
 /// Exactly at the baseline is clean — the ratchet is `>`, not `>=`.
 #[test]
 fn novelty_passes_when_absent_equals_the_asimov_baseline() {
-    let c = corpus_with_n_absent_items("asimov-1989", 295);
+    let c = corpus_with_n_absent_items("asimov-1989", 231);
     let f = audit(&c, &workspace_root());
     assert!(
         f.is_empty(),

@@ -733,7 +733,62 @@ DECAY RATE of chosen items under `MEM-1`'s melt, which is a retention
 mechanism over content rather than the act of accounting. Both refusals are
 the same cut this column already applies to `SOC-11`: the institution and
 the record it keeps are two capabilities, and this family scores the
-narrower one.
+narrower one. CROSS-CORPUS RULINGS ADDED BY THE CADASTRE'S TASK 3
+(2026-09-12). Scoring `asimov-1989`'s 260 new items moved nine registry rows
+into that corpus's `deferred` anchors for the first time -- `MAP-9c`,
+`MAP-the-toll-is-the-inverse-desire-path`, `BIO-9`, `SKY-guest-stars`,
+`SKY-10`, `SKY-magnetic-north`, `SKY-13`, `TECH-4` and `UNI-38` -- none of
+which either corpus had cited before, so family law
+(`technologies/CLAUDE.md`, "A row cited by ONE corpus must be ruled on by
+EVERY corpus") now requires this corpus to rule on all nine. Every one is
+REFUSED here, and each for a reason specific to this column's own subject
+rather than a blanket dismissal: this corpus scores forty-one named, dated
+LOSSES of a capability a real ethnographic or archaeological people once
+held, and none of the nine rows names a capability any of those forty-one
+losses is about. `MAP-9c` ('Menageries -- a caged captive as prestige
+display; observed differently by each watching species', `elaborated`)
+discharges `asimov-1989`'s `inv-zoo` and nothing here: no item in this
+column concerns captive-animal display, and the column's two animal-adjacent
+items (`col-horticulture`, cultivation; the fishing/trapping items, capture
+for food) are subsistence rather than display.
+`MAP-the-toll-is-the-inverse-desire-path` (a chokepoint's toll converting
+detour cost into rent, `elaborated`) discharges `asimov-1989`'s
+`inv-great-wall` and nothing here: this column has no fortification, road or
+toll item at all, and its two engineering-scale items
+(`col-hydraulic-works`, `col-mortared-masonry`) are about water management
+and monumental building, neither a chokepoint economy. `BIO-9` (ethnobotany
+and the pharmacopoeia -- psychoactive/sacred substances gated by metabolism
+and the purity grid, `raw`) discharges `asimov-1989`'s `inv-coffee` and
+nothing here: no item in this column names a cultivated stimulant, a
+psychoactive substance or a pharmacopoeia; `col-horticulture` is the nearest
+neighbour and its own demand is cultivation in general, not a substance's
+ritual or physiological use. `SKY-guest-stars` (a nova/supernova as the
+once-ever event completing the event-shape taxonomy, `raw`) discharges
+`asimov-1989`'s `inv-new-star` and nothing here: this corpus carries no
+astronomical item of any kind -- its calendrical item, `col-long-count`, is
+about computed calendrics, not a transient celestial event. `SKY-10` (no
+comets or meteors -- no aperiodic spectacular events, `raw`) discharges
+`asimov-1989`'s `inv-bright-comet` and nothing here, for the identical
+reason: no astronomical-observation item exists in this column to discharge
+it. `SKY-magnetic-north` (the aurora's oval centres on the magnetic pole,
+not the spin pole, making declination a genuine discovery, `elaborated`)
+discharges `asimov-1989`'s `inv-compass` and nothing here: this column has
+no navigation, magnetism or wayfinding-instrument item -- `col-sea-canoe`
+and `col-deep-water-voyaging` are about hull and route capability, never
+about a magnetic reference. `SKY-13` (no stellar variability or flares --
+the star is luminosity-constant forever, `raw`) discharges `asimov-1989`'s
+`inv-sunspots` and nothing here, for the same reason as the two SKY rows
+above: no item in this column touches solar or stellar observation. `TECH-4`
+(electricity -- natural electrical phenomena and electrical power as a
+far-future capability threshold, `raw`) discharges `asimov-1989`'s
+`inv-static-electricity` and nothing here: this column's electrical-adjacent
+neighbour is nonexistent: the nearest items by era (`col-greek-fire`,
+`col-crucible-steel`) are combustion and metallurgy, not an electrical
+phenomenon. `UNI-38` (pooled versus personal sky-observation -- the TECH-1
+seam for 'instruments, recorded observation', `raw`) discharges
+`asimov-1989`'s `inv-reflecting-telescope` and nothing here: this column has
+no optical-instrument or astronomical-observation item, so the seam UNI-38
+names has no capability in this corpus to attach to.
 - **Frozen:** before first measurement, The Kiln (2026-09-11). THE FREEZE IS STRUCTURAL
 RATHER THAN PROMISED, which is the discipline decision 0936 established for
 `regularities/` and the reason decision 0016 means anything here. This file
