@@ -1147,6 +1147,125 @@ failed, 248 skipped.** Doctests green. `make gate-commit` rc=0.
   is the controller's call.** Not verified, and it would cost a cold build of
   each ref to verify: whether either branch alone was green here.
 
+## The survivorship amendment — execution record
+
+Implements `docs/superpowers/specs/2026-09-12-the-tidemark-survivorship-amendment.md`,
+committed at `750be0be2` **before this work existed**. Subject:
+`windows/worldgen/tests/suite/survivorship_probe.rs`. Panel unchanged (E.9's
+twelve seeds), `BREACH_FREE_PATH_M` unchanged, `Z_SUPPORTS` unchanged,
+`DELVE_M_PER_PERSON_EPOCH` unchanged. Population unchanged at 269 workings —
+32 breached, 148 ordinarily ended, 89 still open.
+
+### R1 — quintile strata, replacing the `STRATA` literal
+
+The five-bucket literal is gone. Strata are now quintiles of the **pooled ended**
+tenure distribution (breached ∪ ordinary, n=180), so both groups are cut on the
+same boundaries; ties in integer epochs fall to the lower stratum (a stratum is
+`(previous, this]`); a quintile empty for either group contributes zero to every
+sum and is skipped. The van Elteren accumulation (`ΣU`, `ΣE`, `ΣV`,
+`z = (ΣU−ΣE)/√ΣV`) is untouched — only the bucket boundaries moved.
+
+**Derived cut points (panel):** Q1 `e ≤ 2`, Q2 `e ≤ 6`, Q3 `e ≤ 10`,
+Q4 `e ≤ 21`, Q5 `e ≤ ∞`.
+
+| stratum | epochs | breached n | breached med | ordinary n | ordinary med | AUC |
+|---|---|---|---|---|---|---|
+| Q1 | 1–2 | 1 | 6.0 | 52 | 12.0 | 0.144 |
+| Q2 | 2+–6 | 3 | 27.3 | 26 | 55.4 | 0.282 |
+| Q3 | 6+–10 | 5 | 161.3 | 29 | 136.7 | 0.600 |
+| Q4 | 10+–21 | 4 | 242.3 | 26 | 271.4 | 0.481 |
+| Q5 | 21+–∞ | 19 | 725.0 | 15 | 718.6 | 0.575 |
+
+**Stratified AUC 0.4977, z −0.034.** Median-direction pair weight: **430
+supporting, 234 opposing**. Pooled (unstratified) AUC 0.7959, z 5.244 — unmoved,
+since the amendment touches only the conditioning.
+
+**Beside the old numbers.** Frozen-literal scheme: stratified AUC 0.5857,
+z 1.326, pair weight 429 supporting / 376 opposing, same 269 workings. The
+literal's top bucket spanned `21+` (60 of 80 epochs, 42% of pair mass); the
+quintile scheme's top bucket spans `21+` too but now holds 34 of the 664
+comparable pairs rather than 342, and the mass has redistributed into Q1 (52
+pairs' worth of the floor spike sitting alone against one breached working).
+
+**P1 (stratified z rises above 1.96): FAILED.** Not marginally — z fell from
+1.326 to −0.034, i.e. the conditioned statistic is at the null, not below the
+boundary. Under §5 of the amendment this is the pole named *"§5.2's claim is
+unsupported at 49 kinds, on an instrument that can now be trusted to say so —
+the stronger finding of the two."* Nothing was tuned in response and nothing
+may be: §1 fixes the response in advance.
+
+**`the_separation_survives_conditioning_on_tenure` is now RED**, on its first
+assertion, at **z = −0.034**. Its second assertion (pair-weighted median
+direction remains breached-deeper) still passes at 430 vs 234, so the test's two
+halves disagree; that disagreement is recorded rather than reconciled.
+
+### R2 — censoring sensitivity arm
+
+Same R1 cut points, comparing breached against **all non-breached**
+(ordinary 148 + still-open 89 = 237). Reports; asserts nothing.
+
+| stratum | epochs | breached n | breached med | non-breached n | non-breached med | AUC |
+|---|---|---|---|---|---|---|
+| Q1 | 1–2 | 1 | 6.0 | 55 | 12.0 | 0.136 |
+| Q2 | 2+–6 | 3 | 27.3 | 40 | 52.8 | 0.317 |
+| Q3 | 6+–10 | 5 | 161.3 | 43 | 137.1 | 0.567 |
+| Q4 | 10+–21 | 4 | 242.3 | 41 | 265.7 | 0.482 |
+| Q5 | 21+–∞ | 19 | 725.0 | 58 | 1081.6 | 0.369 |
+
+**Stratified AUC 0.3946, z −1.803.** Median-direction pair weight: **215
+supporting, 1441 opposing**. Pooled (unstratified) AUC 0.6810, z 3.323.
+
+**Still-open placement, measured rather than assumed** (the amendment's §5 P2
+reasoning depends on it): Q1 3, Q2 14, Q3 14, Q4 15, Q5 43. They are spread
+across all five strata by founding date, not piled at the top — though Q5 does
+carry 48% of them.
+
+**P2 (R2 weakens the separation relative to the primary but does not reverse its
+direction): HELD ON THE STATISTIC, FAILED ON THE PAIR-WEIGHT DIRECTION**, and
+the two halves must be stated separately because they disagree.
+- *Weakening, statistic:* yes. AUC 0.4977 → 0.3946, z −0.034 → −1.803.
+- *Direction, statistic:* no reversal of sign relative to the primary — both sit
+  below AUC 0.5, i.e. both are on the breached-**shallower** side. But the
+  primary is only 0.0023 below 0.5, so "the direction of the primary" is barely
+  defined; P2's reasoning was written expecting a positive primary and the
+  primary is null.
+- *Direction, pair weight:* **reversed.** 430/234 supporting in the primary
+  becomes 215/1441 opposing in the sensitivity arm — driven by Q5, where the
+  non-breached median (1081.6 m, 58 workings, 43 of them still open) is well
+  above the breached median (725.0 m).
+
+Under §5's clause *"if the direction reverses: the exclusion was carrying the
+result, and that is a finding about §5.2's design that outranks P1 either way"* —
+whether the pair-weight reversal counts as that reversal is a campaign-level
+judgment, not this record's to make.
+
+### The four-seed control (E.9), same run
+
+Control cut points differ because the control's own ended population is n=59:
+Q1 `e ≤ 2`, Q2 `e ≤ 6.2`, Q3 `e ≤ 12.8`, Q4 `e ≤ 25.4`, Q5 `e ≤ ∞`. Control
+stratified AUC 0.6533, z 1.295 (pair weight 65 supporting / 10 opposing);
+control pooled AUC 0.7598, z 2.347 against the panel's 5.244. The gate's own
+assertions — direction agreement and the control being the weaker read — both
+still pass. Its doc's stale `z 3.536` / `5.896` figures were corrected to the
+measured 2.347 / 5.244; the control has fallen back below `Z_DECIDES`, which
+that doc had recorded as no longer true.
+
+### What was not touched
+
+`BREACH_FREE_PATH_M`, `Z_SUPPORTS`, `Z_DECIDES`, `DELVE_M_PER_PERSON_EPOCH`,
+`PANEL`, `CONTROL`, the hazard, the bake. Stratum count stayed at five (the
+amendment's own number, fixed before any cut point existed).
+`the_still_open_population_is_not_a_third_arm_of_the_comparison` is unmodified
+and verified green in its own run (pooled AUC 0.7959 excluded vs 0.6810 pooled-in,
+still-open median 327.1 m above the ordinary 67.3 m) — it was cancelled rather
+than run in the four-test pass, so it was run again alone to confirm.
+
+Stale committed numbers in the module's own prose were corrected to this run's
+(269/32/148/89, floor spike 21.6% vs 3.1%, medians 524.2/67.3/327.1, pooled
+AUC 0.7959 / z 5.244, median tenure 24.0 vs 6.0). Those had been carrying the
+pre-Murrain 249-working figures.
+
+
 ## Follow-ups
 
 - **The aerial realm is the empty fourth sibling.** `MAP-11`'s medium axis is
