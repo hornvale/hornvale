@@ -280,29 +280,72 @@ stratum; M2 is two-sided green; M7 shows no map domination.
 
 ### Task 4: Stage 4 — The subsistence roster
 
-**Goal:** the six peoples eat something the world actually has.
+**Goal:** the six peoples eat something the world actually has — and the
+campaign knows, with numbers, what "eat" can mean in a sea with one trophic
+axis.
 
-**Success criteria:** M6 reports zero dangling requirements.
+**Corrected before dispatch (ledger, "Task 4's premise, checked against the
+code").** This task previously led with the roster and made M6 its success
+criterion. Both were defects, and the second is the dangerous one:
 
-- [ ] Author the roster of spec §3.7: a kelp and a reef-building coral (both
-  `SocialForm::Sessile`, which is "rooted; placed on the map, never agentified"),
-  a bivalve bed and an urchin-analogue grazer, a schooling forage fish, a
-  tube-worm analogue (Sessile, Chemotrophic) and a vent scavenger, and a
-  detritivore. Follow `treant`, `shrieker` and `twig-blight` as the terrestrial
-  precedent for flora as kinds.
-- [ ] Hold the line between a named kind and an aggregate: `WaterStocks`'
-  `plankton`, `chemosynthetic_bloom`, `nutrients` and `kelp_reef` stay fields.
-  A kind is authored only where a people interacts with it as a thing. If a
-  proposed kind has no such interaction, it does not get authored — say so in the
-  ledger rather than adding it for completeness.
-- [ ] Check whether `urchin-barren`, already a name in the environment basis,
-  becomes a reachable state once the grazer exists. If it does not, say why; a
-  name in the basis that no mechanism can produce is worth recording either way.
-- [ ] Write M6 as a test: for each of the six peoples, resolve its subsistence to
-  a named kind or an aggregate field, and assert zero dangling. Its failure
-  message must name which kind owes what.
+- `kernel/src/ecology.rs:98` says `MARINE_FORAGE` is the sea's single trophic
+  axis, and that marine food-chain *length* "is not yet an emergent property".
+- `domains/demography/src/niche.rs`: `is_heterotroph` (:93) reads only
+  `PLANT_FORAGE`/`ANIMAL_PREY`; `next_level` (:202) gives a supplier level to
+  those two alone, so `MARINE_FORAGE` contributes no height; `predation()`
+  (:179) emits no edges for a species whose `ANIMAL_PREY` weight is zero.
+- Every existing marine fauna row is `MARINE_FORAGE 1.0`, and five of the six
+  new peoples are too.
+
+So **M6 as previously worded is vacuous** — every marine subsistence axis is
+already an aggregate field with a supplier wired in worldgen, so "zero dangling"
+passes on an empty roster and on a nine-kind roster alike. Success criteria
+below are restated against what can actually discriminate.
+
+**Success criteria:** the measurement in step 1 exists as a committed test and
+reports real numbers; every kind authored in step 3 has a *named, measured*
+interaction with at least one of the six peoples; M6 is written so that it can
+fail, and its failure names which kind owes what.
+
+- [ ] **Step 1 — measure before authoring.** Build the marine web from the real
+  registries and report, for every marine kind (the six peoples and the four
+  existing fauna): its `trophic_levels` height, its `predation()` prey list, and
+  its competitors by niche overlap. `windows/worldgen/tests/suite/waterline_probe.rs`
+  (~line 180) already builds the `(id, Mass, ResourceVector)` rows from
+  `biosphere_registry()` and calls `hornvale_demography::niche::predation` — reuse
+  that idiom rather than inventing one. This is a `windows/` test because a
+  domain crate may not depend on a sibling. **Paste the numbers into the report.**
+- [ ] **Step 2 — decide the roster from what step 1 measured, by this branch
+  table.** Do not decide it from this plan's prose, and do not author for
+  completeness:
+  - *Every marine kind is at height 1.0 and no prey edges exist* → the web has
+    no length, the flatness is the finding, and a kind earns authoring only
+    through a non-trophic interaction that step 1 actually measured
+    (competition on a shared axis, or a distinct condition-response
+    distribution). Author those; report the rest as deferred to
+    `BIO-marine-trophic-split` with the measurement as evidence.
+  - *Some marine kind shows height > 1.0 or a non-empty prey list* → the
+    reading above is wrong; say so, and author the roster the trophic structure
+    actually supports.
+  - Either way, a proposed kind with no measured interaction **does not get
+    authored** — record it in the ledger with its reason.
+- [ ] **Step 3 — author what survived step 2**, following `treant`, `shrieker`
+  and `twig-blight` as the terrestrial precedent for flora as kinds, and
+  `SocialForm::Sessile` ("rooted; placed on the map, never agentified") for the
+  rooted ones. Hold the line against aggregates: `WaterStocks`' `plankton`,
+  `chemosynthetic_bloom`, `nutrients` and `kelp_reef` stay fields.
+- [ ] **Step 4 — `urchin-barren`.** Check whether it becomes a reachable state
+  once a grazer exists. If it does not, say why; a name in the environment basis
+  that no mechanism can produce is worth recording either way.
+- [ ] **Step 5 — M6, written so it can fail.** Whatever it asserts, demonstrate
+  the RED: state the mutation or the pre-authoring run that makes it go red, and
+  paste that output. An M6 that passes before the roster exists has measured
+  nothing. Its failure message must name which kind owes what.
 - [ ] Run the species coverage ratchets — several registries are TOTAL maps and
-  will refuse an unauthored row. Fix the registries, never the ratchets.
+  will refuse an unauthored row; `biosphere_registry()`'s own count literal is
+  `49` today (`domains/species/tests/suite/coverage.rs:926`, whose message
+  carries the arithmetic that must stay true). Fix the registries, never the
+  ratchets.
 - [ ] Run `make gate-commit`; record exit code and duration.
 - [ ] Commit: `feat(the-tidemark): author the marine subsistence roster`.
 - [ ] **Stage boundary:** absorb main, then submit
