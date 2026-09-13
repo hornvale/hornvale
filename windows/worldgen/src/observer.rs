@@ -21,6 +21,41 @@ use hornvale_kernel::color::{
 };
 use hornvale_species::{PerceptionVector, perception_registry};
 
+/// Convert an astronomy observation into culture's sibling-safe sky input.
+/// Astronomy remains responsible for physical visibility; culture receives
+/// only the already filtered, naked-eye candidates and owns interpretation.
+pub fn constellation_candidates(
+    observation: &hornvale_astronomy::SpeciesSkyObservation,
+) -> Vec<hornvale_culture::SkyCandidate> {
+    observation
+        .visible
+        .iter()
+        .map(|star| hornvale_culture::SkyCandidate {
+            id: format!("{:?}", star.id),
+            right_ascension_deg: star.position.ra_deg,
+            declination_deg: star.position.dec_deg,
+            apparent_magnitude: star.apparent_magnitude,
+            physical_descriptor: None,
+        })
+        .collect()
+}
+
+/// Adapt the species-owned perception component to astronomy's sibling-safe
+/// observer contract. The adapter carries no culture or individual state.
+pub fn astronomy_sky_perception(p: &PerceptionVector) -> hornvale_astronomy::SkyPerception {
+    hornvale_astronomy::SkyPerception {
+        activity: match p.activity {
+            hornvale_species::ActivityCycle::Diurnal => hornvale_astronomy::SkyActivity::Day,
+            hornvale_species::ActivityCycle::Nocturnal => hornvale_astronomy::SkyActivity::Night,
+            hornvale_species::ActivityCycle::Crepuscular => {
+                hornvale_astronomy::SkyActivity::Twilight
+            }
+        },
+        acuity: p.night_vision,
+        attention: p.sky_attention,
+    }
+}
+
 /// The standard observer's four authored curves (short, medium, long,
 /// scotopic), copied from `hornvale_kernel::color::standard_observer` —
 /// which does not expose its channels — so this module can build merged
@@ -228,6 +263,22 @@ mod tests {
     use super::*;
 
     #[test]
+    fn astronomy_sky_adapter_preserves_species_perception() {
+        let species = PerceptionVector {
+            activity: hornvale_species::ActivityCycle::Crepuscular,
+            night_vision: 0.73,
+            sky_attention: 0.21,
+        };
+        let astronomy = astronomy_sky_perception(&species);
+        assert_eq!(
+            astronomy.activity,
+            hornvale_astronomy::SkyActivity::Twilight
+        );
+        assert_eq!(astronomy.acuity, species.night_vision);
+        assert_eq!(astronomy.attention, species.sky_attention);
+    }
+
+    #[test]
     fn scotopic_gain_is_unity_below_the_luminance_switch() {
         // Every species below the night_vision midpoint has pack_depths
         // luminance == 1, so the gain must be an exact 1.0 no-op — this is
@@ -268,5 +319,44 @@ mod tests {
         let mut sorted = roster.clone();
         sorted.sort();
         assert_eq!(roster, sorted);
+    }
+
+    #[test]
+    fn constellation_adapter_preserves_filtered_candidate_identity_and_geometry() {
+        let observation = hornvale_astronomy::SpeciesSkyObservation {
+            visible: vec![hornvale_astronomy::SkyStar {
+                id: hornvale_astronomy::StarId::Background(hornvale_astronomy::BackgroundStarId {
+                    astronomy_seed: hornvale_kernel::Seed(7),
+                    cell: hornvale_astronomy::SkyCell::from_index(0).unwrap(), // lexicon: equal-area sky region, not a mesh vertex
+                    ordinal: 2,
+                }),
+                position: hornvale_astronomy::EquatorialCoord {
+                    ra_deg: 12.0,
+                    dec_deg: -4.0,
+                },
+                apparent_magnitude: 3.5,
+            }],
+            limiting_magnitude: 4.0,
+            sky_salience: 0.7,
+            band: Some(hornvale_astronomy::SkyBand::Night),
+        };
+        let candidates = constellation_candidates(&observation);
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].id, format!("{:?}", observation.visible[0].id));
+        assert_eq!(candidates[0].right_ascension_deg, 12.0);
+        assert_eq!(candidates[0].declination_deg, -4.0);
+        assert_eq!(candidates[0].apparent_magnitude, 3.5);
+        assert!(candidates[0].physical_descriptor.is_none());
+    }
+
+    #[test]
+    fn daylight_or_low_acuity_empty_observation_adapts_to_empty_culture_input() {
+        let observation = hornvale_astronomy::SpeciesSkyObservation {
+            visible: Vec::new(),
+            limiting_magnitude: 0.0,
+            sky_salience: 0.0,
+            band: Some(hornvale_astronomy::SkyBand::Day),
+        };
+        assert!(constellation_candidates(&observation).is_empty());
     }
 }

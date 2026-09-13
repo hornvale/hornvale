@@ -25,7 +25,7 @@ A giant wanderer rounds the sun every 4248 days. Wanderer 1 begins a retrograde 
 
 A rock wanderer rounds the sun every 7527 days. Wanderer 2 begins a retrograde loop, resuming forward motion at absolute day 193.59 at absolute day 61.22. Wanderer 2 stands at opposition at absolute day 127.41. Wanderer 2 is in conjunction at absolute day 320.89.
 
-The sky holds 2 figures; 1 stands on the sun's road.
+The sky holds 4 figures; 0 stand on the sun's road.
 
 On day 86, the first moon devours the sun whole along latitude 82°. At the almanac's vantage, the sun is bitten outside the central track on the day side.
 

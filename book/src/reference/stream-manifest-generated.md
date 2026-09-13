@@ -18,11 +18,16 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/forcing` | deep-time orbital forcing |
 | `astronomy/phase-offsets` | per-body genesis phase offsets |
 | `astronomy/neighbor-positions` | per-neighbor celestial position draws (declination, right ascension) |
+| `astronomy/catalog-count` | modeled neighbor catalog count |
+| `astronomy/catalog-identities` | stable modeled neighbor identities |
+| `astronomy/catalog-physics` | modeled neighbor stellar mass and age |
+| `astronomy/catalog-positions` | additional modeled neighbor distances and sky positions |
 | `astronomy/spin-direction` | spin-direction draw: prograde or retrograde |
 | `astronomy/moon-inclinations` | per-moon orbital-inclination draws |
 | `astronomy/wanderer-count` | how many wandering planets |
 | `astronomy/wanderers` | per-wanderer parameter draws, sequential |
 | `astronomy/starfield` | background starfield: count + per-star position/brightness (derived on demand) |
+| `astronomy/starfield/cells/v2` | lazy background stars: fixed cell, count, position and apparent magnitude |
 | `astronomy/moon-nodes` | per-moon ascending-node longitude draws |
 | `astronomy/star-age` | stellar age draw |
 | `astronomy/moon-formation` | per-moon formation-mechanism draw (giant impact vs. capture) |
@@ -32,6 +37,13 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/stellar-topology` | stellar-root topology draw |
 | `astronomy/binary-parameters` | binary companion and orbit parameter draws |
 | `astronomy/wanderer-phases` | per-wanderer circular orbital phases at genesis |
+| `astronomy/comet-count` | persistent comet count |
+| `astronomy/comet-identities` | stable persistent comet identities |
+| `astronomy/comet-orbits` | persistent comet orbital elements |
+| `astronomy/comet-epochs` | persistent comet perihelion epochs |
+| `astronomy/comet-activity` | persistent comet activity parameters |
+| `astronomy/comet-visibility` | persistent comet visibility parameters |
+| `astronomy/comet-debris-streams` | derived persistent comet debris streams |
 
 ### hornvale-chronicle
 

@@ -248,16 +248,44 @@ threads-required = 30
 filter = 'test(/the_null_control_holds_across_a_seed_sweep$/)'
 threads-required = 4
 
-# UNUSED since The Sexton (Task 3): `make gate` (the only caller of the
-# duration alarm now that `make ci` is an alias for it, see the Makefile's
-# `gate-run`) deliberately runs the DEFAULT profile, not this one — running
-# the gate under `fail-fast = false` would silently turn every red gate into
-# a full-suite run, 368 times a month, on the exact axis this campaign exists
-# to protect. Left in place as a hand-invocable profile
-# (`cargo nextest run --profile ci`) and as the historical record of why
-# `fail-fast = false` matters for a duration-collecting run — see
-# `[profile.heavy]` below, which exists for the same reason on the tier that
-# still needs it.
+# USED BY `gate-run` AGAIN SINCE 2026-09-12, REVERSING THE SEXTON (Task 3).
+#
+# The Sexton made `gate-run` take the DEFAULT profile deliberately: running the
+# gate under `fail-fast = false` "would silently turn every red gate into a
+# full-suite run, 368 times a month, on the exact axis this campaign exists to
+# protect." That reasoning was correct and its PREMISE HAS SINCE LAPSED.
+#
+# 368/month was the rate when `make gate` was the full-workspace gate at COMMIT
+# frequency (root CLAUDE.md records 417 calls/month at ~423 s). Decision 0132
+# split that in two. `gate-run` is now reachable only through `gate-suite-run`,
+# which only the `gate` lane set invokes — so it runs at CHAMBER cadence, on
+# the serial box, not on every commit. `gate-commit` runs the sub-floor tier
+# and never reaches this profile.
+#
+# WHAT CHANGED THE TRADE. A red chamber under fail-fast cancels its PENDING
+# tests, so it reports whichever failures happened to be in flight and leaves
+# the rest unexecuted. Measured 2026-09-11: campaign/underworld-peoples spent
+# NINE chamber runs landing one campaign, its eighth red reading
+# `4816/6073 tests run: 4815 passed, 1 failed` — 1,257 tests never run, each
+# subsequent attempt revealing one more pin. Its first run under
+# `fail-fast = false` returned all ten remaining failures at once, for +124 s
+# (806.9 s against 683.3 s). A green run is unchanged either way: there is
+# nothing to fail fast on.
+#
+# So the cost The Sexton protected — a longer red — is now paid at merge
+# cadence and bounded by a green run's own wall time, while the saving is a
+# ~20-minute slot on a strictly serial box per additional failure.
+#
+# `gate-run` takes this profile rather than a bare `--no-fail-fast` flag so the
+# setting lives where the project keeps such settings, and because
+# `failure-output = "immediate-final"` makes the persisted chamber log
+# self-contained — the log is read by whoever attributes the red, often not its
+# author. Per-test overrides are unaffected: nextest resolves an override from
+# `profile.ci.overrides` first and falls back to `profile.default.overrides`
+# (nexte.st/docs/configuration/per-test-overrides), and this profile declares
+# none, so every `threads-required` reservation under `[profile.default]` still
+# applies. See `[profile.heavy]` below, which has always been `fail-fast =
+# false` for the same reason on a tier where a deliberate red is normal.
 [profile.ci]
 # Report a test that crosses this, but never terminate it.
 slow-timeout = { period = "60s" }

@@ -56,7 +56,17 @@ use hornvale_worldgen::seed_42_world;
 /// `vent_expiry.rs`) counts **2** occupations ending on a vent's failure, plus
 /// the refounds those trigger. Do not read the +1,849 as the vent ending's
 /// cost; two of the +111 occupations are its, and the rest is the realm fix.
-const SEED_42_FACT_COUNT: usize = 25_280;
+///
+/// **AND THE SAME THING HAPPENED AGAIN AT THE ABSORB.** main had meanwhile
+/// re-taken this pin to 21_525 (the Underworld Peoples delivery), so the merge
+/// conflicted here — two campaigns moving one number, the exact case the
+/// paragraph above was written for. The merged value below is MEASURED on the
+/// merged world, not chosen between the two sides and not added from them:
+/// this branch carried 25_280, `origin/main` carried 21_525, and the world
+/// built from the merge product carries **25_281** — main contributes exactly
+/// one fact on top of this branch's side. Adding the two sides' deltas would
+/// have given a number no world has.
+const SEED_42_FACT_COUNT: usize = 25_281;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

@@ -507,7 +507,9 @@ pub fn genesis(
     for (i, neighbor) in system.neighbors.iter().enumerate() {
         // A neighbouring star belongs to this system — `subject`, the entity
         // every other system-level fact here hangs off — so it is its child,
-        // ordinaled by its position in the generated neighbourhood.
+        // ordinaled by its position in the compatibility neighbourhood.
+        // Preserve this historical ledger lineage; catalog identity lives
+        // on the modeled record and is independent of this brightness rank.
         let id = world.ledger.mint_entity(Lineage {
             parent: Some(subject),
             role: "neighbor",
@@ -520,7 +522,7 @@ pub fn genesis(
             fact(
                 id,
                 NEIGHBOR_CLASS,
-                Value::Text(crate::neighborhood::class_concept(neighbor.class).to_string()),
+                Value::Text(neighbor.class_concept().to_string()),
             ),
             &world.registry,
         )?;

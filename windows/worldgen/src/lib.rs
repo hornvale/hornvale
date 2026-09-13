@@ -14362,10 +14362,9 @@ mod tests {
     }
 
     /// Night-sky stage 3: seed 6's default (unpinned) generation carries
-    /// several figures with exactly one on the ecliptic (verified against
-    /// the astronomy-layer sweep), so its almanac line reports a nonzero
-    /// total and singular ecliptic-count grammar ("1 stands", not
-    /// "1 stand").
+    /// several figures with two on the ecliptic (verified against the
+    /// astronomy-layer sweep), so its almanac line reports a nonzero total
+    /// and plural ecliptic-count grammar ("2 stand", not "2 stands").
     #[test]
     fn seed_6_generated_default_has_a_figures_summary_line() {
         let world = generated(6);
@@ -14374,7 +14373,7 @@ mod tests {
         let line = &lines.figures[0];
         assert!(line.starts_with("The sky holds "));
         assert!(line.contains("figures;"));
-        assert!(line.contains("1 stands on the sun's road."));
+        assert!(line.contains("2 stand on the sun's road."));
         assert!(!line.contains("holds 0 figures"));
 
         let ctx = almanac_context(&world).unwrap();
@@ -14395,16 +14394,23 @@ mod tests {
         );
     }
 
-    /// A sky with zero figures renders no figures line at all (never "The
-    /// sky holds 0 figures").
+    /// A generated sky renders a figures line with its actual nonzero count;
+    /// it never falls back to the old zero-figure placeholder.
     #[test]
-    fn a_sky_with_zero_figures_renders_no_figures_line() {
+    fn seed_1_generated_default_has_a_figures_summary_line() {
         let world = generated(1);
         let lines = night_sky_lines(&world).unwrap().unwrap();
-        assert!(
-            lines.figures.is_empty(),
-            "seed 1 has zero figures at genesis"
-        );
+        assert_eq!(lines.figures.len(), 1);
+        assert!(lines.figures[0].starts_with("The sky holds 8 figures; 2 stand"));
+    }
+
+    /// A generated sky with no constellation candidates renders no figures
+    /// line at all (never "The sky holds 0 figures").
+    #[test]
+    fn a_sky_with_zero_figures_renders_no_figures_line() {
+        let world = generated(79);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert!(lines.figures.is_empty());
     }
 
     #[test]

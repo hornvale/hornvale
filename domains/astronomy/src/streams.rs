@@ -32,6 +32,14 @@ hornvale_kernel::stream_labels! {
         PHASE_OFFSETS = "phase-offsets" => "per-body genesis phase offsets";
         /// Per-neighbor celestial position draws (declination, right ascension).
         NEIGHBOR_POSITIONS = "neighbor-positions" => "per-neighbor celestial position draws (declination, right ascension)";
+        /// Bounded modeled catalog size, separate from the legacy roster.
+        CATALOG_COUNT = "catalog-count" => "modeled neighbor catalog count";
+        /// Catalog identities assigned in generation order, before sorting.
+        CATALOG_IDENTITIES = "catalog-identities" => "stable modeled neighbor identities";
+        /// Neighbor mass and age draws, isolated from the host and old neighbors.
+        CATALOG_PHYSICS = "catalog-physics" => "modeled neighbor stellar mass and age";
+        /// Distances and equatorial positions for additional catalog members.
+        CATALOG_POSITIONS = "catalog-positions" => "additional modeled neighbor distances and sky positions";
         /// Spin-direction draw: prograde or retrograde (SKY-22).
         SPIN_DIRECTION = "spin-direction" => "spin-direction draw: prograde or retrograde";
         /// Per-moon orbital-inclination draws (SKY-6).
@@ -43,6 +51,8 @@ hornvale_kernel::stream_labels! {
         WANDERERS = "wanderers" => "per-wanderer parameter draws, sequential";
         /// Background starfield draws: count, then per-star position/brightness (derived catalog — consumed on demand, never in genesis).
         STARFIELD = "starfield" => "background starfield: count + per-star position/brightness (derived on demand)";
+        /// Cell-keyed background epoch; the original sequential label is retained, never reused. // lexicon: equal-area sky region, not a mesh vertex
+        STARFIELD_CELLS = "starfield/cells/v2" => "lazy background stars: fixed cell, count, position and apparent magnitude"; // lexicon: equal-area sky region, not a mesh vertex
         /// Per-moon ascending-node longitude draws (Eclipse Seasons).
         MOON_NODES = "moon-nodes" => "per-moon ascending-node longitude draws";
         /// Stellar age draw (The Reckoning).
@@ -68,5 +78,59 @@ hornvale_kernel::stream_labels! {
         BINARY_PARAMETERS = "binary-parameters" => "binary companion and orbit parameter draws";
         /// Per-wanderer genesis phases, isolated from orbit/class/albedo draws.
         WANDERER_PHASES = "wanderer-phases" => "per-wanderer circular orbital phases at genesis";
+        /// Number of persistent comets generated with the system.
+        COMET_COUNT = "comet-count" => "persistent comet count";
+        /// Stable comet identity draws, isolated from every physical parameter.
+        COMET_IDENTITIES = "comet-identities" => "stable persistent comet identities";
+        /// Per-comet Keplerian shape and orientation draws.
+        COMET_ORBITS = "comet-orbits" => "persistent comet orbital elements";
+        /// Per-comet perihelion epoch draws.
+        COMET_EPOCHS = "comet-epochs" => "persistent comet perihelion epochs";
+        /// Per-comet baseline activity and apparition-variation draws.
+        COMET_ACTIVITY = "comet-activity" => "persistent comet activity parameters";
+        /// Per-comet nucleus, albedo, and brightness draws.
+        COMET_VISIBILITY = "comet-visibility" => "persistent comet visibility parameters";
+        /// Derived debris-stream parameters; does not redraw comet identities.
+        COMET_DEBRIS_STREAMS = "comet-debris-streams" => "derived persistent comet debris streams";
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stream_labels;
+
+    #[test]
+    fn modeled_catalog_has_dedicated_streams() {
+        let labels: Vec<_> = stream_labels()
+            .into_iter()
+            .map(|(label, _)| label)
+            .collect();
+        for expected in [
+            "astronomy/catalog-count",
+            "astronomy/catalog-identities",
+            "astronomy/catalog-physics",
+            "astronomy/catalog-positions",
+        ] {
+            assert!(labels.contains(&expected), "missing stream {expected}");
+        }
+    }
+
+    #[test]
+    fn comet_genesis_has_dedicated_streams() {
+        let labels: Vec<_> = stream_labels()
+            .into_iter()
+            .map(|(label, _)| label)
+            .collect();
+        for expected in [
+            "astronomy/comet-count",
+            "astronomy/comet-identities",
+            "astronomy/comet-orbits",
+            "astronomy/comet-epochs",
+            "astronomy/comet-activity",
+            "astronomy/comet-visibility",
+            "astronomy/comet-debris-streams",
+        ] {
+            assert!(labels.contains(&expected), "missing stream {expected}");
+        }
     }
 }
