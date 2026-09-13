@@ -18,7 +18,7 @@ use hornvale_terrain::{
 };
 use hornvale_worldgen::{
     SurfaceFeatureStrip, SurfacePatch, SurfaceRealizationContext, SurfaceRevision,
-    facet::stitch_transition,
+    facet::{stitch_feature_transition, stitch_transition},
 };
 use serde::Serialize;
 
@@ -539,7 +539,8 @@ pub fn surface_patch_scene(
 }
 
 /// Query a patch and, when requested, attach source-computed replacement
-/// triangles for its coarse edge beside an immediate finer neighbor.
+/// triangles and canonical stitched feature strips for its coarse edge beside
+/// an immediate finer neighbor.
 pub fn surface_patch_scene_with_transition(
     context: &SceneContext,
     query: &SurfacePatchQuery,
@@ -560,6 +561,8 @@ pub fn surface_patch_scene_with_transition(
             .realize(transition_address)
             .map_err(|error| SceneError::Surface(error.to_string()))?;
         patch.transition_triangles = stitch_transition(&patch, &fine)
+            .map_err(|error| SceneError::Surface(error.to_string()))?;
+        patch.strips = stitch_feature_transition(&patch, &fine)
             .map_err(|error| SceneError::Surface(error.to_string()))?;
     }
     Ok(patch)

@@ -677,6 +677,121 @@ pub fn stitch_transition(
     Ok(triangles)
 }
 
+/// Replace coarse ribbon boundaries with the fine neighbor's evaluated mesh
+/// edges. Like `stitch_transition`, this validates an adjacent immediate LOD
+/// and returns replacement data without mutating either patch. Install the
+/// result before stitching another half/edge to retain earlier splits.
+///
+/// A normalized point on the same spherical arc is insufficient: its terrain
+/// displacement need not lie on the coarse mesh's straight edge. Copy the
+/// fine vertex (including height and normal) and split the coarse triangles
+/// at it. Feature identity, centerlines and continuation tokens are unchanged.
+pub fn stitch_feature_transition(
+    coarse: &SurfacePatch,
+    fine: &SurfacePatch,
+) -> Result<Vec<SurfaceFeatureStrip>, SurfaceBuildError> {
+    let triangles = stitch_transition(coarse, fine)?;
+    let edge = (0..4)
+        .find(|&edge| {
+            triangles.contains(&[edge as u32, (5 + edge) as u32, 4])
+                && fine.samples[..4]
+                    .iter()
+                    .any(|s| s.position == coarse.samples[5 + edge].position)
+        })
+        .expect("validated transition shares a coarse edge");
+    let plane = normalized_or_zero(cross(
+        coarse.samples[edge].position,
+        coarse.samples[(edge + 1) % 4].position,
+    ));
+    let on_boundary = |position| dot(plane, position).abs() <= STRIP_SEAM_TOLERANCE;
+    // Match by stable identity, without reintroducing a full feature scan per
+    // coarse strip. Only actual fine mesh edges on this seam contribute sites.
+    let mut boundary = std::collections::BTreeMap::<_, Vec<_>>::new();
+    for strip in &fine.strips {
+        for triangle in &strip.triangles {
+            for i in 0..3 {
+                let a = strip.vertices[triangle[i] as usize];
+                let b = strip.vertices[triangle[(i + 1) % 3] as usize];
+                if on_boundary(a.position) && on_boundary(b.position) {
+                    boundary.entry(strip.feature).or_default().extend([a, b]);
+                }
+            }
+        }
+    }
+    for sites in boundary.values_mut() {
+        sites.sort_by(|a, b| {
+            a.position
+                .iter()
+                .zip(b.position)
+                .map(|(a, b)| a.total_cmp(&b))
+                .find(|order| !order.is_eq())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        sites.dedup_by(|a, b| strip_same_position(a.position, b.position));
+    }
+    let mut strips = coarse.strips.clone();
+    for strip in &mut strips {
+        let Some(sites) = boundary.get(&strip.feature) else {
+            continue;
+        };
+        for site in sites {
+            // Canonicalize existing endpoints too: independent clipping can
+            // produce slightly different floating-point positions/heights.
+            for vertex in &mut strip.vertices {
+                if on_boundary(vertex.position)
+                    && strip_same_position(vertex.position, site.position)
+                {
+                    *vertex = *site;
+                }
+            }
+            let mut inserted = None;
+            let mut triangles = Vec::with_capacity(strip.triangles.len());
+            for &triangle in &strip.triangles {
+                let split = (0..3).find(|&i| {
+                    let a = strip.vertices[triangle[i] as usize].position;
+                    let b = strip.vertices[triangle[(i + 1) % 3] as usize].position;
+                    if !on_boundary(a)
+                        || !on_boundary(b)
+                        || strip_same_position(a, site.position)
+                        || strip_same_position(b, site.position)
+                    {
+                        return false;
+                    }
+                    let chord = std::array::from_fn(|axis| b[axis] - a[axis]);
+                    let offset = std::array::from_fn(|axis| site.position[axis] - a[axis]);
+                    let along = dot(offset, chord);
+                    along > 0.0 && along < dot(chord, chord)
+                });
+                if let Some(i) = split {
+                    let index = *inserted.get_or_insert_with(|| {
+                        let index =
+                            u32::try_from(strip.vertices.len()).expect("feature strip exceeds u32");
+                        strip.vertices.push(*site);
+                        index
+                    });
+                    let [a, b, c] = [triangle[i], triangle[(i + 1) % 3], triangle[(i + 2) % 3]];
+                    triangles.extend([[a, index, c], [index, b, c]]);
+                } else {
+                    triangles.push(triangle);
+                }
+            }
+            strip.triangles = triangles;
+        }
+    }
+    Ok(strips)
+}
+
+/// Unit-sphere clipping roundoff, not a height or feature-width tolerance.
+/// type-audit: bare-ok(ratio)
+/// plumb: pending(wave-1)
+const STRIP_SEAM_TOLERANCE: f64 = 1.0e-12;
+
+fn strip_same_position(a: [f64; 3], b: [f64; 3]) -> bool {
+    a.iter()
+        .zip(b)
+        .all(|(a, b)| (a - b).abs() <= STRIP_SEAM_TOLERANCE)
+}
+
 /// Restrict four immediate children to their parent's canonical sample sites.
 ///
 /// Child samples coinciding at a parent site are averaged in address order,
@@ -2047,6 +2162,119 @@ mod tests {
     fn fixture_context() -> SurfaceRealizationContext {
         let world = crate::seed_42_world();
         SurfaceRealizationContext::build(&world).unwrap()
+    }
+
+    /// claim: invariant(seed-42 synthetic ribbon shares displaced fine boundary edges in either half order)
+    #[test]
+    fn unequal_lod_strip_transition_shares_displaced_boundary_edges() {
+        let context = fixture_context();
+        let address = FacetAddress::new(
+            Facet {
+                face: 0,
+                path: vec![0; 6],
+            },
+            vec![],
+        )
+        .unwrap();
+        let mut coarse = context.realize(&address).unwrap();
+        let mut halves = Vec::new();
+        for neighbor in address.macro_face.neighbors() {
+            for digit in 0..4 {
+                let fine = context
+                    .realize(&FacetAddress::new(neighbor.clone(), vec![digit]).unwrap())
+                    .unwrap();
+                if stitch_transition(&coarse, &fine).is_ok()
+                    && fine.samples[..4]
+                        .iter()
+                        .any(|s| s.position == coarse.samples[5].position)
+                {
+                    halves.push(fine);
+                }
+            }
+            if halves.len() == 2 {
+                break;
+            }
+        }
+        assert_eq!(halves.len(), 2);
+        // A ribbon crossing the split at the middle of the coarse boundary.
+        // Its vertices carry real source-evaluated heights and normals. The
+        // fine midpoint is a displaced surface sample, not a chord midpoint.
+        let template = coarse.strips[0].clone();
+        let strip = |positions: [[f64; 3]; 3]| {
+            let mut strip = template.clone();
+            strip.vertices = positions
+                .into_iter()
+                .map(|position| {
+                    let sample = context.sample_at(position).unwrap();
+                    SurfaceFeatureStripVertex {
+                        position,
+                        height_m: sample.height_m,
+                        normal: sample.normal,
+                        side: 1,
+                        signed_distance_rad: 0.001,
+                    }
+                })
+                .collect();
+            strip.triangles = vec![[0, 1, 2]];
+            strip
+        };
+        coarse.strips = vec![strip([
+            coarse.samples[0].position,
+            coarse.samples[1].position,
+            coarse.samples[4].position,
+        ])];
+        for fine in &mut halves {
+            let edge = (0..4)
+                .find(|&i| {
+                    let ends = [fine.samples[i].position, fine.samples[(i + 1) % 4].position];
+                    ends.contains(&coarse.samples[5].position)
+                        && (ends.contains(&coarse.samples[0].position)
+                            || ends.contains(&coarse.samples[1].position))
+                })
+                .unwrap();
+            fine.strips = vec![strip([
+                fine.samples[edge].position,
+                fine.samples[(edge + 1) % 4].position,
+                fine.samples[4].position,
+            ])];
+        }
+        let original = coarse.clone();
+        let fine_before = halves.clone();
+        for fine in &halves {
+            coarse.strips = stitch_feature_transition(&coarse, fine).unwrap();
+        }
+        assert_eq!(halves, fine_before);
+        assert_eq!(coarse.samples, original.samples);
+        assert_eq!(coarse.curves, original.curves);
+        assert_eq!(coarse.strips[0].endpoints, original.strips[0].endpoints);
+        assert_eq!(coarse.strips[0].feature, original.strips[0].feature);
+        assert_eq!(coarse.strips[0].triangles.len(), 2);
+        for fine in &halves {
+            let ends = &fine.strips[0].vertices[..2];
+            let indices: Vec<_> = ends.iter().map(|end| {
+                coarse.strips[0].vertices.iter().position(|vertex| vertex == end)
+                    .expect("fine boundary position AND height/normal must be canonical coarse vertices") as u32
+            }).collect();
+            let uses = coarse.strips[0]
+                .triangles
+                .iter()
+                .flat_map(|t| (0..3).map(move |i| [t[i], t[(i + 1) % 3]]))
+                .filter(|edge| edge.contains(&indices[0]) && edge.contains(&indices[1]))
+                .count();
+            assert_eq!(
+                uses, 1,
+                "each displaced fine edge must be a coarse mesh edge, not a T-junction"
+            );
+            assert_eq!(
+                stitch_feature_transition(&coarse, fine).unwrap(),
+                coarse.strips
+            );
+        }
+        let mut reverse = original;
+        for fine in halves.iter().rev() {
+            reverse.strips = stitch_feature_transition(&reverse, fine).unwrap();
+        }
+        assert_eq!(reverse.strips, coarse.strips);
     }
 
     fn fine_address(position: [f64; 3]) -> FacetAddress {

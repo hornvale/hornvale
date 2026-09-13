@@ -1,10 +1,13 @@
 use hornvale_kernel::{Facet, quantize};
-use hornvale_scene::{SceneContext, SurfacePatchQuery, surface_patch_json, surface_patch_scene};
+use hornvale_scene::{
+    SceneContext, SurfacePatchQuery, surface_patch_json, surface_patch_scene,
+    surface_patch_scene_with_transition,
+};
 use hornvale_terrain::{
     FacetAddress, FacetFieldSample, FeatureId, FeatureKind, RealizedCurve, TerminalKind,
     TerrainFacetInputs, WaterKind,
 };
-use hornvale_worldgen::facet::stitch_transition;
+use hornvale_worldgen::facet::{stitch_feature_transition, stitch_transition};
 use hornvale_worldgen::{SurfacePatch, SurfaceRealizationContext, seed_42_world};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
@@ -466,5 +469,69 @@ fn surface_document_emits_a_strip_for_a_curve_between_terrain_samples() {
             .any(|strip| strip["feature"] == feature_value(missed.feature)),
         "between-sample feature {:?} has no render strip",
         missed.feature
+    );
+}
+
+/// claim: invariant(seed-42 scene transition emits the source's canonical stitched ribbon geometry)
+#[test]
+fn surface_transition_emits_canonical_stitched_strips() {
+    let context = SceneContext::build(&seed_42_world()).unwrap();
+    let query = SurfacePatchQuery {
+        address: FacetAddress::new(
+            Facet {
+                face: 0,
+                path: vec![0; 6],
+            },
+            vec![],
+        )
+        .unwrap(),
+        expected_revision: context.surface_revision().clone(),
+    };
+    let coarse = surface_patch_scene(&context, &query).unwrap();
+    // Exercise a real cube-face seam through the public scene API. Requiring
+    // changed wire geometry makes a missing assignment in that API observable.
+    let neighbor = query
+        .address
+        .macro_face
+        .neighbors()
+        .into_iter()
+        .find(|neighbor| neighbor.face != query.address.macro_face.face)
+        .expect("fixture lies on a cube-face seam");
+    let original_wire: Value = serde_json::from_str(&surface_patch_json(&coarse)).unwrap();
+    let mut checked = 0;
+    for digit in 0..4 {
+        let fine_query = SurfacePatchQuery {
+            address: FacetAddress::new(neighbor.clone(), vec![digit]).unwrap(),
+            expected_revision: query.expected_revision.clone(),
+        };
+        let fine = surface_patch_scene(&context, &fine_query).unwrap();
+        let Ok(triangles) = stitch_transition(&coarse, &fine) else {
+            continue;
+        };
+        let mut expected = coarse.clone();
+        expected.strips = stitch_feature_transition(&coarse, &fine).unwrap();
+        expected.transition_triangles = triangles;
+        let expected_wire: Value = serde_json::from_str(&surface_patch_json(&expected)).unwrap();
+        assert!(
+            expected_wire["strips"] != original_wire["strips"],
+            "fixture must require visible ribbon boundary stitching"
+        );
+        let actual =
+            surface_patch_scene_with_transition(&context, &query, Some(&fine_query.address))
+                .unwrap();
+        assert!(
+            actual.strips == expected.strips,
+            "scene must install the source's canonical boundary vertices and triangles"
+        );
+        let actual_wire: Value = serde_json::from_str(&surface_patch_json(&actual)).unwrap();
+        assert!(
+            actual_wire == expected_wire,
+            "stitched geometry must reach the wire"
+        );
+        checked += 1;
+    }
+    assert_eq!(
+        checked, 2,
+        "both fine halves of the cube seam must be checked"
     );
 }

@@ -338,14 +338,68 @@ fn children_preserve_parent_feature_ids() {
         .iter()
         .flat_map(|patch| patch.strips.iter().map(|strip| strip.feature))
         .collect();
-    assert_eq!(parent_strip_ids, ids);
-    assert_eq!(parent_strip_ids, child_strip_ids);
-    assert!(parent.strips.iter().all(|strip| {
-        strip
-            .endpoints
-            .iter()
-            .all(|endpoint| endpoint.feature == strip.feature)
-    }));
+    // A footprint can intersect the patch with only its bank. Such a strip
+    // keeps its source ID and terminals, but has no patch-local centerline
+    // curve. Refinement must preserve each set independently.
+    for id in ids.difference(&parent_strip_ids).take(3) {
+        let curve = parent.curves.iter().find(|c| c.feature == *id).unwrap();
+        eprintln!(
+            "centerline without strip: {id:?}, points={:?}, width={:?}",
+            curve.points, curve.width
+        );
+    }
+    assert!(
+        parent_strip_ids.difference(&ids).next().is_some(),
+        "fixture must exercise a bank-only strip"
+    );
+    assert!(
+        parent_strip_ids == child_strip_ids,
+        "strip refinement lost {:?}, added {:?}",
+        parent_strip_ids
+            .difference(&child_strip_ids)
+            .take(3)
+            .collect::<Vec<_>>(),
+        child_strip_ids
+            .difference(&parent_strip_ids)
+            .take(3)
+            .collect::<Vec<_>>()
+    );
+    let mut continuations = 0;
+    for patch in std::iter::once(&parent).chain(&children) {
+        for strip in &patch.strips {
+            assert!(parent_strip_ids.contains(&strip.feature));
+            assert!(strip.endpoints.iter().all(|e| e.feature == strip.feature));
+            let pieces: Vec<_> = patch
+                .curves
+                .iter()
+                .filter(|c| c.feature == strip.feature)
+                .collect();
+            if let (Some(first), Some(last)) = (pieces.first(), pieces.last()) {
+                assert_eq!(
+                    strip.endpoints,
+                    [first.endpoints[0].clone(), last.endpoints[1].clone()]
+                );
+                continuations += strip
+                    .endpoints
+                    .iter()
+                    .filter(|e| e.terminal == TerminalKind::Continuation && e.boundary.is_some())
+                    .count();
+            } else {
+                // Bank-only geometry must not invent a centerline crossing.
+                assert!(strip.endpoints.iter().all(|e| e.boundary.is_none()));
+                assert!(
+                    strip
+                        .endpoints
+                        .iter()
+                        .all(|e| e.terminal != TerminalKind::Continuation)
+                );
+            }
+        }
+    }
+    assert!(
+        continuations > 0,
+        "retain parent/child continuation coverage"
+    );
 }
 
 /// claim: invariant(seed-42 mixed-LOD fields and topology agree across all six cube faces)
