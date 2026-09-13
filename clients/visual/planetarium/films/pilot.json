@@ -1,0 +1,117 @@
+{
+  "schema": "planetarium/film/v1",
+  "width": 3840,
+  "height": 2160,
+  "fps": 30,
+  "frames": 300,
+  "binding": {
+    "source_id": "planetarium-pilot",
+    "scope_id": "scientific:unrestricted",
+    "world_sha256": "77168f2bc1a8db9c01b37b31b66ac4757e1133862f8249aa8d80bb0194285bf8",
+    "source_revision": "1e11630202fd5db21a54944ab5f460afc28889ff"
+  },
+  "start_ticks": 0,
+  "end_ticks": 3600,
+  "supported_ticks": [
+    0,
+    3600
+  ],
+  "presentation_seed": 42,
+  "shots": [
+    {
+      "start_frame": 0,
+      "end_frame": 90,
+      "target_body_id": "anchor",
+      "start_offset_km": [
+        -30500,
+        -4500,
+        9500
+      ],
+      "end_offset_km": [
+        -28000,
+        -3000,
+        8100
+      ],
+      "target_offset_km": [
+        -1000,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "vertical_fov_radians": 0.8,
+      "focus_distance_km": 30000,
+      "caption": "A world in motion"
+    },
+    {
+      "start_frame": 90,
+      "end_frame": 210,
+      "target_body_id": "anchor",
+      "start_offset_km": [
+        -23955.8474,
+        -1765.6958,
+        6717.443
+      ],
+      "end_offset_km": [
+        -14100,
+        -9000,
+        4800
+      ],
+      "target_offset_km": [
+        -2400,
+        600,
+        -2500
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "vertical_fov_radians": 0.8,
+      "focus_distance_km": 12000,
+      "caption": "Turning into the light"
+    },
+    {
+      "start_frame": 210,
+      "end_frame": 300,
+      "target_body_id": "anchor",
+      "start_offset_km": [
+        -441242.3104,
+        -181220.0622,
+        18076.2385
+      ],
+      "end_offset_km": [
+        -438000,
+        -187500,
+        19500
+      ],
+      "target_offset_km": [
+        4860.9972,
+        -12652.4851,
+        -2877.2507
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "vertical_fov_radians": 0.078,
+      "focus_distance_km": 477349,
+      "caption": "Moons keep their own time"
+    }
+  ],
+  "settings": {
+    "exposure_ev100": 13.3,
+    "focus_sensor_height": 0.01866,
+    "focus_aperture_f_stops": 4.0,
+    "focus_max_blur_pixels": 2.0,
+    "water_roughness": 0.38,
+    "reflectance": 0.28,
+    "pigment_variation": 0.12,
+    "cloud_opacity": 0.5,
+    "cloud_shell_km": 12.0
+  }
+}

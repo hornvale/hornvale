@@ -313,6 +313,18 @@ fn every_kind_is_pinned_to_its_metabolic_triple() {
         ("gnoll", E::Chemotrophic, D::Organotrophic, C::Heterotrophic),
         ("human", E::Chemotrophic, D::Organotrophic, C::Heterotrophic),
         (
+            "kuo-toa",
+            E::Chemotrophic,
+            D::Organotrophic,
+            C::Heterotrophic,
+        ),
+        (
+            "mountain-dwarf",
+            E::Chemotrophic,
+            D::Organotrophic,
+            C::Heterotrophic,
+        ),
+        (
             "desert-dwarf",
             E::Chemotrophic,
             D::Organotrophic,
@@ -338,6 +350,12 @@ fn every_kind_is_pinned_to_its_metabolic_triple() {
         ),
         ("drow", E::Chemotrophic, D::Organotrophic, C::Heterotrophic),
         (
+            "duergar",
+            E::Chemotrophic,
+            D::Organotrophic,
+            C::Heterotrophic,
+        ),
+        (
             "high-elf",
             E::Chemotrophic,
             D::Organotrophic,
@@ -351,6 +369,12 @@ fn every_kind_is_pinned_to_its_metabolic_triple() {
         ),
         (
             "snow-elf",
+            E::Chemotrophic,
+            D::Organotrophic,
+            C::Heterotrophic,
+        ),
+        (
+            "svirfneblin",
             E::Chemotrophic,
             D::Organotrophic,
             C::Heterotrophic,

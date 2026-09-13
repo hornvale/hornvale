@@ -84,6 +84,8 @@ mod repertory_corpus;
 mod repose_byte_identity;
 #[path = "suite/retired_gate_signposts.rs"]
 mod retired_gate_signposts;
+#[path = "suite/scene_astronomy_at_cli.rs"]
+mod scene_astronomy_at_cli;
 #[path = "suite/scene_context_discipline.rs"]
 mod scene_context_discipline;
 #[path = "suite/scene_cost.rs"]
@@ -106,6 +108,10 @@ mod star_class_is_a_concept;
 mod subfloor_roster_coverage;
 #[path = "suite/system_coverage.rs"]
 mod system_coverage;
+#[path = "suite/technology_corpus.rs"]
+mod technology_corpus;
+#[path = "suite/technology_coverage.rs"]
+mod technology_coverage;
 #[path = "suite/temp_path_ratchet.rs"]
 mod temp_path_ratchet;
 #[path = "suite/test_binary_ratchet.rs"]

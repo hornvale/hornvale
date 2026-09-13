@@ -23004,8 +23004,8 @@ mod tests {
             checked += 1;
         }
         assert_eq!(
-            checked, 39,
-            "the roster is 39 rows; a smaller number means the loop is not \
+            checked, 43,
+            "the roster is 43 rows; a smaller number means the loop is not \
              seeing the table this assertion is about"
         );
     }

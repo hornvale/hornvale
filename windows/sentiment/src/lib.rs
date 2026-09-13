@@ -191,9 +191,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn catalog_holds_exactly_the_fifteen_peoples() {
+    fn catalog_holds_exactly_the_nineteen_peoples() {
         let cat = catalog();
-        assert_eq!(cat.len(), 15, "society_registry defines exactly 15 peoples");
+        assert_eq!(cat.len(), 19, "society_registry defines exactly 19 peoples");
     }
 
     #[test]
@@ -202,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn only_drow_is_subterranean_among_the_fifteen() {
+    fn subterranean_peoples_are_all_in_the_underworld_catalog() {
         let cat = catalog();
         let subterranean: Vec<PeopleId> = cat
             .values()
@@ -211,10 +211,15 @@ mod tests {
             .collect();
         assert_eq!(
             subterranean,
-            vec![hornvale_species::KindId("drow")],
-            "habitat_realm_registry also lists rust-monster and xorn as \
-             Subterranean, but neither is a settling people, so catalog() \
-             (keyed off society_registry) must not surface them"
+            vec![
+                hornvale_species::KindId("drow"),
+                hornvale_species::KindId("duergar"),
+                hornvale_species::KindId("kuo-toa"),
+                hornvale_species::KindId("mountain-dwarf"),
+                hornvale_species::KindId("svirfneblin"),
+            ],
+            "catalog() must surface every subterranean settling people, but not \
+             subterranean fauna"
         );
     }
 }

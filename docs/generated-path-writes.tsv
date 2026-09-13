@@ -25,7 +25,7 @@ book/src/gallery/lot-worker.js	0	1
 book/src/gallery/the-lot.md	0	1
 book/src/gallery/lithology-seed-42.png	0	1
 book/src/gallery/generated/the-lot-seed-42.md	1	1
-book/src/reference/	9	22
+book/src/reference/	9	23
 book/src/reference/concept-registry.md	0	1
 book/src/reference/layering.md	0	1
 book/src/reference/lexicon-of-place.md	0	1
@@ -70,7 +70,7 @@ book/src/laboratory/the-terminator-probe.md	0	1
 book/src/laboratory/census-of-coasts-ii.md	0	1
 book/src/laboratory/census-of-coasts-iii.md	0	1
 book/src/laboratory/census-of-coasts-iv.md	0	1
-docs/audits/	16	27
+docs/audits/	18	39
 docs/audits/heavy-tier-adjudication.md	0	1
 docs/audits/land-elevation-attribution.md	0	1
 docs/audits/the-assay-build-volume-audit.md	0	1
@@ -97,6 +97,8 @@ docs/audits/glyph-specimen-sheet.txt	1	1
 docs/audits/placement-audit-roster.md	1	1
 docs/audits/plumb-roster.md	1	1
 docs/audits/regularity-coverage-sugarscape-1996.md	1	1
+docs/audits/technology-coverage-asimov-1989.md	1	1
+docs/audits/technology-coverage-henrich-2004-extended.md	1	1
 book/src/gallery/possession-carry-seed-14.md	1	1
 clients/game/core/tests/fixtures/session-seed-14-carrying.json	1	1
 observations/fixtures/HV-001/expected-frame-000.json	1	1

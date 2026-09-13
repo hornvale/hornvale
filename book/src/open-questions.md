@@ -2264,6 +2264,21 @@ the only reason this instance surfaced at all was a defect that fell far
 enough from a determinism check's usual territory that nobody thought to
 look for it there.
 
+[The Planetarium](./chronicle/the-planetarium.md) supplies a new consumer witness:
+a native Bevy scene and an actual 300-frame 4K movie driven by evaluated Hornvale
+astronomy at exact integer ticks. Independent comparison found all 300 captured
+astronomy objects equal to the prior native-qualified observations. The source
+and renderer remain separate libraries, and the missing physical anchor radius
+was supplied through a documented model before the globe claimed physical scale.
+This strengthens the scene-interface bet for a bounded astronomical consumer.
+It does not turn semantic agreement into aesthetic acceptance: the movie, phone
+readability and interaction require separate review, and cosmetic surfaces do not
+become simulated geography. Nor does an unrestricted scientific observer establish
+what a situated game is permitted to show. The stronger evidence is that source
+quantities are actually drawn, with their model and presentation limits stated;
+the broader gameplay and whole-world claims remain untested.
+
+
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
 worth more than the check.** The entries above are all forms of *the drawn thing
@@ -3166,6 +3181,16 @@ the unreached-by-band histogram empty on every seed. That still does not place
 a people and nothing that places a people consults it — but the standing
 precondition since The Delvers has been the underworld *being declared as
 places*, and a place nobody can reach is a weaker candidate than one they can.
+
+*Re-scored again by [The Underworld Peoples](./chronicle/the-underworld-peoples.md)
+(2026-09-10).* The bet moves from "the underworld has no participants" to
+"the underworld can host several real, registry-backed participants": mountain
+dwarf, duergar, svirfneblin, and kuo-toa now seat on reachable rungs, with
+kuo-toa's fit changing with water rather than darkness alone. This is evidence
+for the habitat-medium and people-facing halves, not a resolution of the
+vertical-relationship mechanisms themselves. Surface–underground commerce,
+speciation by stratum, predation inversion, and subterranean cultural valence
+remain unbuilt, so the bet stays open at partial confidence.
 
 ## Precedented but nontrivial (moderate confidence)
 
@@ -5794,3 +5819,55 @@ construction, and the two axes this readout touches — the standing of counts
 against clocks, and the reachability of a creature's own memory — are recorded
 here as new material on the cost thread rather than as a re-score of an
 existing row.
+
+### An instrument whose subject has no bet here at all (2026-09-11)
+
+[The Kiln](./chronicle/the-kiln.md) (2026-09-11) opened a sixth corpus family
+and froze two external catalogues against Hornvale's shipped technology model —
+an invention chronology, scoring what the world can represent, and a catalogue
+of documented technology losses, scoring what it can represent *losing*. The
+reading is that of forty-one documented losses the world reaches two of the
+technologies at all, and of those two can represent the loss of exactly zero;
+of forty-one documented inventions it reaches none.
+
+**No bet in the graded tables above moved, and the grep says why rather than a
+judgement about which chapters sounded relevant.** The four confidence-tier
+sections contain **zero** occurrences of `technolog`, and none of *invention*,
+*craft*, *smelting*, or any rung name the shipped ladder uses. The three
+occurrences of `capab` there are a measurement-practice sentence about
+reproducing a predicted capability, a line about pane capabilities needing to be
+verbs, and a note that the census grades values while two corpus families grade
+capability. Of the loss vocabulary, four hits: a decision record *forgetting*
+something, a committed instant's resolution *decaying* with world age, a
+constant the Laboratory checks once and *forgets*, and one campaign's measured
+harm stated as a *loss of area*. Every one is incidental. **No tier bet in this
+chapter concerns technology, capability acquisition, or the loss of a
+capability** — so there is no row to re-score, and the absence is itself the
+interesting part: the project's position on technology has never been graded
+here, which is consistent with its never having been ratified anywhere else
+either.
+
+What the campaign contributes instead is a finding **about the program rather
+than about the world**, and it belongs on this page only as that. The shipped
+technology horizon is a four-rung function of the calendar year, documented
+*monotone in `year`, so tech only ever rises* — so loss is not unimplemented,
+it is inexpressible by construction. Its per-people advancement offset, the one
+term that could have made two peoples diverge, is drawn once and never mutated,
+though the paragraph that justified committing the horizon argued for it on the
+grounds that trajectory is globally dependent through contact and displacement.
+The arithmetic closes it: offsets drawn on `[0, 300]` against a bake ending at
+year 2000, with the top rung opening at 1400, puts every living community past
+the last threshold — and the committed gallery agrees, ten of ten community
+readouts at seed 42 reporting classical statecraft with no second phrasing in
+the file, while the four rungs' whole observable variance sits in ruin strata.
+**The ladder dates the dead; it does not describe the living.**
+
+That is not a bet moving because nothing here had bet on it. It is a
+measurement of a gap between the project's doctrine — which rejects "a progress
+scalar, a civilisation with a *level*" by name and asks instead for a capability
+threshold crossed when a computed bar is cleared — and what the repository
+built, which is that scalar with the graph removed. The instrument that would
+make the gap gradable is the one frozen here, and it cannot grade it yet: every
+trajectory verdict in both columns is unscored, because the model is monotone.
+A successor campaign replaces the clock, at which point two cells become
+measurable and this chapter acquires something it can actually score.

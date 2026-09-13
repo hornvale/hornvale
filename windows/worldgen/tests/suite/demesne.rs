@@ -380,7 +380,7 @@ const BASELINE_DOMINANT_KINDS_42: usize = 2;
 /// which is a property of the deep-history bake (it seeds every Settled people
 /// its own proto-communities, which persist by lineage rather than by winning
 /// local dominance), not a claim that six new peoples all found good ground.
-const BASELINE_PEOPLED_KINDS_42: usize = 15;
+const BASELINE_PEOPLED_KINDS_42: usize = 19;
 /// BASELINE union (dominant ∪ peopled-by) distinct kind count at seed 42.
 const BASELINE_UNION_KINDS_42: usize = 4;
 
@@ -981,8 +981,8 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // has to keep proving it is not. Post-unblinding re-measure, declared
     // per decision 0016.
     assert!(
-        (ratio - 10.1472).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~10.1472). Check the \
+        (ratio - 10.1537).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~10.1537). Check the \
          printed decomposition above before assuming anything latitudinal moved — and \
          note that since The Glasshouse the polar term is OFF its floor, so this is a \
          real tropics/poles ratio and no longer 100 * trop_mean."

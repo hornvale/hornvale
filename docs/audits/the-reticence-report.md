@@ -17,6 +17,7 @@ Computed once, at `Seed(42)` — see this function's own module doc for why a fu
 | desert-dwarf | folk | Spirit | Wary | 4 |
 | desert-elf | folk | Spirit | Wary | 4 |
 | drow | organized | God | Guarded | 2 |
+| duergar | organized | God | Guarded | 2 |
 | gnoll | folk | Spirit | Wary | 4 |
 | goblin | organized | God | Guarded | 2 |
 | gully-dwarf | organized | God | Guarded | 2 |
@@ -24,7 +25,10 @@ Computed once, at `Seed(42)` — see this function's own module doc for why a fu
 | hill-dwarf | organized | God | Guarded | 2 |
 | hobgoblin | organized | God | Guarded | 2 |
 | human | organized | God | Guarded | 2 |
-| kobold | organized | God | Guarded | 2 |
+| kobold | folk | Spirit | Wary | 4 |
+| kuo-toa | organized | God | Guarded | 2 |
+| mountain-dwarf | organized | God | Guarded | 2 |
 | sea-elf | folk | Spirit | Wary | 4 |
 | snow-elf | folk | Spirit | Wary | 4 |
+| svirfneblin | folk | Spirit | Wary | 4 |
 | wood-elf | organized | God | Guarded | 2 |

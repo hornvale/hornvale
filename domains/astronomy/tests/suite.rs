@@ -9,6 +9,8 @@
 //! `tests/suite/`). This collapses 4 separate integration-test
 //! binaries into 1.
 
+#[path = "suite/anchor_radius.rs"]
+mod anchor_radius;
 #[path = "suite/calendar_negative_time.rs"]
 mod calendar_negative_time;
 #[path = "suite/day_is_a_whole_tick_count.rs"]
@@ -21,5 +23,7 @@ mod genesis_properties;
 mod golden_seed_42;
 #[path = "suite/night_sky_regimes.rs"]
 mod night_sky_regimes;
+#[path = "suite/planetarium_geometry.rs"]
+mod planetarium_geometry;
 #[path = "suite/sky_conformance.rs"]
 mod sky_conformance;

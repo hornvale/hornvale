@@ -35,11 +35,58 @@ fn phase_at(period: StdDays, offset: f64, t: StdInstant) -> f64 {
     if phase == 1.0 { 0.0 } else { phase }
 }
 
-fn anchor_position_at(system: &StarSystem, t: StdInstant) -> OrbitalPosition {
+/// Anchor in the native circumprimary or barycentric orbital plane, in AU.
+pub fn anchor_position_at(system: &StarSystem, t: StdInstant) -> OrbitalPosition {
     circular(
         system.anchor.orbit.get(),
         phase_at(system.anchor.year, system.forcing.year_phase_offset, t),
     )
+}
+
+/// Anchor surface orientation, as columns (longitude zero, longitude 90, north).
+///
+/// Converts the exact calendar equatorial frame with Rz(pi) Rx(-obliquity),
+/// then rotates its prime meridian by solar RA minus native subsolar longitude.
+/// The half-turn reconciles calendar solar phase with the center sightline.
+/// Retrograde and locked conventions belong to the calendar; a locked world's
+/// prime meridian follows the orbital center rather than remaining inertial.
+/// type-audit: bare-ok(ratio: return)
+pub fn anchor_body_to_frame_at(system: &StarSystem, instant: StdInstant) -> [[f64; 3]; 3] {
+    let calendar = calendar_of(system);
+    let angle = (calendar.solar_equatorial(instant).ra_deg
+        - crate::sub_solar_longitude_deg(&calendar, instant))
+    .to_radians();
+    let tilt = system.forcing.obliquity_at(instant.get()).to_radians();
+    let (c, s) = (math::cos(angle), math::sin(angle));
+    let (ce, se) = (math::cos(tilt), math::sin(tilt));
+    [
+        [-c, -ce * s, -se * s],
+        [s, -ce * c, -se * c],
+        [0.0, -se, ce],
+    ]
+}
+
+/// Anchor-centered moon position in megameters in the native system frame.
+/// Uses the existing phase, inclination and regressing-node producers, including
+/// their retrograde-inclination convention. The calendar-to-system half-turn
+/// changes XY signs only. No synodic cycle (or no moon) means no position.
+/// type-audit: bare-ok(index: index), pending(wave-1: return)
+pub fn moon_position_at(
+    system: &StarSystem,
+    index: usize,
+    instant: StdInstant,
+) -> Option<[f64; 3]> {
+    let moon = system.moons.get(index)?;
+    let calendar = calendar_of(system);
+    let longitude = crate::moon_ecliptic_longitude_deg(&calendar, index, instant)?;
+    let latitude = crate::moon_ecliptic_latitude_deg(&calendar, moon, index, instant)?;
+    let direction = math::unit_sphere_from_lat_lon(latitude, longitude);
+    let radius = moon.distance.get();
+    Some([
+        -radius * direction[0],
+        -radius * direction[1],
+        radius * direction[2],
+    ])
 }
 
 /// Circular orbital phase in turns, normalized for pre-genesis instants too.

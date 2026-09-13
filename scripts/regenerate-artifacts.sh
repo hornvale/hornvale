@@ -669,19 +669,17 @@ gen_chart_reference() {
 # shorter arc than before: bronze at the base, then iron, then classical, with
 # no neolithic layer left. The standing sixth was founded in 800 by
 # Venggomnjen and holds 84 souls.
-# RE-READ 2026-09-06 (The Murrain, Task 2): history/bake/v4 changes the
-# seed-42 epoch. Vertex 10626 now carries one living human layer, founded in
-# 1775; the camera remains on a non-empty real column, and the framing below
-# states only facts present in the live render.
-# RE-READ 2026-09-11 (The Trencher, Task 4): per-metabolite supply moves the
-# bake's occupation skeleton, so this column is no longer one human layer at
-# all -- it is TEN kobold layers, oldest founded in year 200, the standing one
-# founded in 1200 by Roaxara and still there after 800 years. The prose below
-# is rewritten from the live render rather than patched, which is the whole
-# point of `docs_consistency::the_history_page_prose_names_the_vertex_it_
-# renders`: it caught a framing paragraph whose people, dates and layer count
-# were all wrong at once.
-history_site=10626
+# RE-READ 2026-09-09 (The Underworld Peoples): the expanded settled roster
+# emptied the former camera cell. Vertex 6659 carried seventeen layers,
+# including mountain-dwarf and kuo-toa strata.
+# RE-READ 2026-09-12 (The Trencher, absorbing the Underworld Peoples): the
+# MERGE emptied 6659 in turn -- neither campaign's camera survived the other's
+# world. `the_history_page_prose_names_the_vertex_it_renders` caught it at the
+# merge commit, refusing a showcase for stratigraphy that renders an empty
+# column. Repointed at vertex 10359 and the framing rewritten from the live
+# `history` render, not patched: 17 layers, bugbear throughout with one brief
+# hill-dwarf stratum, still occupied.
+history_site=10359
 gen_history() {
     printf '# A Living Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -691,13 +689,14 @@ gen_history() {
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — vertex %s — and\n' "$history_site"
-    printf 'ten lives have passed over it, one settling atop the ruins of the last.\n'
-    printf 'The deepest layer is a neolithic kobold steading founded in the year\n'
-    printf '200; the standing one, classical kobolds founded by Roaxara in the year\n'
-    printf '1200, stands yet. At its height some 37 souls raised two huts and a\n'
-    printf 'granary. There is no ruin to read at the top — only a living\n'
-    printf 'settlement and smoke on the air.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — vertex %s — where\n' "$history_site"
+    printf 'seventeen lives have passed over the ground, one settling atop the\n'
+    printf 'ruins of the last. The deepest layer is a neolithic bugbear steading\n'
+    printf 'founded in the year 0, which held fifty years and then left of its own\n'
+    printf 'accord; the standing one is a classical bugbear steading founded in the\n'
+    printf 'year 1750, some thirty souls, which has stood 250 years and counting.\n'
+    printf 'One hill-dwarf stratum sits among the bugbear layers. The ground is\n'
+    printf 'occupied still -- there is no ruin to read on top, only smoke on the air.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
@@ -1049,6 +1048,17 @@ spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report 
 spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
 spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
 spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
+# The technology coverage reports (The Kiln, Task 7). `technologies report`
+# is `spawn`ed here rather than run serially like `regularities report`
+# below: unlike that sibling, `technologies::render` reads only the corpus
+# JSON on disk — no census, no `RepoFacts` — so it carries none of the
+# stale-census-read hazard the comment above `regularities report` explains.
+# It is a pure, order-independent read exactly like `systems report` beside
+# it, so it belongs in this same untethered batch.
+spawn run -p hornvale -- technologies report asimov-1989 \
+  > docs/audits/technology-coverage-asimov-1989.md
+spawn run -p hornvale -- technologies report henrich-2004-extended \
+  > docs/audits/technology-coverage-henrich-2004-extended.md
 spawn gen_sentence_coverage
 # The Confidant, Task 7 reshape: world-invariant (builds its own internal
 # Seed(42), like `first_light` above), so it belongs in Group C alongside

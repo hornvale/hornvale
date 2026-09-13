@@ -133,11 +133,17 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// phase changes deterministic history, so the corpus this classifier reads
 /// is re-drawn. A readout, not a target: nothing in this campaign touches the
 /// classifier or the typological stages the baseline is about.
-const BASELINE: f64 = 0.8012779552715655;
+///
+/// **The Underworld peoples: 0.8012779552715655 -> 0.7625935162094764.** Four
+/// new people sections enlarge the committed dictionary and change the
+/// classifier's corpus. This is a calibration readout, not a change to the
+/// classifier or its typological stages; the historical 18-way baseline above
+/// remains preserved in the chronicle.
+const BASELINE: f64 = 0.7625935162094764;
 
-/// The chance floor for an 18-way assignment. Reported alongside the baseline
+/// The chance floor for a 22-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.
-const CHANCE_FLOOR: f64 = 1.0 / 18.0;
+const CHANCE_FLOOR: f64 = 1.0 / 22.0;
 
 fn load() -> Vec<(String, Vec<String>)> {
     let md = std::fs::read_to_string(DICTIONARY).expect("read the committed dictionary");
@@ -188,12 +194,12 @@ fn the_baseline_sits_between_chance_and_certainty() {
 /// The roster the baseline was taken over, pinned so a later reading cannot
 /// silently compare against a different set of tongues.
 #[test]
-fn the_baseline_roster_is_eighteen_tongues() {
+fn the_roster_is_twenty_two_tongues() {
     let lists = load();
     assert_eq!(
         lists.len(),
-        18,
-        "expected 18 tongues, got {}: {:?}",
+        22,
+        "expected 22 tongues, got {}: {:?}",
         lists.len(),
         lists.iter().map(|(n, _)| n).collect::<Vec<_>>()
     );

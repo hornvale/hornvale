@@ -47,9 +47,11 @@
 //! and `subterranean_energy_probe.rs` use) keeps the committed fixture
 //! proportionate to this crate's other fixtures (`repose-exposure.csv`,
 //! `occupancy.csv`) while still comparing the full production roster (39
-//! kinds, `hornvale_species::biosphere_registry`) over every one of seed 42's
-//! cave-bearing vertices — tens of thousands of (kind, vertex) pairs, not a
-//! hand-picked handful.
+//! kinds, `hornvale_species::biosphere_registry`) present when the before-arm
+//! was captured, over every one of seed 42's cave-bearing vertices — tens of
+//! thousands of (kind, vertex) pairs, not a hand-picked handful. Species added
+//! after that capture are deliberately excluded: this frozen fixture has no
+//! honest pre-switch value for them.
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -258,6 +260,7 @@ fn exactly_the_subterranean_roster_moves() {
         &affinities,
     );
 
+    let captured_kinds: BTreeSet<&str> = before.keys().map(|(kind, _)| *kind).collect();
     let mut moved: BTreeSet<&str> = BTreeSet::new();
     let mut compared = 0usize;
     let mut missing = 0usize;
@@ -267,6 +270,9 @@ fn exactly_the_subterranean_roster_moves() {
         }
         for (tag, map) in now.iter() {
             let kind = names[*tag as usize];
+            if !captured_kinds.contains(kind) {
+                continue;
+            }
             let after_bits = map.get(vertex).to_bits();
             match before.get(&(kind, vertex.0)) {
                 Some(&before_bits) => {
@@ -282,8 +288,8 @@ fn exactly_the_subterranean_roster_moves() {
 
     assert_eq!(
         missing, 0,
-        "the committed fixture no longer covers every (kind, cave-vertex) pair a live \
-         seed-42 build produces — the roster or seed 42's cave placement moved since the \
+        "the committed fixture no longer covers every captured (kind, cave-vertex) pair a live \
+         seed-42 build produces — the captured roster or seed 42's cave placement moved since the \
          fixture was captured; re-run capture_before_arm against the PRE-SWITCH tree \
          (see module doc) before trusting this test again"
     );

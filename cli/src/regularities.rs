@@ -348,7 +348,14 @@ impl GeneratedPaths {
     /// it: a path declared in `docs/generated-paths.txt` is relative to the
     /// root that file was found under, so resolving it here cannot pick up a
     /// different root than the declaration did.
-    fn page_text(&self, path: &str) -> Result<String, String> {
+    ///
+    /// `pub(crate)`, not private: `crate::technologies::resolve_anchor`
+    /// reuses this to check a `doc:` anchor's page actually EXISTS, not
+    /// merely that its directory is declared generated — the vacuity this
+    /// family's own campaign found and fixed in `doc_states_the_claim`
+    /// below (ledger #28 records a sibling campaign reproducing it and
+    /// having to be told twice).
+    pub(crate) fn page_text(&self, path: &str) -> Result<String, String> {
         let full = self.root.join(path);
         std::fs::read_to_string(&full).map_err(|e| format!("{}: {e}", full.display()))
     }

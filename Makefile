@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: worktree-reap worktree-reap-dry context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run visual-check visual-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -277,7 +277,39 @@ gate-run:
 # failure rather than as success. A gate that reports green when it does not
 # know is worse than one that reports red when it is unsure.
 	@rm -f target/nextest/ci/nextest.rc
+# `--profile ci` IS LOAD-BEARING HERE AND IS NOT A STYLE CHOICE. It carries
+# `fail-fast = false` (.config/nextest.toml), and without that
+# nextest CANCELS PENDING TESTS at the first failure — those already in flight
+# finish and report, everything not yet started never runs. So a red chamber
+# reports the failures it happened to have running and leaves the rest of the
+# suite unexecuted. (Verified both ways on two injected failures: the default
+# prints `Cancelling due to test failure`, `--no-fail-fast` does not.) That is
+# fine locally,
+# where a re-run is a keystroke. It is not fine here: a chamber re-run is a
+# slot on the one serial box everything else queues behind, so each red buys
+# the submitter exactly one bit at ~20 minutes a bit.
+#
+# MEASURED, 2026-09-11: campaign/underworld-peoples spent NINE chamber runs
+# landing one campaign, and its eighth red read
+# `4816/6073 tests run: 4815 passed, 1 failed` — 1,257 tests never executed,
+# each subsequent red revealing exactly one more pin its four new peoples had
+# always been going to move. With this flag that is one red listing all of
+# them, and roughly two attempts instead of nine.
+#
+# THE COST IS ASYMMETRIC AND THAT IS THE WHOLE ARGUMENT. A GREEN run is
+# UNCHANGED — there is nothing to fail fast on, so it neither runs nor skips a
+# single extra test. Only a RED run costs more: it finishes the suite instead
+# of stopping early, bounded above by a green run's own wall time (~850 s on
+# lefford), which against that run's 681 s is ~3 minutes. Three minutes on a
+# run that has already failed, to save a ~20-minute slot per additional
+# failure.
+#
+# This is the project's stated position for local runs already — CLAUDE.md's
+# iteration guidance says "Run ONCE, inspect many" and prescribes
+# `--no-fail-fast` for the whole failure list in one pass. The chamber was the
+# one place that most needed it and the one place not doing it.
 	@{ NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
+	    --profile ci \
 	    --message-format libtest-json-plus \
 	    2>&1 1>target/nextest/ci/run.json; \
 	   echo $$? > target/nextest/ci/nextest.rc; \
@@ -673,6 +705,18 @@ worktree-take: ## Claim a recycled campaign worktree (NAME=<campaign> [BASE=main
 #     intervening build did not touch, and `worktree-take` deliberately does
 #     not build. Verified: stamp -> partial build -> `--file` proposes deleting
 #     the live test binaries.
+# REAPING IS NOT SWEEPING, and the two are easy to confuse. `sweep` reclaims
+# dead build GENERATIONS inside a target/; `worktree-reap` removes whole
+# worktrees whose branch already landed. Sweeping a finished campaign's
+# worktree keeps the corpse; reaping it is what actually returns the space and
+# the pool slot. Population comes from `git worktree list`, so it spans BOTH
+# pools — see scripts/worktree-reap.sh's header for why that matters.
+worktree-reap-dry: ## Show which merged worktrees would be reaped, removing nothing
+	@bash scripts/worktree-reap.sh
+
+worktree-reap: ## Remove every worktree whose branch is merged (across all pools)
+	@bash scripts/worktree-reap.sh --apply
+
 sweep-check: ## Fail with an install hint if cargo-sweep is missing
 	@command -v cargo-sweep >/dev/null 2>&1 || { \
 		echo "cargo-sweep not found — install it (decision 0848):"; \
@@ -1013,6 +1057,16 @@ wasm-lot: ## Build the Lot's own exhibit wasm into book/src/gallery (deploy runs
 	fi
 	cp clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm book/src/gallery/lot.wasm
 
+visual-check: ## The visual client's CPU gate (GPU qualification is separate)
+	@bash scripts/timed.sh visual-check -- make --no-print-directory visual-check-run
+
+visual-check-run:
+	cd clients/visual && cargo +1.96.1 fmt --check
+	cargo +1.96.1 clippy --locked --manifest-path clients/visual/Cargo.toml --workspace --all-targets -- -D warnings
+	cargo +1.96.1 test --locked --manifest-path clients/visual/Cargo.toml --workspace
+	python3 scripts/visual-dependencies.py
+	python3 scripts/test-visual-dependencies.py
+
 game-check: ## The game client's local gate: fmt/clippy/test on both crates
 	@bash scripts/timed.sh game-check -- make --no-print-directory game-check-run
 
@@ -1093,7 +1147,7 @@ lot-check-run: wasm-lot
 	  gz=$$(gzip -9 -c clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm | wc -c); \
 	  echo "lot wasm size: $$gz bytes gzipped ($$raw raw)"
 
-# THE FIVE ARMS RUN IN PARALLEL, and they used to be plain prerequisites
+# THE CLIENT ARMS RUN IN PARALLEL, and they used to be plain prerequisites
 # (i.e. serial). Measured on lefford 2026-08-23, alternating arms on an idle
 # box to cancel cache-warming drift, when there were four arms (vessel, world,
 # game, atlas — the Lot exhibit did not exist yet):
@@ -1138,13 +1192,13 @@ lot-check-run: wasm-lot
 # are how people learn to stop reading gate logs. `--jobserver-style=fifo`
 # fixes it upstream and needs make 4.4; lefford has 4.3.
 #
-# Backgrounding five SERIAL sub-makes creates no jobserver at all, so the
+# Backgrounding the SERIAL sub-makes creates no jobserver at all, so the
 # warning cannot arise. Each target's output is captured to its own file and
 # printed whole after the `wait`, which gives strictly better grouping than
 # -Otarget did, and every target's pass/fail is named before the logs.
 clients-check-run:
 	@set -u; pids=""; names=""; \
-	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check; do \
+	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check visual-check-run; do \
 	  $(MAKE) --no-print-directory $$t > /tmp/hv-clients-$$t.log 2>&1 & \
 	  pids="$$pids $$!"; names="$$names $$t"; \
 	done; \
@@ -1153,7 +1207,7 @@ clients-check-run:
 	  n=$$(echo $$names | cut -d' ' -f$$i); i=$$((i+1)); \
 	  if wait $$p; then echo "clients: $$n OK"; else rc=1; echo "clients: $$n FAILED"; fi; \
 	done; \
-	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check; do \
+	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check visual-check-run; do \
 	  echo "----- $$t -----"; cat /tmp/hv-clients-$$t.log; \
 	done; \
 	exit $$rc

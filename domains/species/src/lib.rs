@@ -28,6 +28,18 @@ use hornvale_kernel::{
 // internally.
 pub use hornvale_kernel::KindId;
 
+const UNDERWORLD_PEOPLE_IDS: [&str; 4] = ["mountain-dwarf", "duergar", "kuo-toa", "svirfneblin"];
+
+fn add_underworld_rows<C: Clone>(store: &mut ComponentStore<KindId, C>, source: &str) {
+    let value = store
+        .get_by_label(source)
+        .unwrap_or_else(|| panic!("underworld row source {source:?} is registered"))
+        .clone();
+    for id in UNDERWORLD_PEOPLE_IDS {
+        store.insert(KindId(id), value.clone());
+    }
+}
+
 mod allometry;
 pub use allometry::{
     LifeHistory, age_at_maturity, basal_metabolic_rate_w, life_history, lifespan,
@@ -2866,6 +2878,10 @@ pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
         // the surface, and the gate does that measurably. Drow's `elevation`
         // response is wood-elf's byte for byte, for exactly that reason.
         (KindId("drow"), HabitatRealm::Subterranean),
+        (KindId("mountain-dwarf"), HabitatRealm::Subterranean),
+        (KindId("duergar"), HabitatRealm::Subterranean),
+        (KindId("kuo-toa"), HabitatRealm::Subterranean),
+        (KindId("svirfneblin"), HabitatRealm::Subterranean),
     ]
     .into_iter()
     .collect()
@@ -2927,6 +2943,7 @@ pub fn locomotion_registry() -> ComponentStore<KindId, Locomotion> {
         (KindId("giant-squid"), SWIM),
         (KindId("giant-crocodile"), SWIM),
         (KindId("sea-elf"), SWIM),
+        (KindId("kuo-toa"), SWIM),
         (KindId("black-dragon"), FLY),
         (KindId("red-dragon"), FLY),
         (KindId("white-dragon"), FLY),
@@ -3746,7 +3763,7 @@ impl Component for Dispersion {}
 /// for everything else (including the three dragons).
 /// type-audit: bare-ok(identifier-text)
 pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
-    [
+    let mut store = [
         (
             KindId("goblin"),
             BiosphereTraits {
@@ -4555,7 +4572,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// Sleep-debt accrued per LOCAL day awake (The Wicket, Task 9) — the rate
@@ -4604,7 +4623,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
     /// plumb: per-species(a creature's own physiology sets how fast fatigue accrues -- doc's own words: differentiating any OTHER kind's rate away from human's is a fidelity decision left for whoever authors it next; every kind but xorn shares this identical 0.3)
     const RATE: f64 = 0.3;
-    [
+    let mut store = [
         (KindId("goblin"), RATE),
         (KindId("kobold"), RATE),
         (KindId("hobgoblin"), RATE),
@@ -4652,7 +4671,9 @@ pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
         (KindId("wood-elf"), RATE),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// How much MORE a rest or a sleep repays a body of this kind when the room
@@ -4805,7 +4826,7 @@ pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
     /// nothing to restore, and by a sessile one, which never lies down.
     /// plumb: per-species(a kind with no metabolism or no lying posture collects nothing from an afforded site -- ThermalStrategy::Absent and SocialForm::Sessile are the two traits that reach this floor)
     const NO_GAIN: f64 = 1.00;
-    [
+    let mut store = [
         // --- the settled peoples: both halves -----------------------------
         (KindId("goblin"), MADE_FOR_THE_BODY),
         (KindId("hobgoblin"), MADE_FOR_THE_BODY),
@@ -4859,7 +4880,9 @@ pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
         (KindId("shrieker"), NO_GAIN),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// How much a kind gets out of lying on a found surface of a given
@@ -4950,7 +4973,7 @@ pub fn substrate_response(realm: HabitatRealm) -> ConditionResponse {
 /// goblin's authorship, not about what the manikin is.
 /// type-audit: bare-ok(identifier-text)
 pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
-    [
+    let mut store = [
         (
             KindId("goblin"),
             MindVector {
@@ -5174,7 +5197,9 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// Per-kind dispersion. **Variability is itself a species trait** (spec §2's
@@ -5185,7 +5210,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
 /// no society to vary.
 /// type-audit: bare-ok(identifier-text)
 pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
-    [
+    let mut store = [
         // GENERALIST-LITE: the cosmopolitan weed's widest goblinoid spread,
         // still a notch below human's true psychological breadth.
         (
@@ -5373,7 +5398,9 @@ pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// The community-mind component — authored directly, present only for the
@@ -5383,7 +5410,7 @@ pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
 /// same values — again authorship, not definition.
 /// type-audit: bare-ok(identifier-text)
 pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
-    [
+    let mut store = [
         (
             KindId("goblin"),
             SocietyVector {
@@ -5590,7 +5617,9 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// The perception component — authored directly, present for every minded
@@ -5602,7 +5631,7 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
 /// falling back on goblin's row, as the pre-Vigil stopgap did.
 /// type-audit: bare-ok(identifier-text)
 pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
-    [
+    let mut store = [
         (
             KindId("goblin"),
             PerceptionVector {
@@ -5854,7 +5883,9 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
         ),
     ]
     .into_iter()
-    .collect()
+    .collect();
+    add_underworld_rows(&mut store, "drow");
+    store
 }
 
 /// The universal taxonomy lookup: a kind's family label, authored directly
@@ -5921,6 +5952,8 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         (KindId("desert-dwarf"), "dwarf"),
         (KindId("gully-dwarf"), "dwarf"),
         (KindId("hill-dwarf"), "dwarf"),
+        (KindId("mountain-dwarf"), "dwarf"),
+        (KindId("duergar"), "dwarf"),
         // THE RADIATION (C2d): six kinds, ONE label — the roster's largest
         // family, and the programme's last. `family_proto` in
         // `hornvale_language` carries the matching `KindId("elf")` row in this
@@ -5932,6 +5965,8 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         (KindId("sea-elf"), "elf"),
         (KindId("snow-elf"), "elf"),
         (KindId("wood-elf"), "elf"),
+        (KindId("kuo-toa"), "kuo-toa"),
+        (KindId("svirfneblin"), "svirfneblin"),
     ]
     .into_iter()
     .collect()
@@ -6006,6 +6041,8 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("desert-dwarf-kind", "a desert dwarf"),
     ("gully-dwarf-kind", "a gully dwarf"),
     ("hill-dwarf-kind", "a hill dwarf"),
+    ("mountain-dwarf-kind", "a mountain dwarf"),
+    ("duergar-kind", "a duergar"),
     // THE RADIATION (C2d): the elf family's six — the roster's largest family,
     // and the programme's last. These six ids are what
     // `domains/language/src/accession.rs`'s epoch-10 cohort lists;
@@ -6019,6 +6056,8 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("sea-elf-kind", "a sea elf"),
     ("snow-elf-kind", "a snow elf"),
     ("wood-elf-kind", "a wood elf"),
+    ("kuo-toa-kind", "a kuo-toa"),
+    ("svirfneblin-kind", "a svirfneblin"),
 ];
 
 /// The `*-kind` concept naming `species`, or `None` when the species has no
@@ -6577,7 +6616,57 @@ impl Component for EnvironmentNiche {}
 /// authoring a niche for a kind that places no community would be a value no
 /// consumer reads.
 pub fn environment_niche_registry() -> ComponentStore<KindId, EnvironmentNiche> {
-    [(KindId("drow"), drow_niche())].into_iter().collect()
+    let mut store: ComponentStore<KindId, EnvironmentNiche> =
+        [(KindId("drow"), drow_niche())].into_iter().collect();
+    store.insert(KindId("mountain-dwarf"), mountain_dwarf_niche());
+    store.insert(KindId("duergar"), duergar_niche());
+    store.insert(KindId("kuo-toa"), kuo_toa_niche());
+    store.insert(KindId("svirfneblin"), svirfneblin_niche());
+    store
+}
+
+fn mountain_dwarf_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (hornvale_kernel::PHYSIOGNOMY, AxisPreference::graded(0.7)),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(0.6)),
+        (hornvale_kernel::WATER, AxisPreference::graded(0.3)),
+        (hornvale_kernel::SUBSTRATE, AxisPreference::class(0.6)),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(0.0)),
+    ])
+    .expect("mountain dwarf niche is valid")
+}
+
+fn duergar_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (hornvale_kernel::PHYSIOGNOMY, AxisPreference::graded(0.3)),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(0.9)),
+        (hornvale_kernel::WATER, AxisPreference::graded(0.8)),
+        (hornvale_kernel::SUBSTRATE, AxisPreference::class(0.6)),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(0.0)),
+    ])
+    .expect("duergar niche is valid")
+}
+
+fn kuo_toa_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (hornvale_kernel::PHYSIOGNOMY, AxisPreference::graded(0.2)),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(0.8)),
+        (hornvale_kernel::WATER, AxisPreference::graded(1.0)),
+        (hornvale_kernel::SUBSTRATE, AxisPreference::class(0.6)),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(0.0)),
+    ])
+    .expect("kuo-toa niche is valid")
+}
+
+fn svirfneblin_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (hornvale_kernel::PHYSIOGNOMY, AxisPreference::graded(0.8)),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(0.3)),
+        (hornvale_kernel::WATER, AxisPreference::graded(0.5)),
+        (hornvale_kernel::SUBSTRATE, AxisPreference::class(0.6)),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(0.0)),
+    ])
+    .expect("svirfneblin niche is valid")
 }
 
 /// Drow's niche in the environment basis — **every value authored**, on the
@@ -6774,8 +6863,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            39,
-            "thirty-nine kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human, The Delvers added the three dwarves, The Radiation added the six elves)"
+            43,
+            "forty-three kinds compete for space, including the four Underworld peoples"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -6791,11 +6880,11 @@ mod tests {
                 "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
             );
         }
-        assert_eq!(psy.len(), 18, "fifteen peoples + three minded dragons");
+        assert_eq!(psy.len(), 22, "nineteen peoples + three minded dragons");
         assert_eq!(
             per.len(),
-            18,
-            "perception is the fifteen peoples + the three dragons (The Vigil)"
+            22,
+            "perception is the nineteen peoples + the three dragons"
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
@@ -6905,6 +6994,7 @@ mod tests {
                 "desert-elf",
                 "dire-wolf",
                 "drow",
+                "duergar",
                 "giant-constrictor-snake",
                 "giant-crocodile",
                 "giant-elk",
@@ -6922,6 +7012,8 @@ mod tests {
                 "human",
                 "killer-whale",
                 "kobold",
+                "kuo-toa",
+                "mountain-dwarf",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
@@ -6931,6 +7023,7 @@ mod tests {
                 "sea-elf",
                 "shrieker",
                 "snow-elf",
+                "svirfneblin",
                 "treant",
                 "twig-blight",
                 "white-dragon",
@@ -7309,6 +7402,7 @@ mod tests {
                 "desert-dwarf",
                 "desert-elf",
                 "drow",
+                "duergar",
                 "gnoll",
                 "goblin",
                 "gully-dwarf",
@@ -7317,8 +7411,11 @@ mod tests {
                 "hobgoblin",
                 "human",
                 "kobold",
+                "kuo-toa",
+                "mountain-dwarf",
                 "sea-elf",
                 "snow-elf",
+                "svirfneblin",
                 "wood-elf"
             ]
         );

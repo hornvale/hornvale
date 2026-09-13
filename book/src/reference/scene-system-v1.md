@@ -9,6 +9,10 @@ temperature evaluator](./scene-tiles-v1.md#reading-temperature-over-the-year)
 evaluates a temperature from elements rather than storing one per day.
 
 Every valid world has a generated sky and therefore a system to describe.
+For authoritative native positions at an exact instant, use the separate
+[`scene/astronomy-at/v1`](scene-astronomy-at-v1.md) query. Planetarium consumes
+that evaluated surface; the element catalog and its existing consumers retain
+the contract documented here.
 
 ## The document
 

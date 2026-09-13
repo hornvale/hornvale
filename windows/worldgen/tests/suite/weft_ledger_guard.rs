@@ -26,25 +26,23 @@ use hornvale_worldgen::seed_42_world;
 /// `seed_42_world()`'s own fact count, measured directly (not `build_world`,
 /// which `fixture.rs`'s own `the_fixture_equals_a_live_build` already keeps
 /// honest against the fixture) — the number this test pins.
+/// **The mechanism, which survives the merge even though the number does not.**
+/// The Trencher's Task 4 routes `EnergySource::DetritalImport` onto the
+/// `DETRITUS` axis, which had been a flat `DETRITUS_AMBIENT = 0.2` on all
+/// land: a subterranean rung now reads `0.2 + <import>`, a median `+0.12` at
+/// `Band::Undercroft` and up to `+0.77`, and `drow` carries the roster's
+/// largest `DETRITUS` weight at 0.50. The deep-history bake therefore sees a
+/// different competition and commits more dead layers (`is-ruin`), so the
+/// count can rise while LIVING settlements fall.
 ///
-/// **Re-pinned 2026-09-11 (The Trencher, Task 4): 20,109 → 24,931, +4,822
-/// facts, +24.0%.** This is the largest single move in this count's history
-/// and it is worth naming the cause rather than the number. Task 4 routes
-/// `EnergySource::DetritalImport` onto the `DETRITUS` axis, which had been a
-/// flat `DETRITUS_AMBIENT = 0.2` on all land: a subterranean rung now reads
-/// `0.2 + <import>` instead, a median `+0.12` at `Band::Undercroft` and up to
-/// `+0.77`, and `drow` — the one `HabitatRealm::Subterranean` PEOPLE — carries
-/// the roster's largest `DETRITUS` weight at 0.50. So the deep-history bake
-/// sees a materially different competition and produces more turnover:
-/// **more occupation layers, therefore more committed facts.** Seed 42's
-/// living settlements in fact FELL, 307 → 284, while the total fact count
-/// rose — dead layers are committed too (`is-ruin`), and vertex 10626 alone
-/// went from one human layer to ten kobold ones.
-///
-/// The count is not a quality signal in either direction and this note is not
-/// an endorsement: it is a pointer at the one change that moved it, so the
-/// next reader of a red here does not start from `windows/vessel`'s weft.
-const SEED_42_FACT_COUNT: usize = 24_931;
+/// **The number below is main's and is STALE.** Both sides re-pinned it --
+/// The Trencher to 24,931, the Underworld Peoples to 21,524 -- against worlds
+/// that no longer exist. The merged value is re-derived once in the repair
+/// pass (ledger #25/#26). The count is not a quality signal in either
+/// direction.
+// The Underworld Peoples delivery adds the four peoples' committed facts;
+// seed 42 now carries 21,524 ledger facts.
+const SEED_42_FACT_COUNT: usize = 21_524;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

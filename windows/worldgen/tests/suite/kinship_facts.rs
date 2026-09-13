@@ -355,9 +355,9 @@ fn kinship_pass_is_deterministic_across_two_independent_builds() {
 /// committed current-world baseline in
 /// `tests/fixtures/person-facts-seed-42.json`. The older
 /// `pre-kinship-person-facts-seed-42.json` remains historical evidence, but
-/// The Murrain changed seed 42's settlement substrate enough that only one of
-/// its 204 old person subjects survives in the current world. Comparing the
-/// live build against the current serialized baseline keeps this guard
+/// The Underworld changed seed 42's settlement roster enough that the current
+/// world carries 1,584 person facts. Comparing the live build against the
+/// current serialized baseline keeps this guard
 /// meaningful without pretending those worlds are the same. A perturbed name,
 /// birth day, founding day or death day still fails this test.
 ///
@@ -385,7 +385,7 @@ fn person_facts_match_the_current_world_baseline() {
             .expect("fixture parses as Vec<Fact>");
     assert_eq!(
         baseline.len(),
-        1227,
+        1584,
         "the current-world person baseline must not drift — if this fails, \
          regenerate it from the committed seed-42 fixture after confirming the \
          world was meant to move"

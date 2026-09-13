@@ -7,72 +7,108 @@ today. Nothing here replays the deep-history bake; it is all a
 *present-as-query* over committed occupation facts, with the flesh
 (structures, residue) derived on demand and never committed.
 
-This is a real clearing on the world of seed 42 — vertex 10626 — and
-ten lives have passed over it, one settling atop the ruins of the last.
-The deepest layer is a neolithic kobold steading founded in the year
-200; the standing one, classical kobolds founded by Roaxara in the year
-1200, stands yet. At its height some 37 souls raised two huts and a
-granary. There is no ruin to read at the top — only a living
-settlement and smoke on the air.
+This is a real clearing on the world of seed 42 — vertex 10359 — where
+seventeen lives have passed over the ground, one settling atop the
+ruins of the last. The deepest layer is a neolithic bugbear steading
+founded in the year 0, which held fifty years and then left of its own
+accord; the standing one is a classical bugbear steading founded in the
+year 1750, some thirty souls, which has stood 250 years and counting.
+One hill-dwarf stratum sits among the bugbear layers. The ground is
+occupied still -- there is no ruin to read on top, only smoke on the air.
 
 ```text
-The clearing at vertex 10626
+The clearing at vertex 10359
 ============================
 
-Ten lives have passed over this ground, one settling atop the ruins of the last.
+17 lives have passed over this ground, one settling atop the ruins of the last.
 
-The deepest layer — a neolithic kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
-  Its founders fled the ice of the clearing at vertex 10628, kobolds looking for kinder ground.
-  Founded in the year 200, it held for 0 years, until the year 200.
-  They fled — put to flight by kobolds — and did not return.
+The deepest layer — a neolithic bugbear steading, an ordinary place, neither famed nor forgotten, at its height some 16 souls.
+  They raised it from nothing on open ground — the first to break this soil.
+  Founded in the year 0, it held for 50 years, until the year 50.
+  They were not driven from this ground — they left it: in that same year they drove the bugbears off the clearing at vertex 11470, and carried the settlement onto the land they had taken.
 
-Above it — a neolithic kobold steading, an ordinary place, neither famed nor forgotten, at its height some 25 souls.
-  Its founders fled the ice of the clearing at vertex 10628, kobolds looking for kinder ground.
-  Founded in the year 200, it held for 25 years, until the year 225.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at vertex 2666, and carried the settlement onto the land they had taken.
+Above it — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height some 32 souls.
+  Its founders fled the ice of the clearing at vertex 11470, bugbears looking for kinder ground.
+  Founded in the year 50, it held for 300 years, until the year 350.
+  They were not driven from this ground — they left it: in that same year they drove the hill-dwarfs off the clearing at vertex 10440, and carried the settlement onto the land they had taken.
 
-Higher still — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some ten souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 225, it held for 125 years, until the year 350.
-  They fled — put to flight by kobolds — and did not return.
+Higher still — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
+  Its founders fled the ice of the clearing at vertex 165, bugbears looking for kinder ground.
+  Founded in the year 525, it held for 0 years, until the year 525.
+  They fled — put to flight by bugbears — and did not return.
 
-Above that again — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 22 souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 350, it held for 25 years, until the year 375.
-  They were not driven from this ground — they left it: in that same year they drove the humans off the clearing at vertex 10628, and carried the settlement onto the land they had taken.
+Above that again — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height some 34 souls.
+  Its founders fled the ice of the clearing at vertex 10440, bugbears looking for kinder ground.
+  Founded in the year 525, it held for 25 years, until the year 550.
+  They were not driven from this ground — they left it: in that same year they drove the bugbears off the clearing at vertex 2597, and carried the settlement onto the land they had taken.
 
-And later — a bronze-working human steading, an ordinary place, neither famed nor forgotten, at its height some 14 souls.
-  Its founders fled the ice of the clearing at vertex 10628, humans looking for kinder ground.
-  Founded in the year 375, it held for 125 years, until the year 500.
-  They fled — put to flight by kobolds — and did not return.
+And later — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere five souls.
+  Its founders fled the ice of the clearing at vertex 2597, bugbears looking for kinder ground.
+  Founded in the year 550, it held for 0 years, until the year 550.
+  They fled — put to flight by bugbears — and did not return.
 
-And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 17 souls.
-  Its founders fled the ice of the clearing at vertex 10638, kobolds looking for kinder ground.
-  Founded in the year 500, it held for 300 years, until the year 800.
-  They fled — put to flight by kobolds — and did not return.
+And later — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere seven souls.
+  Its founders fled the ice of the clearing at vertex 165, bugbears looking for kinder ground.
+  Founded in the year 550, it held for 25 years, until the year 575.
+  They fled — put to flight by bugbears — and did not return.
 
-And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 25 souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 800, it held for 325 years, until the year 1125.
-  They were not driven from this ground — they left it: in that same year they drove the humans off the clearing at vertex 10628, and carried the settlement onto the land they had taken.
+And later — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
+  Its founders fled the ice of the clearing at vertex 10361, bugbears looking for kinder ground.
+  Founded in the year 575, it held for 25 years, until the year 600.
+  They fled — put to flight by bugbears — and did not return.
 
-And later — an iron-working human steading, an ordinary place, neither famed nor forgotten, at its height some 15 souls.
-  Its founders fled the ice of the clearing at vertex 10628, humans looking for kinder ground.
-  Founded in the year 1125, it held for 0 years, until the year 1125.
-  They fled — put to flight by kobolds — and did not return.
+And later — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height some 24 souls.
+  Its founders fled the ice of the clearing at vertex 2597, bugbears looking for kinder ground.
+  Founded in the year 600, it held for 25 years, until the year 625.
+  They were not driven from this ground — they left it: in that same year they drove the bugbears off the clearing at vertex 10440, and carried the settlement onto the land they had taken.
 
-And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 25 souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 1125, it held for 75 years, until the year 1200.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at vertex 10628, and carried the settlement onto the land they had taken.
+And later — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere three souls.
+  Its founders fled the ice of the clearing at vertex 10440, bugbears looking for kinder ground.
+  Founded in the year 625, it held for 0 years, until the year 625.
+  They fled — put to flight by bugbears — and did not return.
 
-The last of them — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 37 souls.
-  Its founders fled the ice of the clearing at vertex 10628, kobolds looking for kinder ground. It was founded by Roaxara.
-  Founded in the year 1200, it stands yet — 800 years and counting.
+And later — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere seven souls.
+  Its founders fled the ice of the clearing at vertex 10365, bugbears looking for kinder ground.
+  Founded in the year 625, it held for 25 years, until the year 650.
+  They fled — put to flight by bugbears — and did not return.
+
+And later — a bronze-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere five souls.
+  Its founders fled the ice of the clearing at vertex 10361, bugbears looking for kinder ground.
+  Founded in the year 650, it held for 0 years, until the year 650.
+  They fled — put to flight by bugbears — and did not return.
+
+And later — an iron-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere nine souls.
+  Its founders fled the ice of the clearing at vertex 10443, bugbears looking for kinder ground.
+  Founded in the year 650, it held for 150 years, until the year 800.
+  They were not driven from this ground — they left it: in that same year they drove the bugbears off the clearing at vertex 2595, and carried the settlement onto the land they had taken.
+
+And later — an iron-working bugbear steading, an ordinary place, neither famed nor forgotten, at its height some 16 souls.
+  It was settled by bugbears sent out from the clearing at vertex 10360.
+  Founded in the year 875, it held for 125 years, until the year 1000.
+  They were not driven from this ground — they left it: in that same year they drove the bugbears off the clearing at vertex 10440, and carried the settlement onto the land they had taken.
+
+And later — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height some 25 souls.
+  Its founders fled the ice of the clearing at vertex 10440, bugbears looking for kinder ground.
+  Founded in the year 1000, it held for 675 years, until the year 1675.
+  They were not driven from this ground — they left it: in that same year they drove the bugbears off the clearing at vertex 2595, and carried the settlement onto the land they had taken.
+
+And later — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere four souls.
+  Its founders fled the ice of the clearing at vertex 10440, bugbears looking for kinder ground.
+  Founded in the year 1750, it held for 0 years, until the year 1750.
+  They fled — put to flight by hill-dwarfs — and did not return.
+
+And later — a classical hill-dwarf steading, an ordinary place, neither famed nor forgotten, at its height a mere five souls.
+  Its founders fled the ice of the clearing at vertex 10361, hill-dwarfs looking for kinder ground.
+  Founded in the year 1750, it held for 0 years, until the year 1750.
+  They fled — put to flight by bugbears — and did not return.
+
+The last of them — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height some 30 souls.
+  Its founders fled the ice of the clearing at vertex 651, bugbears looking for kinder ground.
+  Founded in the year 1750, it stands yet — 250 years and counting.
   It has never ended; the people are there still.
 
 In the grass today
 ------------------
-At its height some 37 souls, the last kobolds here raised two huts and a granary.
+At its height some 30 souls, the last bugbears here raised a hut and a granary.
 They are living there yet — there is no ruin to read, only smoke on the air.
 ```

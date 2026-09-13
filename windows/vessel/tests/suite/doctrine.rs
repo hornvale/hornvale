@@ -80,9 +80,11 @@ fn cult_form_is_uniform_within_every_people() {
         mixed.is_empty(),
         "cult-form must be uniform per SPECIES, mixed: {mixed:?}"
     );
+    // The Underworld Peoples delivery adds four belief-holding peoples to
+    // seed 42; the live roster is now nineteen.
     assert_eq!(
         per_species.len(),
-        15,
-        "seed 42 has 15 species holding beliefs"
+        19,
+        "seed 42 has 19 species holding beliefs"
     );
 }

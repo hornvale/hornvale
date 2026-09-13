@@ -232,7 +232,15 @@ migrate backward through the calendar (Luna check ≈ 19); the Milankovitch drif
 sinusoids at fixed, near-real periods, with no coupled climate feedback
 driving them); ever-visible hemisphere culling (a body is up or down with
 the observer's hemisphere, never placed at an altitude); the substellar
-point fixed on the prime meridian for tidally locked worlds.
+point fixed on the prime meridian for tidally locked worlds; and the anchor
+world's spherical bulk radius, `earthlike-rocky-zeng2019-linear/v1`: linear
+interpolation over a frozen subset of Li Zeng's numerical Earth-like rocky
+curve (32.5% Fe, 67.5% MgSiO3), using Earth-unit axes and 6371 km as the Earth
+reference radius. Radius evaluation is supported only for the generator's
+0.5–2 Earth-mass range and refuses extrapolation. The composition is an
+explicit default assumption, not a simulated interior; the model adds no
+atmospheric-envelope radius, oblateness, composition diversity, terrain
+rescaling or feedback into existing dynamics.
 
 **Drawn from the seed (or pinned):** star mass; anchor mass and orbital
 distance (within the zone); rotation regime and period; obliquity; moon

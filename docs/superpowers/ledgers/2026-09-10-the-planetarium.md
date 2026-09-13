@@ -1,0 +1,1772 @@
+# The Planetarium — decision ledger
+
+Status: execution authorized; local Tasks 1–9 independently reviewed; Stages 1–3 canonical green; whole-branch technical review approved with documentation corrections; final canonical stage green including Linux visual-client checks; census returned no scientific golden changes; same-ref main-study profiling and timing incorporation complete with scope limits; final close review approved; G6 visual/merge approved by Nathan on 2026-09-11; canonical merge landed at `c0b76af87388ef33fa841b659684cfba52994a0a` on 2026-09-11.
+Branch: `campaign/the-planetarium`.
+Starting revision: `b6b374f6d2dea329d904b56322a09b1dfb29983f`.
+
+## Conversation decisions carried forward
+
+Nathan wants individually directed, beautiful short films. Each film or small
+group of films is a development campaign that grows the observation and
+rendering tools it needs. One idea may cross several scales and visual layers.
+Simple captions belong in the film; technical provenance belongs beside it.
+The desired appearance is lightly stylized, colorful, sculptural, with selective
+focus / a tilt-shift impression where appropriate. The generated glacier contact
+sheet establishes taste, not demonstrated rendering quality.
+
+Nathan prefers astronomy for the first films, following The Wanderers; another
+campaign is planning eclipse refinements. Nathan chose Bevy after discussing
+Blender, Godot and Unity, citing prior Bevy experience and the value of its
+strengths for a future procedural visual client. He accepted a first scene with
+interactive camera/time controls and a short authored sequence. This is approval
+of the direction, not of an implementation plan or final film.
+
+These are backfilled conversation records. Earlier ideonomy passes explored
+films as directed sequences and the progression from film to interactive client;
+they were not recorded contemporaneously. The live rulings below have their own
+passes.
+
+## #1 [G1] — first campaign and engine
+
+- Question: what is the bounded next deliverable after the technically landed
+  Observation Series?
+- Decision: The Planetarium, an in-repository Bevy client outside the simulation
+  Cargo workspace; one selected astronomical scene, free camera/time controls,
+  and a ten-second 4K authored sequence made from the same representation.
+- Why: Nathan's explicit Bevy preference and accepted scene scope; decisions
+  0022/0023 separate simulation from rendering; 0114 supplies a native driver
+  precedent. The Observation Series retrospective identifies the static text
+  renderer as the gap.
+- Alternatives discarded: a universal film generator (premature and expressly
+  unwanted); a Blender-only production path (does not serve the newly chosen
+  interactive direction as directly); Godot/Unity as primary engines (Nathan
+  selected Bevy). Blender remains a possible asset tool.
+- Ideonomy passes / overturns: two live passes, no engine overturn. Combination
+  of modularity with discovered versus invented content clarified that a film
+  commissions shared observation/rendering pieces and authored shots. A second
+  substitution pass across predictable versus stochastic motion and old versus
+  emerging tools found no further material change: keep the production loop
+  reproducible and the engine replaceable at the observation seam.
+- Capture actions: draft spec; expand the existing
+  `RENDER-observation-presentation` row rather than minting a duplicate renderer
+  idea. Capture the broader film-to-client progression separately.
+
+### Shared parts and authored choices
+
+```text
+                        Shared across films       Authored for a film
+World observations      source/query adapters     seed, interval, target
+Visual interpretation   materials, scene mapping  palette emphasis, focus
+Audience direction      capture, camera controls shots, captions, pacing
+```
+
+The cells are different jobs. Reusing a material does not establish the truth of
+a new observation, and a measured orbit does not choose an effective camera.
+
+## #2 [Q] — how Bevy obtains positions and handles time
+
+- Question: should Bevy evaluate serialized orbital elements, or ask the native
+  Hornvale evaluator for the selected instant?
+- Decision: use a small native source driver and an evaluated semantic query,
+  separate from the elements-only system catalog. Bevy consumes serialized
+  results through an isolated view crate. Separate simulation, presentation and
+  rendering clocks; a direct seek and sequential playback must agree on the
+  semantic observation and camera state.
+- Why: 0114's native driver containment, 0117's rule against re-deriving world
+  decisions, and the available ephemeris functions. The Wanderers and the system
+  schema document an element-evaluation precedent, so the spec explicitly adds
+  a distinct evaluated-query path without changing the element catalog.
+- Alternatives discarded: a per-frame CLI subprocess (repeated initialization);
+  duplicating astronomy in Bevy (additional implementation to keep in agreement);
+  sampled positions stuffed into the existing element document (mixed meanings).
+- Ideonomy passes / overturns: two passes applied to this question, no overturn.
+  Substitution across predictable/stochastic playback and historical/current
+  observations tested the loop observe → stage → capture → seek → observe.
+  Dimension-identification then crossed periodic/continuous playback with
+  source/view hierarchy: stale asynchronous replies and temporal render history
+  must not redefine physical time. The draft already covers both; the latter
+  pass produced no further material improvement.
+- Capture actions: spec §§6–8; source/evaluator correspondence and direct-seek
+  checks in §9. Schema-policy extension leads the G3 flags.
+
+### Time and ownership check
+
+```text
+                         Source authority          Presentation authority
+Repeated orbit query     same instant, same state  camera may differ
+Continuous preview       requested instants       wall-time responsiveness
+Fixed-frame film         explicit instant map     camera/caption playhead
+Out-of-order seek        exact query, reply ID     reset temporal history
+```
+
+An absent cell here would be an unowned behavior. None needs Bevy to integrate
+an alternate astronomical world.
+
+## #3 [Q] — pilot scope and visual fidelity
+
+- Question: what can the first beautiful scene show without requiring a complete
+  terrestrial renderer or the eclipse campaign's unfinished work?
+- Decision: one selected astronomical system, an anchor-centered composition,
+  sourced moons and a wanderer point if no physical radius is available. Keep
+  physical size/distance ratios within a shot; use cameras and cuts for clarity.
+  Permit recorded cosmetic materials, not new world facts. Preserve the glacier
+  study as an explicitly labeled art reference. The first native witness makes
+  seed 42 a qualified inventory candidate, not a frozen final visual choice.
+- Why: Nathan requested astronomy first and accepted the ten-second scene
+  experiment. MoonSurface's supplied radius and descriptors, the registry's
+  MAP-49/MAP-50 cautions about invented detail, and RENDER-sourced-effects make
+  the truth/appearance boundary precedented.
+- Alternatives discarded: glacier migration as this pilot (much larger source
+  and visual scope); arbitrary sibling-world landscapes (not supplied); orbital
+  compression/body enlargement (an unnecessary fidelity decision for this
+  first study); depending on eclipse refinements (another campaign owns them).
+- Ideonomy passes / overturns: two passes applied to this question, no overturn.
+  Combination crossed shared/authored work with discovered/invented detail;
+  dimension-identification checked close/global views against one-shot/recurring
+  use. Local material variation belongs in appearance, while reusable view
+  components still need per-film source qualification. The second pass found no
+  further material change beyond the draft's explicit boundaries.
+- Capture actions: spec §§4–5; RENDER-climate-migration-film and
+  RENDER-film-to-client rows; eclipse and broader terrain follow-ups below.
+
+## #4 [G2] — design self-review
+
+- Decision: present the complete draft for G3; do not start implementation
+  planning yet.
+- Why: the spec covers the accepted product, ownership, source seam, clocks,
+  capture, error behavior, visual acceptance, checks and explicit exclusions.
+- Review corrections: preserved the generated concept as a labeled image;
+  made the graphical-client deferral exception explicit; distinguished a new
+  evaluated query from The Wanderers' elements-only policy; qualified seed 42
+  with a fresh source export; made missing ffmpeg/capture fail the pilot rather
+  than inherit the earlier assembler's package-only success behavior.
+- Alternatives discarded: declaring source inspection a renderer witness;
+  treating rough days/weeks estimates as a schedule; silently treating this
+  ten-second study as a 30–60 second approved Observation Series episode.
+- Ideonomy passes / overturns: G2 is consistency review; no additional pass.
+  All live Q rulings above have non-zero passes.
+- Capture actions: expanded the existing renderer registry row to `spec'd`
+  with a draft-spec pointer; captured two raw future directions; kept the
+  longer-term ideas outside the pilot's acceptance requirements.
+
+## Follow-ups
+
+- Task 9 visual refinement: compare richer stable moon material detail driven
+  by the emitted cratering descriptors. The current moon reads as a smooth
+  mottled sphere in Task 5 frames. Any added crater appearance remains cosmetic,
+  with no new physical or walkable terrain; retain it only if actual renders improve.
+
+- G3 review refinement: the shared visual libraries live under `clients/visual/`;
+  Planetarium is the first application in that workspace. Further 2D/2.5D/3D
+  renderers, gameplay adapters and additional library splits are demand-driven,
+  not added to this pilot's implementation scope (ruling #5 below).
+
+- Preserve the climate → plants → herbivores → peoples proposal for a later film
+  campaign. Audit every causal link before claiming it; the user supplied it as
+  a vision, not as an assertion of current end-to-end capability.
+- Keep the eclipse campaign independent. A later film consumes its completed
+  observation surface; The Planetarium does not amend eclipse physics.
+- Potential later films include apparent retrograde motion, an eclipse, trade
+  rerouting through a pass, river-course change and settlement response, and
+  language/contact frontiers. These are candidate stories, not sourced claims
+  or a scheduled release sequence.
+- A future visual game may extend directed playback through time scrubbing,
+  free camera and inspection to interaction. Revisit text/map/3D primacy only
+  in that future scope; this observer does not decide the situated game's form.
+- Return to the Observation Series' existing records and packaging code during
+  planning. Retain useful provenance/verification behavior without forcing a
+  ten-second visual study through the old episode definition.
+- A rendered-image review must establish what actually works before extending
+  the scope to terrestrial detail or a broader game.
+
+## Verification notes
+
+Read-only orientation used the repository's doctor and board in the preceding
+conversation. Source inspection for this design used:
+
+- `sed -n '1017,1040p' windows/scene/src/lib.rs`: `SystemScene` contains schema,
+  seed, star, world, moons, stellar, wanderers; the system scene has elements,
+  not evaluated positions.
+- `rg -n '^pub .*fn|^pub struct' domains/astronomy/src/ephemeris.rs`: existing
+  `stellar_positions_at`, `wanderer_position_at`, `stellar_illumination_at` and
+  related observation evaluators. The anchor position helper is private.
+- `sed -n '1285,1335p' windows/scene/src/lib.rs`: `MoonSurface` emits physical
+  radius, albedo, seeded cratering/maria/tint descriptors, density and formation.
+- `sed -n '4158,4198p' windows/worldgen/src/lib.rs` in the preceding turn:
+  history-bake era construction fills `ice` with false. This is a source finding,
+  not a measured climate-to-migration experiment.
+
+No Bevy renderer, capture path, frame-time measurement, export-byte comparison,
+or visual acceptance is claimed by this design work, except for the narrow
+system-scene export comparison recorded below (which is not a Bevy export).
+
+### Fresh native source witness
+
+From this worktree's freshly built `target/debug/hornvale`, at the starting
+source revision plus documentation changes:
+
+```sh
+target/debug/hornvale new --seed 42 --out /tmp/hornvale-planetarium-20260910/world.json
+target/debug/hornvale scene system --world /tmp/hornvale-planetarium-20260910/world.json > /tmp/hornvale-planetarium-20260910/system-a.json
+target/debug/hornvale scene system --world /tmp/hornvale-planetarium-20260910/world.json > /tmp/hornvale-planetarium-20260910/system-b.json
+cmp /tmp/hornvale-planetarium-20260910/system-a.json /tmp/hornvale-planetarium-20260910/system-b.json
+```
+
+Actual output: `world of seed 42 ... (20109 facts; village: Doaba)`; parsed
+`schema=scene/system/v1 seed=42 topology=single moons=2 wanderers=2`.
+`cmp` exited 0. Top-level fields were
+`schema,seed,star,world,moons,stellar,wanderers`.
+
+### Worktree and checks
+
+`make prewarm` completed with exit 0, wall 241.292 s, and added one measured row
+to `docs/timings.md`; `git diff -- docs/timings.md` confirmed that exact change.
+It is kept with the design, not erased as incidental state. The initial ledger
+commit `d99f847e6` ran the normal pre-commit prose gate: 75 passed, 352 skipped.
+Final design verification is recorded by the next commit's normal hook output.
+
+The final design's first prose-gate attempt found the new spec absent from
+`docs/audits/campaign-reconciliation.tsv` in
+`campaign_reconciliation_covers_every_campaign_record`. Its actual missing set
+contained only this spec. Source inspection of the population check and three
+existing active-campaign rows established the required ten-column entry; the
+repair adds this campaign as `active`, citing its spec and ledger, without
+claiming implementation or approval. An earlier whitespace check also removed
+Markdown hard-break spaces from the spec header. Neither repair changes a test.
+
+The preserved concept image was generated with the built-in ImageGen tool in
+the preceding conversation. Prompt summary: three cinematic stills of an
+invented glacial world at orbital, regional and valley scales, high-color
+terrain, aggregate flow ribbons, and the caption "As the ice advances, life
+moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
+
+## #5 [Q] — reusable library ownership beyond Planetarium
+
+- Question: Nathan asked whether the Bevy/Hornvale connection belongs outside
+  Planetarium-specific crates, given eventual 2D, 2.5D or 3D gameplay.
+- Decision: refine §6 to one independent `clients/visual/` Cargo workspace with
+  `hornvale-visual-source` and `hornvale-bevy-view` reusable libraries and the
+  `hornvale-planetarium` application. Preserve the three structural roles from
+  the previous draft; give them durable library ownership rather than an
+  application-specific home. No package publication or separate repo is needed.
+- Why: the accepted film-to-client direction, Nathan's review question,
+  decisions 0022/0023's toolchain separation, and 0114/0115's native driver and
+  display-mirror boundaries. Current `clients/game` already separates its native
+  driver from a renderer whose manifest contains no simulation dependencies.
+- Alternatives discarded: hiding shared code inside the Planetarium application
+  and extracting it only after coupling has grown; a universal 2D/3D abstraction
+  designed without another consumer; another repository/public package before
+  release/version independence is needed; reusing an unrestricted scientific
+  source as a situated game's authority.
+- Ideonomy passes / overturns: two passes of cross-domain re-instantiation,
+  using direction and complexity. The abstract structure is reusable facilities
+  serving individual productions; a theater's stock equipment and production's
+  staging expose the split between accumulated capabilities and per-show
+  choices. Applied back to Hornvale, the inventory is:
+  - shared source library: native lifetime, query/request handling;
+  - shared Bevy library: presentation mechanisms, including astronomy modules;
+  - production application: chosen observations, scene assembly and direction;
+  - future game: its own allowed observations, inputs and consequences.
+  The first pass refined ownership and made scope-bound caches explicit. The
+  convergence pass compared a minimal shared library with a full generic engine
+  framework and found no further material improvement: implement only the pilot's
+  needed mechanisms and test independence from its application. One ownership
+  refinement, no engine or pilot-scope overturn.
+- Capture actions: spec §6 and cache/verification requirements updated; existing
+  RENDER-film-to-client already captures the wider direction, so no duplicate
+  registry row. G3 remains pending; this question is not spec approval.
+
+## #6 [G3] — spec approved; proceed to planning
+
+- Nathan: “LGTM; let's proceed to the plan!”
+- Decision: the revised design, including reusable source/view libraries outside
+  the Planetarium application, is approved for implementation planning.
+- Scope: approved design boundaries remain in force; this is neither final
+  visual acceptance, publication approval nor authorization to merge.
+- Capture actions: spec status updated; detailed plan and four-stage tracker
+  follow on this branch. No ideonomy pass applies to a direct human approval.
+
+## #7 [Q] — pinned renderer and visible-first sequencing
+
+- Question: which initial release and implementation order make the visual
+  risk visible without building a general engine first?
+- Decision: pin Bevy `=0.19.1`, retain Rust `1.96.1`, and build a real source-fed
+  moving draft in stage 1. Start with one persistent renderer, an image target
+  and one outstanding capture request; qualify the windowless path on the Mac,
+  retaining a window-hosted image target if necessary.
+- Why: the tagged Bevy Cargo.toml declares version 0.19.1 and rust-version
+  1.95.0. The tagged externally-driven renderer example uses an image target
+  and Screenshot::image; the headless-renderer example documents main/render
+  world latency. These are source precedents, not an executed GPU witness.
+  Hornvale's rust-toolchain.toml pins 1.96.1. Local system_profiler identifies
+  an Apple M1 Max, 32 GPU cores, Metal 3; ffmpeg -version reports 8.1.1.
+- Evidence: curl -fsSL fetched
+  https://raw.githubusercontent.com/bevyengine/bevy/v0.19.1/Cargo.toml and
+  examples/app/{headless_renderer,externally_driven_headless_renderer}.rs.
+  rg returned version = 0.19.1, rust-version = 1.95.0 and Screenshot::image.
+- Alternatives discarded: floating engine versions; writing custom GPU-copy
+  machinery before qualifying the built-in screenshot path; finishing controls
+  and provenance before seeing actual movement.
+- Ideonomy passes / overturns: two organon-construction passes using notation,
+  visibility and reversibility. First notation:
+  source(tick) -> applied state -> ready assets -> submitted capture(frame) ->
+  acknowledged image(frame) -> advance; reverse/seek -> discard history.
+  Making the hidden render latency explicit moved frame identity and the early
+  moving witness forward. Second pass inverted windowless/window-hosted and
+  preview/final paths: output dimensions and observations stay fixed while the
+  hosting choice stays reversible. No further material improvement; no engine
+  overturn.
+- Capture actions: these constraints go into the plan; multi-frame pipelining
+  is deferred until measurements justify its complexity.
+
+## #8 [Q] — physical anchor radius is absent
+
+- Question: how can the pilot preserve globe/moon size ratios when the source
+  has no anchor radius?
+- Evidence: domains/astronomy/src/anchor.rs::Anchor has mass, orbit, year,
+  rotation, obliquity and greenhouse_residual, with no physical radius.
+  domains/terrain/src/channel.rs explicitly describes the terrain unit sphere
+  and absent planet radius. Targeted Rust-source searches found no anchor/world
+  radius definition. Moon radius is already derived from mass and density.
+- Recommendation pending Nathan: include a simulation-side physical-radius
+  prerequisite with a documented model and scientific justification.
+- Alternatives: change to a moon-centered pilot; a cosmetic anchor sphere is
+  rejected because it violates the approved physical-ratio requirement.
+- Ideonomy passes / overturns: two notation/visibility/reversibility passes.
+  Writing radius -> mesh scale -> body-size/distance ratio exposed a missing
+  physical input, not a missing export. Moving the assumption from hidden
+  renderer constant to explicit source model improves visibility; trying an
+  isolated moon avoids the missing input but changes the approved subject.
+  The convergence pass found no third option preserving both the subject and
+  the existing source unchanged. This overturns the drafting assumption that
+  the anchor's physical dimensions could simply be exported.
+- Capture actions: async question sent during planning; dependent radius work
+  remains unapproved while independent plan work continues.
+
+## #9 [Q] — approved radius prerequisite and bounded source model
+
+- Nathan's answer: “Include a physical-radius prerequisite”. The source-side
+  work is authorized; the anchor-centered pilot remains the subject.
+- Decision: add a derived `anchor_radius(EarthMasses)` observation returning
+  Megameters, using a frozen subset of the Zeng author's 2019 Earth-like rocky
+  mass–radius curve with declared piecewise-linear interpolation on [0.5,2]
+  Earth masses. The model assumes 32.5% Fe / 67.5% MgSiO3; it does not claim
+  Hornvale has simulated that composition. No new random draw or stored Anchor
+  field is part of the plan. Radius is not fed into existing angular terrain
+  or dynamics in this campaign.
+- Why: the source's existing anchor mass range and the moon-radius precedent
+  allow a narrow derived observation; the published table brackets the whole
+  range. The attractive 2016 analytic shortcut explicitly covers 1–8 Earth
+  masses, so it would extrapolate over half of this model's admitted interval.
+- Evidence: retrieved
+  https://lweb.cfa.harvard.edu/~lzeng/tables/massradiusEarthlikeRocky.txt;
+  49 numerical rows, SHA-256
+  dcc5080f2186983b7e36200373878dc06a8d8083ec21ce1c4f670659c0404b38.
+  The author's planetmodels.html identifies the composition and Earth-unit
+  axes. The plan freezes eight bracketing rows and cites the analytic paper's
+  stated range. Python evaluation of the planned interpolation gives
+  approximately 0.8178, 0.9980 and 1.2113 Earth radii at masses 0.5,1,2; this
+  is a calculation over the retrieved data, not an executed Rust implementation.
+- Alternatives discarded: constant density across the full mass range; analytic
+  formula outside its published range; a new composition distribution and random
+  stream; cosmetic renderer radius; moon-centered scope change.
+- Ideonomy passes / overturns: two notation/visibility/reversibility passes.
+  `source mass -> supported table bracket -> interpolation -> unit conversion
+  -> emitted radius` makes both range and the physical assumption visible.
+  Trying the simpler analytic notation exposed its unsupported lower interval.
+  The convergence pass tested moving the model into a stored field versus a
+  derived observation: derivation preserves the existing construction surface
+  and keeps future model revision explicit. No further material improvement;
+  analytic shortcut rejected before adoption.
+- Capture actions: spec planning amendment and concrete Task 1 added; the
+  existing astronomy model-card page will carry the implemented model. Broader
+  composition, atmospheric envelopes and changed dynamics remain outside this
+  prerequisite and are not promised future work.
+
+## #10 [G4] — implementation-plan self-review
+
+- Decision: the four-stage, nine-task plan matches the approved spec and the
+  newly approved radius prerequisite; proceed under the standing SDD preference
+  when execution begins. This turn prepares the plan, not an implementation.
+- Review: mapped all spec sections to tasks; checked live source signatures and
+  tagged Bevy facilities; checked exact clocks, scope/request identity, library
+  dependency directions, actual GPU evidence, capture errors, package integrity,
+  visual/performance acceptance and G6/publication boundaries.
+- Corrections made during review: Task 1 is now an independently testable
+  physical-radius implementation rather than an unresolved research instruction;
+  shot sampling explicitly takes observed body positions; the unfinished tracker
+  inherited at root is preserved verbatim, with a separate Planetarium section.
+- Alternatives discarded: approving visual quality through tests alone; silently
+  treating an inherited in-progress tracker as disposable; deferring the real
+  moving-image checkpoint until production tooling is complete.
+- Ideonomy passes / overturns: G4 uses spec self-review; the nontrivial planning
+  choices are recorded with passes in #7–9. No new scope overturn.
+- Capture actions: permanent plan, appended four-stage tracker and reconciliation
+  links committed together; final prose-gate evidence is the commit-hook result.
+  No build, test run of new code, render, performance target or merge is claimed.
+
+## #11 [G5] — execution authorized and pre-flight completed
+
+- Nathan: “Let's goooooooo!” — execute the approved plan.
+- Task consistency and shared-interface pre-flight tables are recorded in this
+  plan's SDD progress file. No scope conflict was found.
+- Ruling: Task 1 records geometry conformance cases and source qualification;
+  Task 2 adds their executable evaluated-geometry wrappers/tests. This follows
+  Task 1's explicit “subsequent source implementation” file note and avoids
+  pulling the evaluated scene into the radius-only increment.
+- Stage 1 is in progress. G6 final visual/merge approval remains required.
+
+## #12 [Q] — name the two astronomy reference frames
+
+- Ruling: preserve both existing source conventions and explicitly convert
+  calendar equatorial directions with `Rz(pi) * Rx(-obliquity)` into the
+  native ephemeris system plane. Task 1 review correctly exposed an ambiguous
+  equality; Task 2 must prove the converted equality, including nonzero phase.
+  This is a coordinate conversion, not a change to simulation physics.
+- Why: the native anchor is +X at phase zero, making its center sightline -X;
+  Calendar's phase-zero solar direction is +X. A basis cannot erase that
+  difference without naming which reference it maps from and to. Source
+  anchors: ephemeris.rs `anchor_position_at`, calendar.rs `solar_equatorial`.
+- Cost if wrong: body orientation and lighting disagree; executable geometry
+  conformance in Task 2 must refuse that outcome before rendering.
+- Dictionary of source convention × physical interpretation (combination,
+  dictionary, materiality/source prompts):
+  - Calendar solar direction: an informational equinox convention, not a
+    second physical star position.
+  - Ephemeris center sightline: physical anchor-to-orbital-center direction.
+  - Converted solar direction: the calendar vector expressed in the native
+    system frame; coherent and directly testable.
+  - Resolved stellar direction: native direction to one actual modeled star;
+    substituting the calendar center direction in a binary is incoherent.
+  - Locked surface: fixed substellar body longitude under Calendar's model;
+    this does not mean an inertially fixed body basis.
+  - Basis conversion: a reversible mapping of coordinates, not an orbital
+    modification or a cosmetic scene rotation.
+- Ideonomy passes / overturns: two passes. The combination exposed two
+  distinctions the old prose blurred: reference center versus resolved stars,
+  and locked longitude versus inertial orientation. The convergence pass
+  checked these definitions for overlap/circularity against the native source
+  functions; no further material option. No change to approved fidelity.
+- Alternatives discarded: changing genesis orbital phase; comparing vectors
+  before frame conversion; rotating rendered lighting to disguise a mismatch.
+- Capture actions: original implementer owns the prose fix and numerical
+  evidence; independent scoped re-review precedes the evaluated source task.
+
+## #13 [G5] — native Bevy render qualification
+
+- Bevy 0.19.1 with the plan's explicit features and Rust 1.96.1 compiled.
+  Optimized cold dev build: 21m05s, exit 0. The unmodified tagged upstream
+  externally-driven headless-renderer example then exited 0 on Apple M1 Max
+  through Metal, writing ten 500×500 PNGs.
+- Visual inspection: screenshot0 is clear color only; screenshot9 shows the
+  lit mesh, floor and shadow. The first-frame result is direct evidence for
+  the plan's asset/pipeline/readback readiness requirement. This is a toolchain
+  smoke witness, not a Hornvale moving-image or 4K acceptance result.
+- Screenshot9 SHA-256:
+  `3018399aa47e37bbab3c9a9a5776a1d1190253919903e9c587c5ec75bf10a720`.
+  Runtime log: `/tmp/planetarium-bevy-runtime.log`; build log:
+  `/tmp/planetarium-bevy-build.log`. Scratch manifest path is recorded in
+  `/tmp/planetarium-bevy-qualification-path`; reproducible source:
+  <https://raw.githubusercontent.com/bevyengine/bevy/v0.19.1/examples/app/externally_driven_headless_renderer.rs>.
+- Read-only canonical prerequisites returned lefford, cargo present, X11
+  1.8.4 and xkbcommon 1.5.0. This does not claim a Linux build or stage pass.
+- Capture actions: carry readiness and offscreen ShadowLodOrigin findings into
+  Task 3; keep production rendering and aesthetic evidence separate.
+
+## Task 1 — complete
+
+- Task 1: fix round 1/5 (1 addressed, 0 open — ambiguous frame equality;
+  commits 63c45db62..7a158eb7b). Independent scoped re-review approved spec
+  and quality, with no new breakage or out-of-scope observations.
+- Task 1: complete (commits d61ad3f99..7a158eb7b, review clean).
+- Evidence: 7 radius tests; astronomy 279 unit + 51 integration tests; existing
+  seed-42 golden; local commit hook passed all four subfloor chunks. The
+  prose fix hook passed 75/75. The controller retained the actual red/green,
+  command, hash and gate outputs in the task report; no repeated suite was
+  needed to resolve the review's execution-evidence qualification.
+- Ruling and alternatives for the fix are captured in #12, with two ideonomy
+  passes. The derived radius remains observation-only; evaluated source and
+  moving Hornvale witness are still outstanding Stage 1 work.
+
+## #14 [Q] — reject invalid native luminosity at extreme epochs
+
+- Ruling: the evaluated scene refuses nonfinite or nonpositive native stellar
+  luminosity/flux with an explicit invalid-query/model-validity error. Keep
+  ordinary negative ticks and existing simulation producers unchanged. Do not
+  clamp values or render negative luminosity as darkness.
+- Why: `domains/astronomy/src/star.rs::luminosity_at` computes the existing
+  unbounded linear brightening law. Task 2 validation found negative values
+  at extreme pre-genesis i64 ticks. The plan already requires invalid-query
+  errors and source limitations; accepting such a value would fabricate a
+  plausible-looking observation. Positive output is not a claim that this
+  simplified stellar model covers all stages of stellar evolution.
+- Scale of source intervention (dimension-identification; scope/autonomy):
+  1. Forward every number: widest apparent time scope, consumer silently owns
+     invalid physics. Rejected.
+  2. Refuse invalid native contributions at the observation producer: adopted;
+     scope is the failed query, with an explicit reason and original ticks.
+  3. Impose an arbitrary universal epoch cutoff: rejects otherwise usable
+     observations without source evidence. Rejected.
+  4. Clamp or replace contributions: autonomous presentation changes physical
+     source values. Rejected.
+  5. Replace stellar evolution: a new scientific model beyond this campaign.
+- Ideonomy passes / overturns: two passes. Separating scope and intervention
+  revealed that rejecting all negative ticks would unnecessarily narrow valid
+  use; preserve them and test ordinary negative plus extreme invalid epochs.
+  The convergence pass distinguished numerical admissibility from scientific
+  lifecycle coverage, adding the model limitation above. No further material
+  option; no authorized accuracy tradeoff is being introduced.
+- Cost if wrong: callers may receive an explicit refusal for an epoch a future
+  model can support; source model/version evolution can revise that boundary.
+- Capture actions: Task 2 owns the refusal, regression evidence and emitted
+  limitation note; independent review checks the implementation.
+
+## Task 2 — complete
+
+- Task 2: complete (commits 4e06e3349..048212519, review clean).
+  Independent spec and quality review found no Critical, Important or Minor
+  issue. Controller resolved cross-task qualifications against Task 1's clean
+  review and #14; later GPU/interaction/capture criteria remain outstanding.
+- Native geometry: 4 tests; evaluated scene: 1 unit + 3 integration; CLI: 2;
+  source: 1 unit + 3 integration. Existing astronomy and scene-system goldens
+  passed. Final normal hook: 1425/1425, 1393/1393, 1300/1300, 445/445;
+  wall38.775s, rc0. Two earlier guard failures were fixed with a documented
+  standard-library `Cell` lexicon exception and one justified topology-fixture
+  build-site roster row; their cost rows remain in docs/timings.md.
+- Current `luminosity_rel` was added to evaluated lights under the planned
+  additional-contribution provision. This keeps epoch evolution in the source
+  for off-anchor lighting. Native model validity/refusal ruling is #14, with
+  two ideonomy passes; no new simulation model or accuracy tradeoff.
+- Measured dirty-worktree source sample: 1000 queries, mean11.219µs,
+  p5010.958µs, p9511.750µs; open24.301ms, initial width64 302.431ms.
+  Includes parse/evaluate/quantize/serialize, excludes request construction and
+  initial terrain from per-query cost. These are samples, not guarantees.
+- Controller also compiled and ran a separate scratch consumer of Source,
+  exporting 512×256 native tiles plus ticks0/25000/50000 with source revision
+  048212519. Preserved inputs at
+  `/Users/nathan/Downloads/Hornvale Planetarium/source-preview-048212519/`.
+  World SHA256: `77168f2bc1a8db9c01b37b31b66ac4757e1133862f8249aa8d80bb0194285bf8`;
+  initial JSON SHA256: `376767c88d474ab814ba55cd3b750f81980fd0f539ff9326360414f8185d2fa2`.
+  The 18,005,513-byte initial document includes source sea level -1820.2915m;
+  elevations are reference-datum values, not heights above that sea level.
+  This is preserved source evidence, not a film or accepted visual.
+
+## #15 [Q] — declare the globe's presentation elevation reference
+
+- Ruling: use the emitted physical bulk radius as the spherical sea-surface
+  reference for this view. Positive land displacement is exactly
+  `(elevation_m - sea_level_m) / 1000` kilometres, without an exaggeration
+  factor; ocean depth influences material color. This is a declared rendering
+  reference convention, not a source-modeled geoid or interior/terrain coupling.
+- Why: the approved plan requires physical radius, actual exported sea level
+  and unexaggerated relief. Terrain emits reference-datum elevations and a
+  separately derived sea threshold. Its raw zero is not sea level. No code
+  should silently use that raw zero as the visible sea surface.
+- Negated conventions × source relationship (discovery/invention and
+  predictability prompts):
+
+  ```text
+  convention                     radius origin       altitude treatment
+  emitted radius at sea          native fixed        native difference, 1:1
+  arbitrary display globe size   invented/tunable    relative only; rejected
+  raw elevation means sea height native fixed        wrong datum; rejected
+  flattened land                 native fixed        discards relief; rejected
+  exaggerated relief             native fixed        invented multiplier; rejected
+  new geoid/interior coupling     new source model    beyond this view's scope
+  ```
+
+- Ideonomy passes / overturns: two passes. Negating the nominal reference
+  exposed a false equivalence between isostatic zero and sea level; naming the
+  rendering convention keeps that difference explicit. The convergence pass
+  checked repeatability and ownership: the source radius/altitudes remain fixed,
+  while presentation never claims a new coupled shape model. No further option
+  improved the approved bounded spherical view.
+- Cost if wrong: the rendered reference surface needs rebinding when a native
+  geoid/shape contract exists. No simulation/save quantity is changed; the
+  current convention and limitation must appear in the production record.
+- Capture actions: Task 3 documents and tests this mapping. G6 carries the
+  convention alongside the radius model and other source limitations.
+
+## #16 [Q] — separate stellar body illumination from atmosphere lighting
+
+- Ruling: qualify one point light at each actual emitted stellar position for
+  solid-body PBR, deriving intensity from current emitted luminosity with the
+  declared render-unit conversion. Feed the built-in atmosphere one separate
+  directional light per star using its emitted anchor direction/flux; isolate
+  that directional light from solid surfaces. Unsupported eclipse shadows stay
+  disabled. Disable the atmosphere's apparent stellar disk because the source
+  does not emit a stellar radius.
+- Evidence: the installed pinned `bevy_pbr-0.19.1` shader
+  `src/atmosphere/functions.wgsl`, inspected with `rg` and `sed`, loops every
+  view directional light in `sample_local_inscattering` (line 216),
+  `sample_sun_radiance` (248), and ground reflection (491), without consulting
+  RenderLayers. The sun-radiance path emits a disk when its angular-size and
+  intensity settings are positive. This is code inspection; GPU validation
+  remains Task 3 work, not an inferred success.
+- Why: per-body directional lights could give each moon its actual incident
+  direction and flux, but the atmosphere would add those duplicate feeds.
+  Point transport preserves the source-position relationship for solid bodies
+  and leaves only the intended directional feeds in the atmosphere shader.
+- Illumination routing as a mixing graph (cross-domain re-instantiation;
+  polarity and hierarchy):
+
+  ```text
+  musical source -> duplicate open buses -> unintended amplification [negative]
+  musical source -> dedicated receiver buses -> controlled sum [positive]
+  native star -> actual-position point -> all solid bodies [inverse-square]
+  native star -> anchor directional -> atmosphere [declared approximation]
+  apparent-size default -> invented stellar disk [reject]
+  source revision -> shared binding -> both light treatments [one authority]
+  ```
+
+- Ideonomy passes / overturns: two passes. The audio-routing analogy exposed
+  that “isolated objects” do not imply isolated effects when a downstream
+  consumer ignores the routing filter. The convergence pass checked the shared
+  parent/independent receiver graph and its opposite (one uniform light for
+  everything); this retained the split and prompted the explicit disk-default
+  check. No additional source model or new rendering subsystem is warranted.
+- Alternatives discarded: one anchor light for all moons loses their observed
+  illumination geometry; repeated per-body directional lights contaminate the
+  atmosphere; an immediate custom atmosphere shader is unnecessary before
+  qualifying the existing point-plus-directional arrangement.
+- Cost if wrong: replace the presentation light routing after measured GPU
+  evidence. Actual source positions, luminosity and model contracts stay intact.
+  The bounded atmosphere remains a cosmetic treatment, not a simulated profile.
+- Capture actions: Task 3 verifies point range/culling, scale conversion and
+  actual anchor/moon shading; the production record distinguishes solid-body
+  transport from the directional atmosphere treatment and records disk absence.
+
+## Task 3 — review and fix round 1
+
+- Independent review of `7d3a5156d..a1a9a3089` found three Important issues:
+  incomplete binary light inventories can reach a renderer panic; finite but
+  unsupported radius/elevation values lack geometry bounds; quarter-pixel tests
+  omit the actual f32 camera/body projection. All three returned to the original
+  implementer for fix round 1 and scoped behavioral verification. No finding is
+  dismissed on the basis of the successful native visual witness.
+- Deferred Minor: initial-document validation currently validates only part of
+  the nested static catalog. Carry to Task 4's reset/identity work and Task 8's
+  public schema documentation; the final review must decide whether additional
+  validation is needed. This is separate from the blocking light inventory bug.
+- Deferred Minor: the new 629-line renderer combines construction, application
+  and readiness/capture. Tasks 4 and 6 should separate the lifecycle and capture
+  responsibilities they extend; carry the observation into their briefs and
+  final review, rather than start another implementation wave during this fix.
+- Ruling: Task 3's persistent offscreen Bevy app qualifies its GPU bootstrap;
+  the visible inspection window and controls remain required Task 5 deliverables.
+  Task 3 explicitly starts synchronous exact observation and draft capture;
+  Task 5 owns orbit/pan/dolly, time controls and film/inspection switching.
+  This resolves the review's scope ambiguity without dropping interactive work.
+- Maturity/complexity spectrum (substitution, age and complexity prompts):
+
+  ```text
+  isolated illustrative frame ... persistent native GPU scene ... full interactive film client
+                           Task3 occupies this middle band
+  substitute a visible host window: adds UI hosting, not source-motion evidence
+  substitute an earlier hand-authored image: loses the required native/GPU witness
+  substitute final control/package maturity now: duplicates Tasks4–7 responsibilities
+  ```
+
+  Two ideonomy passes: the first separated a program's visible window from its
+  persistent rendering behavior; the convergence pass checked which later
+  obligations would disappear under that substitution. None may disappear, so
+  the original task allocation stands. Cost if wrong: deliver the visible host
+  earlier; no data/model contract changes and no final acceptance is granted.
+- Unchanged-source qualifications resolved: Task 2's native source and CLI
+  correspondence were independently reviewed at `048212519`; root Cargo.toml
+  currently excludes `clients/visual`. A fresh locked cargo-metadata traversal
+  at the Task 3 head found view closure 448 packages with no Hornvale package
+  except the view itself, and source closure 45 packages with no Bevy or
+  Planetarium dependency, including resolved normal/build/dev edges. The
+  full metadata is retained in task scratch; Task 8 still owes the durable guard.
+- Root independently checked all 60 PNG hashes/dimensions/order, exact inner
+  and outer ticks, unchanged source binding, constant original caption bands,
+  video/still hashes and actual 3840×2160 still dimensions. Viewed every decoded
+  frame in ordered contact sheets and phone-size images. Moon translation,
+  world rotation and persistent caption are present. Live desktop playback is
+  not yet verified: Computer Use access was granted, but QuickTime input
+  remains unreliable; preserve this limitation through the controls review.
+- Actual draft artifacts remain in Downloads/Hornvale Planetarium, with the
+  dirty renderer and local Georgia font documented. They are early visual
+  evidence; neither final visual acceptance nor a clean final package is claimed.
+
+## #17 [Q] — enforce the measured orbital camera envelope
+
+- Ruling: this pilot supports camera-center distances at least twice each
+  body's outer physical radius, including maximum positive terrain height above
+  the emitted sea reference. Reject nearer views before publishing a scene;
+  retain the source sizes/distances. Task 5's authored poses and dolly controls
+  must use the same boundary. Near-surface viewing needs subsequent precision
+  work and is not silently claimed by this orbital pilot.
+- Evidence: Task 3 fix-round probing used the actual f32 camera/body/projection
+  path. The saved focused test log `/tmp/planetarium-review-close-camera2.log`
+  reports `projection error 0,69120; distance=1000000 fov=0.005` for a camera
+  0.2km above a 999999.8km body, and exits with the assertion failed. The
+  implementer retained visible reference points beyond the near clip. The
+  previous center-only test could not detect that local/body cancellation.
+  Boundary witnesses for the enforced envelope are part of the ongoing fix;
+  this ruling does not predict their result.
+- Why: the approved spec requires an explicit bounded camera range and allows
+  a rejected unsupported view. It does not require orbital and near-surface
+  precision to be solved in one pilot. Existing captured compositions fit this
+  orbital range; source geometry is not a tuning parameter.
+- Conditioning grid (abstraction lift, direction and naturalness): the concrete
+  problem is subtracting/rotating body-scale f32 values near a tiny visible
+  separation. Its abstract form is a representation losing a small difference
+  between large quantities, familiar in numerical measurement generally.
+
+  ```text
+  camera direction   current source-preserving f32   new representation       altered physical size
+  approaching surface measured failure; reject       future precision work    false geometry; reject
+  bounded orbital     qualify boundary witnesses     unnecessary if passes    false geometry; reject
+  retreating farther  qualify range/projection       future larger envelope   false geometry; reject
+  ```
+
+- Ideonomy passes / overturns: two passes. The first distinguished source
+  facts from their synthetic coordinate representation and identified the
+  missing near-surface representation as future work. The convergence pass
+  followed an inward/outward camera movement through the boundary: consistent
+  rejection must also constrain interactive dolly and authored shots, not only
+  direct renderer calls. No additional physical model or size distortion helps.
+- Alternatives discarded: ignore the failed visible sample; change physical
+  dimensions; or expand this task into universal near-surface coordinates.
+  A measured supported envelope is the smallest option consistent with the spec.
+- Cost if wrong: expand the presentation coordinate implementation and its
+  supported range in a later refinement; no simulation/save data is changed.
+  G6 must disclose this camera limit alongside the other pilot limitations.
+
+
+## Task 3 — complete; Stage 1 canonical result pending
+
+- Implementation range `7d3a5156d..64c2575f3`; one fix round addressed all three
+  Important findings. Independent scoped review approved complete stellar-light
+  inventories, bounded geometry and the real f32 camera/body projection test.
+- Final focused tests: 25 view and 4 source tests passed, fmt/clippy passed.
+  Normal commit hook passed in 43.352s (`/tmp/planetarium-review-commit2.log`).
+  The first hook correctly refused two lexical-token additions in a comment
+  and test name; rewording removed them without a waiver or guard change.
+- The supported orbital test sampled 6,342 visible points; worst measured error
+  was 0.101748006 pixels. This is measured finite coverage, not a universal proof.
+  Existing draft captures satisfy the range and retain their original hashes
+  and dirty-build provenance. No recapture is claimed for this validation fix.
+- Early visual inspection includes the full-resolution still, phone review and
+  all 60 decoded moving frames in order. Live desktop video playback remains
+  unverified because Computer Use input did not reliably operate QuickTime.
+  Task 5 still owes the actual interactive window and controls witness.
+- The two earlier Minors remain assigned: consumed initial catalog validation
+  in Task 4/8, renderer responsibility split while extending lifecycle/capture
+  in Task 4/6. No additional waiver or new visual approval is implied.
+
+## #18 [Q] — Task 4 quantization and empty-catalog meanings
+
+- Ruling: preserve the approved signed-offset rounding formula. The film samples
+  presentation frames over a half-open interval; rounded simulation ticks can
+  repeat, including the end tick. Do not clamp ticks merely to make an incorrect
+  plan sentence true. Spec section 7 separates those clocks; the plan is corrected.
+- Executed integer probe on 2026-09-10: for frame 299 of 300, start=0/end=1
+  gives tick=1; start=0/end=-1 gives tick=-1. The same formula gives -3 for
+  frame 2 of 3 over 0 to -5. These results disprove the prior unconditional
+  simulation-endpoint exclusion while preserving its signed-offset test.
+- Empty-catalog ruling: test zero rendered entities at reset, before a new reply,
+  and an optional moon/wanderer inventory becoming empty in a valid new source.
+  `documents.rs` requires an anchor and nonempty stellar illumination; a fake
+  anchorless native astronomy document would exercise a different protocol.
+  Reset must remove old selection, material bindings and entities even if the
+  next source reuses IDs. A full observation may then repopulate the new scene.
+- Ideonomy passes / overturns: two dimension-identification passes, using purpose
+  and side-effects. First map: distinguish time sampling from time quantization,
+  and source completeness from displayed-state lifetime. The convergence pass
+  checks reverse intervals and reused IDs: neither should inherit old state or
+  require altered source facts. It adds regressions at these borders but no new
+  clock or schema. Both plan wording defects were overturned.
+
+  ```text
+  PURPOSE: exact time                           PURPOSE: complete source
+  frame sampling -- rounding boundary          native inventory -- reset boundary
+        |                  |                         |                  |
+  no frame at 10s     repeated/end ticks       anchor required     no displayed entities
+  side effect: reject a valid rounded tick     side effect: stale bodies if only replacing
+               if these regions are merged                 matching IDs
+  ```
+
+- Alternatives rejected: endpoint clamping (changes the documented mapping),
+  an anchorless source schema (unneeded protocol expansion), or testing only
+  mirror JSON while leaving ECS entities alive (misses the reset requirement).
+- Capture: plan and Task 4 brief corrected before dispatch; the implementer must
+  record real boundary/reset tests, pending state and worker failure behavior.
+
+
+## Stage 1 — canonical request submitted
+
+- Absorbed main `214c1b67d52ff36165881f98ee1315ba875dee1d` in merge
+  `0268062a71db95c354c469e9ce620f4378198e66`. Actual conflicts were limited
+  to type-audit-report.md and plumb-roster.md. Regenerated both using their own
+  `cargo run --manifest-path tools/{type-audit,plumb}/Cargo.toml -- report`
+  authors and staged those results; no hand-selected generated inventory.
+  Normal merge commit hook passed all four subfloor chunks, 182.889s, rc=0.
+- Controller documentation commit `cf982ae363e8515e90e09ba8c6e5d4a3bd03a5d5`
+  passed all 75 prose-subject tests. Pushed that exact branch tip normally.
+- `make sluice-stage BRANCH=campaign/the-planetarium
+  REF=cf982ae363e8515e90e09ba8c6e5d4a3bd03a5d5` returned request
+  `req-cf982ae363e8-20260910T192747Z`, kind=stage, host=lefford.
+  Submission log: `/tmp/planetarium-stage1-submit.log`. No report is claimed yet.
+- Task 4 development proceeds against the reviewed source/view foundation while
+  the queue works on the fixed Stage 1 SHA. Stage 1 remains In Progress until
+  its actual report is inspected; a later green development test cannot replace it.
+
+
+## #19 [Q] — freeze the final film against the actual capture revision
+
+- Ruling: Task 5 commits a complete authored film referring to an already-existing
+  source revision. Once implementation is committed and the final capture tree
+  is clean, explicitly freeze a package-local copy against that actual full HEAD.
+  Keep world bytes, source/scope IDs, ticks, shots, appearance and assets fixed;
+  record any intentional change. Query fresh initial/observation documents with
+  that binding. Never relabel an earlier capture or silently rewrite its records.
+- Why: Source::open currently validates the caller's revision format and stores
+  it; it does not attest which code was compiled. A final package must record the
+  actual clean build/source revision, executable hash and exact film bytes.
+  The capture definition is an artifact, so it can live beside its output outside
+  Git while the reusable authored direction stays committed. No commit needs to
+  embed its own SHA. Spec sections 4/8 and the plan's clean final capture rule
+  remain intact; this sharpens the controller workflow, not the source protocol.
+- Source/visibility chart (combination):
+
+  ```text
+  origin                 committed authoring record      package-visible evidence
+  authored direction     complete film at existing SHA  exact copied shots/settings
+  actual clean build     source code and lockfile        full HEAD and executable hash
+  evaluated observation  producer implementation        freshly queried binding/time JSON
+  old draft              old provenance retained        never relabeled as final output
+  ```
+
+- Ideonomy passes / overturns: two. First combined where a value originates with
+  where its claim is visible: authoring data and runtime evidence have different
+  recording moments. Second combined content preservation with identity changes:
+  refreshing a revision requires fresh queries and re-verification, not a search
+  and replace in old observations. No additional producer abstraction or schema
+  is needed; the implementation already accepts explicit film paths and bindings.
+- Alternatives rejected: stamping an arbitrary old revision on a new build,
+  weakening film-binding validation, leaving final capture dirty, or adding an
+  unnecessary source-subtree attestation system. Final capture must instead use
+  exact, reviewable data from a clean existing revision.
+- Capture actions: Task 7/9 package instructions clarified. Any repin that changes
+  actual semantic observations or shot inputs triggers normal qualification and
+  visual review; the workflow does not predict that those outputs stay unchanged.
+
+
+## Stage 1 — complete, canonical report inspected
+
+- Request `req-cf982ae363e8-20260910T192747Z` reported green in 1414s.
+  Actual chamber log is `sluice-cf982ae363e8-20260910T195743Z`, retrieved with
+  `make sluice-log JOB=sluice-cf982ae363e8-20260910T195743Z`; the request ID
+  itself is not the log basename. Local saved log: `/tmp/planetarium-stage1-report.log`.
+- Every stage phase exited zero: artifacts 279.378s, outboard 96.258s,
+  gate 823.099s, clients 197.410s. Actual merge product
+  `94fbd6dacb573f6edbbf3841e6d714fb669787e7`, final authored tree
+  `0e5501e62acb79b824914aaf635578ec49ca5e2a`.
+- Terminal report explicitly says nothing pushed; main unchanged at
+  `3aff906d4c52d9d3a4fa0551fec5f84248139e38`, kind=stage, rc=0.
+  This checks the Stage 1 SHA, not subsequent Task 4 changes. New visual client
+  CPU integration into the canonical client phase is still Task 8; current
+  view/source tests were run locally under their separate workspace.
+- Existing remote log warnings concern Git garbage collection and Deno bundle's
+  experimental status. No cleanup or unrelated tool-policy change was attempted.
+  No heavy tier, census or final visual approval is claimed by this stage result.
+
+## Task 4 — implementation reviewed; fix round 1
+
+- Implemented in `5d2225b896ced4b4b531dca41eb6c72e5015baa8`; 37 view,
+  4 source and 5 app tests passed. Normal hook passed all four subfloor chunks
+  in 97.509s. Its initial lexical-token refusal was corrected without a waiver.
+- Independent review requires one correction: a contradictory duplicate of
+  committed A must error even while B is pending, preserving both committed A
+  and pending B. The check currently sits only in the no-pending branch.
+  Original implementer is fixing it with a compiling behavioral regression.
+- The small Minor is included in the same fix round: queue a scene application,
+  reset before its system runs, then verify it cannot repopulate the empty scene.
+  This tests correct existing cleanup behavior; it is not a new protocol or waiver.
+- Task 3's consumed static catalog validation and lifecycle split Minors are
+  addressed by Task 4 according to independent review. Remaining readback/setup
+  separation and any proven failure recovery belong to Task 6.
+- Measured source-worker round trips, 1000 exact queries: p50 17.292us,
+  p95 36.041us, max 148.458us; initial world plus512-wide document 746.706ms.
+  Dirty implementation measurement on the fixed seed42 world, declared source
+  revision cf982ae36; no GPU-rate claim. Bounded scheduling test demonstrates
+  active A plus1000 queued requests -> latest999 and exactly two source calls.
+- Bridge tests were initially written alongside implementation. This deviation
+  is explicit: a compiling mutation retaining the first queued request failed
+  (actual0, expected999), then restoration passed. A first mutation exposed a
+  test-cleanup deadlock; assertions were moved after releasing the fake worker,
+  and the mutation then failed normally. No sleep-based ordering or bypass.
+
+
+## Task 4 — complete after one fix round
+
+- Fix `231ca8aefe20c47d937bb03de0b0f04e0cb4e1c9` moves the committed reply
+  conflict check ahead of pending-request classification. Compiling regression
+  now verifies an error preserves committed A and pending B. A queued-scene/reset
+  test also proves the deferred update cannot repopulate the cleared scene.
+- Independent scoped review approved both findings with no new findings.
+  39 view tests passed after the fix, fmt/clippy passed; normal hook44.473s,
+  all four chunks green. Earlier4source/5app tests passed; the fix touches no
+  bridge/source implementation. No extra gate rerun was substituted for review.
+- Reusable handoff: FilmClock/PresentationTimeline, ObservationState and bounded
+  Bridge, SceneCatalog/SceneTarget with real assets/selection/reset ownership.
+  Task5 now owns the visible window, playback pacing, authored shots/captions,
+  controls and their actual moving visual evidence. Task6 retains explicit capture
+  completion and failure recovery responsibilities. No final visual approval yet.
+
+
+## Task 5 — working inspection foundation and visual iteration
+
+- Foundation committed as `b9364d631a73827143854d41d82841b29ec320d0`.
+  Normal hook passed all four subfloor chunks in 67.478s. Its initial refusal
+  required a structural claim-shape declaration on the frame-partition test;
+  the declaration and focused guard were corrected before the successful hook.
+  Task5 is still in progress, with independent task review and Stage2 pending.
+- Actual native eclipse export for the candidate inclusive interval 0..3600 ticks
+  (CLI standard-day arguments 0..0.036) returned `scene/eclipses/v2`, seed 42,
+  events[]. World SHA remains77168f2bc1a8db9c01b37b31b66ac4757e1133862f8249aa8d80bb0194285bf8.
+  A separate native probe sampled all 300 frames plus endpoint, including native
+  solar angular diameter and eclipse thresholds. Moon0 minimum solar separation
+  50.514136657deg exceeds its maximum native threshold 1.693434031deg; moon1
+  minimum solar 92.810519168deg and anti-solar 86.845548279deg exceed 1.443120246deg.
+  All 301 application astronomy payloads, ticks and bindings agreed with the
+  independent probe. This is selected-interval avoidance, not eclipse validation
+  or permission to invent physical stellar spheres/shadows.
+- Native evidence, reproducer, hashes and executable provenance live at
+  `/Users/nathan/Downloads/Hornvale Planetarium/task5-native-avoidance-01/`.
+  Native paths were clean at 1e11630202fd5db21a54944ab5f460afc28889ff;
+  client implementation was in progress. The helper's initial compile error
+  concerned SceneError conversion and was resolved locally; no native code changed.
+- Real Computer Use review of the bundled app found and verified corrections
+  for Retina startup dimensions, quick scrub clicks, extreme dolly input and
+  inspection text/caption overlap. Actual target 1920x1080 at scale 2 was observed.
+  Body picking/focus, paused camera movement, authored reset, exact frame step,
+  play/pause, reverse and film toggle worked. Native window resize to 3024x1832
+  and back retained readable controls. Approximately 100fps on the overlay is
+  preliminary observation; Task 9 still owes formal performance measurements.
+- Mouse dragging remains a live-input evidence limitation: the Computer Use
+  drag operation leaves the visible pointer at its start in two input versions.
+  Click and wheel delivery work. Orbit/pan geometry and pointer ownership have
+  app tests; they are not relabeled manually demonstrated drag behavior.
+- Preserved actual interaction evidence is in
+  `/Users/nathan/Downloads/Hornvale Planetarium/task5-inspection-02/`:
+  915 acknowledged PNGs and 915 state-at-request records, all images checked
+  against declared dimensions, strictly increasing timestamps and no error records.
+  The 100.727323708s sampled span includes 798 images at1920x1080 and 117 at 3024x1832.
+  `controls.mp4` preserves variable cadence and aspect ratio,100.88s including
+  final hold; SHAeaab3e7e362be0cd84cfa0be354edaaf939bacebc08b493275c3511d1208d132.
+  Recording was stopped with no pending acknowledgement before clean window exit.
+- QuickTime input/playback now works through its actual file dialog. The control
+  movie played through 100.88s, with intermediate changing states observed. Earlier
+  playback difficulty is resolved. A transient garbled player preview was checked
+  against both originalPNG and independently decodedMP4; both files were intact.
+  Visual alarms must be confirmed against actual artifact bytes before changing
+  renderer code, as the earlier caption-preview false alarm already established.
+- Current appearance remains under review. Softer water highlights help, but
+  the first cloud-fraction-driven cosmetic prototype was too sharp and busy and
+  was rejected. Source-driven static cloud appearance and a more revealing camera
+  angle are being refined; physical scale and source time remain unchanged.
+  This checkpoint approves no final visual result, package or merge.
+
+
+## Task 5 — complete moving draft reviewed; caption clearance adjustment
+
+- The softer second cloud prototype and revised close camera produce a clearer
+  change of scale. Full moving draft01 is at
+  `/Users/nathan/Downloads/Hornvale Planetarium/task5-moving-01/review.mp4`;
+  SHA `ea1334b79066e0f668d531a6753b72b9536d7ae3da3451ed2a167dc50f4134ed`.
+  Independent ffprobe confirms 1920x1080, 30fps, 300 frames and 10.000000s.
+- Every original frame's hash and dimensions were checked. Every decoded MP4
+  frame's caption band was checked: all three captions remain present, with
+  small count variation within each shot. The middle-shot band also admits
+  the nearby limb, so that count alone is not a text-only metric. Root played
+  the complete file in QuickTime, observing both cuts and the end state. The
+  player-screen preview intermittently hid parts of text; the original PNGs
+  and all decoded MP4 bands contradict that preview. No caption-renderer fix
+  was made on this evidence.
+- Actual phone-sized cut stills revealed insufficient space between the globe
+  and caption near frame209. The implementer is moving the close shot's aim
+  downward to frame the globe higher, retaining caption placement and physical
+  eye path. Fresh stills and a full moving draft will establish the result;
+  no presumed pixel clearance is accepted as verification.
+- Richer source-descriptor-driven cosmetic moon detail is captured above for
+  Task9. The current task still needs final refinement checks and independent
+  review before its stage submission; visual acceptance remains Nathan's G6.
+
+
+## Task 5 — final directed draft and implementation awaiting review
+
+- Foundation b9364d631 and refinement addbe4e57 are committed. The refinement's
+  53 scoped client tests and normal commit gate passed; gate wall128.174s.
+  Independent spec/quality review is pending, so Stage2 remains in progress.
+- The revised middle shot has visible caption clearance at frame209, including
+  the actual360px-wide phone copy. Root played all10seconds of moving02 in
+  QuickTime. The movie has300frames at1920x1080/30fps and SHA
+  `ec7e30d8bd5ae77ca97d7f38e5567f5a121d7ebc042ccb2cda4f02ef7ddf73f7`.
+  Every original frame hash/dimension and every decoded caption band was checked.
+  Caption masks are stable within each shot (6852/8639/10781 bright pixels).
+- Evidence is preserved in `/Users/nathan/Downloads/Hornvale Planetarium/task5-moving-02/`:
+  `controller-review/check.json`, originalPNG/source documents, movie and
+  direction-seek-check.json. The actual-source601-query check agrees after
+  forward, reverse and direct seeking for astronomy, camera and caption.
+- Five final3840x2160 stills in `task5-cloud-stills-03/` were independently
+  decoded and hash-checked at frames0/90/180/270/299. Frame180 was inspected
+  at full resolution. These and the moving draft retain their actual dirty
+  capture provenance. They are not relabeled final clean-revision packages.
+- No further Task5 composition change is requested. Task9 still owns moon
+  detail, formal performance and final visual refinement; Nathan retains G6.
+
+
+## Task 5 — independent review, fix round1
+
+Independent review of1e1163020..addbe4e57 finds two bounded corrections:
+inspection must disclose the enforced physical camera envelope, time units and
+cosmetic clouds; visible radius-less wanderers must be pickable without adding
+fictional collision radii. Spec and correctness verdicts remain not ready.
+Original implementer owns the fixes, focused regression tests and normal commit;
+independent re-review follows. No design ruling or fidelity reduction is made.
+
+Minor deferred: extract the compressed actions/error boundaries in
+`control_recording.rs` and `main.rs` when the capture/package commands touch them.
+Task6/7 dispatch and final review must retain this maintenance follow-up.
+Manual orbit/pan input delivery remains unproven; handler tests are narrower
+than an actual UI witness, and that limit remains in the final evidence.
+
+
+## Task 5 — complete after independent fix review
+
+Task5 is complete over1e1163020..b5c1b5bc5. Fix round1 addressed both P2
+findings; independent spec and quality verdicts are ready with no new findings.
+The six amended control tests, scoped formatting/clippy/build and normal commit
+gate passed (59.995s). Actual bundle03 UI at1920x1080/scale2 displayed the units,
+camera envelope and cosmetic cloud disclosure; click selectedwanderer:1 and F
+focused the emitted point. Tab retained only the film caption; window exited0.
+Screens and bundle provenance remain in `task5-inspection-03/`. No fictional
+physical radius or new collision sphere was assigned. Production film and
+rendered appearance did not change in this fix. Task-boundary verification made
+no new design decision; no ideonomy pass was needed or run for these code fixes.
+
+Stage2 remains in progress until its canonical request reports. Task6 capture
+implementation follows; the earlier compressed-command maintenance minor is
+carried into its brief. Manual drag delivery remains explicitly unproven.
+
+
+## #20 [Q] — make capture source-wait deadlines effective
+
+Ruling: include bounded source initialization and exact-observation waiting in
+Task6. A timed-out Bridge becomes terminal, rejects future work and discards late
+replies; dropping that failed connection must not wait indefinitely for its
+worker. Keep normal interactive shutdown semantics. This is app lifecycle work,
+not a new physical model or source algorithm.
+
+Evidence: actual `bridge.rs` uses unbounded `rx.recv` in open, `Condvar::wait` in
+observe, and `JoinHandle::join` in Drop. The initial Task6 path checks its deadline
+only after observe returns. Thus renderer deadlines do not bound a stalled query.
+The implementer confirmed these exact boundaries before finalizing the report.
+Tests must demonstrate bounded waiting with deliberately blocked initialization
+and queries, terminal rejection/late-discard behavior and no blocked failure
+cleanup. The fake workers must then be released to keep the test itself clean.
+
+Alternatives: keeping an after-return timeout fails the named AwaitingObservation
+contract. Moving the entire source into a killable helper process introduces a
+larger transport/lifecycle change than this campaign needs. Do not claim forced
+thread termination: an abandoned native thread may finish privately; CLI exit
+ends its process. Synchronous filesystem or driver calls also are not magically
+preempted by application deadlines. Record those actual boundaries.
+
+Ideonomy: two passes, no recommendation overturn; first enriched the choice to
+cover initialization, preserve deadlines across wakeups and make expiration
+absorbing. The second found no further material improvement.
+
+The first pass translated the abstract request/deadline relationship into a
+courier dispatch: old or modern transport changes how a reply arrives, not
+whether an expired recipient should accept it. Age and direction distinguish
+transport lifetime from monotonically expiring authorization:
+
+```text
+Initializing --ready--> Idle --request--> Waiting --on-time reply--> Idle
+Initializing/Waiting --deadline--> Closed
+Closed --late reply--> Closed (discard)
+Closed -X-> Idle or a new request
+```
+
+The second pass ordered guarantees by scope and ownership. Bounded wait and
+terminal isolation are independent requirements; their combination bounds the
+caller's wait without claiming control over all computation or the OS:
+
+```text
+Both guarantees -> bounded wait -> neither guarantee
+Both guarantees -> terminal isolation -> neither guarantee
+```
+
+Capture actions: carry this ruling into Task6 implementation/review; preserve
+prior successful captures as development evidence and run a fresh qualification
+with the final timeout-aware binary. No existing pixels or source records are
+relabelled.
+
+
+## Task 6 — complete with provenance portability follow-up
+
+Task6 is complete over385df541d..28156c1fa. Independent spec and quality review
+passed the development qualification, with one P3 carried into Task7: git
+inventory commands in capture.rs use a caller-relative clients/visual pathspec.
+The review ran that command from clients/visual and observed exit0 with empty
+stdout while HEAD succeeded. Final provenance must anchor commands to the actual
+repository root and reject an unexpectedly empty inventory. This is not a
+failure of the qualified root-directory captures; their inventories are present.
+
+The final implementation includes ledger20 source deadlines. Its63 scoped CPU
+tests, fmt/clippy/build and normal commit gate passed (45.905s). Root independently
+decoded all300 final-binary PNGs in `task6-full-300-02`, checked dimensions, hashes,
+world/source binding, request IDs and ticks, and compared every astronomy object
+to the previously independently qualified native source. All300 PNGs also match
+run01 byte for byte. Final capture took88.74swall, with maximumRSS749305856bytes
+and peakfootprint1076644992bytes; no causal speedup claim is made from this run.
+Detailed measurements and permanent paths are in
+[the capture audit](../../audits/the-planetarium/capture.md).
+
+Capture supplies frame files, not package completion. These development runs
+remain labeled dirty and retain their actual binary/source hashes. Task7 owns
+fresh clean-build provenance, encoding, independent package verification and
+COMPLETE; G6 owns final visual acceptance. No additional design ruling was needed
+at this verification boundary; ledger20 records the two-pass timeout decision.
+The Task5 compressed-action maintenance minor was addressed in the touched CLI
+and recording code. Manual drag input and final moon detail remain Task9 items.
+
+
+## Stage 2 — canonical report green
+
+Request `req-385df541db36-20260910T223202Z` tested submitted SHA
+`385df541db36399df046178c6a3c6c79681d5781`. The actual chamber report,
+retrieved with `make sluice-log JOB=sluice-385df541db36-20260910T224703Z`,
+finished 2026-09-10 at 23:10:54 UTC: all phases returned zero in 1432 seconds.
+Artifacts took 278.791 seconds, outboard 94.821, gate 840.496, and clients
+199.548. The tested merge product was
+`28883a4c09a79905801682139e7c01d5f5252f9f`; the final artifact-bearing tree was
+`9d99edb437587a6e7fcc8803e0216bdccff42aa0`.
+
+This was a stage request: nothing was pushed, and main remained at
+`cb033119272dac268f9b5fc78674dfaf9504ce74`. Together with the reviewed controls,
+seek and moving-image evidence above, this completes Stage 2. The canonical
+client roster at this boundary covers the existing clients; adding the new
+Bevy client to that roster remains Task 8. Its scoped local checks are recorded
+separately. This report does not supply heavy, census, final package or visual
+acceptance. Task 7 continues; G6 remains the final visual and merge stop.
+
+
+## Task 7 — complete clean package, independently reviewed
+
+Task 7 is complete over `452d5cc0f..c2fe914b8`. Independent spec and quality
+review approved the implementation. The 72 client tests, final package corruption
+checks, scoped formatting/clippy and normal commit gates passed. The source
+inventory portability finding from Task 6 is fixed. Exact camera replay required
+the outboard serde_json float_roundtrip feature; both worker and controller
+compared all 300 astronomy objects to prior native-qualified output and found
+no numeric differences. This is a serialization correction, not a new model.
+
+The first clean encode correctly left FAILED without COMPLETE when ffmpeg omitted
+transfer and primaries metadata. A real one-frame probe established explicit frame
+setparams, followed by a regression and fresh clean capture. Failed output01 is
+preserved. Complete output is
+`/Users/nathan/Downloads/Hornvale Planetarium/task7-clean-300-02`, captured at
+`dd37a8e1899e6ac4ad0277f55a0eacb85a3ebefa` with fresh queries and a clean build.
+Later evidence commits do not relabel that revision. Manifest SHA is
+`e5b072af475082eb970df9b9a93a2bbeca64573a8128b33adfabb241a2767c77`; video SHA is
+`8682c28ec26b2de84c1456392e7a4413da45c62f98c3b379e39e6f8e59381a51`.
+
+Root independently decoded all 300 RGB 4K PNGs, checked hashes, bindings, exact
+request IDs/ticks/rational times, compared native astronomy, and played the actual
+full ten-second movie in QuickTime. All PNGs match the prior Task 6 qualification
+byte for byte. The 360-pixel review retains caption readability and limb spacing.
+The actual decoded MP4 frame209 has correct text; a garbled tool-preview caption
+was not treated as a renderer defect. Evidence is in `task7-controller-review-02`
+beside the package. Frames took 85.079 seconds; capture, encode and internal
+verification took 126.17 seconds. This is offline capture, not interactive p95.
+See [the package audit](../../audits/the-planetarium/package.md) for full records.
+
+Follow-up assigned to Task 9: add focused CPU cases for contradictory clean
+provenance (mismatched build revision, dirty build and dirty runtime), rehashing
+changed documents so rejection exercises semantics. Review found the existing
+condition correct; the real clean capture proves its positive case. This
+nonblocking test suggestion remains explicit until final reconciliation.
+
+Stage 3 awaits its canonical report. Task 8 integrates the reusable client gates;
+Task 9 still owns moon detail, interactive performance, repeat-render measurements
+and final G6 review. No visual acceptance, merge or publication is implied by
+package completion. No new design ruling was needed at this verification boundary.
+
+
+## Task 8 — reusable client integration complete
+
+Task 8 is complete over `2dd219cef..dafe45b33`. Independent spec and quality
+review found no findings. The resolved all-feature metadata guard covers normal,
+build and dev edges, including aliases and transitive dependencies. A real
+renamed dev dependency from source to view produced forbidden reachability;
+restoring the exact manifest and lock bytes returned green. The new visual CPU
+gate passed 72 Rust and six Python tests in 47.578 seconds. Focused root
+architecture, lane, test-binary and documentation checks passed; the normal
+implementation gate ran 4,563 selected tests in 42.895 seconds. No new compiled
+test binary or root Bevy dependency was introduced.
+
+The canonical allocator reserved 0956–0965 for this campaign. Records 0956–0958
+cover graphical scheduling, the native evaluated seam, and reusable ownership.
+Public client/schema documentation states the consumed validation subset and
+keeps scientific scope separate from a future situated game. Historical specs
+retain their records with narrow supersession pointers. The named digest author
+added exactly three decision rows; the temporary delta output was unchanged.
+Details and real mutation output are in
+[client-checks.md](../../audits/the-planetarium/client-checks.md).
+
+The plan's root-CWD formatter command failed on the nested virtual manifest.
+The final `cd clients/visual && cargo +1.96.1 fmt --check` invocation selected
+exactly the visual source/view/app targets in its verbose probe. The plan is
+corrected to that tested command, without duplicating the member roster.
+Canonical Linux prerequisites are present; actual new-client compilation remains
+pending the final stage request. Earlier stage client passes do not cover it.
+
+Stage 3 request `req-2dd219cef400-20260910T233741Z` was submitted after normal
+push of `2dd219cef400c0a4cdb770f83f5cae533ca68c32`; it is queued, not passed.
+Before Task 9, root absorbed main `cb033119272dac268f9b5fc78674dfaf9504ce74`
+in `a483c5d9f96fa60ccc0b70bacab510843a2b55ce`. The actual merge preview and merge
+were clean. Main's delta contains artifact registration and workspace cleanup,
+with no simulation changes. The automatic clean merge did not invoke pre-commit;
+root then explicitly ran the local commit gate, which passed all four chunks in
+43.565 seconds before further implementation or push. Future absorptions should
+use `--no-commit` followed by the ordinary commit command to preserve hook order.
+The post-merge generated-write-manifest advisory is retained: full artifact
+authoring remains on the canonical box through the queued stage, rather than
+an unauthorized local full regeneration.
+
+Task 9 follows with the preserved Task 7 clean movie as its comparison, the
+already-recorded moon/detail and clean-provenance test follow-ups, and the final
+performance/GPU evidence. No final visual approval, merge or publication granted.
+
+
+## Task 9 — close preparation during refinement
+
+Task 9 dispatched from `f3e79ba3fd65a5c320c268969fb1ff3b2d0a228d` after live
+signature preflight. The worker owns the actual moon-detail comparison,
+measurement helpers, complete raw timing/repeatability evidence and a fresh clean
+package. Root owns canonical results, independent moving/UI review and close
+artifacts. No final result is assumed from the earlier package.
+
+The complete ledger through Task 8 and this campaign's scratch reports/reviews
+were read before preparing the chronicle and retrospective. Deferred review
+items now have explicit outcomes in the retrospective; Task 9's remaining
+outcomes are still marked pending. The approved camera boundary and candidate
+future film stories have dedicated raw frontier rows. The existing presentation
+row remains spec'd until G6, with its implementation evidence and visual-review
+status corrected; the game and climate/migration rows retain their later scope.
+The Confidence Gradient's phenomena/scene-interface bet gains a narrow actual
+300-frame rendered-consumer witness, without asserting game or general world
+coverage. Spec section 12 promotes the post-G3 material rulings and links the
+three cross-campaign decision records. These are routing and evidence updates,
+not new design choices.
+
+Stage 3 request `req-2dd219cef400-20260910T233741Z` is running as observed from
+`make sluice-status`; no green report is claimed. Final canonical integration,
+census, Task 9 review, final artifact archive and G6 remain outstanding. A fresh
+scratch/ledger delta sweep is required after Task 9 before the final handoff.
+
+
+## Pre-close census — authorized request queued
+
+The authorized census is queued as `req-fa1223fd7e82-20260911T001301Z` at
+`fa1223fd7e82d059b61788506f90abcaf271dc9c`. The normal push and
+`make sluice-census BRANCH=campaign/the-planetarium
+REF=fa1223fd7e82d059b61788506f90abcaf271dc9c` both returned zero; the request
+reported kind=census, host=lefford. This is submission evidence, not a census
+result. No main merge or publication occurred.
+
+The committed simulation work is ready for this pre-close measurement while
+Task 9 refines client presentation. Immediately before submission,
+`git diff --name-only HEAD -- domains kernel windows cli clients/visual/source`
+was empty. Final review must compare those source/model paths between this
+censused ref and the eventual candidate before using its result; a later change
+to census-relevant code would require reassessment. The final stage gate still
+runs against the final client candidate. Queue work does not occupy the Mac's
+reserved interactive measurement window.
+
+Root inspected actual Task 9 draft frames 01 and 03. Varied placement improved
+the first regular crater grid, but the later rims still read as stamped rings.
+The worker is reassessing the continuous crater profile before full clean capture;
+this is appearance refinement within the approved scope, not physical moon
+terrain. No final visual result is accepted here.
+
+
+## Stage 3 — complete, canonical report inspected
+
+Request `req-2dd219cef400-20260910T233741Z` completed all stage phases with
+rc=0 in 1464 seconds. The actual log is
+`sluice-2dd219cef400-20260911T000121Z`: artifacts 273.261 s, outboard 106.059 s,
+gate 860.312 s, clients 207.016 s. The merge product was
+`859b7914f5abe738c92ee36f5584737888c0cc16`; final artifact-bearing tree
+`7f8323377e8c910871d13ab34d0a753945a7b89e`. Main remained
+`cb033119272dac268f9b5fc78674dfaf9504ce74`. The complete log is preserved in
+Downloads/Hornvale Planetarium/task9-controller-review-01/canonical-stage3.log.
+This completes Stage 3, without claiming the later Task 8 visual client was
+compiled on Linux: that integration belongs to the final stage request.
+
+## Task 9 — qualified final candidate and independent controller review
+
+Implementation and qualification are committed through `4eeb58dea`. Independent
+Task 9 spec/quality review is running; no verdict is pre-awarded. Cosmetic moon
+refinement retained draft 04 after comparing the actual originals. The continuous
+bowl, broad irregular rim and corrected Mikk tangent Y sign improve the appearance
+without changing vertices, radius, orbit or native payloads. Earlier drafts and
+rejection reasons remain in the final visual audit. Task 7's clean-provenance
+coverage suggestion is resolved with individually rehashed semantic regressions.
+
+The first final timer began after CLI/film parsing. Root caught the boundary,
+and the worker moved it to main's first statement. The new clean capture SHA is
+`81ba2bfa6d1654c1e99d28b18ab8dc03d602c7ae`; earlier packages and their timing
+origin remain intact. A fresh 60-second 1080p script retained 4,435 intervals,
+p50/p95/p99 13.365084/20.389792/43.588209 ms, maximum 154.991 ms, and 868 query
+samples with p95 129 microseconds. Readiness from main entry took 3.027038167 s.
+The p95 meets the approved 33.33 ms target under recorded desktop contention.
+Other campaign compilers/tests were present; no isolated causal speedup is claimed.
+
+The final package `task9-clean-300-02` contains 300 unique 4K PNGs and the ten-second
+30 fps movie. Capture/encode/internal verification took 189.18 s; standalone
+verification returned VERIFIED in 30.88 s. Manifest SHA-256 is
+`f5a000d46c59826f6242fcb1ea04cb4e00c5dc5ea60a3179dc7a72caa9e3abef`; movie SHA-256
+`4d0da56b5d6cb0d7a7186009176f9e05992576fc4f642b1e8564fe522c31e3b1`.
+Two fresh production renderers produced identical pixels, camera and observation
+hashes for all sixteen corresponding representative/sequence requests.
+
+Root independently decoded all 300 final PNGs and rechecked identity, exact time,
+clean build/runtime provenance, hashes, COMPLETE and video profile. Native payloads
+and cameras match the earlier qualification. Every PNG and the movie bytes match
+the first final package, which root actually played in QuickTime through the
+10-second endpoint. The explicit byte join is in
+`task9-controller-review-02/visual-review-join.json`; the original full/phone review
+and screenshots stay in `task9-controller-review-01`. Exactly 62 PNGs match the
+older Task 7 appearance (90–115 and 174–209), not the entire middle shot.
+
+The third tool mouse-drag attempt still left the pointer at its start; manual
+orbit/pan delivery remains unproven. Real wheel, reset and frame-step actions have
+separate records. Root also bundled the exact final executable, film and world as
+Downloads/Hornvale Planetarium/Planetarium Review.app, actually opened its sourced
+1080p frame 0 without a visible error, and closed the owned window. This launch
+smoke does not replace the missing manual-drag witness.
+
+These are implementation corrections and measured evidence within the approved
+scope; no new design ruling or fidelity cut was adopted. The retrospective names
+each deferred item's outcome. Final whole-branch review, canonical integration,
+census accounting and G6 still remain; technical qualification grants no merge or
+publication approval.
+
+
+## Task 9 — implementation approved after one fix round
+
+Independent review found one Important terminal error: live::run discarded
+Bevy's AppExit, allowing failed benchmark output to return CLI success. The
+worker reproduced it with a real removed output directory (compiled RED: one
+pass, one failure), then propagated the returned error through the existing CLI
+boundary. All twelve app unit tests and scoped clippy passed; the normal local
+gate passed all four subfloor chunks in 75.626 s. Fix commit
+`06e986fac0e2ab97d5f5e25f82fcb35c55e342dc` and timing commit
+`e4b83de247af781612c5b71cee5672abd0621669` are independently re-reviewed:
+spec compliant, quality Approved, I1 resolved. The normal timing prose hook
+passed 76 tests in 4.257 s. The finalized worker report now consistently names
+the corrected-clock -02 qualification.
+
+The reviewer explicitly confirmed that this terminal failure-only fix does not
+change the successful measurement, source, film, material or renderer path.
+Focused CPU regression and scoped re-review suffice; the exact successful GPU
+capture and review app remain at `81ba2bfa6`, not the later fix revision. The
+retained destroyed-window shutdown warning is a nonblocking limitation, recorded
+without suppression. No warning-free GPU log or later GPU qualification is claimed.
+
+Root's actual Stage 3 merge-product-to-final-tree diff contains only
+`docs/generated-path-writes.tsv`, `docs/timings.md`, the subfloor roster and the
+lefford test baseline (four files, 109 insertions / 85 deletions). The diff is
+preserved in `task9-controller-review-02/canonical-stage3-artifact-diff.txt`.
+No scientific fixture movement is inferred from these operational artifacts.
+At `e4b83de24`, direct diffs confirm the seed-42 world keystone equals absorbed
+main `cb0331192`, and census-relevant kernel/domain/window/CLI/visual-source paths
+still equal the queued census ref `fa1223fd7`. Final main/census checks remain
+required if the canonical queue advances those inputs.
+
+Task 9's allocated local implementation and visual/performance evidence are
+approved. Whole-branch review and final canonical integration remain next;
+G6 is still Nathan's final visual and merge decision, not an automatic task gate.
+
+
+## Final canonical stage — request queued
+
+After the normal 76-test prose hook passed in 4.674 s, root pushed
+`62fc0480f1e7de0448e8a848ad6652087ee8b54e` and submitted
+`make sluice-stage BRANCH=campaign/the-planetarium
+REF=62fc0480f1e7de0448e8a848ad6652087ee8b54e`. Both returned zero.
+The durable request is `req-62fc0480f1e7-20260911T010052Z`, kind=stage,
+host=lefford. It is queued, not passed. This request includes the final client
+code and its Linux CPU-gate integration. The independent whole-branch review
+uses this exact HEAD against absorbed main `cb0331192`.
+
+No optional operator nudge or message was sent. The queue preserves FIFO;
+root did not start a competing drain or operate another campaign's request.
+Actual census and final stage reports remain required before G6 preparation
+can claim those checks passed. The final review's pending state is deliberate.
+
+
+## Final whole-branch review — technical approval and documentation correction
+
+The independent final review covered `cb0331192..62fc0480f` (61 commits), including
+the production paths, test evidence, whole ledger and explicit scratch-to-durable
+survival audit. Spec/technical scope and code quality are approved. No new Critical
+or Important finding was established. This is not a merge or G6 approval.
+
+Root verified and corrected the three Minor findings in one documentation wave:
+(1) stars illuminate but have no rendered disk/point and are not pick targets;
+only missing-radius wanderers have inspection markers; (2) current permanent-plan
+Stage 3 and ledger summary now match the actual green report and reviewed local
+work; (3) the retrospective promotes Task 1's stale-brief broad local regeneration.
+That run was interrupted in Group D after world-builder/reader groups, with no
+census option and no retained world/system/moon or transient panel fixture diff.
+The expected plumb-roster update remained. The lesson is to reconcile inherited
+commands against current canonical placement before dispatch, not to claim the
+whole run moved nothing. Task 1's duplicated manual/hook commit gate is also named.
+
+The reviewer found no other lost substantive ruling, parked finding or idea;
+archive receipt and exact routing updates follow scoped documentation review.
+The final stage and census remain queued. Their actual outcomes, any subsequent
+main/source changes and Nathan's final visual/merge acceptance remain necessary.
+
+
+## Reviewed scratch — durable archive verified
+
+Scoped final documentation review at `12849d497` approved M1–M3 as addressed,
+with no new findings. The normal documentation hooks passed 76 tests at both
+`4ccc5f998` (4.361 s) and `12849d497` (4.215 s). Root then copied all 100 own
+campaign scratch files into Downloads/Hornvale Planetarium/campaign-review-12849d497
+and verified every archived hash against the corresponding source. MANIFEST.json
+SHA-256 is `3b94a51f2da0042b538c5ddcff9d3b5496788806aa24069c5ff03dd91120e581`.
+The complete reports/reviews and mutation/controller evidence survive worktree
+recycling; primary GPU evidence stays beside them in its existing directories.
+This is an implementation-review snapshot, not a claim to contain future
+canonical results. The retrospective and close audit record its receipt.
+
+The queue advanced main to `2e86093986a69c9ee032e8872a064c3a432ed9df` through
+the tools follow-up. Root fetched/read the real delta: command-placement/tool
+prerequisite prose, sweep harness changes and operational timing/roster artifacts;
+no kernel/domain/window/CLI/visual-source path changed. The queued census remains
+behind the active earlier census-delivery merge. No final stage/census pass is
+inferred from that queue movement.
+
+
+## Post-review check — one repository-test leak warning retained
+
+The normal hook for archive receipt `2dfa72465` returned zero: 76 tests passed in
+4.252 s, with one LEAK annotation on the unchanged repository test
+`subfloor_roster_coverage::every_workspace_crate_has_a_roster_entry_or_a_declared_reason`.
+Root inspected that test's cargo-metadata subprocess path and confirmed it has no
+campaign diff. A subsequent process snapshot showed no matching surviving test or
+cargo-metadata process. One focused nextest rerun passed (one test, 0.026 s)
+without LEAK. This does not establish the original cause or claim a fix.
+
+The [nextest leak documentation](https://nexte.st/docs/features/leaky-tests/)
+explains the inherited-output-handle signal. The exact handle/descendant was not
+captured here; no timeout, test, warning or process was suppressed. Original hook,
+focused output and investigation are preserved in
+`task9-controller-review-02/{review-archive-commit.log,roster-leak-focused.log,
+roster-leak-investigation.md}`. If it recurs, collect descendant/handle evidence
+rather than attributing it to the renderer or rewriting an unchanged test.
+
+
+## Campaign census — complete, delivery diff inspected
+
+Request `req-fa1223fd7e82-20260911T001301Z` completed on lefford with rc=0 in
+1387 seconds; main remained `2e8609398`. Its authored census timing row reports
+1366.487 s wall, 41737.936 s user, 406.624 s sys, CPU ratio 30.84. The main
+study returned 1000 rows / zero refusals; the complete log is preserved as
+`task9-controller-review-02/canonical-census.log`.
+
+The delivered branch is `census/fa1223fd7e82-20260911T015448Z`, commit
+`88e8aeb7ff0e37dc13c996cd9512a8dc9bf17681`, based on the requested `fa1223fd7`.
+Root fetched it and inspected the actual two-file diff: six rows in docs/timings.md,
+and two file-count changes in docs/generated-path-writes.tsv (reference count
+22→23; audits count 27→33). No scientific golden, world/system/moon fixture or
+other reference data changed. Gnomon arms are unchanged. The diff itself is in
+`task9-controller-review-02/canonical-census-delivery.diff`.
+
+The runner and queue describe this as TIMINGS ROW ONLY. That is a shorthand
+reporting mismatch: the null-golden verdict is correct, but the delivery includes
+six measurements and the operational write-manifest update. Root corrected the
+user-facing account after reading the diff. Do not infer a whole-branch file list
+from that verdict; retain this concrete operational-reporting follow-up.
+
+The actual local merge preview was clean. Root prepared the delivery merge on
+the campaign branch with --no-commit, retaining the normal commit hook. The
+subsequent hook refused as recorded below; no merge commit or main push occurred,
+and the delivered diff contains no scientific golden changes. The final
+canonical stage remains queued. Census-relevant paths have remained identical
+to fa1223fd7 throughout the reviewed client refinements; subsequent main changes
+still require their own contact/identity check before G6.
+
+
+## Census-delivery commit refused — profiling obligation
+
+The normal pre-commit hook refused the prepared census-delivery merge at
+`921381907`: `census_duration::a_census_over_the_alarm_threshold_owes_a_profiling_followup`
+found the new 1366.487 s run above the 1320 s alarm with no per-run finding.
+This is a real failed commit, not a completed absorption. No threshold, test,
+timing row or golden is removed to bypass it. The actual log is retained at
+`task9-controller-review-02/census-absorb-commit-refused.log`; an independent
+read-only investigation is checking the required profiling path and precedent.
+
+Read-only main contact still finds `2e86093986a69c9ee032e8872a064c3a432ed9df`.
+The delta from absorbed main `cb0331192` is six operational/tooling files:
+CLAUDE.md, lane-outboard/sweep-roots scripts, timings, subfloor roster and the
+lefford baseline. The actual diff contains no simulation or visual-source code.
+It is not yet absorbed while the census merge is pending.
+
+The independent investigation confirmed the live-profile obligation. Current
+total CPU is 42144.560 s versus preceding 42220.324 s (-0.179%); wall is
+-3.284%. These aggregates locate no call-path cause and do not discharge the
+profile requirement. The preceding yellow row's 41780.847 figure is user CPU
+only, not total CPU; it must not be reused as the comparison denominator.
+The existing queue exposes no profiling payload. An operator can instrument
+the ordinary census executor after its normal FIFO claim, but the proposed perf
+wrapper is source-derived and not yet validated for release-stack symbolization.
+The complete report is retained in `task9-controller-review-02/census-alarm-investigation.md`.
+A concrete operator notice is prepared there as `operator-request.txt`; it has
+not been sent. External messaging requires explicit user authorization.
+
+
+## Operator request — authorized and sent
+
+Nathan explicitly approved sending the prepared canonical-operator request.
+Root posted its exact text as board notice `e1c052a4c406080449869b964aec090dda48d82d`,
+routed to `scripts/sluice-queue.sh` and `scripts/sluice-census.sh`, and synced it.
+Both commands returned zero; sync reported a push to
+`refs/hornvale/hosts/MacBookPro` and a fetch of three peer mirrors. Exact notice,
+post receipt and sync log are retained under `task9-controller-review-02/`.
+This authorizes the notice, not G6, a Planetarium merge, or film publication.
+The latest queue read shows vent-succession running, eclipse-rhythm-view queued
+ahead of our final stage, and the separate underworld delivery held by its
+operator. No unrelated queue state was changed by this campaign.
+The requested profile is awaiting operator response; it has not run.
+
+
+## Held stage — actual cause and reviewed repair
+
+Nathan reported the hold. The canonical log shows rc=10 during merge, not a
+renderer/test failure: 1948 of 1961 seconds were spent waiting for the lock,
+after which main `f22860af3` conflicted in `windows/scene/src/lib.rs` and the
+plumb/type-audit reports. No stage phase ran, so Linux qualification is still
+unestablished. Full log: `task9-controller-review-02/canonical-stage4-held.log`.
+
+Root preserved all five pending census/close files, the complete binary patch,
+a separate close-doc patch and both merge parents under
+`task9-controller-review-02/held-stage-recovery/`. The first `git merge --abort`
+refused because two files differed from their index entries; after staging the
+backed-up corrections, abort succeeded. This removed the uncommitted delivery
+merge so main could be integrated independently; it does not erase the delivered
+measurements or their profiling debt. The original census branch is unchanged.
+
+An SDD implementer resolved the source annotation as the union of both features,
+regenerated just the two lint reports and committed main absorption at
+`6d5d5a8bb1452149197e1114711b81eb33b1747f` with parents `921381907` and
+`f22860af3`. Scope checks: 67 astronomy/scene/CLI tests, 4 visual-source tests,
+then the normal commit hook's four subfloor chunks all green; gate wall143.893 s.
+The hook timing row is retained in the next evidence commit.
+
+Root read both incoming chronicles: Eclipse Rhythm and View adds observer and
+ground-track/recurrence reporting; The Living Vent adds the isolated temporal
+Waterworld API. Their declared models add no save/epoch/census work. Actual
+source comparison still governs whether this campaign's captured observations
+remain applicable. No renderer or captured-package bytes are rewritten.
+
+CPU replay at the integrated source `6d5d5a8bb` matched the captured initial
+document semantically and all 300 exact-tick observation replies byte-for-byte.
+`task9-controller-review-02/native-main-replay.json` names the actual checkout
+separately from the original capture binding reused for protocol comparison.
+The temporary example was removed; no new GPU or capture qualification is claimed.
+
+Independent scoped integration review approved with no findings at `6d5d5a8bb`.
+Main remains `f22860af3`; the final merge preview is clean. Recovery backup,
+fix/review reports, packages and replay evidence are durably archived in
+`task9-controller-review-02/held-stage-recovery/` with 17 file hashes;
+manifest SHA-256 `83abeb0e89277dc0cd5366d0c128774f24023e1e64b58e951d40b298a0e3ae6d`. The next action is a fresh stage
+submission. The earlier held request is not relabeled as passing.
+
+
+## Final canonical stage — green report
+
+Request `req-a9593ffa367e-20260911T120920Z` at
+`a9593ffa367ecbbca89a362fc27ef5b907380a7f` is **reported green**: all four
+phases returned zero in 2127 s. The tested merge product is
+`914aaf8a53651163894300495f5210c1570e2bef`; the final artifact commit is
+`3f2030a2f1bae992b3c5254f4592fb0d81b4e4d6`. Main was unchanged at
+`f22860af31313a7dc9ad48ed24aa008d539912bf`; root fetched that same main
+after reading the report and confirmed a clean merge preview.
+
+Measured phases: artifacts 281.565 s, outboard 147.279 s, gate 861.821 s,
+clients 817.181 s. The Linux visual-client section actually ran: 79 Rust
+tests plus 6 Python dependency tests passed. This establishes the client CPU
+gate on Linux, not a Linux GPU-quality claim. The final artifact diff contains
+only four operational files: generated-path write counts, timings, subfloor
+roster, and the lefford test baseline (120 insertions / 95 deletions). No
+scientific fixture or renderer source changed in that authoring delta.
+
+Full log, actual diff and hashed report are preserved in
+`task9-controller-review-02/canonical-stage5*`. The earlier held request remains
+a failed merge attempt; this fresh report is the successful qualification.
+The captured movie/app remain bound to `81ba2bfa6`, with the separately
+recorded integrated-source replay proving 300/300 reply byte agreement.
+
+The census's null-golden result is already known, but its 1366.487 s timing
+still owes the requested live profile before delivery incorporation. No
+operator profiling result has been reported. That obligation, final G6
+approval, and the post-approval merge/heavy run remain open.
+
+
+## Profiling request acknowledged on the canonical board
+
+Nathan pointed to a reply. The synced Mac board still omitted it; a direct
+read on lefford found notice `fec09fa6fca550d6b1f6ea3dd3abd7481d0b4c1c`.
+The rendered note was truncated even under `board read`, so root read its
+complete JSON blob from `refs/hornvale/board:posts/<id>.json`. The original
+reply is retained as `task9-controller-review-02/operator-profile-ack.json`.
+The operator acknowledges the exact requested source ref and profiling work,
+but has not run it: they paused to ask Nathan about 25–30 minutes of box cost.
+
+Root asked the operator to proceed with bounded corrective validation under
+the campaign's existing authorization and normal FIFO/shared-claim discipline.
+Decision 0514 removes the ordinary canonical-census per-run permission gate;
+it does not itself define a profiling queue payload. This is the controller's
+application of authorized validation scope, not a claim that Nathan explicitly
+approved a new standalone profiling run in this turn. The response reiterates
+that no unprofiled repeat, main push, G6 or publication is authorized.
+
+One arithmetic claim in the operator's rationale is insufficient: the overage
+is 46.487 s, larger than their cited 34.365 s spread. Broader variance might
+explain the run, but those two readings do not establish that claim. Root
+flagged this before any finding is written; the existing CPU-flat evidence
+stays qualified and the actual live profile is still required. The response
+and transport receipts are retained beside the original notice.
+
+
+## Census profiling — evidence received and inspected
+
+The operator's full reply `e31231fb7e580a7a05c8cfac866385449d98b6dc` reports
+a completed same-ref main-study profile on lefford. Root inspected the actual
+perf header, reports, study log, source HEAD/status and artifact hashes, then
+archived raw perf data and the matching executable outside temporary storage.
+2,789,455 samples, zero lost; 1000 rows, zero refusals; 4.71% largest symbol
+self time. The main-study-only scope, lack of a scaling proof, instrumented
+build, and distinct timing boundaries are retained in
+[the profile audit](../../audits/the-planetarium/census-profile.md).
+
+The per-run yellow-log row records actual live findings and their limits. It
+does not adopt the operator's claims of irreducibility, exclusion of quadratic
+work, first-ever profiling, or overage lying inside the smaller cited spread.
+Threshold recalibration is a separate proposal routed to the existing
+`PROC-census-budget-denominated-by-cpu-ratio` row; this campaign changes no
+alarm/refusal bound and performs no performance optimization.
+
+The original null-golden delivery `88e8aeb7` merges cleanly into the current
+branch, bringing six timing rows and two write-manifest count changes. The
+profile worktree's removed schema `backfilled` marker is not imported. The
+normal merge commit hook now gets the original duration together with its
+actual profiled finding; its outcome is recorded at completion.
+
+Before this delivery, main `007936ed6` was absorbed at `7f8947e5d`. Incoming
+changes were tools/prose/timings only; the Makefile declaration keeps both
+visual and reaper targets. The current user's explicit staging-file instruction
+and this campaign's approved plan retain `IMPLEMENTATION_PLAN.md` until
+completion despite main retiring that shared path. Its inherited block is
+Eclipse Rhythm and View (not the earlier remembered Murrain block), and the
+whole file was preserved byte-for-byte. No reaper was run. Scoped tooling
+checks and the ordinary 76-test hook passed, 4.289 s.
+
+
+## Census-close obligation completed
+
+The original census delivery and scoped live-profile finding were committed
+together at `e8fdb804ce9aa1c9f6a8927b77be8bb598ab4ddc`. The normal hook
+passed all 76 prose-subject tests in 4.027 s, including the census alarm's
+per-run finding check. Its first attempt correctly refused an overlong idea
+index cell; root restored the existing cell and put the new profile link in
+the Where column, retaining the full reasoning in the audit. No test, threshold
+or calibration reference was weakened.
+
+Main contact at this boundary remains `007936ed6`, already absorbed. No
+simulation or visual-client source changed after the successful stage and
+300-reply comparison. The seed-42 keystone is checked against current main;
+no fresh physical or GPU claim is inferred from these operational/doc changes.
+The [profile audit](../../audits/the-planetarium/census-profile.md) is the final scope of census attribution.
+The G6 decision and subsequent queue merge/heavy phase are still required.
+
+
+## Final independent review — ready for G6
+
+The scoped final integration/profile review approved `e8fdb804c` with no
+findings. It explicitly found the measured main-study-only attribution adequate
+to discharge this referral, while retaining the unproven full-pipeline/scaling
+claims as limits. Its report is durably preserved with the controller evidence.
+All campaign implementation, visual, canonical and census-accounting work needed
+for the G6 package is now complete; Nathan's visual/merge decision remains open.
+
+The controller evidence snapshot contains 92 file hashes at
+`task9-controller-review-02/pre-g6-evidence-manifest.json`, SHA-256
+`174766c0f6267812500da122924782288895909dc056392f73e46297659b7696`. It precedes this final approval-receipt metadata;
+the original 4K package and census raw-profile archive retain their separate
+manifests. This does not grant publication or report a landed campaign.
+
+
+## G6 approval — 2026-09-11
+
+Nathan reviewed the package at `83a4fa3d08da54b4339ebaccf1df3b0891e028e8`
+and approved the visual direction and merge: “Yeah, it's fine. We'll need to
+refine it in future campaigns, but it's fine for now.” This accepts the bounded
+pilot with its recorded limitations; further aesthetic refinement stays with
+future campaigns. It does not claim the broader visual ambition is finished.
+The post-approval changes record this decision and prepare the authorized merge;
+the frozen film/app identity remains `81ba2bfa6`. Publication is outside scope.
+The actual canonical merge and heavy result must be read before reporting landing.
+
+
+## Canonical landing — 2026-09-11
+
+Approved candidate `12d434ee5a4c95cf0ab8428ece49bf04d22e1516` landed through
+request `req-12d434ee5a4c-20260911T164738Z`. All five canonical phases passed.
+The actual merge product was `3e35133ea5c828cd09611e18d4b8edd26c59cc69`; the
+queue pushed and mirrored final revision `c0b76af87388ef33fa841b659684cfba52994a0a`. Root fetched main
+and the campaign branch at that revision and fast-forwarded the clean worktree.
+The workspace suite passed 6,089 tests (719.067 s); the heavy suite passed all
+65 (449.318 s); every client check, including visual-check-run, passed.
+The full log is archived at `task9-controller-review-02/canonical-merge.log`.
+The merge product to final revision changed only four operational files:
+generated-path write counts, timings, subfloor roster, and the lefford baseline
+(120 insertions / 94 deletions). No renderer, scientific fixture or source
+identity changed in that authoring delta. The accepted film/app remain bound
+to their original clean capture revision `81ba2bfa6`.
+
+The earlier running request at `2c3a535ad` was deliberately stopped by the
+operator after about two minutes so the corrected G6 acceptance text could land
+with the implementation; it was not a test failure, and main did not move.
+The replacement above is the completed qualification.
+
+All Planetarium stages are complete. The temporary root tracker was removed
+after verifying that its inherited Eclipse campaign had also landed at
+`f22860af3`; its remaining In Progress label was stale, not unfinished work. Further
+visual refinement remains with future campaigns. This close receipt is a
+prose-only follow-up to the landed implementation, not a new visual candidate.
+Publication remains outside scope; leave the warm worktree in the pool.
+
+
+### Tracker retirement correction
+
+The operator held receipt candidate `489e00f36` before a chamber run because it
+kept the root tracker that Plan Hygiene had deleted and gitignored at
+`0d266b32a`. Root verified that revision has no `IMPLEMENTATION_PLAN.md` and
+that the Eclipse ledger Closeout and reconciliation row both record its
+completed landing at `f22860af3`. The earlier preservation decision read a
+stale In Progress label as live work. There is no unfinished inherited work
+to preserve; removing the file now satisfies the approved plan's condition
+to remove it once all trackers are complete. Permanent campaign plans survive.
