@@ -88,6 +88,34 @@ The pooled test requires no stratification and is unambiguous at n = 32.
 - **Extending the panel belongs to The Winze**, not to The Tidemark. The
   arithmetic above is handed over; the seed count is E.9's to amend.
 
+## Corroboration (added 2026-09-12, after acceptance)
+
+A third roster configuration was measured by `campaign/the-trencher` after this
+record was accepted, and it strengthens the ruling rather than revising it:
+
+| roster | verdict |
+|---|---|
+| four subterranean peoples alone | **green** |
+| six marine peoples alone | **green** |
+| both — 49 kinds | **red**, z −0.034 |
+
+Three configurations, three verdicts. **The verdict tracks roster composition
+rather than a threshold anyone crossed**, and both outcomes sit inside what a
+panel with breached n = 1, 3, 5, 4, 19 can produce. Two disagreeing points admit
+"something changed between them"; three admit only "the instrument cannot hold
+still" — which is what *unevaluated* asserts.
+
+The green configuration is **not** evidence the conditioned claim is true, and
+the campaign that measured it recorded that itself.
+
+*Provenance:* measured by campaign/the-trencher on its own tree and **not
+independently re-run here**; consistent with both measurements above. Recorded
+attributed rather than absorbed, so a later reader can go re-check it.
+
+*This section is additive and post-acceptance.* It does not revise the ruling.
+"Supersede, never edit" protects a history someone could have relied on; dated,
+attributed corroboration adds to what a reader can rely on.
+
 ## Consequences not resolved here
 
 - **Right-censoring.** The 89 still-open workings are the deepest population
