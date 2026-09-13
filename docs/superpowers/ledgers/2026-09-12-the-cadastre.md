@@ -630,3 +630,83 @@ and `inv-parchment` were already CHOSEN non-roots in the 41-item corpus (per
 family law's own worked example about `inv-parchment`) and became INHERITED
 the same way the 10 named roots did. All 17 are now resolved; `technologies
 check asimov-1989` exits 0.
+
+---
+
+**#11 [G5] — The held-out control: 4 of 6 recovered, the aggregate contaminated,
+and two disagreements that look like defects in the FROZEN corpus.**
+
+*What was run.* Task 3 Step 1: an agent re-scored the 41 arc items blind, given
+the catalogue pages, the idea registry and the decision log, and forbidden the
+corpus, the audits and every task report.
+
+*Result.*
+
+```
+KILN'S 6 deferred:    animal-dom coal-mining library literature turnplow writing
+CONTROL'S 6 deferred: alphabet animal-dom horse library turnplow writing
+RECOVERED 4/6 · MISSED coal-mining, literature · EXTRA alphabet, horse
+per-item disagreement: 4 of 41 = 10%
+anchors on all four recovered: EXACT (BIO-animal-domestication, MEM-4, BIO-8, MAP-8)
+```
+
+*Ruling on the branch table.* The plan's Step 1 table says misses of 1-2 →
+record the recall and proceed; 3 or more → stop. **Two missed, so the campaign
+proceeds**, with the measured recall stated in `provenance` as a declared
+limitation of the sweep.
+
+*The contamination, and why it changes what the control measured.* The agent
+reported, unprompted, that `book/src/frontier/idea-registry.md` — a file its
+own procedure REQUIRES it to read — carries the row `TECH-invention-corpus`,
+whose text states *"First reading … absent 35, deferred 6 — zero `present`."*
+It therefore knew the target aggregate partway through, and returned exactly
+35/6. **The aggregate is worthless as a control and the item set is not**:
+knowing "six" cannot tell you WHICH six, and the sets differ on four items.
+The set comparison is the measurement; the tally is discarded.
+
+**This is the same defect as #9, one level up.** There, a confirming count
+reused the same parser and so confirmed the parser. Here, a confirming tally
+was available to the thing being measured and so confirmed nothing. Twice in
+one campaign, agreement was produced by the instrument rather than by the
+world.
+
+*Structural consequence — the control can never be clean as things stand.* The
+spoiler lives in the one file every scorer must read, so withholding it is not
+available. A future control needs the registry served with that row redacted,
+or the row must stop restating a corpus's scored tally. Recorded as a
+follow-up; not repaired here, because repairing it mid-campaign would mean
+editing the instrument between the control and the sweep.
+
+*The four disagreements are NOT swept, and two of them accuse the frozen
+corpus.*
+- `horse` — control says `deferred` on `registry:BIO-animal-domestication`,
+  the identical row The Kiln cites for `animal-dom`. Domesticating the horse
+  is animal domestication; the corpus scores it `absent`.
+- `alphabet` — control says `deferred` on `registry:MAP-8`, the identical row
+  The Kiln cites for `writing`, reporting that `frontier.md`'s MAP-8 essay
+  names phonetic borrowing explicitly.
+- `coal-mining`, `literature` — control says `absent` where The Kiln says
+  `deferred`; the agent flagged `coal-mining` as a close breadth call
+  (`TECH-3` names ore, not fuel).
+
+**If `horse` and `alphabet` are right, the frozen corpus is wrong in the
+FLATTERING direction** — `absent` where a registry row plans it — which is the
+exact error ledger #12 was written to prevent, found by the instrument built to
+catch it.
+
+*Ruling: the 41 arc verdicts are NOT changed.* Spec §10 and this plan's Task 2
+require the arc items to keep their verdicts, and there is a stronger reason
+than consistency: these same verdicts are the control's answer key. Re-scoring
+them using the control's output would consume the control and make the
+measurement unrepeatable. The four disagreements are recorded here, carried to
+the chronicle, and go to Nathan at G6 as a finding about `asimov-1989` for a
+successor to rule on.
+Cost if wrong: the corpus keeps two verdicts that are probably too flattering,
+visibly documented, for one campaign.
+
+*Ideonomy passes / overturns.* One (polarity again — asking which direction
+each disagreement errs in, which is what separated "the control missed two"
+from "the control accuses the corpus of two").
+
+*Capture actions.* `provenance` states the measured recall; chronicle carries
+the four disagreements; follow-ups carry the registry-spoiler defect.
