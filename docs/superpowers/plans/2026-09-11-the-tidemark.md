@@ -307,6 +307,18 @@ reports real numbers; every kind authored in step 3 has a *named, measured*
 interaction with at least one of the six peoples; M6 is written so that it can
 fail, and its failure names which kind owes what.
 
+**OUTCOME (2026-09-13): steps 1-2 done; steps 3-5 deliberately NOT done.**
+The probe landed (`windows/worldgen/tests/suite/marine_web_probe.rs`, commit
+`f605b765a`) and measured the sea flat: all ten marine kinds at trophic height
+exactly 1.000, `predation()` omitting all ten as keys, pairwise niche overlap
+1.0000 for eight of them. Step 2's branch table selected its first arm, and
+Nathan ruled at the carve-out stop that **no fauna are authored** — anything
+placeable at an ocean vertex must sit on `MARINE_FORAGE`, which makes it a
+perfect competitor of the people it would feed. The design that would make the
+roster meaningful is `docs/design/what-eats-what.md`, registered as
+`BIO-trophic-receptors`, and is its own campaign. Task 4's deliverable is the
+probe and the finding. See the ledger entry "Task 4's roster, taken to Nathan".
+
 - [ ] **Step 1 — measure before authoring.** Build the marine web from the real
   registries and report, for every marine kind (the six peoples and the four
   existing fauna): its `trophic_levels` height, its `predation()` prey list, and
