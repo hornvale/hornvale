@@ -7447,3 +7447,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-13T03:08:27Z | census-tail-anomalies | 0.326 | 0.275 | 0.033 | 0.94 | 0 | 14f834ab9 | campaign/the-cadastre | MacBookPro | 10 |
 | 2026-09-13T03:08:43Z | rebaseline | 206.876 | 563.308 | 23.692 | 2.84 | 0 | 14f834ab9 | campaign/the-cadastre | MacBookPro | 10 |
 | 2026-09-13T03:17:22Z | gate-commit | 81.130 | 91.607 | 21.085 | 1.39 | 0 | 14f834ab9 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:41:19Z | census-tail-chorus | 82.352 | 234.148 | 8.157 | 2.94 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:41:21Z | census-tail-domesday | 0.941 | 0.430 | 0.039 | 0.50 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:41:21Z | census-tail-anomalies | 0.731 | 0.344 | 0.035 | 0.52 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:41:48Z | rebaseline | 378.661 | 568.194 | 23.839 | 1.56 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:43:14Z | gate-commit | 60.461 | 88.476 | 20.549 | 1.80 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |

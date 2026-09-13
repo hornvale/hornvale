@@ -145,7 +145,16 @@ the predecessor's, unchanged; the remaining 55 `deferred` and all 9
 `present` are Task 3's. `present` was the verdict this instrument was least
 entitled to when Task 2 committed this file with zero of them; Task 3's
 search earned nine, each anchored to a shipped mechanism (a `test:` or
-`path:` anchor -- see `## Items`). HOW THE 260 WERE SCORED. Six independent
+`path:` anchor -- see `## Items`). PER-SERIES `absent` FRACTIONS, ADDED HERE
+SO THE DRIFT-CHECKED AUDIT CARRIES WHAT ONLY THE CHRONICLE STATED BEFORE
+(final review, M4): the 41-item arc sample sits at 85.4% `absent` (35 of
+41), the 260 newly admitted items at 75.4% (196 of 260), and the closed
+301-item population at 76.7% (231 of 301). THE FRACTION FELL, BY NINE
+POINTS, ACROSS THE THREE SAMPLES, AND IT FELL RATHER THAN ROSE: the three
+original arcs were harsher than the closed population turned out to be, so a
+reading anchored to the 41-item sample alone OVERSTATES the model's poverty
+relative to the wider catalogue -- this task's own closure work is the
+correction, not a repetition of it. HOW THE 260 WERE SCORED. Six independent
 scoring agents, each assigned a batch of at most 50 items, each given the
 invention.cards catalogue pages, `book/src/frontier/idea-registry.md` and
 the in-force decision log, and each DENIED the corpus file itself -- so no
