@@ -672,11 +672,20 @@ nextest-check: ## Fail with an install hint if cargo-nextest is missing
 		exit 1; }
 
 # HV_DOCS_TESTS_EXCLUDE narrows this roster for ONE caller only: a census
-# delivery commit, which cannot satisfy the yellow-census alarm by construction
-# (see scripts/hooks/pre-commit's HV_CENSUS_DELIVERY block). Empty for every
-# other caller, so the default roster is unchanged.
+# delivery commit, which cannot satisfy EITHER duration check by construction --
+# both read the latest row of docs/timings.md, and the row the delivery is
+# committing is that latest row (see scripts/hooks/pre-commit's
+# HV_CENSUS_DELIVERY block). Empty for every other caller, so the default roster
+# is unchanged.
+#
+# IT CARRIES A FILTER EXPRESSION, NOT A TEST NAME. It held a bare name until
+# The Stilling, and `not test($(VAR))` could therefore express exactly one
+# exclusion -- which is why the refusal ceiling could not join the alarm that
+# was already stood down beside it, and why a census slower than the ceiling
+# could not deliver its own goldens at all. Passing an expression costs the same
+# and has no arity.
 docs-tests: nextest-check ## The prose-subject tests -- run by pre-commit when only docs are staged (The Nettle)
-	@cargo nextest run -p hornvale --test suite -E '(test(docs_consistency) or test(generated_paths) or test(census_duration) or test(repose_byte_identity) or test(audio_artifacts) or test(lexicon_guard) or test(subfloor_roster_coverage) or test(architecture) or test(temp_path_ratchet))$(if $(HV_DOCS_TESTS_EXCLUDE), and not test($(HV_DOCS_TESTS_EXCLUDE)),)'
+	@cargo nextest run -p hornvale --test suite -E '(test(docs_consistency) or test(generated_paths) or test(census_duration) or test(repose_byte_identity) or test(audio_artifacts) or test(lexicon_guard) or test(subfloor_roster_coverage) or test(architecture) or test(temp_path_ratchet))$(if $(HV_DOCS_TESTS_EXCLUDE), and not ($(HV_DOCS_TESTS_EXCLUDE)),)'
 
 absorb: ## Absorb main into this campaign branch, regenerating artifacts it cannot merge
 	@bash scripts/absorb.sh

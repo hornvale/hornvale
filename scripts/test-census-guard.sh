@@ -136,5 +136,79 @@ n_sd="$(grep -cF 'if [ -n "${HV_CENSUS_DELIVERY:-}" ]' scripts/hooks/pre-commit)
 if [ "$n_sd" = "3" ]; then ok "HV_CENSUS_DELIVERY stands down exactly three checks"
 else bad "HV_CENSUS_DELIVERY stand-down branches: $n_sd, want 3"; fi
 
+# --- the docs-tests stand-down, in two-way agreement with the source ---------
+#
+# DIRECTION THIS CHECK ENFORCES: every test in cli/tests/suite/census_duration.rs
+# that renders a VERDICT against a CENSUS_*_SECS threshold is named in the
+# hook's delivery stand-down. It does NOT check the converse (a name in the
+# exclusion that no longer exists is caught separately below), and it says
+# nothing about whether the thresholds themselves are right.
+#
+# WHY THIS SHAPE AND NOT A LIST OF TWO NAMES. The defect it exists to prevent
+# already happened once: the yellow alarm was stood down for a delivery in 2026-09,
+# `the_latest_census_is_under_the_refusal_ceiling` was added later reading the
+# same latest row of the same file, nobody added it here, and a census slower
+# than the ceiling became unable to deliver its own goldens at all -- each
+# attempt destroying the previous attempt's staged output in the shared census
+# worktree. A hard-coded pair would be satisfied forever while a THIRD threshold
+# test walked into the identical trap. Deriving the set from the source is what
+# makes the next one loud.
+#
+# A threshold VERDICT is distinguished from an instrument test by whether it
+# compares against a CENSUS_*_SECS constant -- `the_chronologically_latest_row_
+# wins_even_when_it_is_not_last_in_the_file` calls the same helper on synthetic
+# rows and is correctly NOT excluded, because a delivery can satisfy it.
+echo "== docs-tests stand-down: every threshold verdict is deferred for a delivery"
+cd_src="cli/tests/suite/census_duration.rs"
+dte="$(grep -m1 '^ *docs_tests_exclude="test(' scripts/hooks/pre-commit | sed 's/^[^"]*"//; s/"$//')"
+if [ -n "$dte" ]; then ok "read docs_tests_exclude from the hook"
+else bad "could not read docs_tests_exclude from scripts/hooks/pre-commit"; fi
+
+verdicts="$(awk '/^fn /{n=$0; sub(/^fn /,"",n); sub(/\(.*/,"",n)}
+                 /CENSUS_[A-Z]+_SECS/{if(n!="" && !seen[n]++) print n}' "$cd_src")"
+n_v="$(printf '%s\n' "$verdicts" | grep -c .)"
+if [ "$n_v" -ge 2 ]; then
+    ok "found $n_v threshold verdict test(s) in census_duration.rs"
+else
+    bad "found $n_v threshold verdicts — the derivation has rotted, so the checks below prove nothing"
+fi
+for v in $verdicts; do
+    if printf '%s' "$dte" | grep -qF "test($v)"; then
+        ok "the delivery stand-down covers $v"
+    else
+        bad "$v compares against a CENSUS_*_SECS threshold but is NOT stood down for a delivery — a census that trips it cannot deliver its own goldens, and each retry destroys the last one's staged output"
+    fi
+done
+
+# THE CONVERSE. A name in the exclusion that no longer exists in the source
+# silences nothing and hides that the roster has rotted.
+for nm in $(printf '%s' "$dte" | tr ' ' '\n' | sed -n 's/^test(\(.*\))$/\1/p'); do
+    if grep -q "^fn $nm(" "$cd_src"; then
+        ok "excluded name $nm still exists in the source"
+    else
+        bad "the exclusion names $nm, which no longer exists in $cd_src"
+    fi
+done
+
+# THE CONTROL. Without it, a grep that matched anything would satisfy every
+# assertion above.
+if grep -q "^fn no_such_census_test_zzz(" "$cd_src"; then
+    bad "control failed: a name that cannot exist was found in the source"
+else
+    ok "CONTROL: a name that does not exist is not found (the existence check can fail)"
+fi
+
+# AND THE INSTRUMENT TESTS MUST STILL RUN. Standing down the whole module would
+# satisfy everything above while deferring checks a delivery CAN satisfy --
+# over-deferral is the failure mode on the other side of this rule.
+for keep in the_census_ledger_has_rows_this_test_can_read \
+            the_chronologically_latest_row_wins_even_when_it_is_not_last_in_the_file; do
+    if printf '%s' "$dte" | grep -qF "test($keep)"; then
+        bad "$keep is stood down, but a delivery CAN satisfy it — the stand-down is over-broad"
+    else
+        ok "$keep still runs during a delivery"
+    fi
+done
+
 printf '\ntest-census-guard: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
