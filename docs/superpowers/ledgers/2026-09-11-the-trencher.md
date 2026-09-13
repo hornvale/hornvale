@@ -3019,3 +3019,105 @@ sentence.
 **Ideonomy passes / overturns:** one overturn — `#32`'s "not this campaign's
 call," overturned by seeing that the repair was the file's existing rule rather
 than a new one.
+
+---
+
+## #36 [G5] — Task 10: my candidate was wrong, the profile named a different one, and the fix is worth 65.9 s
+
+Commit `f15744189`. Nathan ruled *profile and optimise first* rather than raise
+the ceiling; this is what the profile found.
+
+### MY HYPOTHESIS IS FALSIFIED, and I am glad I told it not to trust me
+
+I said the likely cost was `SUPPLY_AXIS_ORDER` widening 7 -> 11, since no kind
+weights a metabolite axis and those four terms are `0.0 * supply` for every
+species in both capacity loops. **It costs essentially nothing.**
+
+- The new per-rung derivation is **cheaper than what it replaced** —
+  `energy::chemical_supply` 0.078% of study cycles against
+  `energy::subterranean_energy` 0.096% at baseline. Net **−0.3%** of the delta.
+  `subterranean_energy` is now a *projection* of `chemical_supply` over the
+  same `EnergySource::ALL` loop, so the work did not double; it moved.
+- The widened dot product, bounded above by the inner closure's absolute
+  cycles, is **≤0.4% of the +341.192 s census delta** — and that bound also
+  contains astronomy and every other main commit in the interval.
+
+The `0.0 * inf` trap I warned about never applied, because `axis_supply_with`
+was never touched. **A brief that names the author's own hypothesis AND tells
+the implementer to distrust it is worth writing**; this is the second task this
+campaign where doing so changed the answer.
+
+### The three-point differential, which is why the attribution is credible
+
+Instrument matched to the 2026-09-11 baseline exactly (perf 99 Hz,
+frame-pointer, 1000 rows, 3,708,467 samples, zero lost) and **validated against
+the recorded figures before use** — `build_row` 82.83%, extraction 49.61%
+reproduced. Folded stacks were re-derived from the preserved `fa1223fd7` profile
+and a 2026-09-12 main profile already on the box, making three points rather
+than two.
+
+Study cycles **+31.84%** A→C:
+
+| | share of delta |
+|---|---|
+| ordinary main drift (296 commits, neither campaign) | **41.0%** |
+| `astronomy::ephemeris::orbital_state_at` — 0% at baseline, 10.707% now | **44.3%** |
+| everything else, including all of The Trencher | 14.7% |
+
+### The optimisable share, and it is a FIFTH instance of `PROC-prose-claims-no-assertion-checks`
+
+Swept every frame ≥0.1% for a duplicate-derivation signature. **One real hit,
+nothing else above 0.25%:** `chorus::accounts_from`, 5.866% of study cycles,
+split into **six shares inside a 0.2 pp band** — 16.76 / 16.69 / 16.68 / 16.67
+/ 16.61 / 16.59.
+
+`chorus_voices`'s own doc claimed the six metrics *"share one call site rather
+than each re-deriving voices."* **True of the call site. False of the work.**
+
+That is exactly the class I filed at `#35` — a prose claim no assertion
+enforced — and it is the **first instance with a price on it**: 4.889% of study
+cycles by profile, 6.53% of study wall realised, **3.86% of the whole census,
+65.9 s of 1707.679 s**. The registry row now leads with it, because a row with
+a number is worth several without.
+
+### Bit-identity, proven four ways rather than asserted
+
+A private `OnceCell` on `FullView`, the pattern already used for `lot`,
+`band_transects` and the weft pools. Matched pair on lefford, full 1000-row
+study, back to back under one claim:
+
+```
+957.58 s -> 895.02 s   (−62.56 s), user CPU −2,479 s, RSS flat
+rows.csv SHA-256 IDENTICAL: 0fb652ea…
+```
+
+And that hash **is also the hash of the census goldens already staged** in
+`hornvale-census-wt` — so the instrument reproduces the real census exactly,
+and a re-run at the fixed ref delivers the goldens we already have. Plus:
+`census_sentinel` emits an **identical 138-line** disagreement set before and
+after, run as an explicit control; `make rebaseline` moves nothing; a Mac
+hardware-counter cross-check agrees at −7.27% cycles.
+
+### Ruling on the ceiling: DO NOT RAISE YET
+
+Projected census **~1641.8 s** — under the 1650 ceiling by **8.2 s (0.50%)**.
+The implementer said plainly that this is not comfortable, and cited the
+ledger's own **2.5% wall spread at +0.03% of work**. That is the right kind of
+honesty about a margin one coin-flip wide.
+
+**Re-run first** — the recovery (65.9 s) exceeds the overage (57.7 s), the
+goldens are provably the staged ones, and a re-run at the final ref is owed
+anyway. Census queued at `06055072d639`.
+
+**If it still refuses**, raise it as a deliberate recalibration with this
+condition attached: **ratchet back to 1650 once `orbital_state_at` is addressed
+and two consecutive censuses measure under 1600.** That names a measured target
+— ~96 s of the new 895 s study, roughly 1.5x the lever just taken.
+
+`orbital_state_at` was left alone **deliberately and correctly**: its shape is
+per-item (200 lots, ~270 settlements each observing its own sky), not the
+six-equal-shares case, so it needs its own task rather than a speculative edit
+inside a closing campaign. It is also **astronomy's code, not ours**.
+
+**Ideonomy passes / overturns:** one overturn — my own candidate, falsified by
+the instrument I asked for.
