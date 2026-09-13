@@ -629,6 +629,44 @@ pub struct FullView {
     /// view's single biggest field; the indirection costs one allocation
     /// per world instead.
     lot: std::cell::OnceCell<Option<Box<LotSample>>>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// This world's chorus — every placed culture's account
+    /// ([`hornvale_worldgen::chorus::accounts_from`]) — computed on first
+    /// demand by [`chorus_voices`] and then reused by the six `chorus-*`
+    /// metrics.
+    ///
+    /// **Why it is memoised and not a bare call.** [`chorus_voices`]'s own doc
+    /// said the six metrics "share one call site rather than each re-deriving
+    /// voices", and that was true of the CALL SITE and false of the WORK: each
+    /// of the six called it and each paid a full derivation. The Trencher's
+    /// Task 10 census profile (lefford, `perf -F 99 --call-graph fp`, 1000
+    /// rows at `8b00851c5`) found `accounts_from` at **5.866% of study
+    /// cycles, split six ways within 0.2 percentage points** — 16.76 / 16.69
+    /// / 16.68 / 16.67 / 16.61 / 16.59 — which is the signature of one
+    /// derivation done six times. Five of the six were pure waste: **4.889%
+    /// of all study cycles**, the largest recoverable item the profile found
+    /// and the only one above 0.25%.
+    ///
+    /// **Scoping is the whole safety argument, so it is stated here, the same
+    /// way [`TerrainView::band_transects`] and [`FullView::lot`] state it.**
+    /// The cell is a private field of the view, so its lifetime is exactly one  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// world's evaluation: `build_row` constructs a `BuiltView` per (seed, pin
+    /// set), applies every metric to it, and drops it. There is no key to
+    /// collide, no `static` to outlive a world, and no way to hand this cache
+    /// voices other than the ones [`chorus_voices`]'s own uncached body
+    /// derives for THIS view's `world()`/`terrain()`/`climate()` — which is
+    /// also why the memoisation is bit-identical rather than merely equal:
+    /// `accounts_from` is a pure function of exactly those three, all three
+    /// are fixed for the life of the view, and every reader now receives the
+    /// same `Vec` the first reader built rather than a recomputed equal one.
+    /// `OnceCell` (not `OnceLock`) is deliberate: it is `!Sync`, so a view  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// carrying filled voices cannot be shared across the runner's worker
+    /// threads even by accident.
+    ///
+    /// No `Option` wrapper, unlike [`FullView::lot`]: `accounts_from` returns
+    /// a `Vec` and cannot refuse, so an empty chorus is already the honest
+    /// reading for a world with no placed people — which is exactly the case
+    /// each `chorus_*_metric_over` answers `Absent` for.
+    chorus: std::cell::OnceCell<Vec<ChorusVoice>>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
 }
 
 impl FullView {
@@ -651,6 +689,7 @@ impl FullView {
             },
             lexicon_cache: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             lot: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense (`Box<LotSample>` inside — see this field's own doc)
+            chorus: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
         })
     }
 
@@ -6724,10 +6763,20 @@ fn toponymic_roots_won(view: &FullView) -> usize {
 }
 
 /// Every placed culture's account, read straight off the world (C4
-/// LANG-41): a thin passthrough so the six chorus metrics below share one
-/// call site rather than each re-deriving voices.
-fn chorus_voices(v: &FullView) -> Vec<ChorusVoice> {
-    accounts_from(v.world(), v.terrain(), v.climate())
+/// LANG-41), derived once per view and memoised on [`FullView::chorus`] so
+/// the six chorus metrics below share one DERIVATION and not merely one call
+/// site.
+///
+/// That distinction is the whole point of this function and it used to be
+/// unmet: the previous body was a bare `accounts_from` call, so each of the
+/// six metrics paid a full chorus. The Trencher's Task 10 census profile
+/// measured `accounts_from` at 5.866% of study cycles split into six shares
+/// inside a 0.2 pp band, and 4.889% of all study cycles was the five
+/// redundant derivations. See [`FullView::chorus`] for the profile numbers
+/// and the scoping argument.
+fn chorus_voices(v: &FullView) -> &[ChorusVoice] {
+    v.chorus
+        .get_or_init(|| accounts_from(v.world(), v.terrain(), v.climate()))
 }
 
 /// Mean `distortion()` over `voices` (C4 LANG-41). `Absent` if `voices` is
@@ -6747,7 +6796,7 @@ fn chorus_distortion_metric_over(voices: &[ChorusVoice]) -> MetricValue {
 }
 
 fn chorus_distortion_metric(v: &FullView) -> MetricValue {
-    chorus_distortion_metric_over(&chorus_voices(v))
+    chorus_distortion_metric_over(chorus_voices(v))
 }
 
 /// Mean `recoverability()` over `voices` (C4 LANG-41). `Absent` if `voices`
@@ -6765,7 +6814,7 @@ fn chorus_recoverability_metric_over(voices: &[ChorusVoice]) -> MetricValue {
 }
 
 fn chorus_recoverability_metric(v: &FullView) -> MetricValue {
-    chorus_recoverability_metric_over(&chorus_voices(v))
+    chorus_recoverability_metric_over(chorus_voices(v))
 }
 
 /// Population variance of `distortion()` over `voices` (C4 LANG-41): the
@@ -6788,7 +6837,7 @@ fn chorus_variance_metric_over(voices: &[ChorusVoice]) -> MetricValue {
 }
 
 fn chorus_variance_metric(v: &FullView) -> MetricValue {
-    chorus_variance_metric_over(&chorus_voices(v))
+    chorus_variance_metric_over(chorus_voices(v))
 }
 
 /// Mean pairwise `distinctiveness()` across every unordered pair of `voices`
@@ -6809,7 +6858,7 @@ fn chorus_distinctiveness_metric_over(voices: &[ChorusVoice]) -> MetricValue {
 }
 
 fn chorus_distinctiveness_metric(v: &FullView) -> MetricValue {
-    chorus_distinctiveness_metric_over(&chorus_voices(v))
+    chorus_distinctiveness_metric_over(chorus_voices(v))
 }
 
 /// Mean pairwise absolute difference in `sky_capability` across every
@@ -6832,7 +6881,7 @@ fn chorus_param_spread_metric_over(voices: &[ChorusVoice]) -> MetricValue {
 }
 
 fn chorus_param_spread_metric(v: &FullView) -> MetricValue {
-    chorus_param_spread_metric_over(&chorus_voices(v))
+    chorus_param_spread_metric_over(chorus_voices(v))
 }
 
 /// Kendall tau between per-voice `sky_capability` and per-voice
@@ -6884,7 +6933,7 @@ fn chorus_sky_calibration_metric_over(voices: &[ChorusVoice]) -> MetricValue {
 }
 
 fn chorus_sky_calibration_metric(v: &FullView) -> MetricValue {
-    chorus_sky_calibration_metric_over(&chorus_voices(v))
+    chorus_sky_calibration_metric_over(chorus_voices(v))
 }
 
 // --- The Contour (Task 4, round 3): the Spearman rank-correlation helpers
@@ -17398,27 +17447,31 @@ mod tests {
         assert_eq!(chorus_sky_calibration_metric_over(&[]), MetricValue::Absent);
 
         let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
-        let one_voice: Vec<ChorusVoice> = chorus_voices(&view).into_iter().take(1).collect();
-        assert_eq!(one_voice.len(), 1, "seed 1 must place at least one voice");
+        let voices = chorus_voices(&view);
+        assert!(!voices.is_empty(), "seed 1 must place at least one voice");
+        // A borrowed prefix, not a cloned `Vec`: `chorus_voices` hands back the
+        // view's memoised slice now (see `FullView::chorus`), and `ChorusVoice`
+        // is not `Clone`.
+        let one_voice = &voices[..1];
         assert!(matches!(
-            chorus_distortion_metric_over(&one_voice),
+            chorus_distortion_metric_over(one_voice),
             MetricValue::Number(_)
         ));
         assert!(matches!(
-            chorus_recoverability_metric_over(&one_voice),
+            chorus_recoverability_metric_over(one_voice),
             MetricValue::Number(_)
         ));
         assert_eq!(
-            chorus_distinctiveness_metric_over(&one_voice),
+            chorus_distinctiveness_metric_over(one_voice),
             MetricValue::Absent
         );
-        assert_eq!(chorus_variance_metric_over(&one_voice), MetricValue::Absent);
+        assert_eq!(chorus_variance_metric_over(one_voice), MetricValue::Absent);
         assert_eq!(
-            chorus_param_spread_metric_over(&one_voice),
+            chorus_param_spread_metric_over(one_voice),
             MetricValue::Absent
         );
         assert_eq!(
-            chorus_sky_calibration_metric_over(&one_voice),
+            chorus_sky_calibration_metric_over(one_voice),
             MetricValue::Absent
         );
     }

@@ -7614,3 +7614,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-13T19:11:41Z | gate-commit | 124.791 | 661.190 | 48.669 | 5.69 | 0 | eafd88258 | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-13T19:38:36Z | gate-commit | 48.241 | 90.987 | 23.551 | 2.37 | 0 | eafd88258 | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-13T19:47:01Z | gate-commit | 40.874 | 81.822 | 19.647 | 2.48 | 0 | eafd88258 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T20:17:08Z | gate-commit | 42.763 | 82.654 | 20.246 | 2.41 | 0 | 634714d92 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T22:04:27Z | gate-commit | 73.912 | 229.088 | 49.347 | 3.77 | 0 | 99a2c188a | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T22:05:49Z | gate-commit | 47.455 | 91.595 | 25.500 | 2.47 | 0 | 99a2c188a | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T22:18:08Z | census-tail-chorus | 39.093 | 243.668 | 13.114 | 6.57 | 0 | 99a2c188a | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T22:18:09Z | census-tail-domesday | 0.355 | 0.315 | 0.028 | 0.97 | 0 | 99a2c188a | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T22:18:09Z | census-tail-anomalies | 0.297 | 0.253 | 0.028 | 0.95 | 0 | 99a2c188a | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T22:18:23Z | rebaseline | 164.329 | 558.632 | 25.551 | 3.55 | 0 | 99a2c188a | campaign/the-trencher | MacBookPro | 10 |
