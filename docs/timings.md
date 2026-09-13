@@ -7622,3 +7622,19 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-13T22:18:09Z | census-tail-anomalies | 0.297 | 0.253 | 0.028 | 0.95 | 0 | 99a2c188a | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-13T22:18:23Z | rebaseline | 164.329 | 558.632 | 25.551 | 3.55 | 0 | 99a2c188a | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-13T22:19:33Z | gate-commit | 45.324 | 86.885 | 22.282 | 2.41 | 0 | 99a2c188a | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T18:40:23Z | census-tail-chorus | 71.408 | 957.583 | 25.775 | 13.77 | 0 | 594850b06 |  | lefford | 40 |
+| 2026-09-13T18:40:24Z | census-tail-domesday | 1.402 | 1.210 | 0.129 | 0.96 | 0 | 594850b06 |  | lefford | 40 |
+| 2026-09-13T18:40:25Z | census-tail-anomalies | 1.066 | 0.926 | 0.140 | 1.00 | 0 | 594850b06 |  | lefford | 40 |
+| 2026-09-13T18:40:57Z | sluice:artifacts | 352.148 | 2757.144 | 106.618 | 8.13 | 0 | 594850b06 |  | lefford | 40 |
+| 2026-09-13T18:43:29Z | sluice:outboard | 151.299 | 169.099 | 96.891 | 1.76 | 0 | 8ff2678ef |  | lefford | 40 |
+| 2026-09-13T19:01:05Z | sluice:gate | 1055.743 | 30347.658 | 1066.450 | 29.76 | 0 | 792238af1 |  | lefford | 40 |
+| 2026-09-13T19:06:40Z | sluice:clients | 334.901 | 4917.333 | 409.086 | 15.90 | 0 | 386da1b46 |  | lefford | 40 |
+| 2026-09-13T19:16:12Z | sluice:heavy | 571.244 | 15881.590 | 358.906 | 28.43 | 0 | 7bf01b618 |  | lefford | 40 |
+| 2026-09-13T20:51:42Z | census-tail-chorus | 29.096 | 583.634 | 18.617 | 20.70 | 0 | a57f8e0fa |  | lefford | 40 |
+| 2026-09-13T20:51:44Z | census-tail-domesday | 1.551 | 1.353 | 0.143 | 0.96 | 0 | a57f8e0fa |  | lefford | 40 |
+| 2026-09-13T20:51:44Z | census-tail-anomalies | 0.934 | 0.792 | 0.143 | 1.00 | 0 | a57f8e0fa |  | lefford | 40 |
+| 2026-09-13T20:52:16Z | sluice:artifacts | 254.816 | 1429.760 | 43.147 | 5.78 | 0 | a57f8e0fa |  | lefford | 40 |
+| 2026-09-13T20:54:32Z | sluice:outboard | 135.185 | 101.163 | 81.742 | 1.35 | 0 | ffb2a3833 |  | lefford | 40 |
+| 2026-09-13T21:10:34Z | sluice:gate | 961.456 | 28774.589 | 936.575 | 30.90 | 0 | b06751b5a |  | lefford | 40 |
+| 2026-09-13T21:15:21Z | sluice:clients | 287.450 | 4231.623 | 303.348 | 15.78 | 0 | de313b101 |  | lefford | 40 |
+| 2026-09-13T21:24:37Z | sluice:heavy | 555.685 | 15763.829 | 346.568 | 28.99 | 0 | 3cabea2e3 |  | lefford | 40 |
