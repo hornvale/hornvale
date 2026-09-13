@@ -965,7 +965,7 @@ instinct in each case:
 
 `founder_collision`'s 0–2999 positive-set sweep budgets **~800 s** in its own
 `#[ignore]` reason (prior sweeps: 692.89 / 744.21 / 768.72 / 798.87 s). At
-this roster it ran **8,160 s without finishing and was stopped** — a **≥10.2x**
+this roster it ran **8,183.313 s without finishing and was stopped** — a **≥10.2x**
 rise. Cause: it builds 3,000 worlds through the deep-history bake on ten
 threads, and the settling roster went 15 → 20, so every world pays for five
 more peoples' placement and promotion.
@@ -1022,6 +1022,11 @@ mutation-verified red on the exact revert.
 ### Known-red at the close of this task, and why
 
 **Five tests, in two groups, neither of them unfinished re-pinning.**
+
+> **Superseded below (see "`founder_collision` is NO LONGER RED").** The
+> paragraph that follows was accurate when written, before the absorb. It is
+> left standing rather than rewritten, because a ledger that edits its own
+> earlier state cannot be read as a history.
 
 The three `founder_collision` tests are blocked on the sweep above, which is
 now an hours-long instrument. The two census ones are blocked on the canonical
