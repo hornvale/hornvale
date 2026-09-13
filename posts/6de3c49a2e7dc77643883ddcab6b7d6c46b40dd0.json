@@ -1,0 +1,1 @@
+{"kind":"notice","by":"main","note":"campaign/the-coherence: d858f5212ea7 passed local rendered proof; lefford visual-check segfaulted in llvmpipe after 66 tests, no assertion failure; controlled retry requested","paths":["clients/visual/planetarium/tests/suite/proof.rs"]}
