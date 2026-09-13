@@ -1324,6 +1324,33 @@ needed. Temporarily lowered to 1, the gate opens and the assertion **fires**:
 `stratified z = -0.034, at or under 1.96` — nextest rc=100. Restored, tree
 clean.
 
+**And the restore left a STALE TEST BINARY that a clean tree, a correct grep
+and a green `gate-commit` all failed to reveal.** Worth recording because the
+mechanism is not the usual one. The probe's verify-both-ways pass used
+`sed -i.bak` to lower the floor and `mv …bak …rs` to restore it — and `mv`
+carries the backup's mtime, which is the file's mtime *before* the edit. So
+the restore rolled the source's mtime **backward**, to earlier than the
+timestamp of the binary built from the mutated source. cargo's freshness check
+is mtime-based, so it judged the crate fresh and rebuilt nothing: the next
+three things to run — `cargo clippy --all-targets`, `gate-commit` (rc=0), and
+the four-test confirmation — all consumed the `MIN = 1` binary while the
+committed source said 10.
+
+Everything a reader would check agreed and was wrong together: `git status`
+clean, `grep` on the constant showing 10, gate green. The single tell was
+inside the panic text — *"every tenure stratum clears **1** breached
+workings"* — a number the run's own source could not produce. `touch` on the
+file, then a re-run: 4/4 pass, the UNEVALUATED block reports the floor as 10,
+`gate-commit` re-run rc=0.
+
+The general shape, which is the part that transfers: **a mutation restored by
+`mv` from a `.bak` is invisible to cargo**, where the same restore by rewriting
+the file (an editor, `git checkout --`) is not, because those stamp *now*. The
+memory index already carries "a restored mutation can leave a stale binary";
+this is the variant where the restore makes the tree look *more* trustworthy
+rather than less. Restore a mutation with `git checkout -- <file>`, or `touch`
+after any `mv`-based restore.
+
 **Preregistration outcome appended, predictions untouched.** §7 of
 `docs/superpowers/specs/2026-09-12-the-tidemark-survivorship-amendment.md`
 records P1 FAILED (and that the pole's stated `refuted` consequence was
