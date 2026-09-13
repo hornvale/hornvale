@@ -14,8 +14,8 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 999 | 100.0% |
-| `false` | 0 | 0.0% |
+| `true` | 998 | 99.9% |
+| `false` | 1 | 0.1% |
 
 ### `epithet-honorific-kobold`
 
@@ -36,7 +36,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.12244898 | 0.47493404 | 0.54180107 | 0.58943089 | 0.7057903 | 0.52512356 |
+| 0.19565217 | 0.46367521 | 0.53549966 | 0.58719647 | 0.69733333 | 0.52126645 |
 
 ### `name-gloss-true`
 
@@ -57,7 +57,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 4.75 | 7.3673469 | 8.3404255 | 9.35 | 18.224719 | 8.492323 |
+| 4.8666667 | 7.4 | 8.3823529 | 9.4375 | 15.55102 | 8.487415 |
 
 ### `name-length-goblin-twin`
 
@@ -73,7 +73,7 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2.6666667 | 5.6833333 | 6.6666667 | 7.7710843 | 20.684932 | 6.9264986 |
+| 2.6666667 | 5.6785714 | 6.59199 | 7.741573 | 20.128205 | 6.9026713 |
 
 ### `name-pattern-signatures`
 
@@ -83,7 +83,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 5 | 9 | 9 | 9 | 9 | 8.977 |
+| 7 | 9 | 9 | 9 | 9 | 8.997 |
 
 ### `name-people-recoverability`
 
@@ -93,7 +93,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.22222222 | 0.26315789 | 0.26315789 | 0.26315789 | 0.41176471 | 0.26493212 |
+| 0.125 | 0.125 | 0.125 | 0.125 | 0.33333333 | 0.12874225 |
 
 ### `name-prefix-region-full-stack`
 
@@ -103,7 +103,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.14273995 | 0.36954798 | 0.47239661 | 0.59375 | 0.85947712 | 0.48356042 |
+| 0.160401 | 0.38963211 | 0.48161786 | 0.59020979 | 0.91932458 | 0.49095628 |
 
 ### `name-prefix-region-scope`
 
@@ -113,7 +113,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 1 | 1 | 1 | 1 | 1 |
+| 1 | 1 | 1 | 1 | 2 | 1.001 |
 
 ### `name-prefix-settlement-scope`
 
@@ -123,7 +123,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.87648456 | 0.94266442 | 0.95721568 | 0.96949891 | 1 | 0.95520504 |
+| 0.84514436 | 0.94392523 | 0.95775999 | 0.96923077 | 1 | 0.95576956 |
 
 ### `name-syllables-goblin`
 
@@ -133,7 +133,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1.75 | 2.4651163 | 2.6666667 | 2.8888889 | 6.4494382 | 2.7078075 |
+| 1.5897436 | 2.4705882 | 2.6666667 | 2.8974359 | 4.7272727 | 2.7086215 |
 
 ### `name-syllables-kobold`
 
@@ -143,7 +143,7 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1.1666667 | 1.9354839 | 2.1464603 | 2.3955224 | 7.5 | 2.2191126 |
+| 1.0833333 | 1.9459459 | 2.1573787 | 2.3717949 | 7.1282051 | 2.2139884 |
 
 ### `name-transparency`
 
@@ -153,7 +153,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.23809524 | 0.62237762 | 0.69773218 | 0.7787234 | 0.96061269 | 0.69484314 |
+| 0.27403846 | 0.62275449 | 0.70724468 | 0.77358491 | 0.96666667 | 0.69371085 |
 
 ### `toponymic-core-size`
 
@@ -173,13 +173,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 4 | 6 | 7 | 7 | 7 | 6.541 |
+| 4 | 7 | 7 | 7 | 7 | 6.835 |
 
 ## Weaknesses found here
 
 ### `epithet-honorific-goblin`
 
-- **D1**: "true" holds 999/999 worlds (100.0%), at or above the 80% threshold
+- **D1**: "true" holds 998/999 worlds (99.9%), at or above the 80% threshold
 
 ### `epithet-honorific-kobold`
 
@@ -187,17 +187,18 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `name-pattern-signatures`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 4 min..max range), under the 5% bar
-- **D4**: median 9 equals the max (5 .. 9)
+- **D3**: p25..p75 spans 0 (0.00% of the 2 min..max range), under the 5% bar
+- **D4**: median 9 equals the max (7 .. 9)
 
 ### `name-people-recoverability`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 0.18954248999999998 min..max range), under the 5% bar
+- **D3**: p25..p75 spans 0 (0.00% of the 0.20833332999999998 min..max range), under the 5% bar
+- **D4**: median 0.125 equals the min (0.125 .. 0.33333333)
 
 ### `name-prefix-region-scope`
 
-- **D2**: min == median == max == 1 across 1000 worlds
-- **D4**: median 1 equals the min (1 .. 1)
+- **D3**: p25..p75 spans 0 (0.00% of the 1 min..max range), under the 5% bar
+- **D4**: median 1 equals the min (1 .. 2)
 
 ### `toponymic-core-size`
 
@@ -206,5 +207,6 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `toponymic-roots-won`
 
+- **D3**: p25..p75 spans 0 (0.00% of the 3 min..max range), under the 5% bar
 - **D4**: median 7 equals the max (4 .. 7)
 

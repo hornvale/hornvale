@@ -10,13 +10,13 @@ What peoples believe: pantheons, cults, and the vestiges belief leaves in the wo
 
 Sentiment of the bugbear flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one
 
-n = 994 present, 6 absent (of 1000 worlds)
+n = 996 present, 4 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `cyclic` | 894 | 89.9% |
-| `ambient` | 90 | 9.1% |
-| `eternal` | 10 | 1.0% |
+| `cyclic` | 902 | 90.6% |
+| `ambient` | 86 | 8.6% |
+| `eternal` | 8 | 0.8% |
 
 ### `belief-kind-goblin`
 
@@ -48,8 +48,8 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `cyclic` | 923 | 94.0% |
-| `eternal` | 59 | 6.0% |
+| `cyclic` | 921 | 93.8% |
+| `eternal` | 61 | 6.2% |
 
 ### `blind-attribution-correct`
 
@@ -59,8 +59,8 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 871 | 88.7% |
-| `false` | 111 | 11.3% |
+| `true` | 872 | 88.8% |
+| `false` | 110 | 11.2% |
 
 ### `crisis-fires`
 
@@ -81,8 +81,8 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 954 | 95.5% |
-| `folk` | 45 | 4.5% |
+| `organized` | 958 | 95.9% |
+| `folk` | 41 | 4.1% |
 
 ### `cult-form-goblin`
 
@@ -92,8 +92,8 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 954 | 95.5% |
-| `folk` | 45 | 4.5% |
+| `organized` | 958 | 95.9% |
+| `folk` | 41 | 4.1% |
 
 ### `cult-form-goblin-twin`
 
@@ -112,8 +112,8 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 678 | 69.0% |
-| `folk` | 304 | 31.0% |
+| `organized` | 672 | 68.4% |
+| `folk` | 310 | 31.6% |
 
 ### `head-deity-domain-goblin`
 
@@ -142,8 +142,8 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `lunar` | 855 | 87.1% |
-| `solar` | 127 | 12.9% |
+| `lunar` | 861 | 87.7% |
+| `solar` | 121 | 12.3% |
 
 ### `head-deity-periodicity`
 
@@ -164,7 +164,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.9 | 1 | 1 | 1 | 0.9285305 |
+| 0 | 0.90909091 | 1 | 1 | 1 | 0.9322173 |
 
 ### `pantheon-cyclic-share-goblin-twin`
 
@@ -180,7 +180,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 7 | 10 | 18 | 7.7197197 |
+| 1 | 5 | 7 | 10 | 18 | 7.7067067 |
 
 ### `pantheon-size-goblin`
 
@@ -190,7 +190,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 7 | 10 | 18 | 7.7197197 |
+| 1 | 5 | 7 | 10 | 18 | 7.7067067 |
 
 ### `pantheon-size-goblin-twin`
 
@@ -206,7 +206,7 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 7 | 9 | 16 | 7.0702648 |
+| 1 | 5 | 7 | 9 | 16 | 7.0916497 |
 
 ### `pantheon-verticality`
 
@@ -222,7 +222,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 ### `belief-kind-bugbear`
 
-- **D1**: "cyclic" holds 894/994 worlds (89.9%), at or above the 80% threshold
+- **D1**: "cyclic" holds 902/996 worlds (90.6%), at or above the 80% threshold
 
 ### `belief-kind-goblin`
 
@@ -234,19 +234,19 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 ### `belief-kind-kobold`
 
-- **D1**: "cyclic" holds 923/982 worlds (94.0%), at or above the 80% threshold
+- **D1**: "cyclic" holds 921/982 worlds (93.8%), at or above the 80% threshold
 
 ### `blind-attribution-correct`
 
-- **D1**: "true" holds 871/982 worlds (88.7%), at or above the 80% threshold
+- **D1**: "true" holds 872/982 worlds (88.8%), at or above the 80% threshold
 
 ### `cult-form`
 
-- **D1**: "organized" holds 954/999 worlds (95.5%), at or above the 80% threshold
+- **D1**: "organized" holds 958/999 worlds (95.9%), at or above the 80% threshold
 
 ### `cult-form-goblin`
 
-- **D1**: "organized" holds 954/999 worlds (95.5%), at or above the 80% threshold
+- **D1**: "organized" holds 958/999 worlds (95.9%), at or above the 80% threshold
 
 ### `head-deity-domain-goblin`
 
@@ -254,7 +254,7 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 ### `head-deity-domain-kobold`
 
-- **D1**: "lunar" holds 855/982 worlds (87.1%), at or above the 80% threshold
+- **D1**: "lunar" holds 861/982 worlds (87.7%), at or above the 80% threshold
 
 ### `head-deity-periodicity`
 
