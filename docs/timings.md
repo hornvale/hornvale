@@ -7459,6 +7459,21 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T17:48:26Z | sluice:gate | 786.346 | 24491.733 | 743.282 | 32.09 | 0 | 2eb1e2157 |  | lefford | 40 |
 | 2026-09-11T17:52:47Z | sluice:clients | 260.828 | 3579.202 | 286.076 | 14.82 | 0 | d92d89908 |  | lefford | 40 |
 | 2026-09-11T18:00:11Z | sluice:heavy | 443.784 | 12829.265 | 266.752 | 29.51 | 0 | f6577d99e |  | lefford | 40 |
+| 2026-09-12T14:21:57Z | gate-commit | 40.073 | 63.917 | 3.926 | 1.69 | 0 | e841ed0b7 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T14:24:35Z | gate-commit | 31.577 | 43.719 | 3.743 | 1.50 | 0 | e841ed0b7 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T14:28:03Z | gate-commit | 190.416 | 69.506 | 16.960 | 0.45 | 0 | e841ed0b7 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T14:28:03Z | gate-commit | 200.949 | 1406.517 | 64.810 | 7.32 | 0 | e841ed0b7 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T14:29:04Z | gate-commit | 42.295 | 73.381 | 20.671 | 2.22 | 0 | e841ed0b7 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T14:29:09Z | gate-commit | 44.789 | 73.683 | 20.966 | 2.11 | 0 | 560b6506e | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T14:32:34Z | gate-commit | 57.339 | 190.932 | 40.847 | 4.04 | 0 | 560b6506e | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T14:46:16Z | gate-commit | 67.029 | 231.213 | 42.168 | 4.08 | 0 | 6c4e7f359 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T14:47:05Z | gate-commit | 37.934 | 73.627 | 20.675 | 2.49 | 0 | 6c4e7f359 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T14:53:49Z | gate-commit | 59.686 | 172.847 | 42.840 | 3.61 | 0 | 947edbf25 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T15:06:33Z | gate-commit | 17.939 | 41.645 | 5.332 | 2.62 | 0 | 41478d7f2 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T15:08:36Z | gate-commit | 28.336 | 40.439 | 5.162 | 1.61 | 0 | 41478d7f2 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T15:11:15Z | gate-commit | 107.761 | 621.126 | 52.935 | 6.26 | 0 | 41478d7f2 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T15:20:56Z | gate-commit | 21.254 | 33.563 | 5.228 | 1.83 | 0 | 1f5330a75 | astronomy-deepening | MacBookPro | 10 |
+| 2026-09-12T15:22:02Z | gate-commit | 52.017 | 153.029 | 40.939 | 3.73 | 0 | 1f5330a75 | astronomy-deepening | MacBookPro | 10 |
 | 2026-09-11T23:22:45Z | census-tail-chorus | 64.430 | 851.455 | 23.243 | 13.58 | 0 | bd7478c80 |  | lefford | 40 |
 | 2026-09-11T23:22:47Z | census-tail-domesday | 1.274 | 1.096 | 0.122 | 0.96 | 0 | bd7478c80 |  | lefford | 40 |
 | 2026-09-11T23:22:48Z | census-tail-anomalies | 1.000 | 0.877 | 0.123 | 1.00 | 0 | bd7478c80 |  | lefford | 40 |
@@ -7569,3 +7584,32 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-13T18:17:04Z | gate-commit | 43.040 | 81.765 | 18.719 | 2.33 | 0 | 4bc365b4c | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-13T18:18:10Z | gate-commit | 39.526 | 78.870 | 18.295 | 2.46 | 0 | 4bc365b4c | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-13T18:22:04Z | gate-commit | 45.083 | 81.432 | 19.280 | 2.23 | 0 | 0e6052e2c | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-12T21:40:16Z | census-tail-chorus | 68.324 | 938.945 | 24.109 | 14.10 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T21:56:14Z | census-study-the-census | 957.546 | 34308.840 | 166.834 | 36.00 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:02:08Z | census-study-the-meeting | 354.733 | 12856.783 | 143.599 | 36.65 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:02:10Z | census-tail-anomalies | 0.598 | 0.540 | 0.059 | 1.00 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:02:10Z | census-tail-domesday | 1.464 | 1.277 | 0.132 | 0.96 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:02:40Z | census | 1624.010 | 50209.542 | 430.353 | 31.18 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-12T22:10:41Z | gnomon-injection | 479.173 | 5806.803 | 164.433 | 12.46 | 0 | f0cc1965f |  | lefford | 40 |
+| 2026-09-13T15:33:32Z | census-tail-chorus | 72.033 | 1050.112 | 30.892 | 15.01 | 0 | 20d6713e8 |  | lefford | 40 |
+| 2026-09-13T15:33:34Z | census-tail-domesday | 1.128 | 0.993 | 0.135 | 1.00 | 0 | 20d6713e8 |  | lefford | 40 |
+| 2026-09-13T15:33:34Z | census-tail-anomalies | 0.957 | 0.838 | 0.119 | 1.00 | 0 | 20d6713e8 |  | lefford | 40 |
+| 2026-09-13T15:34:05Z | sluice:artifacts | 332.719 | 3376.202 | 163.542 | 10.64 | 0 | 20d6713e8 |  | lefford | 40 |
+| 2026-09-13T15:36:22Z | sluice:outboard | 136.488 | 171.377 | 102.434 | 2.01 | 0 | 4029cb8ba |  | lefford | 40 |
+| 2026-09-13T15:55:21Z | sluice:gate | 1138.893 | 31548.965 | 1125.042 | 28.69 | 0 | dc4e1b451 |  | lefford | 40 |
+| 2026-09-13T16:00:57Z | sluice:clients | 336.215 | 4995.644 | 401.435 | 16.05 | 0 | 9cf52dbf0 |  | lefford | 40 |
+| 2026-09-13T16:10:14Z | sluice:heavy | 556.296 | 15661.857 | 321.057 | 28.73 | 0 | 27c065872 |  | lefford | 40 |
+| 2026-09-13T16:14:32Z | census-tail-chorus | 29.933 | 559.210 | 15.676 | 19.21 | 0 | 953bb760e |  | lefford | 40 |
+| 2026-09-13T16:14:33Z | census-tail-domesday | 1.126 | 0.991 | 0.135 | 1.00 | 0 | 953bb760e |  | lefford | 40 |
+| 2026-09-13T16:14:34Z | census-tail-anomalies | 0.919 | 0.782 | 0.138 | 1.00 | 0 | 953bb760e |  | lefford | 40 |
+| 2026-09-13T16:15:03Z | sluice:artifacts | 234.642 | 1417.098 | 37.490 | 6.20 | 0 | 953bb760e |  | lefford | 40 |
+| 2026-09-13T16:16:35Z | sluice:outboard | 91.315 | 68.042 | 71.766 | 1.53 | 0 | 81c31a307 |  | lefford | 40 |
+| 2026-09-13T16:32:01Z | sluice:gate | 925.398 | 28702.789 | 860.306 | 31.95 | 0 | 4fda09c84 |  | lefford | 40 |
+| 2026-09-13T16:36:42Z | sluice:clients | 280.737 | 4153.973 | 308.175 | 15.89 | 0 | 5153f33db |  | lefford | 40 |
+| 2026-09-13T16:45:32Z | sluice:heavy | 530.056 | 15851.280 | 334.384 | 30.54 | 0 | ab7447400 |  | lefford | 40 |
+| 2026-09-13T19:02:27Z | census-tail-chorus | 57.599 | 293.944 | 15.055 | 5.36 | 0 | eafd88258 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T19:02:28Z | census-tail-domesday | 0.359 | 0.316 | 0.028 | 0.96 | 0 | eafd88258 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T19:02:28Z | census-tail-anomalies | 0.304 | 0.260 | 0.029 | 0.95 | 0 | eafd88258 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T19:02:43Z | rebaseline | 235.406 | 659.176 | 29.158 | 2.92 | 0 | eafd88258 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T19:11:41Z | gate-commit | 124.791 | 661.190 | 48.669 | 5.69 | 0 | eafd88258 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T19:38:36Z | gate-commit | 48.241 | 90.987 | 23.551 | 2.37 | 0 | eafd88258 | campaign/the-trencher | MacBookPro | 10 |

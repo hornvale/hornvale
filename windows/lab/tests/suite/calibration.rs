@@ -473,9 +473,24 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // invariant (a frozen sky never heads a cyclic pantheon) is the `other` arm's
     // `panic!` in the loop above, and the run reaches this line, so it never fired
     // on any of the 1000 seeds.
+    // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+    // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE MERGE,
+    // PRE-CENSUS. The absorb kept MAIN's census fixtures byte-for-byte
+    // (`the-census/rows.csv` hashes identical to origin/main's) while the
+    // conflict resolution kept THIS branch's census-delivery literals, so the
+    // entry above was the Trencher delivery's value read against main's census
+    // data -- the two halves of one pin disagreeing about which world they
+    // describe. Re-measured over the merged tree: (153, 39) -> (151, 41).
+    // RE-CHECKED RATHER THAN ASSUMED: the categorical invariant (a frozen sky
+    // never heads a cyclic pantheon) is the `other` arm's `panic!` in the loop
+    // above; the whole test was re-run with BOTH pins below softened to prints
+    // and passed, so the loop reached this line on all 1000 seeds and the arm
+    // never fired. The merged world is NOT yet censused -- this campaign's
+    // metabolite/supply work is absent from the committed CSV -- so this row
+    // is expected to move again at the post-merge census.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (153, 39),
+        (151, 41),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -542,8 +557,14 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // fixture and is not a mover here.
     // 14 -> 12. THIS ROW WAS MASKED by the split assertion above, which failed
     // first; it was read in the same pass, not on a later run.
+    // MERGE RE-PIN (2026-09-13, The Trencher absorbing origin/main): 12 -> 14,
+    // measured at the merge, pre-census, in the SAME softened pass as the split
+    // above rather than on a later run -- the split assertion masks this one,
+    // and this file's own history records that mistake being made. WITNESS, not
+    // claim: nothing here asserts a direction. Expected to move again at the
+    // post-merge census.
     assert_eq!(
-        spinning_eternal, 12,
+        spinning_eternal, 14,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -870,8 +891,17 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // coastal 182 -> 194, inland 817 -> 805. WITNESS, not claim — nothing here
     // asserts a direction. The inland row was masked by the coastal one and was
     // read in the same pass.
-    assert_eq!(coastal, 194, "coastal flagship count drifted");
-    assert_eq!(inland, 805, "inland flagship count drifted");
+    // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+    // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE MERGE,
+    // PRE-CENSUS: the absorb kept main's census fixtures while the conflict
+    // resolution kept this branch's census-delivery literals, so both rows read
+    // the Trencher delivery's value against main's census data. Re-measured
+    // over the merged tree: coastal 194 -> 182, inland 805 -> 817. BOTH were
+    // read in ONE softened pass, not one per failing run -- the inland row is
+    // masked by the coastal one. WITNESS, not claim: nothing here asserts a
+    // direction. Expected to move again at the post-merge census.
+    assert_eq!(coastal, 182, "coastal flagship count drifted");
+    assert_eq!(inland, 817, "inland flagship count drifted");
 }
 
 #[test]
@@ -1342,8 +1372,19 @@ fn blind_attribution_beats_chance_decisively() {
     // (perfect attribution among spinning, mooned pairs) was MASKED by this line
     // and could not be assumed; it was re-run with both pins softened and passed.
     // The total row was masked too and was read in the same pass.
-    assert_eq!(correct, 872, "blind-attribution count drifted");
-    assert_eq!(total, 983, "attributable-pair count drifted");
+    // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+    // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE MERGE,
+    // PRE-CENSUS: the absorb kept main's census fixtures while the conflict
+    // resolution kept this branch's census-delivery literals. Re-measured over
+    // the merged tree: correct 872 -> 871, total 983 -> 982; accuracy
+    // 871/982 = 0.887, so the 0.75 floor asserted ABOVE still clears by a wide
+    // margin. RE-CHECKED RATHER THAN ASSUMED: the run reaches this line with
+    // the floor armed, and the mooned-pair invariant BELOW (perfect attribution
+    // among spinning, mooned pairs) -- which these two lines mask -- was
+    // re-checked in the same softened pass and passed. Both rows were read in
+    // that one pass. Expected to move again at the post-merge census.
+    assert_eq!(correct, 871, "blind-attribution count drifted");
+    assert_eq!(total, 982, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1641,9 +1682,21 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // kobold (982, 18) -> (983, 17). The claim holds, re-checked rather than
     // assumed: the inner `assert!(!*v)` in the loop above reads FALSE on every
     // kobold world and never fired, and `g_false_seeds` above is still empty.
+    // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+    // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE MERGE,
+    // PRE-CENSUS: the absorb kept main's census fixtures while the conflict
+    // resolution kept this branch's census-delivery literals. Re-measured over
+    // the merged tree: (983, 17) -> (982, 18). THE GOBLIN ROW ABOVE DID NOT
+    // MOVE -- it measures (999, 1) on the merged tree, exactly its pinned
+    // value -- so this is one kobold world losing its pantheon, not a
+    // re-seating of both species. The claim holds, re-checked rather than
+    // assumed: the whole test was re-run with both split pins softened to
+    // prints and passed, so the inner `assert!(!*v)` read FALSE on every kobold
+    // world and never fired, and `g_false_seeds` above is still empty.
+    // Expected to move again at the post-merge census.
     assert_eq!(
         (k_false, k_absent),
-        (983, 17),
+        (982, 18),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -2297,7 +2350,16 @@ fn name_collision_rate_is_measured_and_pinned() {
         // fixture and is not a mover here.
         // 0.525_118_426_989_999_1 -> 0.527_216_074_640_001. The zero/nonzero/absent
         // world counts above did NOT move (0 / 1000 / 0).
-        (mean - 0.527_216_074_640_001).abs() < 1e-6,
+        // MERGE NOTE (The Trencher absorbing origin/main, 2026-09-13): BOTH
+        // sides above re-pinned this against worlds that no longer exist --
+        // The Trencher's census delivery, and the Orrery/astronomy delivery on
+        // main. main's value is taken here to compile. The merged value is
+        // re-derived ONCE after the post-absorb census, per ledger #30: a
+        // census is a world-mover, not only a remedy.
+        // The Orrery delivery gate (2026-09-12, current canonical merge
+        // product): the same fixture reads 0.525_123_563_979_999; this is a
+        // small re-pin, not a changed directional claim.
+        (mean - 0.525_123_563_979_999).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2578,7 +2640,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // NOTE: goblin appears TWICE in this table (here and below). That duplication
         // is PRE-EXISTING, not introduced by this re-pin; both arms are updated
         // together, and the duplicate is reported rather than silently deleted.
-        ("goblin", 999u32, 8.551_386_390_790_796),
+        ("goblin", 999u32, 8.492_322_954_254_249),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2746,8 +2808,24 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 6.926_498_556_008_148 -> 6.918_919_202_238_042. THE KOBOLD ROW WAS MASKED
         // by the goblin arm exactly as this file's own 2026-08-28 note warns; both
         // were read in ONE pass with the pins softened, not one per failing run.
-        ("goblin", 999u32, 8.551_386_390_790_796),
-        ("kobold", 983u32, 6.918_919_202_238_042),
+        // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+        // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE
+        // MERGE, PRE-CENSUS: the absorb kept main's census fixtures while the
+        // conflict resolution kept this branch's census-delivery literals.
+        // Re-measured over the merged tree -- goblin present unmoved at 999,
+        // mean 8.551_386_390_790_796 -> 8.492_322_954_254_249; kobold present
+        // 983 -> 982, mean 6.918_919_202_238_042 -> 6.926_498_556_008_148.
+        // BOTH SPECIES were read in ONE softened pass, not one per failing
+        // run: the goblin arm masks the kobold arm, and this file's own
+        // history records exactly that mistake. NOTE THE DUPLICATE GOBLIN ROW
+        // ABOVE -- it predates this merge and sits on BOTH sides of it, so it
+        // is left alone here, but it must be moved in step with this one or
+        // the test reds on whichever copy still holds the old mean.
+        // Re-checked rather than assumed: the `present + absent == 1000`
+        // structural row below stayed ARMED through the softened pass and
+        // held. Expected to move again at the post-merge census.
+        ("goblin", 999u32, 8.492_322_954_254_249),
+        ("kobold", 982u32, 6.926_498_556_008_148),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2993,8 +3071,22 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // the same softened pass. Both stay inside spec 8 criterion 2's 2-3 syllable
         // range, and the per-row structural relation this loop asserts (a world reports
         // a syllable count exactly when it reports a name length) never fired.
-        ("goblin", 999u32, 2.723_809_030_930_932),
-        ("kobold", 983u32, 2.216_176_219_226_857),
+        // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+        // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE
+        // MERGE, PRE-CENSUS: the absorb kept main's census fixtures while the
+        // conflict resolution kept this branch's census-delivery literals.
+        // Re-measured over the merged tree -- goblin present unmoved at 999,
+        // mean 2.723_809_030_930_932 -> 2.707_807_533_233_231_6; kobold
+        // present 983 -> 982, mean 2.216_176_219_226_857 ->
+        // 2.219_112_594_602_85. Both arms read in ONE softened pass. The
+        // present counts still agree exactly with the name-length row's
+        // (999 / 982), which is the structural relation this row's own header
+        // says is worth asserting rather than assuming -- and the per-row
+        // absent-parity assertion inside the loop stayed ARMED through the
+        // softened pass and held. Expected to move again at the post-merge
+        // census.
+        ("goblin", 999u32, 2.707_807_533_233_231_6),
+        ("kobold", 982u32, 2.219_112_594_602_85),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -3320,7 +3412,15 @@ fn name_transparency_is_measured_and_pinned() {
         // mean 0.694_843_139_979_999_5 -> 0.693_758_744_690_001; present/absent unmoved
         // at 1000/0. The floor and ceiling rows below were MASKED by this line and were
         // read in the same softened pass (see their own notes).
-        (mean - 0.693_758_744_690_001).abs() < 1e-9,
+        // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+        // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE
+        // MERGE, PRE-CENSUS: the absorb kept main's census fixtures while the
+        // conflict resolution kept this branch's census-delivery literals.
+        // 0.693_758_744_690_001 -> 0.694_843_139_979_999_5. The present/absent
+        // rows above did NOT move (1000 / 0). The floor and ceiling rows below
+        // are MASKED by this line and were read in the SAME softened pass, not
+        // on later runs. Expected to move again at the post-merge census.
+        (mean - 0.694_843_139_979_999_5).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3424,7 +3524,15 @@ fn name_transparency_is_measured_and_pinned() {
         // spread narrows from BOTH ends; a 0.341-to-0.969 span around a 0.694 mean is
         // still a real distribution over worlds, not the uniformity defect this row
         // guards. Read the two together before treating either as a trend.
-        (min - 0.340_659_34).abs() < 1e-8,
+        // MERGE RE-PIN (2026-09-13, The Trencher absorbing origin/main):
+        // floor 0.340_659_34 -> 0.238_095_24, measured at the merge,
+        // pre-census, in the same softened pass as the mean above. The floor
+        // FALLS and the ceiling below falls too, so the spread widens at the
+        // bottom and narrows at the top; a 0.238-to-0.961 span around a 0.695
+        // mean is still a real distribution over worlds, not the uniformity
+        // defect this row guards. Read the two together before treating
+        // either as a trend. Expected to move again at the post-merge census.
+        (min - 0.238_095_24).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -3470,7 +3578,14 @@ fn name_transparency_is_measured_and_pinned() {
         // rather than re-pinned silently: it is a rise of 0.0089, the ceiling remains
         // off 1.0, and no world reads fully transparent. Recorded, not read as a
         // return of the defect — but a further rise toward 1.0 is the thing to watch.
-        (max - 0.969_498_91).abs() < 1e-8,
+        // MERGE RE-PIN (2026-09-13, The Trencher absorbing origin/main):
+        // ceiling 0.969_498_91 -> 0.960_612_69, measured at the merge,
+        // pre-census, in the same softened pass as the mean above. This moves
+        // AWAY from 1.0, which is away from the defect this row guards rather
+        // than toward it; the standing instruction above asks a rise toward
+        // 1.0 to be read against, and this is not one. No world reads fully
+        // transparent. Expected to move again at the post-merge census.
+        (max - 0.960_612_69).abs() < 1e-8,
         "name-transparency maximum drifted: {max:.15}"
     );
 }
@@ -3979,6 +4094,15 @@ fn null_control_name_length_smd_is_pinned() {
         // the census-of-the-meeting fixture this control reads as well as the-census.
         // Still comfortably inside the +/-0.2 sampling bound that
         // `null_control_distributions_are_within_the_sampling_bound` asserts.
+        // MERGE NOTE (The Trencher absorbing origin/main, 2026-09-13): BOTH
+        // sides above re-pinned this against worlds that no longer exist --
+        // The Trencher's census delivery, and the Orrery/astronomy delivery on
+        // main. main's value is taken here to compile. The merged value is
+        // re-derived ONCE after the post-absorb census, per ledger #30: a
+        // census is a world-mover, not only a remedy.
+        // The Orrery delivery gate (2026-09-12, current canonical merge
+        // product): the same fixture reads -0.033_664_353_490_275_48; the
+        // null remains comfortably inside the pre-registered bound.
         (namelen - -0.033_664_353_490_275_48).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );

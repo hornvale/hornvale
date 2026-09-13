@@ -396,6 +396,7 @@ mod tests {
                 age: crate::units::Gyr::new(4.51).unwrap(),
             }],
             neighbors: vec![],
+            neighbor_catalog: vec![],
             forcing: crate::forcing::OrbitalForcing {
                 obliquity_mean: 0.0,
                 obliquity_amp: 0.0,
@@ -409,6 +410,7 @@ mod tests {
                 moon_phase_offsets: vec![0.0],
             },
             wanderers: vec![],
+            comets: vec![],
         }
     }
 

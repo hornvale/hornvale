@@ -517,8 +517,38 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
         // ratio, or print it, so the next lapse fires instead of accruing. Not
         // done here -- The Trencher is cut to its supply half and adding a guard
         // to another campaign's calibration row is not its call to make.
-        (mean - 18.1105).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~18.1105)"
+        // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+        // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE
+        // MERGE, PRE-CENSUS: the absorb kept main's census fixtures
+        // byte-for-byte while the conflict resolution kept this branch's
+        // census-delivery literal, so the row above read the Trencher
+        // delivery's value against main's census data. Re-measured over the
+        // merged tree: 18.1105 -> 17.6474.
+        //
+        // THE THREE-NARROWING TREND THE BLOCK ABOVE REPORTED UPWARD IS
+        // PARTLY UNWOUND, AND SAYING SO IS THE HONEST READING. 18.1105 was
+        // the Trencher census delivery's value; against main's census the
+        // reading is 17.6474, which is the value the Underworld Peoples
+        // delivery already recorded two paragraphs up. So the largest of the
+        // three steps (+0.4631) belonged to the delivery this merge did not
+        // keep, and is NOT evidence about the floor either -- the same
+        // objection the block above makes applies unchanged: eight (now
+        // nine) opportunistic readings off successive refreshes cannot answer
+        // a floor question, and the merged world is not yet censused at all.
+        // The ratio correction above stands and is NOT walked back:
+        // 32.7 / 17.6474 = 1.853x, still short of the "better than 2x" this
+        // file claims eleven times, and the crossing still sits between
+        // 15.0340 and 17.2377 -- before this campaign, and owned by neither
+        // it nor the three narrowings.
+        //
+        // THE ASSERTED CLAIM IS UNCHANGED AND RE-CHECKED RATHER THAN
+        // ASSUMED: the preregistered directional assertion (mean < the
+        // uniform-sphere baseline of 32.7) sits ABOVE this line and stayed
+        // ARMED through the softened pass that took this measurement, so
+        // 17.6474 cleared it. Expected to move again at the post-merge
+        // census.
+        (mean - 17.6474).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.6474)"
     );
 }
 

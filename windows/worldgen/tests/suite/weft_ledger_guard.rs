@@ -44,7 +44,35 @@ use hornvale_worldgen::seed_42_world;
 /// sides, which is not a quality signal in either direction: the bake sees a
 /// different competition, so living settlements and dead layers move
 /// independently of each other.
-const SEED_42_FACT_COUNT: usize = 20_518;
+/// MERGE NOTE (The Trencher absorbing origin/main, 2026-09-13): BOTH
+/// sides above re-pinned this against worlds that no longer exist --
+/// The Trencher's census delivery, and the Orrery/astronomy delivery on
+/// main. main's value is taken here to compile. The merged value is
+/// re-derived ONCE after the post-absorb census, per ledger #30: a
+/// census is a world-mover, not only a remedy.
+// The Underworld Peoples delivery adds the four peoples' committed facts;
+// seed 42 now carries 21,524 ledger facts.
+//
+// MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+// origin/main -- the Orrery/astronomy delivery): 21_525 -> 20_519,
+// measured on the merged tree. The deferral the doc note above records
+// ("re-derived ONCE after the post-absorb census") is WITHDRAWN rather
+// than honoured, because it rested on a false premise: THIS ROW DOES NOT
+// READ CENSUS OUTPUT. `seed_42_world()` reads
+// `cli/tests/fixtures/world-seed-42.json`, which the merge REGENERATED
+// into an object byte-identical to neither side (branch 10bbddb8..., main
+// c8b56418..., merged 73c25a8f...), so the number below is the merged
+// world's own and the post-merge census cannot move it. It is therefore
+// FINAL, unlike the ten calibration pins re-measured alongside it in this
+// commit, every one of which reads the committed census CSV and every one
+// of which is expected to move again.
+//
+// The cause is the conjunction the doc comment above already names: this
+// campaign's per-metabolite supply change composed with main's astronomy
+// delivery, each of which re-decides the deep-history bake's competition.
+// The count falls against both pre-merge pins, which is not a quality
+// signal in either direction.
+const SEED_42_FACT_COUNT: usize = 20_519;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

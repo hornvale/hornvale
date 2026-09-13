@@ -8,6 +8,12 @@ pub use subsistence::{BiomeClass, Subsistence, fertility, subsistence};
 pub mod structure;
 pub use structure::{EnvSummary, PsychSummary, RoleVocabulary, structure};
 
+pub mod constellations;
+pub use constellations::{
+    Constellation, ConstellationCulture, DEFERRED_SKY_FEATURES, GroupingRule, SkyCandidate,
+    derive_constellations,
+};
+
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World, WorldTime,
 };

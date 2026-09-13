@@ -901,13 +901,26 @@ fn homophony_count_is_measured_and_pinned() {
     // highest by more than 3x, so this re-pins the witnesses rather than the claim;
     // the `mb > mg && mb > mh` invariant below was masked by these lines and was
     // re-checked in the same pass rather than assumed.
-    assert!((mg - 6.52).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.76).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 24.188).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+    // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE MERGE,
+    // PRE-CENSUS: the absorb kept main's census fixtures byte-for-byte while
+    // the conflict resolution kept this branch's census-delivery literals, so
+    // all four rows read the Trencher delivery's values against main's census
+    // data. Re-measured over the merged tree: goblin 6.52 -> 6.595, hobgoblin
+    // 6.76 -> 6.856, bugbear 24.188 -> 24.465, kobold 7.089 -> 7.013. ALL FOUR
+    // were read in ONE softened pass, not one per failing run -- the failure
+    // named only goblin, and this file's own note above records that mistake
+    // being made before. Bugbear remains highest by more than 3x, so this
+    // re-pins the witnesses rather than the claim; the `mb > mg && mb > mh`
+    // invariant below stayed ARMED through the softened pass and held.
+    // Expected to move again at the post-merge census.
+    assert!((mg - 6.595).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.856).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 24.465).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
     // Unmoved at 6.326 through The Foliot and The Sources' second and third
     // censuses; 6.326 -> 6.36 at The Precedence's, with the other three.
-    assert!((mk - 7.089).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mk - 7.013).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

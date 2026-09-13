@@ -941,14 +941,34 @@ mod tests {
         // UNCHANGED, so this test's name still carries the right count. Two columns
         // left the evaluable side for the excluded rails. The excluded row was MASKED
         // by the evaluable one and was read in the same softened pass.
+        // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
+        // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE
+        // MERGE, PRE-CENSUS: the absorb kept main's census fixtures
+        // byte-for-byte while the conflict resolution kept this branch's
+        // census-delivery literals, so both rows read the Trencher delivery's
+        // values against main's census data. Re-measured over the merged
+        // tree: evaluable 179 -> 181, excluded 53 -> 51. The excluded row is
+        // MASKED by the evaluable one and was read in the SAME softened pass,
+        // not on a later run.
+        //
+        // THE 292-COLUMN METRIC SURFACE THIS TEST'S NAME CARRIES IS
+        // UNCHANGED, and that was checked rather than assumed: the census
+        // header is 295 CSV columns less `seed`, `pin_set` and `refusal` on
+        // BOTH sides of the merge and in the merged tree, with an identical
+        // column SET (a line-by-line diff of the three headers is empty). So
+        // neither the test name nor its exact-name entry in
+        // `docs/timings/subfloor-roster.tsv` moves in this commit. Expected
+        // to move again at the post-merge census, which will carry this
+        // campaign's metabolite/supply work the committed CSV does not yet
+        // have.
         assert_eq!(
             evaluable.len(),
-            179,
+            181,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            53,
+            51,
             "excluded count moved — re-measure and update this"
         );
     }

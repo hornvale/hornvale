@@ -4,6 +4,7 @@
 pub mod anchor;
 pub mod anchor_radius;
 pub mod calendar;
+pub mod comets;
 pub mod eclipses;
 pub mod ephemeris;
 pub mod facts;
@@ -11,6 +12,7 @@ pub mod figures;
 pub mod forcing;
 pub mod heliacal;
 pub mod illuminant;
+pub mod meteors;
 pub mod moons;
 pub mod neighborhood;
 pub mod night_sky;
@@ -34,6 +36,10 @@ pub use calendar::{
     Calendar, SkyBand, TWILIGHT_DEPTH_DEG, WandererCalendarMark, calendar_of,
     wanderer_calendar_marks,
 };
+pub use comets::{
+    Comet, CometId, CometObservation, CometReturn, CometVisibility, MAX_COMETS,
+    comet_appearance_at, generate_comets, visibility_tier,
+};
 pub use eclipses::{
     EclipseBody, EclipseCycle, EclipseEvent, EclipseKind, EclipseObserverResult, EclipseRecurrence,
     EclipseRegion, EclipseSide, EclipseSight, EclipseVisibility, GroundTrack, LUNAR_SHADOW_FACTOR,
@@ -55,8 +61,14 @@ pub use figures::{
 pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
 pub use illuminant::{at_elevation, daylight};
 pub use moons::{Formation, Moon, generate_moons, hill_radius_mm, is_icy, radius_km};
-pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
-pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
+pub use neighborhood::{
+    CatalogStar, CatalogStarId, MAX_CATALOG_STARS, MIN_CATALOG_STARS, Neighbor, class_luminosity,
+    class_name, generate_catalog, generate_neighbors,
+};
+pub use night_sky::{
+    Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, SkyActivity, SkyPerception,
+    SpeciesSkyObservation, SpeciesSkyObserver, night_sky_at, species_sky_at,
+};
 pub use pins::{
     ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, SpinPin, parse_pin,
     pin_strings,
@@ -67,11 +79,11 @@ pub use provider::{
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{
-    GYR_DAYS, SPECTRAL_CLASSES, Star, T_MAX, brightening_per_gyr, class_concept, common_words,
-    generate_star, insolation_rel, insolation_rel_at, luminosity_at, main_sequence_lifetime,
-    planet_age,
+    EvolutionaryStage, GYR_DAYS, NeighborStar, SPECTRAL_CLASSES, Star, T_MAX, brightening_per_gyr,
+    class_concept, common_words, generate_star, insolation_rel, insolation_rel_at, luminosity_at,
+    main_sequence_lifetime, planet_age,
 };
-pub use starfield::{FieldStar, starfield};
+pub use starfield::{BackgroundStarId, FieldStar, SkyCell, SkyStar, StarId, starfield}; // lexicon: equal-area sky region, not a mesh vertex
 pub use stellar::{
     BinaryOrbit, CompanionStar, StellarConfiguration, StellarTopology, generate_stellar,
     stellar_gravity_mass, stellar_luminosity_at,
