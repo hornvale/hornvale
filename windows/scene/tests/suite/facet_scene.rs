@@ -362,7 +362,7 @@ fn surface_document_is_canonical_and_contains_no_weather_hooks() {
     );
     assert_eq!(
         value["revision"]["algorithm_version"],
-        "hornvale/surface-realization/v6"
+        "hornvale/surface-realization/v7"
     );
     assert_eq!(
         value["revision"]["configuration_hash_hex"]
