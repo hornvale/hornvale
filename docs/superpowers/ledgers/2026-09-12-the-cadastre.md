@@ -377,3 +377,29 @@ than a campaign.
 - **`tech_offset` is drawn per-community, not per-people**, and its doc comment
   says otherwise — inherited from The Kiln's own follow-ups, and #6 makes it
   more confusing rather than less, since the whole structure is ruin-side.
+
+---
+
+**#8 [G4] — Plan self-review against the spec**
+
+*Two gaps found and closed before the plan was committed, both of the same
+shape: a spec requirement with no step to implement it.*
+
+1. **No task wrote `provenance` or `frozen`.** Family law requires the
+   selection rule to be stated in `provenance` and applicable by someone who
+   has never read `history_bake.rs` — the single most load-bearing prose in
+   the artifact, and six tasks said "record it in provenance" while none
+   created it. Now Task 2 Step 5, with the five things it must carry in order.
+2. **Success criterion 4 — edge completeness — was verified by nothing.**
+   Closure guarantees zero dropped edges, which is the entire point of the
+   campaign, and the plan asserted it rather than checking it. Now Task 2
+   Step 6, a script that diffs every item's `presupposes` against the source
+   and expects an empty result in BOTH directions (dropped AND invented).
+
+*Why both are the same defect.* Each was a claim the spec makes that the plan
+restated instead of implementing — the project's own recorded pattern of a
+clause vacuously satisfied hiding a deliverable nobody built.
+
+*Ideonomy passes / overturns.* None; a checklist pass, not a design decision.
+
+*Capture actions.* Plan Task 2 Steps 5 and 6.
