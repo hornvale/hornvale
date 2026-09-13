@@ -1715,3 +1715,43 @@ retains identity (species, mass, location) and detritus does not, and the model
 has one axis for both. It is the same shape as the marine flatness — one axis
 standing in for a structure — and it was invisible until the marine question
 forced a whole-registry readout.
+
+## Close — what was routed, and the three things left in the tree on purpose
+
+Step 2 of `closing-a-campaign` walked the scratch and this ledger. Most items
+landed in the chronicle, the retrospective, or one of five idea-registry rows
+(`BIO-trophic-receptors`, `PROC-frozen-population-guard`,
+`TOOL-test-only-readers`, `PROC-review-package-total-cap`,
+`PROC-census-tier-mismatch`). Three did not, each for a stated reason:
+
+- **`founder_collision`'s two `#[ignore]` reasons carry a cost claim this
+  campaign falsified and they are UNCHANGED.** They say the 0-2999 sweep
+  "costs ~800 s wall on ten threads (prior sweeps:
+  692.89/744.21/768.72/798.87 s)". At the 49-kind roster it was killed by
+  SIGTERM at **8,183.313 s** — 10.2x the budget, never completing, no positive
+  set written. Left alone deliberately: it is another campaign's surface, the
+  strings are candidates for `heavy_tier.rs`'s untokenised roster, and editing
+  two guarded ignore-reason literals at a merge boundary risks a red for no
+  benefit to this campaign. The measured figure is here so the next reader has
+  it; the fix belongs to whoever next touches that file.
+- **`the_two_realms_order_hardness_oppositely` keeps its now-inaccurate name.**
+  Three realms exist; the test compares two, deliberately. The rename was
+  deferred because the name is an entry in `docs/timings/subfloor-roster.tsv`,
+  which only a green chamber run rewrites — renaming at a merge boundary
+  desyncs the commit gate's roster from the tree. A scoping doc comment was
+  added in place instead (`domains/species/tests/suite/coverage.rs`), which
+  touches no roster. Do the rename in a campaign already taking a roster
+  rewrite.
+- **Task 2's minor M-a is unfixed and was never ledgered contemporaneously.**
+  `build_at` derives the ambient habitat and discards it — one wasted column
+  walk per bake, performance only. Recorded here as a backfilled entry (no
+  ideonomy pass was run for it); it should have been ledgered when it was
+  found, not discovered at close.
+
+**And one item is LOST, which is this campaign's routing failure and is named
+as such in the retrospective.** Task 3 deferred **nine** minors to a "final
+whole-branch review" that never ran. Their text survives in no committed file
+and no scratch file — `progress.md` carries the count and not the items. The
+count is the only thing that can be reported, which is exactly the shape The
+Cartulary moved the ledger to prevent, reproduced one level down: a deferral
+whose destination is a step rather than a document.

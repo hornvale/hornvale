@@ -1038,6 +1038,16 @@ fn every_kind_in_the_realm_store_has_a_biosphere_row() {
 /// direction the habitat realm states. A curve that answered the same for
 /// both realms would make the whole `(species, thing)` relation rank-1 --
 /// separable, and therefore not an edge at all.
+/// **The name says "the two realms" and there are three since The Tidemark.**
+/// The scope is deliberate and the name is stale, not the claim: this compares
+/// `Surface` against `Subterranean` only, and both curves are unchanged. A
+/// `Marine` arm would be a new assertion, not a fix to this one.
+///
+/// The rename was deferred rather than done at The Tidemark's close because
+/// this test's name is an entry in `docs/timings/subfloor-roster.tsv`, which
+/// only a green chamber run rewrites -- renaming at a merge boundary desyncs
+/// the commit gate's roster from the tree for no gain. Do it in a campaign
+/// that is already taking a roster rewrite.
 #[test]
 fn the_two_realms_order_hardness_oppositely() {
     const SOFT: f64 = 0.1;
