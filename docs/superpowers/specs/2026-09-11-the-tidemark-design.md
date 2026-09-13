@@ -284,10 +284,29 @@ separation between them, and unlike depth it is something the model can say.
 
 ### 3.7 The subsistence roster
 
-Six peoples need something to eat, and the roster is thin: the only marine kinds
-today are `giant-octopus`, `giant-squid`, `killer-whale` and `reef-shark` — two
-cephalopods, a cetacean and a shark, which is a predator guild with no base
-under it.
+Six peoples need something to eat, and the marine **fauna** roster is thin: a
+predator guild with no base under it.
+
+**Re-derive the census before authoring; do not take it from this paragraph.**
+As first drafted this section said "the only marine kinds today are
+`giant-octopus`, `giant-squid`, `killer-whale` and `reef-shark`" — which was true
+when written and false by the time Task 4 could act on it, because this
+campaign's own six marine peoples are marine kinds too, and an absorption added
+four subterranean peoples besides. The *instruction* (author a subsistence base
+for the six) survived unchanged; only its census rotted, which is the more
+dangerous half, because nothing about a correct instruction resting on a stale
+reason looks wrong.
+
+So the census is a command rather than a list:
+
+```
+grep -n "HabitatRealm::Marine" domains/species/src/lib.rs     # marine kinds, all of them
+```
+
+and the distinction that actually matters for a subsistence roster is **fauna
+versus peoples**, not marine versus not: the four named above were the marine
+*fauna* at drafting time, and it is the fauna base that Task 4 exists to
+thicken. Check whether that is still the fauna set before relying on it.
 
 **The line between a named kind and an aggregate stock.** `WaterStocks` already
 carries `plankton`, `chemosynthetic_bloom`, `nutrients` and `kelp_reef` as
