@@ -783,3 +783,56 @@ which produced the directional-honesty paragraph above, not the rules).
 
 *Capture actions.* `provenance` records the two rules and the re-score;
 retrospective owes the `TechHorizon` three-readers finding.
+
+---
+
+**#13 [G4-defect] — The plan sequenced Task 4 after Task 3, and it cannot be:
+the sibling discharge is a precondition of Task 3 committing green.**
+
+*What happened.* Task 3's implementer had to edit
+`technologies/henrich-2004-extended.technology.json`'s `provenance` — Task 4's
+entire deliverable — to finish Task 3, and flagged it as outside its brief.
+
+*Why it was unavoidable, and why the plan was wrong.* Moving 64 items off
+`absent` made `asimov-1989` cite nine registry rows no sibling mentioned
+(`MAP-9c`, `MAP-the-toll-is-the-inverse-desire-path`, `BIO-9`,
+`SKY-guest-stars`, `SKY-10`, `SKY-magnetic-north`, `SKY-13`, `TECH-4`,
+`UNI-38`). The cross-corpus rule then reds `henrich-2004-extended`, and
+`gate-commit` runs `technologies check` over both corpora — so **there is no
+commit in which Task 3 is done and Task 4 is not.** Spec §8 and the plan both
+treat the discharge as downstream work; it is the same commit's work.
+
+**The plan's own pre-flight scan had the row and passed it.** The T3->T4 row
+reads "clean; T4 Step 1 derives them from the resolver, not from T3's report",
+which checks that the INTERFACE is sound and never asks whether the two can
+occupy separate commits. A dependency table that only models data flow cannot
+see a gate that spans both endpoints.
+
+*Ruling.* **Accept the merge. Task 4 is discharged inside Task 3's commit;
+Task 4 reduces to verification.** The alternative — reverting and re-splitting
+— would produce a knowingly red intermediate commit for the sake of matching a
+plan that was wrong.
+
+*The discipline Task 4 existed to enforce is preserved, and was checked by the
+controller rather than accepted:*
+
+```
+top-level keys changed: ['provenance']
+item count old/new: 41 41
+ITEM-LEVEL changes: 0 []
+```
+
+Only `provenance` moved. No item, verdict, anchor, statistic or criterion in
+the frozen sibling changed — which is the whole defence of editing it at all
+(spec §8).
+
+*Cost if wrong.* The campaign's history shows one commit where the plan shows
+two; the artifact is identical either way.
+
+*Ideonomy passes / overturns.* None; a plan defect adjudicated against the
+spec, which is the binding authority and which §8 states correctly even though
+its sequencing is wrong.
+
+*Capture actions.* Task 4 becomes a verification step; the retrospective owes
+the pre-flight-scan lesson — a dependency table that models only data flow is
+blind to a GATE that spans both tasks.
