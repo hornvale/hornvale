@@ -873,19 +873,33 @@ fn validate_face_corner(patches: &[serde_json::Value]) -> Result<(), String> {
 }
 
 fn process_memory_bytes() -> Result<u64, String> {
-    let mut usage = std::mem::MaybeUninit::<libc::rusage>::zeroed();
-    // SAFETY: `usage` points to writable storage of the exact type required by
-    // getrusage, and RUSAGE_SELF asks only for this process.
-    let result = unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) };
-    if result != 0 {
-        return Err(format!(
-            "read proof process memory: getrusage failed with {result}"
-        ));
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        let mut usage = std::mem::MaybeUninit::<libc::rusage>::zeroed();
+        // SAFETY: getrusage initializes the supplied rusage struct on success.
+        let status = unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) };
+        if status != 0 {
+            return Err(format!(
+                "read proof process memory: getrusage failed with {status}"
+            ));
+        }
+        // SAFETY: the successful getrusage call initialized `usage`.
+        let usage = unsafe { usage.assume_init() };
+        let raw = u64::try_from(usage.ru_maxrss)
+            .map_err(|_| "read proof process memory: negative ru_maxrss".to_string())?;
+        #[cfg(target_os = "macos")]
+        let factor = 1;
+        #[cfg(target_os = "linux")]
+        let factor = 1024;
+        Ok(raw.saturating_mul(factor))
     }
-    let usage = unsafe { usage.assume_init() };
-    let bytes_per_unit = if cfg!(target_os = "macos") { 1 } else { 1024 };
-    Ok((usage.ru_maxrss as u64).saturating_mul(bytes_per_unit))
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        Err("read proof process memory: getrusage is unsupported on this platform".into())
+    }
 }
+
 pub fn run(
     world: PathBuf,
     revision: String,
@@ -1057,6 +1071,11 @@ mod review_tests {
             feature_delta_pixels(&before, &after, Some([20, 40, 100])).unwrap(),
             1
         );
+    }
+
+    #[test]
+    fn process_memory_reports_os_peak_rss() {
+        assert!(process_memory_bytes().unwrap() > 0);
     }
 
     fn tempfile_dir() -> PathBuf {
