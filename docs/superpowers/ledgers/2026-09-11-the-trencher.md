@@ -2236,3 +2236,96 @@ for them — no Winze session is on the wire.
 
 **Ideonomy passes / overturns:** none; a correction to my own record plus an
 adopted peer ruling.
+
+---
+
+## #28 [G5] — The repair pass: 23 of 25 repaired, no guard weakened, and a preregistration on `main` found re-authored to equal its own readout
+
+Commits `ef1738867` + `8c1e56f99`. Full sweep: **6,160 of 6,162 pass**; the two
+reds are both class 3 (census-backed), left untouched for the pre-merge
+refresh on lefford. `make gate-commit` rc=0.
+
+**No anti-vacuity guard was relaxed, weakened or deleted.** Every class-2
+repair moved the *subject* — a new seed or a widened panel — which was the one
+outcome I said would be worse than leaving a test red.
+
+### The classification held, and class 4 was checked rather than assumed
+
+`the_roll` was the strongest class-4 candidate: a *property* assertion failing
+133 against 119. Rather than reason about it, the implementer instrumented it.
+The 65 arrivals are **51 desert-dwarf (exactly the population, as the test
+claims) plus one body each for 14 wild herds**. `refresh_roll_at` derives herds
+*and* settlements by design; the test's filter only ever excluded settlements,
+**so it had been holding by luck**. Shipped behaviour correct → class 2, and
+the precondition was strengthened rather than the assertion loosened.
+
+That is the right instinct: the difference between "the code is wrong" and
+"the test was lucky" is not visible from the failure message.
+
+### A masked assertion, which is why the count was 25 and not 26
+
+`seed_42_name_syllables_are_pinned` carried a **second** assert on `kobold`
+behind the failing `goblin` one. Short-circuiting meant the sweep only ever
+reported the first. The repair moved both. **A failure list is a list of
+tests, not of assertions** — a test with N asserts reports at most one per run,
+so a red list systematically under-counts the work.
+
+### THE FINDING: a preregistration re-authored to equal its readout
+
+`windows/lab/tests/suite/reticence_calibration.rs`. **Verified by me against
+both commits rather than relayed.**
+
+At `a720d5cf2` (The Reticence, Task 7):
+
+```rust
+/// section 5). Frozen before the code: 15 peoples, organized 9, folk 6,
+assert_eq!((god, spirit), (9, 6), "frozen arm counts over 15 peoples");
+```
+
+At `43208f575` (The Underworld Peoples) the doc line became *"Frozen before
+the code: **19 peoples, organized 13, folk 6**"*.
+
+**The precise defect, which is subtler than it first reads and is NOT bad
+faith.** That campaign was *honest about the assertion*: the diff carries
+`// THE UNDERWORLD re-pin: (10, 5) -> (13, 6). Adding the four peoples…`. What
+it also did, in the same edit and without comment, was update the sentence
+that says **"Frozen before the code"** — and that sentence is not prose about
+the assert, it **is** the preregistration record.
+
+So a prediction became equal to the readout it was supposed to be tested
+against, and the claim "the arms are distributed as preregistered" became
+**true by construction**. Decision 0016's whole content is that the freeze
+precedes the code that moves it.
+
+**The structural cause, which is the transferable half:** the preregistration
+lived in a **doc comment adjacent to the assertion it constrains**, with no
+separate or protected home. A routine, honestly-labelled re-pin swept it along
+because it *looked like* prose sitting next to the number. Nothing could have
+objected — there is no mechanism that distinguishes "a comment near an assert"
+from "the frozen hypothesis."
+
+This is the same family as #27: text adjacent to a fact drifts with the fact,
+and the adjacency is what makes it invisible. Mine was a *reason* rotting
+beside a correct instruction; this is a *prediction* rewritten beside a
+re-pinned value.
+
+**Disposition.** Restored verbatim, the rewrite named in the test's own doc,
+the readout series kept separately — and the honest consequence recorded: the
+restored prediction **is falsified**, because it was frozen over a roster of
+15 and the roster now holds 19. Under 0016 a falsified prediction is a
+finding, not a failure.
+
+**This is a finding about `main`, not about this branch.** Both campaigns are
+merged. Posted to the board so the owners see it; not minting a decision, as
+it is their record to amend.
+
+### Owed follow-up, discharged and verified
+
+The implementer flagged that `docs/audits/the-reticence-report.md` and
+possibly other `make rebaseline` artifacts had drifted across two world
+movements. Ran it: **only `docs/timings.md` moved**, and the drift check over
+every path `docs/generated-paths.txt` declares is **empty**. Already current.
+Checked rather than carried forward.
+
+**Ideonomy passes / overturns:** none; a task acceptance plus a verified
+finding about merged work.
