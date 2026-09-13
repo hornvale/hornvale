@@ -2329,3 +2329,89 @@ Checked rather than carried forward.
 
 **Ideonomy passes / overturns:** none; a task acceptance plus a verified
 finding about merged work.
+
+---
+
+## #29 [Ruling] — Stage 3's surface is a fifth of what the plan says, its inert guard already exists, and Tasks 6 and 7 must not be split
+
+Verification before dispatch, against `domains/terrain/`. Also: the stage gate
+came back RED (`rc=11`, 1581 s) and its **two failures are exactly the two
+census-backed reds I deliberately left open** — `census_sentinel` and
+`tripwire`, 6,165 of 6,167 passing on lefford. Nothing new; the census refresh
+is queued at `1172e1069b43`, submitted at 0 commits behind main per #21.C.
+
+### A. NINE sites, not ten — and only TWO are production
+
+The plan states *"Measured: 10 sites, every one hardcoded `0.0`, none via
+`Default`."* The count is **9**, and the classification the plan never made is
+the one that matters:
+
+```
+domains/terrain/src/lithology.rs:632    PRODUCTION
+domains/terrain/src/globe.rs:532        PRODUCTION
+domains/terrain/src/lithology.rs:969    test
+domains/terrain/src/features.rs:718     test
+domains/terrain/src/cave_depth.rs:247   test
+domains/terrain/src/cave_depth.rs:263   test
+windows/worldgen/src/energy.rs:985      test
+windows/vessel/src/fabric.rs:292        test
+windows/vessel/src/plan.rs:614          test
+```
+
+**Task 7's real surface is two sites.** Seven are fixtures that may stay
+`0.0` — a fixture asserting an inert value is not a call site of the
+derivation. The plan's "modify the 10 sites" would have had an implementer
+threading a derivation through seven test helpers for nothing, across three
+crates.
+
+### B. Task 8's inert arm ALREADY EXISTS
+
+`domains/terrain/src/lithology.rs:1126`,
+`buffer_axes_are_bounded_and_thaumic_is_zero`:
+
+```rust
+let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+...
+assert_eq!(b.thaumic, 0.0, "inert-tier thaumic must be identically zero");
+```
+
+Default pins, **every vertex**, seed 42. That is precisely Task 8 Step 1's
+"artifacts under default pins must be byte-identical," in a stronger and far
+cheaper form — identically zero rather than byte-identical, checked pointwise
+rather than through a rendered artifact.
+
+So **Task 8's genuinely new work is the PINNED arm**, which is the half the
+plan itself calls the non-vacuous one. The inert arm is a guard to keep green,
+not to build.
+
+### C. Tasks 6 and 7 SHARE A COMMIT
+
+The plan splits the pin (Task 6) from its derivation (Task 7). **A pin with no
+derivation is a field nothing reads** — a producer with no consumer, which is
+the exact defect #26 records this campaign committing one stage earlier. Task
+6's own test (`pins.metaphysics.is_none()`) would pass on a field wired to
+nothing, forever.
+
+**Ruling:** one commit. The deliverable is a gate that demonstrably gates
+something.
+
+### D. What the plan got right, verified
+
+- **No metaphysics pin exists.** Only prose mentions (`star.rs:38`,
+  `features.rs:5`, `lithology.rs:104`). The gate is genuinely new.
+- **`MaterialBuffer` does not derive `Default`** — `#[derive(Debug, Clone,
+  Copy, PartialEq)]` only, so all nine sites are explicit and none is implied.
+- **`TerrainPins` is all-`Option` with `Default`**, so `None` = inert = the
+  unpinned world is byte-identical. The shape to copy is real.
+
+### E. Noted, not in scope
+
+`features.rs:5` already declares a sibling reservation — *"Mundane only —
+magical ores are metaphysics-gated and stay reserved."* So the pin this stage
+builds will eventually gate more than `thaumic`. Worth knowing when naming it:
+call it for the *gate*, not for the one axis it first admits.
+
+**Cost if wrong:** low. A and B save work rather than prevent damage; C is the
+one that prevents a repeat of #26.
+
+**Ideonomy passes / overturns:** none; a verification step with five findings.
