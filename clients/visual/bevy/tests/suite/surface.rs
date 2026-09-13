@@ -1,3 +1,8 @@
+#![allow(
+    clippy::approx_constant,
+    reason = "fixture wire values intentionally preserve decimal protocol samples"
+)]
+
 use hornvale_bevy_view::{
     CameraPose, ObservationMirror,
     astronomy::{lighting, surface},

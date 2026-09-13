@@ -3,7 +3,8 @@ use hornvale_bevy_view::{
     lifecycle::visible_surface_patches,
 };
 use planetarium::review::{
-    CapturedFrames, SurfaceProofMetrics, compare_surface_review, run_surface_proof,
+    CapturedFrames, SurfaceProofMetrics, compare_surface_review, run_rendered_surface_proof,
+    run_surface_proof,
 };
 use std::collections::BTreeSet;
 
@@ -75,6 +76,23 @@ fn before_capture_must_differ_from_after_capture() {
     assert!(!review.coast_is_continuous);
     assert!(!review.mountain_direction_reads);
     assert!(!review.biome_transitions_are_blended);
+}
+
+#[test]
+fn rendered_proof_reads_distinct_frames_and_patch_readiness() {
+    let proof = run_rendered_surface_proof(42).unwrap();
+    assert_ne!(proof.before.png_sha256, proof.after.png_sha256, "{proof:?}");
+    assert!(proof.after.patch_entities > 0);
+    assert!(proof.after.narrow_feature_entities > 0);
+    assert!(!proof.after.fallback_visible);
+    assert_eq!(proof.before.camera_sha256, proof.after.camera_sha256);
+    assert!(!proof.after.source_revision.is_empty());
+    assert_eq!(proof.before.source_revision, proof.after.source_revision);
+    assert!(!proof.source_generation_ms.is_empty());
+    assert!(proof.mesh_material_application_ms > 0.0);
+    assert!(proof.first_visible_frame_ms > 0.0);
+    assert!(proof.steady_state_frame_ms > 0.0);
+    assert!(proof.peak_rss_bytes > 0);
 }
 
 #[test]

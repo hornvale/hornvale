@@ -3,6 +3,7 @@ use crate::{
     Binding, CameraPose, ObservationMirror, ViewError,
     astronomy::surface,
     camera::OrbitCamera,
+    cube,
     documents::{
         self, SurfaceFeatureId, SurfacePatchCacheKey, SurfacePatchDocument, SurfacePatchRevision,
     },
@@ -12,7 +13,6 @@ use bevy::{
     light::{Atmosphere, atmosphere::ScatteringMedium},
     prelude::*,
 };
-use hornvale_kernel::{Facet, FacetId, locate};
 use std::collections::BTreeMap;
 use std::sync::{Mutex, OnceLock};
 pub const KM_PER_UNIT: f64 = 1000.;
@@ -115,6 +115,13 @@ pub struct SurfacePatchCatalogState {
     pub retired: Vec<SurfacePatchCacheKey>,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SurfaceRenderEvidence {
+    pub patch_entities: usize,
+    pub narrow_feature_entities: usize,
+    pub fallback_visible: bool,
+}
+
 #[derive(Default)]
 struct CatalogSurfaceState {
     desired: Vec<SurfacePatchCacheKey>,
@@ -161,12 +168,6 @@ fn packed_macro_face(face: usize, x: u32, y: u32) -> u32 {
     (pathword << 5) | face as u32
 }
 
-fn macro_facet(face: usize, x: u32, y: u32) -> Facet {
-    FacetId(u64::from(packed_macro_face(face, x, y)))
-        .unpack()
-        .expect("a Level-6 cube face address is valid")
-}
-
 /// Select the camera-facing Level-6 macro patch and its bounded globe-local ring.
 /// Integer address sorting makes repeated selection independent of reply order.
 pub fn visible_surface_patches(
@@ -202,19 +203,20 @@ pub fn visible_surface_patches_for_body(
         ));
     }
     let direction = offset.normalize().to_array();
-    let (face, a, b) = locate(direction);
+    let (face, a, b) = cube::locate(direction);
     let scale = 1_u32 << MACRO_PATCH_DEPTH;
     let coordinate = |parameter: f64| {
         (((parameter + 1.0) * 0.5 * f64::from(scale)).floor() as i64).clamp(0, i64::from(scale - 1))
     };
     let (x, y) = (coordinate(a) as u32, coordinate(b) as u32);
     let revision = revision.cache_token();
-    let center = macro_facet(face, x, y);
-    let mut selected = std::iter::once(center.clone())
-        .chain(center.neighbors())
-        .map(|facet| SurfacePatchCacheKey {
+    let center = packed_macro_face(face, x, y);
+    let mut selected = cube::neighbors(center)
+        .into_iter()
+        .chain(std::iter::once(center))
+        .map(|macro_face| SurfacePatchCacheKey {
             revision: revision.clone(),
-            macro_face: facet.pack().expect("a Level-6 neighbor remains packable").0 as u32,
+            macro_face,
             child_path: Vec::new(),
         })
         .collect::<Vec<_>>();
@@ -658,6 +660,30 @@ impl SceneCatalog {
                 .get::<Visibility>(entity)
                 .is_none_or(|visibility| *visibility != Visibility::Hidden)
         })
+    }
+
+    pub fn surface_render_evidence(&self, world: &World) -> SurfaceRenderEvidence {
+        let patch_entities = self
+            .surface
+            .ready
+            .iter()
+            .filter(|patch| world.get_entity(patch.entity).is_ok())
+            .count();
+        let narrow_feature_entities = self
+            .surface
+            .ready
+            .iter()
+            .flat_map(|patch| patch.feature_entities.iter())
+            .filter(|entity| world.get_entity(**entity).is_ok())
+            .count();
+        SurfaceRenderEvidence {
+            patch_entities,
+            narrow_feature_entities,
+            // The monolithic fallback remains visible for uncovered regions;
+            // a ready patch owns its covered region and is depth-biased ahead
+            // of that globe surface.
+            fallback_visible: self.surface.ready.is_empty(),
+        }
     }
 
     /// Prepare the entire snapshot first, then queue one atomic ECS application.

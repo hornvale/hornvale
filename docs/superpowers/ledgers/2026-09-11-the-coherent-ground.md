@@ -162,3 +162,21 @@ reconciliation row records the Astra revision review.
   retaining lazy refinement and deferring any Level-8 macro expansion until a
   separate campaign supplies a broader measured region and an explicit visual
   need.
+
+## Task 4 — genuine rendered proof
+
+The Planetarium proof now renders the fixed seed-42 camera twice through the
+production Bevy renderer. It reads back distinct before/after PNG bytes and
+records the shared camera digest and source revision in the returned frame
+evidence. The after frame observed one ready patch, 39,608 source-owned narrow
+feature entities, and no visible fallback overlap. The local Apple M1 Max run
+measured 10,585 ms source generation, 35,734 ms mesh/material application,
+2,004 ms first-visible capture, 540 ms steady-state capture, and 1,330,561,024
+bytes peak RSS. These are observations, not acceptance thresholds; the large
+feature count and application cost are useful evidence for a future bounded
+feature-budget refinement.
+
+The proof remains bounded: it establishes one camera-visible patch and does
+not prove global coverage, dynamic weather, Level-8 macro authority, or a
+complete film package. The fallback handoff is exercised by the real ready-set
+path and hides the monolithic globe only after coverage is complete.

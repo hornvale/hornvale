@@ -2577,8 +2577,8 @@ name = "hornvale-bevy-view"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "hornvale-kernel",
  "image",
+ "libm",
  "serde",
  "serde_json",
 ]

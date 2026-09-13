@@ -10,7 +10,7 @@ use crate::{
 };
 use hornvale_bevy_view::{
     ObservationMirror, Renderer,
-    documents::{self, SurfacePatchCacheKey},
+    documents::{self, SurfacePatchCacheKey, SurfacePatchRevision},
     lifecycle,
 };
 use sha2::{Digest, Sha256};
@@ -71,6 +71,28 @@ pub struct SurfaceReview {
     pub coast_is_continuous: bool,
     pub mountain_direction_reads: bool,
     pub biome_transitions_are_blended: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RenderedSurfaceFrame {
+    pub png_path: PathBuf,
+    pub png_sha256: String,
+    pub camera_sha256: String,
+    pub source_revision: String,
+    pub patch_entities: usize,
+    pub narrow_feature_entities: usize,
+    pub fallback_visible: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RenderedSurfaceProof {
+    pub before: RenderedSurfaceFrame,
+    pub after: RenderedSurfaceFrame,
+    pub source_generation_ms: Vec<u64>,
+    pub mesh_material_application_ms: f64,
+    pub first_visible_frame_ms: f64,
+    pub steady_state_frame_ms: f64,
+    pub peak_rss_bytes: u64,
 }
 
 /// Compare visible before/after facts without deriving semantic terrain in the
@@ -286,6 +308,183 @@ pub fn run_surface_proof(seed: u64) -> Result<SurfaceProofMetrics, String> {
         generation_latency_ms,
         peak_memory_bytes,
         frame_time_ms,
+    })
+}
+
+/// Render a fixed seed and camera before and after one real source patch is
+/// applied. The PNGs and metadata are written to a unique temporary artifact
+/// directory and are intentionally returned to callers for readback checks.
+pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, String> {
+    let world = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../cli/tests/fixtures/world-seed-42.json");
+    let world_document: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(&world).map_err(|error| format!("read proof world: {error}"))?,
+    )
+    .map_err(|error| format!("parse proof world: {error}"))?;
+    if world_document["seed"].as_u64() != Some(seed) {
+        return Err(format!("proof world is not seed {seed}"));
+    }
+    let mut source = hornvale_visual_source::Source::open(
+        &world,
+        crate::provenance::BUILD_REVISION,
+        "planetarium-rendered-surface-proof",
+    )
+    .map_err(|error| format!("open proof source: {error}"))?;
+    let initial_json = source
+        .initial_document(512)
+        .map_err(|error| format!("load proof initial document: {error}"))?;
+    let initial: serde_json::Value = serde_json::from_str(&initial_json)
+        .map_err(|error| format!("parse proof initial document: {error}"))?;
+    let mut mirror = ObservationMirror::new(&initial_json)
+        .map_err(|error| format!("create proof mirror: {error}"))?;
+    let observation = mirror
+        .request(0)
+        .map_err(|error| format!("request proof observation: {error}"))?;
+    mirror
+        .accept(
+            &source
+                .observe(&observation)
+                .map_err(|error| format!("observe proof observation: {error}"))?,
+        )
+        .map_err(|error| format!("accept proof observation: {error}"))?;
+    let film: FilmDefinition = serde_json::from_str(include_str!("../films/pilot.json"))
+        .map_err(|error| format!("parse proof film: {error}"))?;
+    let camera = sample_shot(&film, 0, &positions(&mirror))
+        .map_err(|error| format!("sample proof camera: {error}"))?;
+    let camera_sha256 = hash(
+        &serde_json::to_vec(&camera).map_err(|error| format!("serialize proof camera: {error}"))?,
+    );
+    let revision: SurfacePatchRevision =
+        serde_json::from_value(initial["surface_revision"].clone())
+            .map_err(|error| format!("parse proof revision: {error}"))?;
+    let mut renderer = Renderer::new(&mirror, 1920, 1080)
+        .map_err(|error| format!("create proof renderer: {error}"))?;
+    renderer
+        .set_caption_font(include_bytes!("../assets/LibreBaskerville-Regular.ttf").to_vec())
+        .map_err(|error| format!("load proof caption font: {error}"))?;
+    renderer
+        .apply(&mirror, &camera)
+        .map_err(|error| format!("apply proof before scene: {error}"))?;
+    let output = std::env::temp_dir().join(format!(
+        "hornvale-coherent-ground-proof-{}-{}-{}",
+        std::process::id(),
+        NEXT_PROOF_REQUEST_ID.fetch_add(1, Ordering::Relaxed),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|error| format!("read proof clock: {error}"))?
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&output)
+        .map_err(|error| format!("create proof artifact dir: {error}"))?;
+    let before_path = output.join("before.png");
+    renderer
+        .capture(&before_path)
+        .map_err(|error| format!("capture proof before frame: {error}"))?;
+    let before = rendered_frame(
+        &before_path,
+        &camera_sha256,
+        &revision.source_revision,
+        renderer.surface_render_evidence(),
+    )?;
+    let anchor = mirror
+        .current()
+        .and_then(|reply| {
+            reply
+                .astronomy
+                .bodies
+                .iter()
+                .find(|body| body.id == "anchor")
+        })
+        .ok_or("proof observation has no anchor")?;
+    let candidates = lifecycle::visible_surface_patches(
+        &hornvale_bevy_view::camera::OrbitCamera::new(camera.clone()),
+        anchor.position_km,
+        anchor.radius_km.ok_or("proof anchor has no radius")?,
+        &revision,
+    )
+    .map_err(|error| format!("select camera-visible proof patches: {error}"))?;
+    let key = candidates
+        .first()
+        .cloned()
+        .ok_or("camera-visible proof patch set is empty")?;
+    let macro_face = key.macro_face;
+    let child_path = key.child_path.clone();
+    renderer
+        .set_desired_surface_patches(&mirror, vec![key.clone()])
+        .map_err(|error| format!("select proof patch: {error}"))?;
+    let request_id = NEXT_PROOF_REQUEST_ID.fetch_add(1, Ordering::Relaxed);
+    let request = serde_json::json!({
+        "schema": "visual/surface-request/v1",
+        "binding": initial["binding"],
+        "request_id": request_id,
+        "generation": mirror.generation(),
+        "address": {"macro_face": macro_face, "child_path": child_path},
+        "expected_revision": initial["surface_revision"],
+    })
+    .to_string();
+    renderer
+        .schedule_surface_patch(key, request.clone())
+        .map_err(|error| format!("schedule proof patch: {error}"))?;
+    let generation_start = Instant::now();
+    let reply = source
+        .observe_surface(&request)
+        .map_err(|error| format!("generate proof patch: {error}"))?;
+    let source_generation_ms = vec![generation_start.elapsed().as_millis().max(1) as u64];
+    let application_start = Instant::now();
+    renderer
+        .apply_surface_reply(&reply)
+        .map_err(|error| format!("apply proof patch: {error}"))?;
+    renderer
+        .apply(&mirror, &camera)
+        .map_err(|error| format!("apply proof after scene: {error}"))?;
+    let mesh_material_application_ms =
+        (application_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
+    let after_path = output.join("after.png");
+    let first_start = Instant::now();
+    renderer
+        .capture(&after_path)
+        .map_err(|error| format!("capture proof after frame: {error}"))?;
+    let first_visible_frame_ms = (first_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
+    let after = rendered_frame(
+        &after_path,
+        &camera_sha256,
+        &revision.source_revision,
+        renderer.surface_render_evidence(),
+    )?;
+    let steady_start = Instant::now();
+    renderer
+        .capture(&output.join("steady.png"))
+        .map_err(|error| format!("capture proof steady frame: {error}"))?;
+    let steady_state_frame_ms = (steady_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
+    Ok(RenderedSurfaceProof {
+        before,
+        after,
+        source_generation_ms,
+        mesh_material_application_ms,
+        first_visible_frame_ms,
+        steady_state_frame_ms,
+        peak_rss_bytes: process_memory_bytes()?,
+    })
+}
+
+fn rendered_frame(
+    path: &std::path::Path,
+    camera_sha256: &str,
+    source_revision: &str,
+    evidence: hornvale_bevy_view::lifecycle::SurfaceRenderEvidence,
+) -> Result<RenderedSurfaceFrame, String> {
+    let bytes =
+        std::fs::read(path).map_err(|error| format!("read rendered proof frame: {error}"))?;
+    image::load_from_memory_with_format(&bytes, image::ImageFormat::Png)
+        .map_err(|error| format!("decode rendered proof frame: {error}"))?;
+    Ok(RenderedSurfaceFrame {
+        png_path: path.to_path_buf(),
+        png_sha256: hash(&bytes),
+        camera_sha256: camera_sha256.into(),
+        source_revision: source_revision.into(),
+        patch_entities: evidence.patch_entities,
+        narrow_feature_entities: evidence.narrow_feature_entities,
+        fallback_visible: evidence.fallback_visible,
     })
 }
 
