@@ -328,6 +328,7 @@ hornvale-astronomy::hornvale_astronomy$provider::tests::a_locked_sun_is_aperiodi
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_moon_below_the_phase_threshold_is_a_smear_not_a_face
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_mooned_sky_promises_bloodred_lunar_eclipses_at_night
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_night_sky_reports_each_body_as_its_own_phrase
+hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_heliacal_rising_across_a_year
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_wandering_star_across_two_synodic_periods
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_query_has_a_documented_answer
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_sky_answers_for_the_instant_asked
@@ -1462,8 +1463,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
 hornvale-lab::hornvale_lab$domesday::render::tests::the_index_carries_the_generated_header_and_every_domain_link
 hornvale-lab::hornvale_lab$domesday::stats::tests::a_metric_with_no_present_values_yields_none
@@ -1705,6 +1704,7 @@ hornvale-lab::suite$health_calibration::one_stuck_creature_among_nine_recovering
 hornvale-lab::suite$health_calibration::searching_is_not_distress
 hornvale-lab::suite$health_calibration::the_chronic_threshold_is_exact_at_chronic_ticks
 hornvale-lab::suite$hearth_population_calibration::the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close
+hornvale-lab::suite$hearth_population_calibration::the_hearth_never_worsens_a_planted_cold_built_population
 hornvale-lab::suite$individuation::awakening_is_a_fact_and_the_large_owlbear_stays_large
 hornvale-lab::suite$individuation::mighty_things_in_the_cold_north
 hornvale-lab::suite$individuation::the_roster_passes_integrity_and_stays_out_of_the_canon
@@ -4391,7 +4391,6 @@ hornvale::suite$lane_sets::every_rostered_set_is_well_formed
 hornvale::suite$lane_sets::the_commit_gate_is_local_and_everything_else_is_the_lane
 hornvale::suite$lane_sets::the_phase_lists_and_the_roster_rungs_agree_both_ways
 hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
-hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty
 hornvale::suite$lexicon_guard::the_tokenizer_counts_affixed_bare_and_shouting_forms
 hornvale::suite$murrain_epidemiology::h_m1_binds_catalogue_rows_and_uses_the_monotonicity_grid
@@ -4412,11 +4411,9 @@ hornvale::suite$observations::observations_evidence_status_rejects_editorial_onl
 hornvale::suite$observations::observations_export_missing_manifest_does_not_create_output_directory
 hornvale::suite$observations::observations_export_neighbors_preserves_the_authoritative_scene_and_refuses_systems
 hornvale::suite$observations::observations_export_neighbors_refuses_missing_or_mismatched_declared_world
-hornvale::suite$observations::observations_export_neighbors_resolves_declared_world_from_repository_root
 hornvale::suite$observations::observations_export_refuses_every_non_existing_capability_state_by_name
 hornvale::suite$observations::observations_export_refuses_needs_simulation_extension
 hornvale::suite$observations::observations_fixture_is_a_valid_internal_record
-hornvale::suite$observations::observations_hv_009_neighbor_fixture_is_producer_backed
 hornvale::suite$observations::observations_missing_count_unit_is_refused
 hornvale::suite$observations::observations_missing_object_or_scale_is_refused
 hornvale::suite$observations::observations_non_finite_frame_rate_and_time_are_refused
