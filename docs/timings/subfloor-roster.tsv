@@ -1446,7 +1446,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_column
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_292_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -3719,8 +3718,7 @@ hornvale-worldgen::hornvale_worldgen$harvest::tests::periodic_over_one_year
 hornvale-worldgen::hornvale_worldgen$harvest::tests::southern_hemisphere_is_half_a_year_out_of_phase
 hornvale-worldgen::hornvale_worldgen$hazard::tests::a_transform_boundary_is_seismic_and_never_volcanic
 hornvale-worldgen::hornvale_worldgen$hazard::tests::an_amagmatic_vertex_never_erupts
-hornvale-worldgen::hornvale_worldgen$hazard::tests::an_empty_or_reversed_window_yields_nothing
-hornvale-worldgen::hornvale_worldgen$hazard::tests::busier_ground_produces_more_events
+hornvale-worldgen::hornvale_worldgen$hazard::tests::events_in_is_a_pure_read
 hornvale-worldgen::hornvale_worldgen$hazard::tests::events_lie_inside_the_window_and_are_ordered
 hornvale-worldgen::hornvale_worldgen$hazard::tests::every_interval_lies_inside_its_authored_bracket
 hornvale-worldgen::hornvale_worldgen$hazard::tests::hazard_is_pure_and_carries_no_state
@@ -3916,9 +3914,9 @@ hornvale-worldgen::hornvale_worldgen$tests::name_gloss_predicate_is_registered_f
 hornvale-worldgen::hornvale_worldgen$tests::no_zero_population_settlements
 hornvale-worldgen::hornvale_worldgen$tests::occlusion_composes_with_species_perception
 hornvale-worldgen::hornvale_worldgen$tests::pacing_elves_harder_than_dwarves_changes_no_drift_regime
-hornvale-worldgen::hornvale_worldgen$tests::placed_peoples_lists_flagship_holders_in_registry_order
 hornvale-worldgen::hornvale_worldgen$tests::referent_ord_discriminates_on_concept
 hornvale-worldgen::hornvale_worldgen$tests::register_all_via_roster_registers_name_gloss
+hornvale-worldgen::hornvale_worldgen$tests::settlement_lines_describe_the_people
 hornvale-worldgen::hornvale_worldgen$tests::settlement_populations_are_the_conserved_field_readout
 hornvale-worldgen::hornvale_worldgen$tests::settlements_and_deities_gain_name_gloss_facts_when_a_gloss_exists
 hornvale-worldgen::hornvale_worldgen$tests::sky_of_rejects_an_unparseable_scenario_pin
@@ -4066,7 +4064,6 @@ hornvale-worldgen::suite$history_emit::end_of_life_facts_are_day_stamped_at_ende
 hornvale-worldgen::suite$history_emit::founded_from_and_ended_by_resolve_to_the_right_entities
 hornvale-worldgen::suite$history_emit::occupation_records_round_trip_every_committed_field
 hornvale-worldgen::suite$history_emit::outbreak_events_emit_as_a_paired_dated_fact
-hornvale-worldgen::suite$history_emit::person_years_matches_epochs_credited_at_their_end
 hornvale-worldgen::suite$history_emit::present_frame_crosses_the_bake_year_by_days_per_year
 hornvale-worldgen::suite$history_emit::same_day_layers_order_by_material_facts_not_mint_order
 hornvale-worldgen::suite$history_emit::territories_group_alive_occupations_by_people
