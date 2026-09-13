@@ -10,7 +10,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, VertexMap};
-use hornvale_terrain::TerrainPins;
+use hornvale_terrain::{Metaphysics, TerrainPins};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, WorldComponents, build_world_to, build_world_to_with_artifacts,
     terrain_of,
@@ -95,6 +95,10 @@ fn hoisted_terrain_equals_the_re_derived_terrain_under_pins() {
         supercontinent: Some(true),
         globe_level: None,
         continents: Some(5),
+        // The metaphysics gate (The Ground §8) rides this claim too: a
+        // charged world that re-derived as an inert one would be a lossy
+        // round trip of exactly the kind this test exists to catch.
+        metaphysics: Some(Metaphysics::Thaumic),
     };
     let a = build_world_to_with_artifacts(
         Seed(42),

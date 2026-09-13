@@ -4,7 +4,7 @@
 use crate::boundaries::{self, VertexBoundary};
 use crate::crust::{Craton, Terrane};
 use crate::elevation::TrailSeamount;
-use crate::pins::{self, GenesisError, TerrainPins};
+use crate::pins::{self, GenesisError, Metaphysics, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
 use crate::water::WaterKind;
@@ -180,6 +180,14 @@ pub struct TectonicGlobe {
     /// `branch::rills_of` takes it directly rather than deriving it again, so
     /// a caller holding it cannot reach any other terrain stream through it.
     pub rill_seed: Seed,
+    /// The world's metaphysical tier, resolved once from the pins at the top
+    /// of [`generate`] (`None` resolves to [`Metaphysics::Inert`]). Carried
+    /// here rather than re-read from the pins so every metaphysics-gated
+    /// derivation over an assembled globe — starting with `lithology`'s
+    /// `thaumic` axis (see [`crate::lithology::thaumic_at`]) — reads one
+    /// answer and cannot form a second opinion. Structural: no draw, no
+    /// stream, no genesis note. Recomputed at genesis, never serialized.
+    pub metaphysics: Metaphysics,
     /// The drawn rift history (rift-and-fit, spec §3): the majors' assembly
     /// frame, their seams, and one global spreading rate. The crust field
     /// clips each major craton's cap along these seams. Recomputed at
@@ -225,6 +233,11 @@ pub fn generate(
     pins: &TerrainPins,
 ) -> Result<GenesisOutcome<TectonicGlobe>, GenesisError> {
     pins::validate(pins)?;
+    // The metaphysical tier (The Ground, spec §8). Structural like
+    // `--supercontinent`: resolved from the pins alone, consuming no stream,
+    // so an unpinned world resolves to `Inert` and is byte-identical to every
+    // world generated before the gate existed.
+    let metaphysics = pins.metaphysics.unwrap_or(Metaphysics::Inert);
     let terrain_seed = world_seed.derive(streams::ROOT);
     let mut notes = Vec::new();
     let plate_list = plates::generate_plates(terrain_seed, pins, &mut notes);
@@ -495,7 +508,11 @@ pub fn generate(
 
     // Lithology (The Ground, spec §2) is a pure function of the assembled
     // globe's other fields, so the globe is built first with a placeholder
-    // buffer, then the real buffer is assembled and swapped in. The noise
+    // buffer, then the real buffer is assembled and swapped in. EVERY axis of
+    // that placeholder is a neutral zero, `thaumic` included, and it is not a
+    // derivation site for any of them: `assemble_material` never reads
+    // `globe.lithology`, and the statement immediately after this struct
+    // literal replaces the whole map. The noise
     // seed here is hash-noise only (`streams::LITHOLOGY`) — never consumed
     // as a `Stream`, so this is not a new draw-order contract.
     let lithology_seed = terrain_seed.derive(streams::LITHOLOGY);
@@ -569,6 +586,7 @@ pub fn generate(
         arc_gate_seed,
         rill_seed,
         rift,
+        metaphysics,
     };
     globe.lithology = crate::lithology::assemble_material(geosphere, &globe);
 

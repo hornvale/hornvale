@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 826 |
-| … file-level | 782 |
+| Quantity consts judged (the denominator) | 832 |
+| … file-level | 788 |
 | … associated (impl/trait) | 10 |
 | … inside a fn body | 34 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
 | Excluded: declared non-quantity type | 559 |
-| **Every `const` the walk touched** | **1558** |
+| **Every `const` the walk touched** | **1564** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **748**: file-level
+nor the whole `file-level` row — it is **754**: file-level
 constants of those five types. The `file-level` row itself is
-**782**, and the denominator is **826**; the difference is
+**788**, and the denominator is **832**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -68,11 +68,11 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 613 |
+| `f64` | 618 |
 | `i32` | 7 |
 | `i64` | 8 |
 | `u16` | 1 |
-| `u32` | 83 |
+| `u32` | 84 |
 | `u64` | 18 |
 | `u8` | 8 |
 | `usize` | 58 |
@@ -160,13 +160,13 @@ bare count would hide a quantity someone had wrongly denied.
 | per-individual | 2 |
 | per-people | 1 |
 | per-species | 32 |
-| per-world | 6 |
+| per-world | 12 |
 | universal | 154 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 826 |
+| _total_ | 832 |
 
-Declared: **826 of 826**. Undeclared is backlog; a malformed
+Declared: **832 of 832**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -176,7 +176,7 @@ converted.** Every row below is a constant judged to vary along an axis
 the code does not yet have -- nothing about the world changed to produce
 this table, and nothing here is scheduled for conversion by this
 campaign. `universal` and `pending(wave-N)` constants are excluded; their
-counts are already the Coverage table above. 41 finding(s).
+counts are already the Coverage table above. 47 finding(s).
 
 | File:line | Constant | Rung | Reason |
 |------|------|------|------|
@@ -202,6 +202,12 @@ counts are already the Coverage table above. 41 finding(s).
 | `domains/species/src/lib.rs:6745` | `DROW_WATER` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6750` | `DROW_SUBSTRATE` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6754` | `DROW_LIGHT` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/terrain/src/lithology.rs:463` | `LEY_REACH` | per-world | the width of a world's ley-lines is a property of that world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:470` | `LEY_GAIN` | per-world | ley intensity is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:477` | `WELL_RADIUS_RAD` | per-world | the reach of a mana-well is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:483` | `WELL_GAIN` | per-world | mana-well intensity is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:491` | `HALLOW_AGE_MIN` | per-world | how much deep time it takes to charge ground is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:498` | `HALLOW_GAIN` | per-world | the residue deep time leaves is a property of a world's magic, not of this code |
 | `windows/vessel/src/liveness.rs:307` | `SUSTENANCE` | per-species | a creature's own metabolism sets how fast thirst/foraging need accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
 | `windows/vessel/src/liveness.rs:385` | `FURNISHING_COLD_C` | per-people | whether a room's people build around a fire tracks that people's own cold tolerance and culture, not a fixed climate cutoff for every people -- doc: a room's people build around a fire |
 | `windows/vessel/src/liveness.rs:469` | `THERMAL_FEAR_SPAN_C` | per-species | how WIDE a creature's comfort band is before fear ramps to full weight is a trait separate from where the band is centered -- a stenotherm and a eurytherm can share an optimum and differ entirely in span |
@@ -224,7 +230,7 @@ counts are already the Coverage table above. 41 finding(s).
 
 ## The contested middle
 
-388 of the 826 constants sit in a file mentioning one of
+388 of the 832 constants sit in a file mentioning one of
 the kind-adjacency markers above, across 147 of the 360 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
 where `FATIGUE_RISE` lived. 388 of them are declared.
@@ -255,6 +261,6 @@ in the inclusive direction on purpose.
 | sentiment | 8 | 0 | 0 | 8 |
 | settlement | 4 | 0 | 0 | 4 |
 | species | 39 | 0 | 0 | 39 |
-| terrain | 152 | 0 | 0 | 152 |
+| terrain | 158 | 0 | 0 | 158 |
 | vessel | 110 | 0 | 0 | 110 |
 | worldgen | 207 | 0 | 0 | 207 |

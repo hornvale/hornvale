@@ -65,7 +65,7 @@ pub use lithology::{
     Appearance, Basement, Fertility, Hydro, MarginPolarity, MaterialBuffer, RockClass, SoilDepth,
     SoilOrder, appearance, cave_proneness, classify_soil, fertility, hydrogeology, prospectivity,
 };
-pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
+pub use pins::{GenesisError, Metaphysics, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;
 pub use strata::{

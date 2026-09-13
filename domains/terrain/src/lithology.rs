@@ -30,7 +30,9 @@
 //!   range would make it reachable without a new axis.
 
 use crate::boundaries::BoundaryKind;
+use crate::elevation::TrailSeamount;
 use crate::globe::TectonicGlobe;
+use crate::pins::Metaphysics;
 use crate::plates::{Plate, dot, normalize, sub, velocity_at};
 use hornvale_kernel::color::{Mixture, Reflectance};
 use hornvale_kernel::{Fbm, Geosphere, Vertex, VertexMap, math};
@@ -439,6 +441,147 @@ const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.46;
 /// plumb: pending(wave-1)
 const GRAIN_POROSITY_GAIN: f64 = 0.40;
 
+// ---------------------------------------------------------------------------
+// The metaphysics-gated overlay tier (The Ground, spec §8).
+//
+// Six constants, every one of them the SHAPE of a charged world rather than a
+// fact about a mundane one, and none of them read at all under the default
+// (inert) tier. They are tagged `per-world` deliberately: the intensity and
+// reach of a world's magic is a property of that world, and the pin is a tier
+// FLAG today only because a tier parameterisation would have needed draws this
+// stage is forbidden (and does not need). Tagging them `universal` would claim
+// every charged world's ley-lines run exactly three hops wide, which is
+// precisely the inherited fixedness `tools/plumb` exists to make visible.
+// ---------------------------------------------------------------------------
+
+/// Graph hops from the nearest same-plate boundary within which the ley term
+/// contributes. A fault is a *line*, so this is deliberately tighter than
+/// [`OROGEN_REACH`] (4): metamorphism is a broad aureole around a collision,
+/// whereas a ley-line that reads as a line at all must be narrower than the
+/// orogen it runs through.
+/// plumb: per-world(the width of a world's ley-lines is a property of that world's magic, not of this code)
+const LEY_REACH: u32 = 3;
+
+/// Peak ley contribution, at a boundary vertex itself, falling linearly to
+/// zero at [`LEY_REACH`] hops. Below [`WELL_GAIN`] because a fault is a
+/// conduit and a plume is a source: flux passing through is weaker than flux
+/// welling up.
+/// plumb: per-world(ley intensity is a property of a world's magic, not of this code)
+const LEY_GAIN: f64 = 0.6;
+
+/// Angular radius of a mana-well's aureole around a live hotspot dome,
+/// radians (~0.12 rad, about 7°). An order of magnitude tighter than
+/// [`crate::elevation::TRAIL_LENGTH_RAD`] (0.35, the whole trail's length),
+/// so a well is a place and not a province.
+/// plumb: per-world(the reach of a mana-well is a property of a world's magic, not of this code)
+const WELL_RADIUS_RAD: f64 = 0.12;
+
+/// Peak mana-well contribution, at the dome itself, falling linearly in
+/// angle to zero at [`WELL_RADIUS_RAD`]. The largest of the three: the plume
+/// conduit is the one place the mantle reaches the surface directly.
+/// plumb: per-world(mana-well intensity is a property of a world's magic, not of this code)
+const WELL_GAIN: f64 = 0.8;
+
+/// Crust age (`[0,1]`, the winning craton's age) above which deep time reads
+/// as hallowed or cursed ground. Set high on purpose: the term is meant to
+/// select the oldest cratonic shields — the ground that was *there* for the
+/// deep-time cataclysms — not merely old-ish continental interior. Oceanic
+/// crust has age 0 and so never qualifies, which is the intended reading.
+/// plumb: per-world(how much deep time it takes to charge ground is a property of a world's magic, not of this code)
+const HALLOW_AGE_MIN: f64 = 0.75;
+
+/// Peak deep-time contribution, at maximal crust age. The weakest of the
+/// three: accumulated history is a residue, not a source, so on its own it
+/// can never saturate a vertex — hallowed ground needs a fault or a well
+/// beneath it to read as a nexus.
+/// plumb: per-world(the residue deep time leaves is a property of a world's magic, not of this code)
+const HALLOW_GAIN: f64 = 0.4;
+
+/// Thaumic saturation at one vertex, `[0, 1]` — the metaphysics-gated
+/// overlay tier on the material buffer (The Ground, spec §8; `MAP-40` /
+/// `MAP-53`).
+///
+/// **An inert world returns exactly `0.0` on the first line**, before a
+/// single input is read, by the same path the pre-gate code took: the
+/// mundane substrate *is* the charged tier's floor, so the overlay refines
+/// the inert world and never contradicts it (coarse-constrains-fine, applied
+/// to metaphysics). `TerrainPins::default()` is inert, so every world
+/// generated before this gate existed is byte-identical to the same world
+/// generated after it.
+///
+/// The charged tier sums the three hooks §8 names — "ley-lines from faults,
+/// mana-wells from hotspots, hallowed/cursed ground from deep-time
+/// cataclysms" — each a pure read over world-state terrain already owns:
+///
+/// - **Ley-lines from faults.** `hops_to_boundary` is the graph distance to
+///   the nearest same-plate boundary vertex (`TectonicGlobe::boundary_
+///   distance`), already computed for [`assemble_material`]'s metamorphic
+///   term. Flux runs *along* the fault, so saturation falls linearly with
+///   distance from it and vanishes past [`LEY_REACH`].
+/// - **Mana-wells from hotspots.** `hotspot_domes` is the retained trail-
+///   seamount list; the term reads only `age_index == 0` entries, the LIVE
+///   domes. The fossil trail upstream of a dome is where the plume *was*,
+///   and a well is where it *is* — a distinction the trail list makes for
+///   free and which no other terrain field records. Saturation falls
+///   linearly in angular distance from the nearest live dome, vanishing past
+///   [`WELL_RADIUS_RAD`]; wells superpose by maximum, not by sum, because
+///   two plumes do not make a deeper conduit.
+/// - **Hallowed/cursed ground from deep time.** `crust_age` is the winning
+///   craton's age in `[0,1]`, zero on oceanic floor. Only the oldest shields
+///   (past [`HALLOW_AGE_MIN`]) contribute, and they contribute the least
+///   ([`HALLOW_GAIN`]): the ground remembers, but memory is residue.
+///
+/// The three **sum** and then clamp, rather than taking a maximum, so that a
+/// live plume sitting on a fault under an ancient shield saturates — a
+/// **nexus** is the coincidence of the three generators, which is exactly
+/// `MAP-53`'s centrality claim read pointwise. Each term alone is bounded
+/// well below 1, so saturation is reachable only by coincidence and never by
+/// any single hook.
+///
+/// **No draw.** Every input is existing world-state (a graph distance, a
+/// retained seamount list, a sampled crust age) and every parameter is an
+/// authored constant, so activating the tier consumes no stream, perturbs no
+/// draw order, and forces no epoch — the additive, no-epoch activation The
+/// Ground reserved the `thaumic` slot for.
+/// type-audit: bare-ok(count: hops_to_boundary), bare-ok(ratio: position), bare-ok(ratio: crust_age), bare-ok(ratio: return)
+pub(crate) fn thaumic_at(
+    metaphysics: Metaphysics,
+    hops_to_boundary: Option<u32>,
+    hotspot_domes: &[TrailSeamount],
+    position: [f64; 3],
+    crust_age: f64,
+) -> f64 {
+    if !metaphysics.is_charged() {
+        return 0.0;
+    }
+
+    // Ley-lines from faults: linear falloff in graph hops.
+    let ley = match hops_to_boundary {
+        Some(h) if h <= LEY_REACH => LEY_GAIN * (1.0 - h as f64 / LEY_REACH as f64),
+        _ => 0.0,
+    };
+
+    // Mana-wells from hotspots: the nearest LIVE dome only (`age_index == 0`),
+    // linear falloff in angular distance. Superposed by maximum.
+    let mut well: f64 = 0.0;
+    for dome in hotspot_domes.iter().filter(|d| d.age_index == 0) {
+        let cos_sep = dot(position, dome.position).clamp(-1.0, 1.0);
+        let sep = math::acos(cos_sep);
+        if sep < WELL_RADIUS_RAD {
+            well = well.max(WELL_GAIN * (1.0 - sep / WELL_RADIUS_RAD));
+        }
+    }
+
+    // Hallowed/cursed ground from deep time: the oldest shields only.
+    let hallow = if crust_age > HALLOW_AGE_MIN {
+        HALLOW_GAIN * ((crust_age - HALLOW_AGE_MIN) / (1.0 - HALLOW_AGE_MIN)).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    (ley + well + hallow).clamp(0.0, 1.0)
+}
+
 /// Drainage scale for [`cave_proneness`]'s wetting term. Formerly shared
 /// with `hydrogeology`'s flowing-vs-still `Spring` gate (named
 /// `SPRING_DRAINAGE_THRESHOLD`); that gate is retired (The Witness, Task
@@ -629,7 +772,7 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> VertexMap<Ma
             margin,
             soil_depth,
             basement,
-            thaumic: 0.0,
+            thaumic: thaumic_at(globe.metaphysics, hops, &globe.trail_seamounts, p, age),
         }
     })
 }

@@ -2,6 +2,38 @@
 //! generation conditions on pinned values identically to drawn ones;
 //! out-of-range or unsatisfiable pins fail loudly.
 
+/// A world's metaphysical tier — the gate every reserved fantasy overlay on
+/// the terrain substrate sits behind (The Ground, spec §8; `UNI-2`).
+///
+/// Named for the **gate**, not for the first axis it admits: `thaumic`
+/// saturation is one overlay, and `domains/terrain/src/features.rs` already
+/// reserves a sibling behind the same gate ("magical ores are
+/// metaphysics-gated and stay reserved").
+///
+/// Coarse constrains fine: the mundane substrate Hornvale ships *is* the
+/// charged tier's floor, so a charged world refines the inert one and never
+/// contradicts it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Metaphysics {
+    /// No magic in the physics. Every metaphysics-gated axis reads its
+    /// reserved floor — `thaumic` is identically zero. The default, and the
+    /// only tier an unpinned world has ever had.
+    Inert,
+    /// Thaumic saturation is a real field: charged ground exists, derived
+    /// from the faults, hotspots and deep time terrain already owns (see
+    /// [`crate::lithology::thaumic_at`]).
+    Thaumic,
+}
+
+impl Metaphysics {
+    /// Whether this tier admits the metaphysics-gated overlays at all.
+    /// False for [`Metaphysics::Inert`], which is the reserved floor.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_charged(self) -> bool {
+        matches!(self, Metaphysics::Thaumic)
+    }
+}
+
 /// The scenario pins for tectonic genesis. Every field: `None` = drawn from
 /// the seed; `Some` = supplied by the experimenter and conditioned on.
 /// type-audit: bare-ok(count: plates), bare-ok(ratio: ocean_fraction), bare-ok(flag: supercontinent), bare-ok(count: globe_level), bare-ok(count: continents)
@@ -25,6 +57,14 @@ pub struct TerrainPins {
     /// Craton count (legal 1–16); drawn 8–14 (ocean-fraction-budget-scaled,
     /// Task 9 iteration 3') when `None`.
     pub continents: Option<u32>,
+    /// The world's metaphysical tier (The Ground, spec §8). **Structural,
+    /// exactly like `supercontinent`: it has no drawn counterpart**, so
+    /// `None` means [`Metaphysics::Inert`] rather than "drawn from the seed",
+    /// it consumes no stream, and it is never metered in genesis notes.
+    /// `Some(Metaphysics::Inert)` re-affirms the default; the tier is
+    /// resolved once at the top of [`crate::generate`] and carried on the
+    /// globe so every metaphysics-gated derivation reads the same answer.
+    pub metaphysics: Option<Metaphysics>,
 }
 
 pub use hornvale_kernel::genesis::GenesisError;
@@ -88,7 +128,20 @@ pub fn pin_strings(pins: &TerrainPins) -> Vec<String> {
     if let Some(n) = pins.continents {
         out.push(format!("continents={n}"));
     }
+    if let Some(m) = pins.metaphysics {
+        out.push(format!("metaphysics={}", metaphysics_key(m)));
+    }
     out
+}
+
+/// The round-trippable spelling of a metaphysical tier, as `pin_strings`
+/// emits it and `parse_pin` accepts it.
+/// type-audit: bare-ok(identifier-text)
+fn metaphysics_key(m: Metaphysics) -> &'static str {
+    match m {
+        Metaphysics::Inert => "inert",
+        Metaphysics::Thaumic => "thaumic",
+    }
 }
 
 /// Parse one `key=value` pin string (as produced by `pin_strings`) into
@@ -135,6 +188,17 @@ pub fn parse_pin(s: &str, pins: &mut TerrainPins) -> Result<(), String> {
                 .map_err(|_| format!("continents: invalid count '{value}'"))?;
             pins.continents = Some(n);
         }
+        "metaphysics" => {
+            pins.metaphysics = Some(match value {
+                "inert" => Metaphysics::Inert,
+                "thaumic" => Metaphysics::Thaumic,
+                other => {
+                    return Err(format!(
+                        "metaphysics: expected inert or thaumic, got '{other}'"
+                    ));
+                }
+            });
+        }
         other => return Err(format!("unknown terrain pin key '{other}'")),
     }
     Ok(())
@@ -159,12 +223,56 @@ mod tests {
             supercontinent: Some(true),
             globe_level: Some(6),
             continents: Some(5),
+            metaphysics: Some(Metaphysics::Thaumic),
         };
         let mut rebuilt = TerrainPins::default();
         for s in pin_strings(&pins) {
             parse_pin(&s, &mut rebuilt).unwrap();
         }
         assert_eq!(rebuilt, pins);
+    }
+
+    /// The whole point of the gate: an unpinned world is metaphysically
+    /// inert, so every metaphysics-gated overlay reads its reserved floor
+    /// and no existing world moves. Both halves are asserted — the pin is
+    /// absent, and the resolution of that absence is `Inert`.
+    #[test]
+    fn the_default_world_is_metaphysically_inert() {
+        let pins = TerrainPins::default();
+        assert!(
+            pins.metaphysics.is_none(),
+            "an unpinned world must be inert"
+        );
+        assert_eq!(
+            pins.metaphysics.unwrap_or(Metaphysics::Inert),
+            Metaphysics::Inert
+        );
+        assert!(!Metaphysics::Inert.is_charged());
+        assert!(Metaphysics::Thaumic.is_charged());
+    }
+
+    /// A pinned tier must survive the `pin_strings` -> `scenario-pin` fact ->
+    /// `parse_pin` round trip `windows/worldgen` rebuilds a world through;
+    /// without this arm a pinned world would rebuild from its own ledger as
+    /// an inert one.
+    #[test]
+    fn metaphysics_round_trips_through_its_pin_string() {
+        for tier in [Metaphysics::Inert, Metaphysics::Thaumic] {
+            let pins = TerrainPins {
+                metaphysics: Some(tier),
+                ..TerrainPins::default()
+            };
+            let strings = pin_strings(&pins);
+            assert_eq!(strings.len(), 1, "one pinned field, one string");
+            let mut rebuilt = TerrainPins::default();
+            parse_pin(&strings[0], &mut rebuilt).unwrap();
+            assert_eq!(rebuilt.metaphysics, Some(tier));
+        }
+        assert!(
+            parse_pin("metaphysics=arcane", &mut TerrainPins::default())
+                .unwrap_err()
+                .contains("inert or thaumic")
+        );
     }
 
     #[test]
