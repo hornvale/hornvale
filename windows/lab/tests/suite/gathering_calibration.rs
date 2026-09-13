@@ -468,8 +468,37 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // 17.6474; the
     // directional claim remains true.
     assert!(
-        (mean - 17.6474).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.6474)"
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // 17.6474 -> 18.1105, a +0.4631-degree poleward step and the largest single
+        // movement this row has recorded.
+        //
+        // THE STANDING INSTRUCTION ABOVE FIRES, AND IS ANSWERED RATHER THAN DEFERRED.
+        // It asks that a further NARROWING of the margin be treated as a question about
+        // the floor of the trend rather than a quiet re-pin. The margin narrows again:
+        // 32.7 - 18.1105 = 14.5895 degrees (ratio 1.8056x), and this is now the THIRD
+        // consecutive narrowing, each step larger than the last
+        // (17.2377 -> 17.4432 -> 17.6474 -> 18.1105; +0.2055, +0.2042, +0.4631).
+        //
+        // WHAT IT SAYS ABOUT THE FLOOR IS STILL NOTHING, and that is the honest answer
+        // rather than an evasive one. The sole mover is the census delivery, whose
+        // content is this campaign's trophic/metabolite/subterranean-supply work plus
+        // an absorbed peoples roster — none of which carries a latitude term, and the
+        // authored biome affinities a roster change brings are exactly the
+        // authored-curve-read-as-finding this file has been caught on before. A floor
+        // question needs an instrument that varies latitude deliberately; eight
+        // opportunistic readings off successive refreshes cannot answer it.
+        //
+        // THE ASSERTED CLAIM IS UNCHANGED AND HOLDS: the preregistered directional
+        // assertion (below the uniform-sphere baseline of 32.7) sits ABOVE this line
+        // and the run reached here, so 18.1105 cleared it by better than 1.8x.
+        // REPORTED UPWARD rather than only recorded here: three accelerating
+        // narrowings is more than the single step the note above answered.
+        (mean - 18.1105).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~18.1105)"
     );
 }
 

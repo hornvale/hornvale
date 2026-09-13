@@ -889,13 +889,25 @@ fn homophony_count_is_measured_and_pinned() {
     // four sentient peoples and re-seats the naming population, moving the
     // means to 6.595, 6.856, 24.465, and 7.013. Bugbear remains highest by
     // more than 3x, so this re-pins the witnesses rather than the claim.
-    assert!((mg - 6.595).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.856).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 24.465).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+    // of the-census `rows.csv` (116 files in the delivery); this pin reads
+    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+    // fixture and is not a mover here.
+    // goblin 6.595 -> 6.52, hobgoblin 6.856 -> 6.76, bugbear 24.465 -> 24.188,
+    // kobold 7.013 -> 7.089. ALL FOUR were re-measured in ONE pass with the pins
+    // softened, not one per failing run — the failure named only goblin, and this
+    // file's own note above records that mistake being made before. Bugbear remains
+    // highest by more than 3x, so this re-pins the witnesses rather than the claim;
+    // the `mb > mg && mb > mh` invariant below was masked by these lines and was
+    // re-checked in the same pass rather than assumed.
+    assert!((mg - 6.52).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.76).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 24.188).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
     // Unmoved at 6.326 through The Foliot and The Sources' second and third
     // censuses; 6.326 -> 6.36 at The Precedence's, with the other three.
-    assert!((mk - 7.013).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mk - 7.089).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

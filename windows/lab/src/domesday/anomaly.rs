@@ -932,14 +932,23 @@ mod tests {
         // commit, since a stale id there selects nothing and prints green.
         let c = committed();
         let (evaluable, excluded) = evaluable_columns(&c);
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // evaluable 181 -> 179, excluded 51 -> 53. The 292-column metric surface is
+        // UNCHANGED, so this test's name still carries the right count. Two columns
+        // left the evaluable side for the excluded rails. The excluded row was MASKED
+        // by the evaluable one and was read in the same softened pass.
         assert_eq!(
             evaluable.len(),
-            181,
+            179,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            51,
+            53,
             "excluded count moved — re-measure and update this"
         );
     }

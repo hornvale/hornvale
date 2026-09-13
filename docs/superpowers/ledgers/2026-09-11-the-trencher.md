@@ -2415,3 +2415,204 @@ call it for the *gate*, not for the one axis it first admits.
 one that prevents a repeat of #26.
 
 **Ideonomy passes / overturns:** none; a verification step with five findings.
+
+---
+
+## #30 [Ruling] — The census is a WORLD-MOVER, not only a fix; and two gate holes composed to hide a red branch
+
+Tasks 6+7 came back **BLOCKED**, correctly. The implementation is complete and
+verified; it cannot commit because `make gate-commit` is red at HEAD **for
+reasons that predate it**. The implementer verified the same twelve failures
+against a clean HEAD before concluding that, and refused `--no-verify`.
+
+### A. THE ORDERING RULE I WROTE WAS RIGHT AND I APPLIED IT ONE MOVE SHORT
+
+#25/#26 ruled: repair once, after the last thing that moves the world. I then
+treated the **census** as the *fix* for two census-backed reds rather than as
+*a mover* in its own right. It is both. The delivery moved **117 golden
+files**; twelve `hornvale-lab` calibration pins read census output and were
+falsified by it.
+
+```
+domesday::anomaly::evaluable_columns_… : evaluable count moved, 181 -> 179
+calibration::name_collision_rate_…     : mean name-collision-rate drifted
+                                         to 0.527216074640001
++ 10 more, all hornvale-lab, all sub-second reads of committed CSV
+```
+
+So the census **fixed two reds and broke twelve**. The refined rule:
+
+> A census refresh is a world-moving event for every consumer that reads
+> census output, not merely the remedy for the consumers that compare against
+> it. Repair AFTER the census lands, not before — and expect the census
+> itself to move pins that the pre-census repair could not have seen.
+
+The repair pass (#28) was therefore correct in method and one step early in
+sequence. Nothing it did was wasted; twelve more were simply not visible yet.
+
+### B. TWO INDEPENDENT GATE HOLES COMPOSED, AND THE SECOND ONE IS MINE
+
+The branch has been red since the census merge and **nothing caught it**:
+
+1. **A `--no-ff` merge fires `pre-merge-commit` only, and `scripts/hooks/`
+   holds no such hook.** CLAUDE.md documents this exactly — the *clean*
+   auto-merge is the ungated shape. Both my merges (census delivery, Cadastre
+   absorb) were true merge commits and both went ungated.
+2. **Every commit I made after that was DOCS-ONLY**, and the pre-commit hook
+   says so itself: *"no Rust-relevant paths staged — running the prose-subject
+   tests instead of `make gate-commit`."* Four ledger commits, four prose-only
+   runs.
+
+Neither hole is a defect on its own — (1) is documented and (2) is a
+deliberate cost saving. **Composed, they mean the subfloor tier had not run on
+a commit since before the census**, and a campaign that ledgers diligently is
+*more* exposed than one that does not, because every ledger commit is
+docs-only.
+
+**The generalizable form, which is worth more than this instance:** after any
+merge that moves the world, the next commit that runs the code gate may be
+arbitrarily far away, and a run of documentation commits guarantees it is.
+**Run `make gate-commit` by hand after a world-moving merge** — the hook will
+not do it for you, and the merge did not either.
+
+### C. Ruling on the twelve
+
+**They are class-1 literal drift** (#28's taxonomy), caused by the census
+delivery `bdc59cc18` and the Cadastre absorption. Not invariant violations,
+not vacated preconditions — pinned values whose world moved. I verified two
+directly and the shape of the other ten from their sub-second runtimes.
+
+**Re-pin all twelve, with the cause named in each**, plus `golden-pins.sql`.
+Bare re-pins are refused, per #28: a number updated without its reason is what
+makes the next person's breakage invisible.
+
+This is the campaign's judgment call and the implementer was right to leave
+it. Delegating the mechanical half with the ruling attached.
+
+### D. Two smaller findings from the same report, both accepted
+
+- **`windows/worldgen/tests/suite/artifacts.rs` was edited outside the
+  brief's file list, and correctly.** Its `TerrainPins` literal is exhaustive
+  with no `..default()`, so a new field forces it. Setting the new field to
+  `Some(Metaphysics::Thaumic)` rather than `None` **extends that test's
+  round-trip claim to the new pin** instead of merely satisfying the compiler.
+  The forced edit was turned into coverage.
+- **This session's `docs/timings.md` rows were discarded during staging.**
+  Figures preserved in the report. Append-only and not regenerable, so the
+  loss is real but bounded; noted rather than reconstructed.
+
+**Ideonomy passes / overturns:** none; a blocked task correctly refused, plus
+a refinement to my own sequencing rule.
+
+## #31 [G5] — The twelve re-pinned and read rather than inferred: 26 drifted values behind 12 failures, and three corrections to #30
+
+#30's ruling executed. **All twelve are class-1 literal drift, and that is now
+READ rather than inferred** — #30 classified two directly and ten from their
+runtimes, and invited a better instrument.
+
+### A. THE INSTRUMENT: SOFTEN THE PINS, KEEP THE INVARIANTS ARMED
+
+Rather than re-run twelve times reading one failure per run, the **pin**
+assertions alone were temporarily rewritten to non-fatal `eprintln!` (a
+`soft!`/`soft_eq!` pair), leaving every invariant, precondition and structural
+relation as a live `assert!`. One run then reported every drifted value at
+once **and** proved the classification:
+
+```
+12 tests run: 12 passed, 0 failed        <- with ONLY the pins softened
+```
+
+Twelve green with the pins removed means every invariant in all twelve was
+**reached and held**: the frozen-sky `panic!` arm, blind attribution's 0.75
+floor AND its mooned-pair `assert_eq!`, the epithet detector's inner
+`assert!`, the syllable/name-length per-row structural relation, homophony's
+`mb > mg && mb > mh`, and the latitude baseline. None is an invariant
+violation; none is a vacated precondition. The instrument was removed and the
+files diffed back to their pristine hashes before the real re-pins were made.
+
+### B. TWELVE FAILURES WERE HIDING TWENTY-SIX DRIFTED VALUES
+
+The asserts are **sequential**, so each failure masked everything after it.
+The measured surface is **26 drifted values across 24 literal sites**, plus
+**20 literals in `golden-pins.sql`** — not twelve:
+
+| masked behind | rows that never ran |
+| --- | --- |
+| frozen-sky split | `spinning_eternal` 14 -> 12 — **a 13th test-level pin nobody had named** |
+| blind-attribution `correct` | `total` 982 -> 983 (the denominator moved) + the mooned-pair invariant |
+| goblin flagship `coastal` | `inland` 817 -> 805 |
+| name-length goblin arm | kobold present 982 -> 983 **and** its mean |
+| name-syllables goblin arm | kobold present 982 -> 983 **and** its mean |
+| homophony goblin | hobgoblin, bugbear, kobold — **all three** |
+| transparency mean | the floor AND the ceiling |
+| evaluable count | excluded count 51 -> 53 |
+
+`branches_family_calibration.rs` carries a note from 2026-08-28 warning about
+exactly this ("only goblin was [re-measured]... these asserts are sequential").
+Reading one failure per run would have reproduced that mistake four-fold.
+
+### C. THREE CORRECTIONS TO #30, all measured
+
+1. **The delivery moved 116 files, not 117** (`git show --stat bdc59cc18`:
+   `116 files changed, 2611 insertions(+), 2623 deletions(-)`).
+2. **The Cadastre absorb is NOT a mover.** #30 attributes the drift to "the
+   census delivery `bdc59cc18` and the Cadastre absorption".
+   `git diff --name-only 6b7d05eab c23bae9fd -- 'book/src/laboratory/generated/**'`
+   is **empty**: the absorb touched no census fixture. All four affected files
+   read `book/src/laboratory/generated/the-census` (and
+   `census-of-the-meeting` for the null control), both of which only
+   `bdc59cc18` rewrote. **The census delivery is the sole mover**, and each
+   re-pin says so.
+3. **`spinning_eternal` makes thirteen test-level pins**, not twelve tests'
+   worth of one each.
+
+### D. TWO DEFECTS FOUND WHILE RE-PINNING, ONE OF THEM MINE
+
+- **A pre-existing duplicate table row.** `name_length_distributions_…`
+  iterates `[("goblin", …), ("goblin", …), ("kobold", …)]` — goblin appears
+  **twice** with identical values, so its arm is asserted twice. Pre-existing,
+  harmless to correctness, and **reported rather than silently deleted**; both
+  arms were re-pinned together. Removing the duplicate is a separate decision.
+- **I introduced, then caught, a half-updated pin.** Each integer pin in
+  `golden-pins.sql` writes its value TWICE — `182.0 AS pinned` for the report
+  and `= 182` for the verdict. My first pass updated only the comparison, so
+  `census-check` went green while its report still PRINTED the old pinned
+  value: the check passed and lied. Caught by reading the passing output
+  instead of trusting the exit code — the row read
+  `spinning-yet-eternal …,12.0,14.000…,true`. Eleven rows were affected and
+  all eleven are fixed; computed and pinned now agree on every row.
+  **The lesson is the one this file already teaches from the other side:** a
+  duplicated value needs both halves moved, and a green check whose own output
+  contradicts itself is worse than a red one.
+
+### E. The latitude row's standing instruction fired, and is answered
+
+`pop_weighted_abs_latitude_…` moved 17.6474 -> 18.1105, a **+0.4631-degree**
+poleward step — the largest this row has recorded, and the **third consecutive
+narrowing of the margin**, each step larger than the last (+0.2055, +0.2042,
++0.4631). That file carries a standing instruction that a further narrowing be
+treated as a question about the floor rather than a quiet re-pin.
+
+Answered in place: **it still says nothing about the floor.** The sole mover is
+the census delivery, whose content is this campaign's trophic/metabolite/
+subterranean-supply work plus an absorbed peoples roster — nothing with a
+latitude term, and a roster's authored biome affinities are exactly the
+authored-curve-read-as-finding that file has been caught on before. The
+asserted claim is untouched: 18.1105 clears the 32.7 uniform-sphere baseline by
+1.81x. **Raised here rather than left in a comment**, because three
+accelerating narrowings is more than the single step the previous note
+answered.
+
+### F. Verification
+
+```
+subfloor tier: 4646 tests run: 4646 passed, 1767 skipped     (was 4634/12 red)
+make census-check: ok                                        (20 SQL pins resynced)
+```
+
+Per #30.B this is **the first green code tier on this branch since the census
+merge**. `census-check`'s recomputation is an independent second path from the
+fixture, and its computed column agrees with every Rust re-pin.
+
+**Ideonomy passes / overturns:** none; an execution entry with three
+corrections and two defects.

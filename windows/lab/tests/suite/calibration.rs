@@ -464,9 +464,18 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // The Underworld Peoples close regen (2026-09-10): the four added peoples
     // move one locked head from eternal to ambient, (153, 39) -> (151, 41)
     // after the full census resync; the categorical invariant remains.
+    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+    // of the-census `rows.csv` (116 files in the delivery); this pin reads
+    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+    // fixture and is not a mover here.
+    // (151, 41) -> (153, 39). RE-CHECKED RATHER THAN ASSUMED: the categorical
+    // invariant (a frozen sky never heads a cyclic pantheon) is the `other` arm's
+    // `panic!` in the loop above, and the run reaches this line, so it never fired
+    // on any of the 1000 seeds.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (151, 41),
+        (153, 39),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -526,8 +535,15 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // 85ef1edd, goldens c90072b9): the refreshed epidemic histories move this
     // witness 10 -> 12. The frozen-sky/cyclic-pantheon invariant above still
     // holds; only the count of spinning worlds with eternal heads moved.
+    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+    // of the-census `rows.csv` (116 files in the delivery); this pin reads
+    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+    // fixture and is not a mover here.
+    // 14 -> 12. THIS ROW WAS MASKED by the split assertion above, which failed
+    // first; it was read in the same pass, not on a later run.
     assert_eq!(
-        spinning_eternal, 14,
+        spinning_eternal, 12,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -846,8 +862,16 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // 85ef1edd, goldens c90072b9): epidemic-history population work re-seats
     // six goblin flagships, 183 -> 189 coastal. The split remains a witness,
     // not a directional claim.
-    assert_eq!(coastal, 182, "coastal flagship count drifted");
-    assert_eq!(inland, 817, "inland flagship count drifted");
+    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+    // of the-census `rows.csv` (116 files in the delivery); this pin reads
+    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+    // fixture and is not a mover here.
+    // coastal 182 -> 194, inland 817 -> 805. WITNESS, not claim — nothing here
+    // asserts a direction. The inland row was masked by the coastal one and was
+    // read in the same pass.
+    assert_eq!(coastal, 194, "coastal flagship count drifted");
+    assert_eq!(inland, 805, "inland flagship count drifted");
 }
 
 #[test]
@@ -1306,8 +1330,20 @@ fn blind_attribution_beats_chance_decisively() {
     // three attributable pairs to the correct side, 888 -> 891. The
     // directional claim remains intact: blind attribution still beats chance
     // decisively.
-    assert_eq!(correct, 871, "blind-attribution count drifted");
-    assert_eq!(total, 982, "attributable-pair count drifted");
+    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+    // of the-census `rows.csv` (116 files in the delivery); this pin reads
+    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+    // fixture and is not a mover here.
+    // correct 871 -> 872, total 982 -> 983 (the DENOMINATOR moved this time).
+    // The directional claim (blind attribution beats chance decisively) HOLDS,
+    // re-checked rather than assumed: the 0.75 floor is asserted above and the run
+    // reaches here, so 872/983 = 0.887 cleared it. The mooned-pair invariant BELOW
+    // (perfect attribution among spinning, mooned pairs) was MASKED by this line
+    // and could not be assumed; it was re-run with both pins softened and passed.
+    // The total row was masked too and was read in the same pass.
+    assert_eq!(correct, 872, "blind-attribution count drifted");
+    assert_eq!(total, 983, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1597,9 +1633,17 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
         (999, 1),
         "goblin epithet-honorific true/absent split drifted"
     );
+    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+    // of the-census `rows.csv` (116 files in the delivery); this pin reads
+    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+    // fixture and is not a mover here.
+    // kobold (982, 18) -> (983, 17). The claim holds, re-checked rather than
+    // assumed: the inner `assert!(!*v)` in the loop above reads FALSE on every
+    // kobold world and never fired, and `g_false_seeds` above is still empty.
     assert_eq!(
         (k_false, k_absent),
-        (982, 18),
+        (983, 17),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -2246,7 +2290,14 @@ fn name_collision_rate_is_measured_and_pinned() {
         // failed and is recorded as such above), the tolerance is unchanged
         // at 1e-6, and the rate stays inside the range decision 0024
         // sanctions (see the note above).
-        (mean - 0.525_118_426_989_999_1).abs() < 1e-6,
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // 0.525_118_426_989_999_1 -> 0.527_216_074_640_001. The zero/nonzero/absent
+        // world counts above did NOT move (0 / 1000 / 0).
+        (mean - 0.527_216_074_640_001).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2516,7 +2567,18 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 8.545_224_123_300_008. Still comfortably below the campaign's own
         // <10-character claim (spec 7) — 1.45 characters of margin —
         // re-checked rather than assumed.
-        ("goblin", 999u32, 8.492_322_954_254_249),
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // goblin mean 8.492_322_954_254_249 -> 8.551_386_390_790_796; present unmoved
+        // at 999. Still far below the campaign's own <10-character claim (spec 7) —
+        // 1.45 characters of margin — re-checked rather than assumed.
+        // NOTE: goblin appears TWICE in this table (here and below). That duplication
+        // is PRE-EXISTING, not introduced by this re-pin; both arms are updated
+        // together, and the duplicate is reported rather than silently deleted.
+        ("goblin", 999u32, 8.551_386_390_790_796),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2674,8 +2736,18 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 6.889_837_276_428_570. Still comfortably below the <10-character
         // claim — 3.11 characters of margin — re-checked rather than
         // assumed.
-        ("goblin", 999u32, 8.492_322_954_254_249),
-        ("kobold", 982u32, 6.926_498_556_008_148),
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // goblin mean 8.492_322_954_254_249 -> 8.551_386_390_790_796 (the duplicate
+        // goblin arm noted above); kobold present 982 -> 983 and mean
+        // 6.926_498_556_008_148 -> 6.918_919_202_238_042. THE KOBOLD ROW WAS MASKED
+        // by the goblin arm exactly as this file's own 2026-08-28 note warns; both
+        // were read in ONE pass with the pins softened, not one per failing run.
+        ("goblin", 999u32, 8.551_386_390_790_796),
+        ("kobold", 983u32, 6.918_919_202_238_042),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2910,8 +2982,19 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // goblin 2.716_477_110_510_509 -> 2.720_362_562_599_999,
         // kobold 2.200_726_815_918_366_6 -> 2.209_761_443_265_304_3.
         // Both stay inside spec 8 criterion 2's 2-3 syllable range.
-        ("goblin", 999u32, 2.707_807_533_233_231_6),
-        ("kobold", 982u32, 2.219_112_594_602_85),
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // goblin mean 2.707_807_533_233_231_6 -> 2.723_809_030_930_932 (present unmoved
+        // at 999); kobold present 982 -> 983 and mean 2.219_112_594_602_85 ->
+        // 2.216_176_219_226_857. The kobold arm was MASKED by goblin and was read in
+        // the same softened pass. Both stay inside spec 8 criterion 2's 2-3 syllable
+        // range, and the per-row structural relation this loop asserts (a world reports
+        // a syllable count exactly when it reports a name length) never fired.
+        ("goblin", 999u32, 2.723_809_030_930_932),
+        ("kobold", 983u32, 2.216_176_219_226_857),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -3229,7 +3312,15 @@ fn name_transparency_is_measured_and_pinned() {
         // the pre-campaign 1.00 degenerate value, with the min/max spread
         // below still spanning 0.298 to 0.987. Nothing here licenses reading
         // it as an improvement; it is a roster change, recorded.
-        (mean - 0.694_843_139_979_999_5).abs() < 1e-9,
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // mean 0.694_843_139_979_999_5 -> 0.693_758_744_690_001; present/absent unmoved
+        // at 1000/0. The floor and ceiling rows below were MASKED by this line and were
+        // read in the same softened pass (see their own notes).
+        (mean - 0.693_758_744_690_001).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3323,7 +3414,17 @@ fn name_transparency_is_measured_and_pinned() {
         // The Winze's close regen (2026-08-29, same census): the world
         // holding the most-worn name set changes with the roster —
         // 0.284_644_19 -> 0.298_181_82. The maximum below does NOT move.
-        (min - 0.238_095_24).abs() < 1e-8,
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // floor 0.238_095_24 -> 0.340_659_34. MASKED by the mean assertion above.
+        // The floor RISES and the ceiling falls in the same refresh (below), so the
+        // spread narrows from BOTH ends; a 0.341-to-0.969 span around a 0.694 mean is
+        // still a real distribution over worlds, not the uniformity defect this row
+        // guards. Read the two together before treating either as a trend.
+        (min - 0.340_659_34).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -3359,7 +3460,17 @@ fn name_transparency_is_measured_and_pinned() {
         // widened overall — a rising ceiling alongside a falling floor is a
         // widening distribution, not the uniformity defect this row guards;
         // it stays well clear of 1.0.
-        (max - 0.960_612_69).abs() < 1e-8,
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // ceiling 0.960_612_69 -> 0.969_498_91. MASKED by the mean assertion above.
+        // This WALKS BACK UP toward 1.0, which the note above asks to be read against
+        // rather than re-pinned silently: it is a rise of 0.0089, the ceiling remains
+        // off 1.0, and no world reads fully transparent. Recorded, not read as a
+        // return of the defect — but a further rise toward 1.0 is the thing to watch.
+        (max - 0.969_498_91).abs() < 1e-8,
         "name-transparency maximum drifted: {max:.15}"
     );
 }
@@ -3859,7 +3970,16 @@ fn null_control_name_length_smd_is_pinned() {
         // order of magnitude inside the +/-0.2 sampling bound, and still
         // negative, so the sign this row has carried through every regen is
         // unmoved: only the magnitude did.
-        (namelen - -0.032_587_081_074_588_166).abs() < 1e-9,
+        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
+        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
+        // of the-census `rows.csv` (116 files in the delivery); this pin reads
+        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
+        // fixture and is not a mover here.
+        // -0.032_587_081_074_588_166 -> -0.033_664_353_490_275_48. The delivery moved
+        // the census-of-the-meeting fixture this control reads as well as the-census.
+        // Still comfortably inside the +/-0.2 sampling bound that
+        // `null_control_distributions_are_within_the_sampling_bound` asserts.
+        (namelen - -0.033_664_353_490_275_48).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
