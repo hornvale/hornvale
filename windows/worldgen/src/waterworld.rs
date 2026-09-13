@@ -22,8 +22,19 @@ const VENT_ACTIVE_TICKS: i64 = 30 * WorldTime::TICKS_PER_STD_DAY;
 const VENT_WEAKENING_TICKS: i64 = 20 * WorldTime::TICKS_PER_STD_DAY;
 /// plumb: pending(wave-1)
 const VENT_FAILED_TICKS: i64 = 15 * WorldTime::TICKS_PER_STD_DAY;
+/// The full succession cycle, in exact ticks: the five finite intervals of
+/// spec section 3.2 summed — 20 days absent, 15 nascent, 30 active, 20
+/// weakening, 15 failed, so 100 standard days.
+///
+/// **Public because a measurement needs it and must not re-derive it.** The
+/// Tidemark's M3a negative control holds vent phase constant by sampling at
+/// instants spaced one whole cycle apart — `(t + offset) mod cycle` is
+/// invariant under adding a whole cycle — and a control that spelled `100 *
+/// TICKS_PER_STD_DAY` for itself would silently stop being a control the day
+/// one of the five intervals above moved.
 /// plumb: pending(wave-1)
-const VENT_CYCLE_TICKS: i64 = VENT_ABSENT_TICKS
+/// type-audit: bare-ok(count)
+pub const VENT_CYCLE_TICKS: i64 = VENT_ABSENT_TICKS
     + VENT_NASCENT_TICKS
     + VENT_ACTIVE_TICKS
     + VENT_WEAKENING_TICKS

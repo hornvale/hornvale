@@ -275,6 +275,8 @@ mod underworld_per_rung_switch;
 mod underworld_separation;
 #[path = "suite/underworld_water_table_probe.rs"]
 mod underworld_water_table_probe;
+#[path = "suite/vent_expiry.rs"]
+mod vent_expiry;
 #[path = "suite/warp_signs.rs"]
 mod warp_signs;
 #[path = "suite/warren_gate.rs"]
