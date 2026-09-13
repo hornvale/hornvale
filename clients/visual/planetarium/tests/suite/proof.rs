@@ -84,6 +84,10 @@ fn rendered_proof_reads_distinct_frames_and_patch_readiness() {
     assert_ne!(proof.before.png_sha256, proof.after.png_sha256, "{proof:?}");
     assert!(proof.after.patch_entities > 0);
     assert!(proof.after.narrow_feature_entities > 0);
+    assert!(
+        proof.after.narrow_feature_pixels > 0,
+        "feature geometry did not change PNG pixels: {proof:?}"
+    );
     assert!(!proof.after.fallback_visible);
     assert_eq!(proof.before.camera_sha256, proof.after.camera_sha256);
     assert!(!proof.after.source_revision.is_empty());

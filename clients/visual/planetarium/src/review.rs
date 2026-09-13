@@ -32,6 +32,13 @@ const PROOF_CASES: [&str; 5] = [
 ];
 static NEXT_PROOF_REQUEST_ID: AtomicU64 = AtomicU64::new(1 << 32);
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct FrameMetadata {
+    camera: hornvale_bevy_view::CameraPose,
+    source_revision: String,
+    evidence: hornvale_bevy_view::lifecycle::SurfaceRenderEvidence,
+}
+
 /// Measurements from the small, repeatable coherent-ground proof slice.
 ///
 /// These values are observations for review, not performance acceptance
@@ -82,6 +89,7 @@ pub struct RenderedSurfaceFrame {
     pub patch_entities: usize,
     pub narrow_feature_entities: usize,
     pub fallback_visible: bool,
+    pub narrow_feature_pixels: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -359,6 +367,7 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
             .map_err(|error| format!("parse proof revision: {error}"))?;
     let mut renderer = Renderer::new(&mirror, 1920, 1080)
         .map_err(|error| format!("create proof renderer: {error}"))?;
+    let mut rss_peak = process_memory_bytes()?;
     renderer
         .set_caption_font(include_bytes!("../assets/LibreBaskerville-Regular.ttf").to_vec())
         .map_err(|error| format!("load proof caption font: {error}"))?;
@@ -380,12 +389,15 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
     renderer
         .capture(&before_path)
         .map_err(|error| format!("capture proof before frame: {error}"))?;
-    let before = rendered_frame(
-        &before_path,
-        &camera_sha256,
+    rss_peak = rss_peak.max(process_memory_bytes()?);
+    let before_metadata = output.join("before.json");
+    write_frame_metadata(
+        &before_metadata,
+        &camera,
         &revision.source_revision,
         renderer.surface_render_evidence(),
     )?;
+    let before = rendered_frame(&before_path, &before_metadata, None)?;
     let anchor = mirror
         .current()
         .and_then(|reply| {
@@ -429,6 +441,7 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
     let reply = source
         .observe_surface(&request)
         .map_err(|error| format!("generate proof patch: {error}"))?;
+    rss_peak = rss_peak.max(process_memory_bytes()?);
     let source_generation_ms = vec![generation_start.elapsed().as_millis().max(1) as u64];
     let application_start = Instant::now();
     renderer
@@ -437,6 +450,7 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
     renderer
         .apply(&mirror, &camera)
         .map_err(|error| format!("apply proof after scene: {error}"))?;
+    rss_peak = rss_peak.max(process_memory_bytes()?);
     let mesh_material_application_ms =
         (application_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
     let after_path = output.join("after.png");
@@ -444,17 +458,21 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
     renderer
         .capture(&after_path)
         .map_err(|error| format!("capture proof after frame: {error}"))?;
+    rss_peak = rss_peak.max(process_memory_bytes()?);
     let first_visible_frame_ms = (first_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
-    let after = rendered_frame(
-        &after_path,
-        &camera_sha256,
+    let after_metadata = output.join("after.json");
+    write_frame_metadata(
+        &after_metadata,
+        &camera,
         &revision.source_revision,
         renderer.surface_render_evidence(),
     )?;
+    let after = rendered_frame(&after_path, &after_metadata, Some(&before_path))?;
     let steady_start = Instant::now();
     renderer
         .capture(&output.join("steady.png"))
         .map_err(|error| format!("capture proof steady frame: {error}"))?;
+    rss_peak = rss_peak.max(process_memory_bytes()?);
     let steady_state_frame_ms = (steady_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
     Ok(RenderedSurfaceProof {
         before,
@@ -463,29 +481,94 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
         mesh_material_application_ms,
         first_visible_frame_ms,
         steady_state_frame_ms,
-        peak_rss_bytes: process_memory_bytes()?,
+        peak_rss_bytes: rss_peak,
     })
 }
 
 fn rendered_frame(
     path: &std::path::Path,
-    camera_sha256: &str,
-    source_revision: &str,
-    evidence: hornvale_bevy_view::lifecycle::SurfaceRenderEvidence,
+    metadata_path: &std::path::Path,
+    before_path: Option<&std::path::Path>,
 ) -> Result<RenderedSurfaceFrame, String> {
     let bytes =
         std::fs::read(path).map_err(|error| format!("read rendered proof frame: {error}"))?;
     image::load_from_memory_with_format(&bytes, image::ImageFormat::Png)
         .map_err(|error| format!("decode rendered proof frame: {error}"))?;
+    let metadata: FrameMetadata = serde_json::from_slice(
+        &std::fs::read(metadata_path).map_err(|e| format!("read frame metadata: {e}"))?,
+    )
+    .map_err(|e| format!("parse frame metadata: {e}"))?;
+    let narrow_feature_pixels =
+        before_path.map_or(0, |before| feature_delta_pixels(before, path).unwrap_or(0));
     Ok(RenderedSurfaceFrame {
         png_path: path.to_path_buf(),
         png_sha256: hash(&bytes),
-        camera_sha256: camera_sha256.into(),
-        source_revision: source_revision.into(),
-        patch_entities: evidence.patch_entities,
-        narrow_feature_entities: evidence.narrow_feature_entities,
-        fallback_visible: evidence.fallback_visible,
+        camera_sha256: hash(&serde_json::to_vec(&metadata.camera).map_err(|e| e.to_string())?),
+        source_revision: metadata.source_revision,
+        patch_entities: metadata.evidence.patch_entities,
+        narrow_feature_entities: metadata.evidence.narrow_feature_entities,
+        fallback_visible: metadata.evidence.fallback_visible,
+        narrow_feature_pixels,
     })
+}
+
+fn write_frame_metadata(
+    path: &std::path::Path,
+    camera: &hornvale_bevy_view::CameraPose,
+    source_revision: &str,
+    evidence: hornvale_bevy_view::lifecycle::SurfaceRenderEvidence,
+) -> Result<(), String> {
+    let bytes = serde_json::to_vec(&FrameMetadata {
+        camera: camera.clone(),
+        source_revision: source_revision.into(),
+        evidence,
+    })
+    .map_err(|e| e.to_string())?;
+    std::fs::write(path, bytes).map_err(|e| e.to_string())
+}
+
+fn feature_delta_pixels(
+    before: &std::path::Path,
+    after: &std::path::Path,
+) -> Result<usize, String> {
+    let before = image::open(before).map_err(|e| e.to_string())?.to_rgba8();
+    let after = image::open(after).map_err(|e| e.to_string())?.to_rgba8();
+    if before.dimensions() != after.dimensions() {
+        return Err("frame dimensions differ".into());
+    }
+    Ok(before
+        .pixels()
+        .zip(after.pixels())
+        .filter(|(old, new)| {
+            old != new && new[2] > new[0].saturating_add(8) && new[2] > new[1].saturating_add(4)
+        })
+        .count())
+}
+
+#[cfg(test)]
+mod review_tests {
+    use super::*;
+
+    #[test]
+    fn feature_delta_requires_blue_feature_pixels_in_png() {
+        let directory = tempfile_dir();
+        let before = directory.join("before.png");
+        let after = directory.join("after.png");
+        image::RgbaImage::from_pixel(2, 1, image::Rgba([10, 10, 10, 255]))
+            .save(&before)
+            .unwrap();
+        let mut pixels = image::RgbaImage::from_pixel(2, 1, image::Rgba([10, 10, 10, 255]));
+        pixels.put_pixel(1, 0, image::Rgba([20, 40, 100, 255]));
+        pixels.save(&after).unwrap();
+        assert_eq!(feature_delta_pixels(&before, &after).unwrap(), 1);
+    }
+
+    fn tempfile_dir() -> PathBuf {
+        let path =
+            std::env::temp_dir().join(format!("hornvale-review-test-{}", std::process::id()));
+        std::fs::create_dir_all(&path).unwrap();
+        path
+    }
 }
 
 fn observe_proof_patch(
@@ -838,6 +921,8 @@ pub fn run(
         }
         let mut file = None;
         let mut sha = None;
+        let mut record_camera = camera.clone();
+        let mut record_revision = mirror.initial().binding.source_revision.clone();
         if frame % stride == 0 || frame == film.frames - 1 {
             if renderer.is_none() {
                 let mut r = Renderer::new(&mirror, width, width * 9 / 16)?;
@@ -850,15 +935,26 @@ pub fn run(
             r.set_caption(sample_caption(&film, frame)?);
             r.apply(&mirror, &camera)?;
             let filename = format!("frame-{frame:05}.png");
-            r.capture(&output.join(&filename))?;
-            sha = Some(hash(&std::fs::read(output.join(&filename))?));
+            let png_path = output.join(&filename);
+            r.capture(&png_path)?;
+            let metadata_path = output.join(format!("frame-{frame:05}.json"));
+            write_frame_metadata(
+                &metadata_path,
+                &camera,
+                &mirror.initial().binding.source_revision,
+                r.surface_render_evidence(),
+            )?;
+            let metadata: FrameMetadata = serde_json::from_slice(&std::fs::read(metadata_path)?)?;
+            record_camera = metadata.camera;
+            record_revision = metadata.source_revision;
+            sha = Some(hash(&std::fs::read(&png_path)?));
             file = Some(filename);
             println!(
                 "review frame {frame} tick {ticks} elapsed {:.2}s",
                 start.elapsed().as_secs_f64()
             );
         }
-        records.push(serde_json::json!({"frame":frame,"ticks":ticks,"camera":camera,"caption":sample_caption(&film,frame)?,"file":file,"sha256":sha,"observation_sha256":hash(reply.as_bytes())}));
+        records.push(serde_json::json!({"frame":frame,"ticks":ticks,"camera":record_camera,"source_revision":record_revision,"caption":sample_caption(&film,frame)?,"file":file,"sha256":sha,"observation_sha256":hash(reply.as_bytes())}));
     }
     // Endpoint is an avoidance probe, not a presentation frame.
     let q = mirror.request(film.end_ticks)?;

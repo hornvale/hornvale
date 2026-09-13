@@ -15,6 +15,16 @@ fn setup() -> (World, ObservationMirror, SceneCatalog) {
     c.populate(&mut world, &m).unwrap();
     (world, m, c)
 }
+
+#[test]
+fn surface_evidence_reports_ecs_fallback_visibility() {
+    let (mut world, _mirror, catalog) = setup();
+    assert!(catalog.surface_render_evidence(&world).fallback_visible);
+    world
+        .entity_mut(catalog.fallback_surface.expect("anchor fallback"))
+        .insert(Visibility::Hidden);
+    assert!(!catalog.surface_render_evidence(&world).fallback_visible);
+}
 #[test]
 fn reset_removes_entities_assets_and_selection_even_when_ids_repeat() {
     let (mut world, mut m, mut c) = setup();

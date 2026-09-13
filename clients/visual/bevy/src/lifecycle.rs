@@ -115,7 +115,7 @@ pub struct SurfacePatchCatalogState {
     pub retired: Vec<SurfacePatchCacheKey>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SurfaceRenderEvidence {
     pub patch_entities: usize,
     pub narrow_feature_entities: usize,
@@ -679,10 +679,7 @@ impl SceneCatalog {
         SurfaceRenderEvidence {
             patch_entities,
             narrow_feature_entities,
-            // The monolithic fallback remains visible for uncovered regions;
-            // a ready patch owns its covered region and is depth-biased ahead
-            // of that globe surface.
-            fallback_visible: self.surface.ready.is_empty(),
+            fallback_visible: self.fallback_surface_visible(world),
         }
     }
 
