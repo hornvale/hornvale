@@ -1517,3 +1517,128 @@ pass unchanged.
   (`k_live` vs `k_surface_forced`). That converts M4 from a fragile
   before/after baseline into a permanent two-arm test. Plan text corrected
   before Task 1 was dispatched.
+
+## Task 4 — the owed stage boundary, submitted before dispatch
+
+Ruling S1 (pre-flight) deferred Tasks 1–3's stage gate to "absorb +
+`sluice-stage` before Task 4". The absorb landed (`c78116d0f`, 179 commits);
+the submission never happened, and the branch had drifted 93 behind again by
+the time Task 4 opened. Submitted at the Task 3 tip:
+
+```
+sluice-request: req-1a21e863d825-20260913T130708Z branch=campaign/the-tidemark
+                ref=1a21e863d825 kind=stage host=lefford
+```
+
+**Measured before submitting, rather than assumed:** main's 93 commits touch
+`domains/species/` **not at all** (`git diff --stat <merge-base>..origin/main
+-- domains/species/` is empty; `git log` over the same range, same path, is
+empty). They are The Kiln's technology corpus, an astronomy census delivery and
+docs. So Task 4's authoring surface carries no conflict risk from the drift,
+and the absorb is the chamber's job at this boundary rather than a blocker on
+dispatch.
+
+**How to read the verdict when it returns — a branch table, not a prediction.**
+Two chamber jobs sat held at main's tip `84131b0d5` when this was submitted
+(`req-2e77f2aed7de` merge, `req-1172e1069b43` the-trencher stage), both rc=11.
+Their attribution was read from the log rather than inherited:
+
+```
+FAIL [51.912s] hornvale-lab::suite census_sentinel::the_first_three_census_worlds_match_the_committed_rows
+FAIL [49.503s] hornvale-lab::suite tripwire::the_committed_census_agrees_with_a_live_rebuild_of_the_tripwire_seeds
+Summary [943.387s] 6167 tests run: 6165 passed (96 slow), 2 failed, 249 skipped
+```
+
+Both are the census-drift pair, and this branch carries the same two as known-red
+(progress notes, post-absorb: "Only the two census-blocked remain"). So:
+
+- **rc≠0 naming exactly `census_sentinel` + `tripwire` and nothing else** →
+  the ordinary world-touching-campaign census obligation. Task 4 continues; the
+  refresh is owed at the final tip, not now (Task 4 authors kinds that move the
+  world again).
+- **rc≠0 naming anything else** → stop and attribute before Task 4 commits.
+- **rc=0** → the fixtures happen to agree; record it, since it would mean the
+  campaign's world movement is not census-visible, which is itself a finding.
+
+`main` never moves on a stage gate, so a red here costs a queue slot and
+nothing else.
+
+## #N [G5] — Task 4's premise, checked against the code before dispatch
+
+**Question:** Task 4's success criterion is "M6 reports zero dangling
+requirements", and spec §3.7 motivates the roster as "a predator guild with no
+base under it". Is that premise true of the mechanism that would have to
+report it?
+
+**Decision:** Restructure Task 4 to **measure before authoring**, and dispatch
+the measurement as the task's first deliverable rather than the roster. The
+roster is authored only for kinds the measurement shows can actually interact.
+
+**Why — the dispatch checklist's step 1, and it contradicted the plan rather
+than sharpening it.** Grepped, not reasoned:
+
+- `kernel/src/ecology.rs:98` — `MARINE_FORAGE` is one axis, and its own doc
+  says so: "a reef grazer and a pelagic apex predator are differentiated only
+  by their condition-response curves, not by what they eat, so marine food-chain
+  *length* is not yet an emergent property. Splitting it is
+  **BIO-marine-trophic-split**."
+- `domains/demography/src/niche.rs:93` — `is_heterotroph` is
+  `PLANT_FORAGE > 0 || ANIMAL_PREY > 0`. A `MARINE_FORAGE` kind is not one.
+- `domains/demography/src/niche.rs:202-237` — `next_level` gives a supplier
+  level to `PLANT_FORAGE` (constant 1) and `ANIMAL_PREY` (recursive) only.
+  `MARINE_FORAGE` enters the renormalising denominator and contributes no
+  height, i.e. it is treated exactly like the abiotic axes.
+- `domains/demography/src/niche.rs:179` — `predation()` skips any species whose
+  `ANIMAL_PREY` weight is `<= 0.0`, so it emits no edges for a marine kind.
+- The existing marine fauna are all `ResourceVector::new(&[(MARINE_FORAGE, 1.0)])`
+  (`domains/species/src/lib.rs:4583/4596/4609/4622` — reef-shark, giant-octopus,
+  killer-whale, giant-squid), and five of the six new peoples sit at
+  `MARINE_FORAGE 1.00` with kelp-tender at `PHOTOSYNTHATE 0.40 / MARINE_FORAGE
+  0.60` and vent-commensal at `CHEMOSYNTHATE 0.75 / MARINE_FORAGE 0.25`.
+
+Read together these say the sea has **no trophic height at all**: every marine
+kind, people and fauna alike, should resolve to level 1.0 — a producer. §3.7's
+"predator guild with no base under it" is wrong in a deeper way than it knew.
+There is no predator guild, because the axis that would make one a predator is
+not the axis the sea eats on.
+
+**The consequence that makes this a stop-and-measure rather than a footnote:**
+M6 as the plan words it — "resolve its subsistence to a named kind or an
+aggregate field, and assert zero dangling" — is satisfied **today, before a
+single kind is authored**, because `MARINE_FORAGE`, `PHOTOSYNTHATE` and
+`CHEMOSYNTHATE` are all aggregate axes with suppliers wired in worldgen
+(`marine_forage_supply_field`, `marine_chemosynthate_supply_field`). Written
+that way it is a vacuous green: it would pass on an empty roster, pass on a
+nine-kind roster, and never distinguish them. That is the failure shape this
+project has named repeatedly, and authoring nine kinds underneath it would
+produce "modelled, authored, unreachable".
+
+**Alternatives discarded:**
+
+- *Author the nine as specified and let M6 pass.* Rejected: vacuous by the
+  paragraph above, and it would ship nine kinds no mechanism separates from the
+  peoples that supposedly eat them.
+- *Author nothing and report the null.* Rejected as premature — competition on
+  a shared axis (`domains/demography/src/coexist.rs`) and the
+  condition-response curves are real differentiators that the measurement has
+  not yet ruled in or out, and `urchin-barren` is an open question the plan
+  already asks.
+- *Do `BIO-marine-trophic-split` here.* Rejected on scope, and the reason is
+  worth keeping: the kernel doc says it "costs only new ids", and `v1_basis` is
+  append-only (`the_basis_ids_are_append_only`), so the *ids* really are cheap
+  — but re-weighting every marine kind's niche moves carrying capacity, hence
+  settlement placement, hence every marine world. That is epoch-scale, it is
+  its own idea-registry row, and it is not Task 4.
+
+**Ideonomy passes / overturns:** 1 pass (expansion, inversion,
+symmetry-hunting, implication-mining); 0 overturns of the recommendation, three
+enrichments folded in above — the vacuous-M6 hazard (inversion: "what if the
+roster lands and the flatness is never found?"), the `v1_basis` append-only
+implication, and the symmetry reading that the terrestrial web has two trophic
+axes and the subterranean three while the marine has one, which is the finding
+rather than an accident.
+
+**Capture actions:** plan Task 4 rewritten to lead with the measurement and to
+carry a branch table for the roster; this entry; a G6-leading flag accrued —
+the marine web's flatness is an accuracy finding about the campaign's own
+headline and goes to Nathan with numbers, not as this hypothesis.
