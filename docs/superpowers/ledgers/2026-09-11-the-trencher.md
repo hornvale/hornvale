@@ -2616,3 +2616,182 @@ fixture, and its computed column agrees with every Rust re-pin.
 
 **Ideonomy passes / overturns:** none; an execution entry with three
 corrections and two defects.
+
+---
+
+## #31 [Q] — The seven reaction yields were never on a common scale. The mean hid it; the sum exposes it. And "methane is flat" was my imprecision.
+
+Chasing my own reported finding — *methane flat at 0.025 while sulphur spans
+0.053-0.556* — on the suspicion that an inert axis about to take a permanent
+append-only id might be a defect rather than a fact. It is neither. It is a
+pre-existing asymmetry this campaign's instrument made visible.
+
+### What the code actually says
+
+`EnergySource::yield_at` (`windows/worldgen/src/energy.rs`) treats its seven
+sources three different ways:
+
+| source | moisture term | shape term |
+|---|---|---|
+| `IronReduction` | `water_gate(m, 0.25)` — saturates | silica band |
+| `Radiolysis` | `water_gate(m, 0.10)` — saturates | silica band |
+| `SulphideOxidation` | `water_gate(m, 0.40)` — saturates | **normalized to peak exactly 1.0** (the `4r·ΔT/(r+ΔT)²` AM-GM construction) |
+| `Geothermal` | `water_gate(m, 0.20)` — saturates | saturating ΔT |
+| `Serpentinization` | **raw `* moisture`** — documented stoichiometric | silica band |
+| `Methanogenesis` | **raw `* moisture`** — documented stoichiometric | **none, and unnormalized** |
+| `DetritalImport` | — | depth falloff |
+
+**`Methanogenesis` is `buffer.carbonate * buffer.porosity * moisture`: the only
+source that is a bare product of THREE unnormalized `[0,1]` terms**, with no
+saturating gate and no peak normalization. Its siblings either saturate their
+water term to ~1.0 in ordinary conditions or normalize their shape term to
+peak at 1.0. It does neither.
+
+Also measured off the code, and it corrects a thing I assumed: **only three of
+the seven read `depth_m` at all** — `SulphideOxidation`, `Geothermal`,
+`DetritalImport`. `Serpentinization`, `IronReduction`, `Radiolysis` and
+`Methanogenesis` have no depth term; their per-rung variation arrives entirely
+through `moisture`.
+
+### MY CLAIM WAS IMPRECISE AND I PROPAGATED IT TO TWO CAMPAIGNS
+
+I reported *"three of the four axes discriminate spatially; one does not"* and
+*"METHANE buys no discrimination."* Both overstate what I measured.
+
+What I measured was **per-rung medians**. Methane carries the same raw-moisture
+term Serpentinization does, so it plausibly varies *proportionally* as much as
+`HYDROGEN` — its **absolute** range is compressed by the `carbonate × porosity`
+factor, which is a product of two small numbers.
+
+**The right word is DIM, not FLAT.** And dimness is what matters here, for a
+reason that is not obvious from the word: `axis_supply_with` is a **SUM**, so a
+consumer receives absolute magnitude, not proportional variation. `METHANE` at
+~0.025 against `HYDROGEN` at ~0.35 is a **~14x weaker axis**. A kind weighting
+`METHANE` at 1.0 receives a fourteenth of what the same weight on `HYDROGEN`
+would pay.
+
+Combined with The Tidemark's discount constraint, the consequence sharpens: a
+methanotroph is not merely unviable, it is **dominated** — any kind that names
+methane instead of hydrogen takes a 14x supply cut for naming a different food.
+
+**The practical advice I gave both campaigns — do not build anything that
+depends on methane varying — is unchanged and still correct. Its stated reason
+was wrong.** That is precisely the shape I warned The Tidemark about and then
+produced: a correct instruction resting on a justification that does not hold.
+Correcting the reason on the board and to both campaigns.
+
+### WHY THIS IS THE CAMPAIGN'S FINDING RATHER THAN ITS DEFECT
+
+The mean-of-seven divided everything by seven and averaged the scale asymmetry
+into a single scalar, where it was **invisible by construction**. No reader of
+`subterranean_energy` could have seen that one of its seven inputs was on a
+different scale from the others, because the output was one number.
+
+Disaggregation makes each reaction's scale **directly observable as an axis
+magnitude**. So the campaign's own instrument revealed a pre-existing
+inconsistency in a reaction set that predates it by two campaigns. That is what
+a better instrument is for, and it is worth saying in the chronicle: the
+disaggregation's first finding is about the thing it disaggregated, not about
+the world.
+
+### Ruling: RECORD, DO NOT FIX
+
+Normalizing `Methanogenesis` — a saturating gate, or a peak normalization
+matching `SulphideOxidation`'s — would change world output, invalidate the
+census delivered at `1172e1069b43`, and cost another ~2100 s run plus a repair
+pass, inside a campaign Nathan has already cut to its supply half.
+
+It is also a **modelling** question, not a mechanical one: is methane genuinely
+rare because carbonate, porosity and water rarely co-occur, or is the triple
+product the wrong encoding of "all three required"? The doc says water is
+consumed by the reaction, which justifies the raw multiply; it does not justify
+the absent normalization.
+
+**Recorded as a finding with its cost named, for a successor.** `METHANE` keeps
+id 10: an axis whose supply is dim is not an axis that is wrong, and the id is
+append-only and cheap. What would be wrong is landing it while implying four
+usable metabolites — so the spec says three discriminate usefully and one is
+dim, with this entry as the reason.
+
+**Ideonomy passes / overturns:** none; a suspicion chased into the code, which
+corrected my own reported result.
+
+---
+
+## #32 [Q] — A claim repeated eleven times, asserted zero times, went false before anyone noticed
+
+Stage 3's implementer escalated `pop_weighted_abs_latitude_…` rather than
+re-pinning it quietly: `17.6474 -> 18.1105`, the largest single step that row
+has recorded, and the third consecutive narrowing with each larger than the
+last (`+0.2055, +0.2042, +0.4631`). That was the right call and the file's own
+standing instruction demanded it.
+
+Chasing it found something the step does not show.
+
+**`windows/lab/tests/suite/gathering_calibration.rs` says the directional claim
+"still clears the baseline by better than 2x" ELEVEN TIMES. It does not.**
+
+```
+mean 15.0340  ->  2.175x      the last reading that was true
+mean 17.2377  ->  1.897x   |
+mean 17.4432  ->  1.875x   |  the three narrowings the implementer tracked
+mean 17.6474  ->  1.853x   |
+mean 18.1105  ->  1.806x      The Trencher
+```
+
+**The crossing predates this campaign and predates all three narrowings** — it
+sits between `15.0340` and `17.2377`, and belongs to neither.
+
+**Nothing could have caught it.** The assertion pins the DIRECTION
+(`mean < UNIFORM_SPHERE_BASELINE`) and nothing pins the RATIO. So a margin
+claim, restated approvingly by eleven successive campaigns, lapsed in silence
+while every run stayed green. This is the same shape as #27 and #31 arriving
+from a third direction: **a claim carried in prose beside an assertion that
+does not enforce it**. #27 was a reason rotting beside a correct instruction;
+#31 was my own imprecise summary propagating; this is eleven authors
+inheriting a margin figure nobody re-derived.
+
+Worth naming the mechanism, because it is not carelessness: each of those
+eleven entries was **true when written**, each author re-checked the
+*directional* claim exactly as the file asks, and the ratio was a parenthetical
+nobody was asked to verify. The file's discipline is real and it had a hole in
+the shape of the one number it repeated most.
+
+**What I did, and deliberately did not do.** Added a correction at the current
+entry. **Did not rewrite the eleven historical lines** — they record what each
+campaign correctly observed at its own time, and editing them would falsify the
+record to make the file tidy. Append-only applies to prose that is a record.
+
+**Did not add a ratio assertion**, though that is the repair that would stop
+recurrence. This campaign is cut to its supply half, and adding a guard to
+another campaign's calibration row is not its call. Recorded for that row's
+owner: the cheap fix is to pin or print the ratio so the next lapse fires
+rather than accrues.
+
+**The implementer's own three corrections to #30, all verified by me:** the
+delivery moved **116** files not 117; **the Cadastre absorb is not a mover**
+(`git diff 6b7d05eab c23bae9fd -- book/src/laboratory/generated/**` is empty),
+so #30 named a co-cause that does not exist; and it was **thirteen** pins, not
+twelve — `spinning_eternal` (14 -> 12) was masked and nobody had named it.
+
+**And the methodology that earned those:** rather than infer the
+classification, it softened **only the pin assertions** to non-fatal prints,
+left every invariant and precondition armed, and re-ran. All twelve then
+**passed** — proving the invariants were reached and held, so all twelve are
+class-1 literal drift. That is a positive control for a classification, which
+is stronger than any amount of reading, and it is the technique to reuse.
+
+It also found that **twelve failures were hiding twenty-six drifted values
+across twenty-four sites** plus twenty in `golden-pins.sql`, because asserts
+are sequential — including three of homophony's four species, the exact
+mistake that file's own 2026-08-28 note records. Reading one failure per run
+would have repeated a documented error fourfold.
+
+**Its own defect, self-caught and worth more than the fix:** each integer pin
+in `golden-pins.sql` writes its value twice — once for the report, once for
+the verdict. Its first pass moved only the verdict, so **`census-check` went
+green while its report printed the old value**. Caught by reading the passing
+output rather than trusting the exit code.
+
+**Ideonomy passes / overturns:** none; an escalation chased into a lapsed
+claim.

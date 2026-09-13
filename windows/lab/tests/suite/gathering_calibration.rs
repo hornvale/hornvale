@@ -497,6 +497,26 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
         // and the run reached here, so 18.1105 cleared it by better than 1.8x.
         // REPORTED UPWARD rather than only recorded here: three accelerating
         // narrowings is more than the single step the note above answered.
+        //
+        // AND THE CONTROLLER'S ANSWER, which found something the step itself
+        // does not show: THIS FILE CLAIMS "better than 2x" ELEVEN TIMES in the
+        // history above, AND THAT CLAIM IS NOW FALSE. 32.7 / 18.1105 = 1.806x.
+        // It went false BEFORE this campaign: 15.0340 read 2.175x, and the three
+        // steps this entry names (17.2377 / 17.4432 / 17.6474) are 1.897x /
+        // 1.875x / 1.853x. The crossing sits between 15.0340 and 17.2377 and
+        // belongs to neither The Trencher nor the three narrowings above it.
+        //
+        // NOTHING COULD HAVE CAUGHT IT. The assertion above this block pins the
+        // DIRECTION (mean < 32.7) and nothing pins the RATIO, so a margin claim
+        // repeated eleven times in prose lapsed silently while every run stayed
+        // green. The eleven historical lines were TRUE WHEN WRITTEN and are left
+        // exactly as they are -- rewriting them would falsify the record of what
+        // each campaign correctly observed. This note is the correction.
+        //
+        // FOR WHOEVER OWNS THIS ROW: the cheap repair is not prose. Pin the
+        // ratio, or print it, so the next lapse fires instead of accruing. Not
+        // done here -- The Trencher is cut to its supply half and adding a guard
+        // to another campaign's calibration row is not its call to make.
         (mean - 18.1105).abs() < 1e-3,
         "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~18.1105)"
     );
