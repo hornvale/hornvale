@@ -484,3 +484,55 @@ triggered.
 **Script and cache are throwaway**, per ledger #13: `/tmp/cadastre/*.py` and
 `/tmp/cadastre/pages/*.html` are not part of this commit and are not added to
 the repository.
+
+---
+
+**#9 [G5] — The catalogue holds 1,486 items, not 1,484, and this campaign's
+own confirming fetch reproduced the error.**
+
+*Finding (Task 1, flagged by the implementer against its own brief).* The slug
+pattern `[a-z0-9-]+` — prescribed in the plan, inherited from the controller's
+spec work, and matching what The Kiln used — silently drops two real items:
+`2,4-d` (comma) and `mössbauer-effect` (non-ASCII `ö`). Broadening to `[^"/]+`
+yields **1,486**.
+
+*Verified independently by the controller* on a separately cached copy of the
+page, rather than accepted from the report:
+
+```
+href="/2,4-d/"
+href="/mössbauer-effect/"
+ASCII-only regex: 1484
+broadened regex:  1486
+```
+
+*Ruling.* **Adopt 1,486 as the catalogue's size. The population stands at 301,
+unchanged.** Both recovered items postdate 1700, appear in no arc, and are
+named in no item's `Built on` list — checked directly against the closed graph
+by the implementer and not merely argued — so seed, closure and
+`population.json` are untouched.
+
+*Why this is the campaign's sharpest process finding.* Spec §2.1 claimed a
+"third independent fetch" had reproduced The Kiln's 1,484 exactly, and offered
+it as evidence of the catalogue's stability. **The fetch was independent; the
+PARSER was not.** Reusing the same slug pattern could only ever confirm the
+pattern, so the agreement measured nothing about the catalogue. This is the
+project's own recorded failure — a peer confirmation that sampled nothing new —
+reproduced by the session that had the note.
+
+*What it costs if wrong.* Nothing downstream: the corpus is built from
+`population.json`, which never contained either item. The exposure is a false
+denominator in committed prose, which is exactly what #9 corrects.
+
+*Blast radius, since a correction has one.* The Kiln's
+`docs/audits/technology-coverage-asimov-1989.md` and the frozen corpus's
+`provenance` both carry 1,484. Both are merged and append-only, so the
+correction lands in THIS campaign's `provenance` (Task 2 Step 5) and the
+chronicle (Task 6 Step 3), never by editing them. The spec is unmerged and was
+corrected in place.
+
+*Ideonomy passes / overturns.* None; an adjudication of an implementer's
+finding against a controller-verified measurement.
+
+*Capture actions.* Spec §4 corrected; Task 2 Step 5 and Task 6 Step 3 inherit
+the correction; the retrospective owes the same-instrument lesson.

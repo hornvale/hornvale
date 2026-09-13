@@ -32,8 +32,8 @@ Hence §7: the durable deliverable is the rule, not the 260 items.
 
 ## 2. What is NOT being claimed
 
-**This is not a census.** A census of all 1,484 was specified, adopted at
-ledger #1, and withdrawn at #7. Two measurements killed it:
+**This is not a census.** A census of the whole catalogue was specified,
+adopted at ledger #1, and withdrawn at #7. Two measurements killed it:
 
 - **It cannot be scored honestly at that size.** The cheap method — a keyword
   sieve over the 1,787 idea-registry rows — was tested against the only answer
@@ -83,6 +83,16 @@ carries none.
 Measured: **301 items, 401 edges, 0 cycles, 1 root (`biped`)**. 260 new to
 score. The closure adds only 7 above the era cut (the steam chain), so the cut
 is very nearly self-closing.
+
+**The catalogue holds 1,486 items, not the 1,484 every prior count reported**
+(Task 1, ledger #9). Two slugs — `2,4-d` and `mössbauer-effect` — are dropped
+by an ASCII-only slug pattern, one for its comma and one for its `ö`. The
+Kiln's committed provenance carries 1,484, and so did this campaign's own
+"third independent fetch", which reused the same pattern and therefore
+confirmed the instrument rather than the fact. Both recovered items postdate
+1700, appear in no arc, and are named in no item's `Built on` list, so the
+seed, the closure and the population are unchanged. The population is right;
+the population's stated denominator was not.
 
 ### 4.1 Why two rules rather than one
 
