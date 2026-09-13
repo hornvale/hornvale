@@ -241,8 +241,139 @@ anchor requirement, not on its name).
 
 *Capture actions.* #5 carried to Nathan at the scope stop.
 
+---
+
+**#6 [Q] — `TechHorizon` dates RUINS, not the living world, and two of this
+campaign's arguments were built on the opposite reading (Nathan, correcting the
+controller).**
+
+*The correction.* This session repeatedly described `TechHorizon`'s four values
+as "Hornvale's technology model" and "our ceiling is Classical". Nathan: the
+horizon applies to *the technology of discovered ruins*, not to the technology
+of the world itself. Verified against every consumer rather than accepted on
+authority:
+
+```
+domains/history/src/record.rs:142   OccupationRecord.tech       an occupation's tech
+domains/history/src/flesh.rs:644    occ.core.tech >= Iron       fleshing occupation records
+windows/worldgen/src/vestige.rs:321 tech: TechHorizon::Iron     vestiges, i.e. ruins
+domains/history/src/lib.rs:73       OCC_TECH = "occ-tech"
+windows/worldgen/src/history_bake.rs:2900  tech_for(year)       dates a PAST occupation
+```
+
+Every reader is occupation- or vestige-side. **There is no living-world
+technology model at all.**
+
+*What it invalidates, specifically.* Two things, and neither is a detail.
+
+1. **The 500 CE threshold** (#3's and the spec's §4.1). It was derived from
+   "our top horizon is `Classical`, and the Classical era ends around 500 CE."
+   That is a fact about how old ruins get, and it was being used to bound what
+   living peoples could do. Wrong quantity.
+2. **#3's `inapplicable` reasoning**, which argued the value would "manufacture
+   a deliberate choice out of an unbuilt one" by pointing at the four-token
+   ceiling. The verdict SURVIVES and its reason gets stronger: with no
+   living-world model of any kind, there is no precondition the world
+   *deliberately* lacks, because nothing about it was decided. `absent` stays;
+   the argument is rewritten.
+
+*What it does NOT invalidate.* The Kiln's F2 finding — that the shipped model
+is a monotone clock in which prerequisites, divergence and loss are
+inexpressible — stands, and is strengthened: it is not merely that the model
+cannot express loss, it is that the thing being modelled is ruin-dating and
+the living world has no capability state to lose.
+
+*How this got past three gates.* The controller read `tech_for`, `tech_weight`
+and `TechHorizon`'s definition and never once read a CALLER. The definition is
+domain-neutral ("Stone-tool, pre-metal"); only the call sites say what it is
+*for*. This is the project's own recorded lesson about reading a constraint off
+a construction site instead of its consumers, reproduced exactly.
+
+*Ideonomy passes / overturns.* None — a factual correction from the project
+owner, verified in code.
+
+*Capture actions.* Spec §4.1 and §4.2 rewritten; this entry; the retrospective
+owes the caller-reading lesson.
+
+---
+
+**#7 [G1-revised] — The selection rule is TWO blind rules unioned, then closed,
+and the population is 301.**
+
+*Question.* #1 adopted a census of all 1,484. #4 and #5 then showed a census
+cannot be scored honestly at that size. What replaces it?
+
+*Decision.* **Seed = the catalogue's three named arcs UNION everything the
+catalogue attests before 1700; then close under the catalogue's own `Built on`
+relation.** Measured: **301 items, 401 edges, 0 cycles, 1 root (`biped`), 260
+new to hand-score.** The closure step adds only 7 above the cut (the steam
+chain), so the era cut is very nearly self-closing.
+
+*Why two rules and not one.* They are near-independent and each misses what the
+other catches. Measured at the 500 CE cut, where the comparison was first run:
+closure alone 77, era alone 98, **overlap only 41**. Closure alone excludes
+`pottery` — which `TECH-2` in the idea registry names explicitly as the
+pyrotechnology ladder's first rung — along with irrigation, calendar, law,
+medicine, coin, arch, aqueduct. **A rule that drops the capability the
+project's own registry most explicitly plans is not a principled rule**, and
+the controller recommended it for two turns.
+
+*Why closure is not optional.* Decision 0386 derives demands by transitive
+closure over `presupposes`, and `presupposes` may name only in-corpus items, so
+any corpus drawn from a subset of a linked catalogue silently loses its
+outside edges at authoring time. The Kiln documents this as a known distortion:
+the demand set "UNDER-DESCRIBES every such item's real prerequisites."
+Closure repairs it. `Built on` is the direction that terminates (one root);
+`Led to` does not, so closure is defined on `Built on` alone.
+
+*Why the era cut cannot flatter us — the objection the controller raised and
+then withdrew.* Selection keyed to our own code makes the selection the
+measurement (The Kiln, ledger #7), and "items appropriate to our scenario"
+looked like exactly that. It is not, for a reason #6 supplies: **there is no
+living-world technology model, so no item's verdict depends on its date.**
+Every item scores on the same basis whatever era it is from. The cut changes
+which capabilities are examined, never how well the world does on them, so the
+gaming vector is absent rather than merely unlikely.
+
+*The threshold is a judgement and is recorded as one.* 1700 comes from Nathan's
+reading of the setting's intellectual reach — "perhaps we've had a Descartes
+somewhere; I don't think we've had a Newton" — with deliberate headroom. Noted
+at the time and accepted: `< 1700` **includes** Newton (`Calculus` 1669, `Laws
+of motion` and `Universal gravitation` both 1687); `< 1650` is the cut that
+matches the phrase literally and gives 249 items. 1700 was kept on the
+instrument argument: **a corpus that stops exactly where the world is thought
+to stop can never report that the world stops too early.** An `absent` on
+universal gravitation is a finding; its exclusion is an invisible decision.
+
+*Alternatives discarded.*
+- *Census of all 1,484* (#1's adopted answer) — withdrawn on #4 and #5: it
+  cannot be scored honestly, and ~1,400 of its cells are permanently `absent`
+  under any model Hornvale will have, so they can never discriminate.
+- *Closure alone, 77 items* — rejected above; drops `pottery`.
+- *Era cut alone, no closure* — rejected: reintroduces the truncation this
+  campaign exists to repair.
+- *`< 1650`, 249 items* — rejected on the ceiling-indictment argument.
+
+*Ideonomy passes / overturns.* One (scope substitution on the selection rule —
+narrow to one neighbourhood, widen to all of humanity — which is what exposed
+that the two candidate rules overlapped on only half their union and therefore
+should be unioned rather than chosen between). **One overturn: the census
+adopted at #1 is withdrawn.**
+
+*Capture actions.* Spec rewritten to this population. The withdrawn census
+keeps its one interesting question — whether the `absent` fraction differs
+between sample and full population — which wants an idea-registry row rather
+than a campaign.
+
 ## Follow-ups
 
 - **The manifest-only fallback** (#1) wants an idea-registry row if this
   campaign does not land: the enumeration plus the lattice, frozen, carrying no
   verdicts and therefore owing no sibling rulings.
+- **The census's one good question survives its rejection** (#7): does the
+  `absent` FRACTION differ between the arc sample and the whole catalogue? Not
+  answerable without scoring the whole catalogue, so it is a registry row, not
+  a campaign.
+- **`tech_offset` is drawn per-community, not per-people**, and its doc comment
+  says otherwise — inherited from The Kiln's own follow-ups, and #6 makes it
+  more confusing rather than less, since the whole structure is ruin-side.
