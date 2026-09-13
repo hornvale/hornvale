@@ -1,6 +1,10 @@
 # The Tidemark — retrospective
 
-**Merged:** 2026-09-13
+**Status:** closed 2026-09-13. This record is written *into* the merge rather
+than after it (`closing-a-campaign` step 5b — a second merge slot for a handful
+of status lines measured ~1,300 s), so the line is authored before the landing
+it describes. `git log --merges` finds the commit; the reconciliation row names
+the branch.
 
 ## Every defect was found by running the thing or mutating it. None by re-reading, and none by its author.
 

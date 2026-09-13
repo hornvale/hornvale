@@ -332,8 +332,16 @@ predicate histogram rather than inferred from which commits landed:
 settlements 396 → 435, occupations 1,148 → 1,259, ruins 752 → 824. That is a
 settlement-placement shape, and the bulk of it is a *fixture selector* repair,
 not the vent ending — whose own measurement is two occupations. The pin's
-documentation says so, so that nobody later reads +1,849 facts as the price of
-a vent mechanism.
+documentation says so, so that nobody later reads **+1,850** facts as the price
+of a vent mechanism.
+
+That total is itself two numbers and worth splitting, because the campaign's
+own record nearly published the wrong one: **1,849** facts are this branch's
+side, and the final **one** arrived from `main` at the closing absorb, where
+the same pin had meanwhile been moved by another campaign to 21,525. The
+merged value was measured on the merged world rather than chosen between the
+two sides or added from their deltas — adding them would have produced a
+number no world has.
 
 That repair is worth naming because a board notice from another session found
 it, not a review. The demo walk's subject selector filtered settlements on
