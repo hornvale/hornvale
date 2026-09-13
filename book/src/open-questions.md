@@ -5871,3 +5871,58 @@ make the gap gradable is the one frozen here, and it cannot grade it yet: every
 trajectory verdict in both columns is unscored, because the model is monotone.
 A successor campaign replaces the clock, at which point two cells become
 measurable and this chapter acquires something it can actually score.
+
+### The same instrument, sharpened; still no bet to move (2026-09-12)
+
+[The Cadastre](./chronicle/the-cadastre.md) (2026-09-12) completed the
+invention column [The Kiln](./chronicle/the-kiln.md) froze — from a
+forty-one-item sample of a linked catalogue to the closed
+three-hundred-and-one-item population that sample's own prerequisite edges
+demand. The reading is 231 `absent`, 61 `deferred`, 9 `present`, and no
+`inapplicable` anywhere by rule.
+
+**No bet in the graded tables above moved, and the grep says so rather than a
+judgement about which rows sounded relevant.** Re-run over the four
+confidence-tier sections at this campaign's subjects: **zero** occurrences of
+`technolog`, `invention`, `craft`, `smelt`, `prerequisit` or `catalogue`. The
+one hit on `corpus` is a creature-name spelling check. The four on `closure`
+are a bit-identical realm-gate arm and three sentences about a chart declaring
+its own fields. The five on `lattice` are all geometric — a screen projection,
+a triangular grid, a quadrilateral one. The three on `capab` are the same
+three The Kiln found: reproducing a predicted capability, pane capabilities
+needing to be verbs, and a note on which instruments grade what. Every one is
+incidental, which is the same answer as last time and for the same reason:
+**this chapter has never bet on technology, capability acquisition, or the
+loss of a capability**, and the project's position on all three remains
+unratified anywhere else either.
+
+What the campaign contributes is a measurement about the **instrument**, and
+it belongs here only as that. A corpus family whose demands are derived by
+closure over a prerequisite relation cannot be drawn from a subset of a linked
+source without silently deleting every edge that crosses the subset's
+boundary — the field that would carry such an edge may name only in-corpus
+items, so there is nowhere for the loss to be recorded. Measured on the item
+that shows it most clearly: an improved steam engine, unchanged in every
+field, whose derived demand set rises from fourteen capabilities to
+forty-seven once its ancestors are in the register. The ten apparent roots of
+the sample collapse to one. **A sample of a graph is not a subgraph of it**,
+and the corpus could not previously compute the quantity it already claimed.
+
+One number here is worth keeping because it grades a selection rather than a
+world. The `absent` fraction is 85.4% over the original forty-one arc items
+and 76.7% over the closed population — the fraction moved nine points, and
+downward. The modest reading is the right one: three arcs chosen for narrative
+momentum asked harder questions than a population closure drags back through
+pottery, numbers, domestication and the plough, where this project's own plans
+are thickest. That is a fact about the sample, not evidence the world does
+better than the earlier reading said.
+
+Two findings about the campaign's own honesty are recorded in the chronicle
+and not graded here, because neither is a bet. A blind re-score of the frozen
+forty-one recovered four of six and proposed two more `deferred` where the
+frozen file says `absent` — the flattering direction, found by the instrument
+built to catch it, and left open for a successor because those verdicts are
+the control's answer key. And twice, a number offered as confirmation turned
+out to have been produced by the thing being checked: a re-fetch of the source
+catalogue that reused the same parser, and a blind control that had read the
+target tally in a file its own procedure requires it to open.
