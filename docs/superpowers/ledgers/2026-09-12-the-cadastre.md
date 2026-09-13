@@ -403,3 +403,84 @@ clause vacuously satisfied hiding a deliverable nobody built.
 *Ideonomy passes / overturns.* None; a checklist pass, not a design decision.
 
 *Capture actions.* Plan Task 2 Steps 5 and 6.
+
+---
+
+## Task 1: Fetch, close, and verify the population
+
+**Step 1 — enumeration fetched twice, independently.** Both fetches of
+`https://invention.cards/browse/` (2026-09-13, ~01:20 UTC) are byte-identical:
+**150,326 bytes each**, `diff` empty. FETCHES AGREE; proceeded.
+
+**Step 2 — parsed the enumeration.** Applying the brief's own regex
+(`href="/([a-z0-9-]+)/">`) yields **1,484** items, exactly matching The Kiln's
+prior count. **But this count is corroborating a shared bug, not confirming
+correctness — branch fired.** Direct inspection of the page found **1,486**
+`<li>` entries and 1,487 `/slug/` hrefs (1,486 items + the page's own
+`/browse/` footer self-link, which sits outside any `<h2>`/`<ul>` section and
+was never a candidate match to begin with). The 2-item gap is a charset bug in
+the prescribed slug pattern, which excludes anything outside `[a-z0-9-]`:
+
+- `2,4-d` (title "2,4-D", year 1944) — slug contains a comma.
+- `mössbauer-effect` (title "Mössbauer effect", year 1958) — slug contains a
+  non-ASCII letter (ö).
+
+Both are real catalogue items with real `/slug/` pages. Broadening the slug
+capture to `[^"/]+` recovers both; re-parsing gives **1,486** distinct items,
+the count recorded as this session's enumeration total (`all-items.json`).
+**Neither item is in the seed** (both post-1700, absent from all three arcs)
+**nor reachable via `Built on` from the seed** (checked directly: neither slug
+appears as a value in any closed-population item's `Built on` list), so this
+bug has **zero effect on the closed population or on `population.json`** — it
+only corrects the reported size of the source enumeration.
+
+**Step 3 — seed built from the two blind rules.** Arc counts, fetched
+independently and matching The Kiln's prior figures exactly:
+- `knights`: **16**
+- `republic-of-letters`: **10**
+- `steam-diffusion`: **15**
+- arc union: **41**
+
+Era (`year < 1700`, over the corrected 1,486-item enumeration): **294**.
+Seed (arc union ∪ era): **298** — unaffected by the Step 2 correction, since
+both newly-recovered items postdate 1700. Matches The Kiln's prior 298
+exactly.
+
+**Steps 4–5 — fetched every seed item and closed under `Built on`.** 301 pages
+fetched (301 new; cache now warm at `/tmp/cadastre/pages/`), 0.3 s sleep
+between requests. BFS to fixpoint on `Built on` only:
+
+**CLOSED: 301 items, 401 edges.** Matches The Kiln's prior 301/401 exactly.
+The closure adds exactly 3 items beyond the 298-item seed: `coke-iron`,
+`heat-capacity`, `mercury-thermometer`.
+
+**Step 6 — acyclicity gate.** **CYCLES: 0.** Roots (items with an empty
+`Built on`): **1** (`biped`). Matches The Kiln's prior 0 cycles / 1 root
+exactly. Stop condition did not fire; proceeded.
+
+**Step 7 — `Led to` agreement with `Built on`.** Over the 301-item closed
+population:
+- built-on edges: **401**
+- inverted led-to edges: **401**
+- led-to with no built-on: **0**
+- built-on with no led-to: **0**
+
+Full agreement in both directions — no asymmetry to launder.
+
+**Step 8 — emitted `population.json`.** `/tmp/cadastre/population.json`: a
+JSON array of **301** objects, each exactly
+`{slug, title, year:int, field, built_on:[slug], led_to:[slug]}`, covering the
+closed population and nothing else (verified: correct key set on every
+record, `year` is `int` on every record, 301 distinct slugs, valid top-level
+JSON array). All 301 items' `title`/`year`/`field` came from the browse-page
+enumeration; none needed a page-metadata fallback.
+
+**Branches that fired:** Step 2's "count differs" branch (the enumeration is
+1,486, not 1,484 — a slug-regex charset bug, recorded above; the two
+recovered items do not touch the seed or the closure). No other branch table
+entry fired; neither stop condition (Step 1 fetch mismatch, Step 6 cycle)
+triggered.
+
+**Script and cache are throwaway**, per ledger #13: `/tmp/cadastre/*.py` and
+`/tmp/cadastre/pages/*.html` are not part of this commit and are not added to
+the repository.
