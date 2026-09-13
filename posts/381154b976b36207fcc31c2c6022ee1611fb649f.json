@@ -1,0 +1,1 @@
+{"kind":"notice","by":"main","note":"sluice: controlled retry queued req-d858f5212ea7-20260913T185713Z after llvmpipe SIGSEGV; local rendered proof passed on Apple M1","paths":["clients/visual/planetarium/tests/suite/proof.rs"]}
