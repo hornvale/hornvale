@@ -1642,3 +1642,76 @@ rather than an accident.
 carry a branch table for the roster; this entry; a G6-leading flag accrued —
 the marine web's flatness is an accuracy finding about the campaign's own
 headline and goes to Nathan with numbers, not as this hypothesis.
+
+## #N+1 [Q] — Task 4's roster, taken to Nathan, and what came back
+
+**Question:** §3.7's roster cannot carry trophic meaning on today's axes (see
+the previous entry, and `windows/worldgen/tests/suite/marine_web_probe.rs` for
+the numbers). Author the nine anyway, author a subset, ship the null, or split
+the axis?
+
+**Brought to Nathan** as a carve-out (accuracy tradeoff on the campaign's own
+headline), with four options and a recommendation of "ship the null". He
+declined all four and asked the better question — what would make a rich,
+diverse ocean — which overturned the recommendation twice in succession.
+
+**Decision:** Task 4 ships the probe and the measured flatness as its finding.
+It authors **no fauna**. The design that would make the roster meaningful is
+recorded in `docs/design/what-eats-what.md` and registered as
+`BIO-trophic-receptors`; Nathan takes it up in a separate session as its own
+campaign.
+
+**Why — two overturns, both worth recording because both were mine:**
+
+1. *"The split is epoch-scale."* Wrong, and wrong in a specific way: it priced a
+   cost this campaign is **already paying**. Six marine peoples plus realm
+   gating already move worlds, `census_sentinel`/`tripwire` are already red, and
+   a census refresh is already owed at close. The split would not have added a
+   census; it would have changed what that census measured. A cost already
+   incurred is not a cost of the increment.
+2. *"So do the split."* Also wrong, once Nathan proposed explicit diets. The
+   marine flatness is not a missing marine axis — it is an artifact of
+   expressing diet as *which substance-bucket you draw from* at all. A
+   `MARINE_PREY` axis plus a re-weighting of sixteen niches would have been
+   thrown away by the better design. Under a receptor model the sea gets depth
+   with no new axis.
+
+**The correction Nathan made to the measurement's reading, which is the design's
+spine:** this session called the black dragon's 38-entry prey list (containing
+every marine people) absurd. It is not. It is a correct statement of
+**capability** misread as a statement of **realization** — a dragon *can* eat an
+abyssal elf, and on Denali it would. The defect is one missing co-location
+filter, not a broken derivation. That reframing is what separates the five terms
+in §4.3 of the design brief, and this session did not have it.
+
+**Alternatives discarded:** author the nine on `MARINE_FORAGE` (rejected —
+measured overlap 1.0000 with the six peoples, so the "base" is a perfect
+competitor of what it feeds); author a reduced roster (rejected — a pure
+phototroph gets zero marine supply and is never placed, and anything placeable
+lands back on `MARINE_FORAGE`); do the receptor design inside this campaign
+(rejected on scope by Nathan, who is starting it fresh).
+
+**Ideonomy passes / overturns:** 7 passes — one at the roster decision
+(expansion, inversion, symmetry-hunting, implication-mining) and six drawn
+tuples afterwards at Nathan's request (flora; sentients; carrion/detritus; cycle
+resolution rate; preference; yield). **2 overturns**, both listed above. Full
+record preserved in `docs/design/what-eats-what.md` §5 rather than summarised,
+because the passes contain material the design compresses away — the
+whole/part mass-rule split, the carrion-versus-detritus identity gradient that
+explains six *terrestrial* kinds pinned at height 1.000, and tradition-as-
+hysteresis.
+
+**Capture actions:** `docs/design/what-eats-what.md` (the full reasoning, written
+to be read cold); `BIO-trophic-receptors` added to the idea registry as `raw`,
+superseding `BIO-marine-trophic-split` and flagged to be reconciled with
+`BIO-trophic-basis-is-flat` rather than both being built; plan Task 4 already
+rewritten to lead with the measurement; this entry.
+
+**A finding this campaign owes its successor, and did not go looking for.** The
+same probe shows six *terrestrial* kinds — `carrion-crawler`, `otyugh`, `drow`,
+`duergar`, `kuo-toa`, `gully-dwarf` — pinned at height 1.000 by `is_off_chain`,
+because detritus-dominance pins a kind off the chain by convention. Carrion
+retains identity (species, mass, location) and detritus does not, and the model
+has one axis for both. It is the same shape as the marine flatness — one axis
+standing in for a structure — and it was invisible until the marine question
+forced a whole-registry readout.
