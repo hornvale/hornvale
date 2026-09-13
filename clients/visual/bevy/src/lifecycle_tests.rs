@@ -46,7 +46,8 @@ fn surface_evidence_reports_patch_ownership_over_fallback_region() {
         feature_color: None,
     });
 
-    assert!(world.get::<Visibility>(fallback).is_none());
+    assert!(catalog.surface_render_evidence(&world).fallback_visible);
+    world.entity_mut(fallback).insert(Visibility::Hidden);
     assert!(!catalog.surface_render_evidence(&world).fallback_visible);
 }
 #[test]

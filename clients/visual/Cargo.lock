@@ -3741,6 +3741,7 @@ dependencies = [
  "hornvale-bevy-view",
  "hornvale-visual-source",
  "image",
+ "libc",
  "serde",
  "serde_json",
  "sha2",

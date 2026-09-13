@@ -657,16 +657,16 @@ impl SceneCatalog {
                     world.entity_mut(*entity).insert(Visibility::Visible);
                 }
             }
+            self.set_fallback_surface_visible(world, false);
         }
         Ok(Some(entity))
     }
 
     pub fn fallback_surface_visible(&self, world: &World) -> bool {
         self.fallback_surface.is_some_and(|entity| {
-            self.surface.ready.is_empty()
-                && world
-                    .get::<Visibility>(entity)
-                    .is_none_or(|visibility| *visibility != Visibility::Hidden)
+            world
+                .get::<Visibility>(entity)
+                .is_none_or(|visibility| *visibility != Visibility::Hidden)
         })
     }
 

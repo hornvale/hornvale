@@ -18,7 +18,6 @@ use std::{
     collections::BTreeSet,
     error::Error,
     path::PathBuf,
-    process::Command,
     sync::atomic::{AtomicU64, Ordering},
     time::Instant,
 };
@@ -582,35 +581,6 @@ fn feature_delta_pixels(
         .count())
 }
 
-#[cfg(test)]
-mod review_tests {
-    use super::*;
-
-    #[test]
-    fn feature_delta_requires_feature_color_in_png() {
-        let directory = tempfile_dir();
-        let before = directory.join("before.png");
-        let after = directory.join("after.png");
-        image::RgbaImage::from_pixel(2, 1, image::Rgba([10, 10, 10, 255]))
-            .save(&before)
-            .unwrap();
-        let mut pixels = image::RgbaImage::from_pixel(2, 1, image::Rgba([10, 10, 10, 255]));
-        pixels.put_pixel(1, 0, image::Rgba([20, 40, 100, 255]));
-        pixels.save(&after).unwrap();
-        assert_eq!(
-            feature_delta_pixels(&before, &after, Some([20, 40, 100])).unwrap(),
-            1
-        );
-    }
-
-    fn tempfile_dir() -> PathBuf {
-        let path =
-            std::env::temp_dir().join(format!("hornvale-review-test-{}", std::process::id()));
-        std::fs::create_dir_all(&path).unwrap();
-        path
-    }
-}
-
 fn observe_proof_patch(
     source: &mut hornvale_visual_source::Source,
     binding: &serde_json::Value,
@@ -903,23 +873,18 @@ fn validate_face_corner(patches: &[serde_json::Value]) -> Result<(), String> {
 }
 
 fn process_memory_bytes() -> Result<u64, String> {
-    let pid = std::process::id().to_string();
-    let output = Command::new("ps")
-        .args(["-o", "rss=", "-p", &pid])
-        .output()
-        .map_err(|error| format!("read proof process memory: {error}"))?;
-    if !output.status.success() {
+    let mut usage = std::mem::MaybeUninit::<libc::rusage>::zeroed();
+    // SAFETY: `usage` points to writable storage of the exact type required by
+    // getrusage, and RUSAGE_SELF asks only for this process.
+    let result = unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) };
+    if result != 0 {
         return Err(format!(
-            "read proof process memory: ps exited with {}",
-            output.status
+            "read proof process memory: getrusage failed with {result}"
         ));
     }
-    let kib = String::from_utf8(output.stdout)
-        .map_err(|error| format!("read proof process memory: {error}"))?
-        .trim()
-        .parse::<u64>()
-        .map_err(|error| format!("parse proof process memory: {error}"))?;
-    Ok(kib.saturating_mul(1024))
+    let usage = unsafe { usage.assume_init() };
+    let bytes_per_unit = if cfg!(target_os = "macos") { 1 } else { 1024 };
+    Ok((usage.ru_maxrss as u64).saturating_mul(bytes_per_unit))
 }
 pub fn run(
     world: PathBuf,
@@ -1071,4 +1036,33 @@ pub fn qualify(
     std::fs::write(output.join("film.json"), serde_json::to_vec_pretty(&film)?)?;
     println!("QUALIFICATION COMPLETE {}", output.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod review_tests {
+    use super::*;
+
+    #[test]
+    fn feature_delta_requires_feature_color_in_png() {
+        let directory = tempfile_dir();
+        let before = directory.join("before.png");
+        let after = directory.join("after.png");
+        image::RgbaImage::from_pixel(2, 1, image::Rgba([10, 10, 10, 255]))
+            .save(&before)
+            .unwrap();
+        let mut pixels = image::RgbaImage::from_pixel(2, 1, image::Rgba([10, 10, 10, 255]));
+        pixels.put_pixel(1, 0, image::Rgba([20, 40, 100, 255]));
+        pixels.save(&after).unwrap();
+        assert_eq!(
+            feature_delta_pixels(&before, &after, Some([20, 40, 100])).unwrap(),
+            1
+        );
+    }
+
+    fn tempfile_dir() -> PathBuf {
+        let path =
+            std::env::temp_dir().join(format!("hornvale-review-test-{}", std::process::id()));
+        std::fs::create_dir_all(&path).unwrap();
+        path
+    }
 }
