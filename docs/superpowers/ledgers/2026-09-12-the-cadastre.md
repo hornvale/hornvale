@@ -537,7 +537,7 @@ finding against a controller-verified measurement.
 *Capture actions.* Spec §4 corrected; Task 2 Step 5 and Task 6 Step 3 inherit
 the correction; the retrospective owes the same-instrument lesson.
 
-**#10 [Task 2] — Five judgement calls the brief left open while rebuilding the
+**#10 [Task 2] — Six judgement calls the brief left open while rebuilding the
 corpus at its closed 301-item population.**
 
 *1. `henrich-2004-extended`'s frozen-size assertion is left at 41, untouched.*
