@@ -7518,3 +7518,38 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-13T13:50:37Z | census-tail-domesday | 0.390 | 0.336 | 0.029 | 0.94 | 0 | 6b7d05eab | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-13T13:50:37Z | census-tail-anomalies | 0.328 | 0.266 | 0.031 | 0.91 | 0 | 6b7d05eab | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-13T13:50:51Z | rebaseline | 149.129 | 542.442 | 27.691 | 3.82 | 0 | 6b7d05eab | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-12T23:22:52Z | prewarm | 249.920 | 1610.619 | 57.998 | 6.68 | 0 | 84131b0d5 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T01:42:58Z | gate-commit | 44.939 | 81.691 | 19.975 | 2.26 | 0 | e3755b45c | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T01:45:17Z | gate-commit | 40.745 | 80.380 | 19.492 | 2.45 | 0 | e3755b45c | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T02:28:38Z | census-tail-chorus | 40.211 | 245.379 | 12.722 | 6.42 | 0 | fccc62ce1 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T02:28:39Z | census-tail-domesday | 0.421 | 0.359 | 0.032 | 0.93 | 0 | fccc62ce1 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T02:28:39Z | census-tail-anomalies | 0.351 | 0.285 | 0.031 | 0.90 | 0 | fccc62ce1 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T02:28:55Z | rebaseline | 253.785 | 570.239 | 26.743 | 2.35 | 0 | fccc62ce1 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T02:32:03Z | gate-commit | 53.874 | 85.003 | 21.361 | 1.97 | 0 | fccc62ce1 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T02:50:32Z | census-tail-chorus | 71.769 | 235.869 | 8.712 | 3.41 | 0 | 4880b79f4 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T02:50:33Z | census-tail-domesday | 0.520 | 0.390 | 0.042 | 0.83 | 0 | 4880b79f4 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T02:50:33Z | census-tail-anomalies | 0.359 | 0.295 | 0.035 | 0.92 | 0 | 4880b79f4 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T02:50:56Z | rebaseline | 300.923 | 570.821 | 23.384 | 1.97 | 0 | 4880b79f4 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:03:02Z | gate-commit | 107.305 | 91.246 | 20.606 | 1.04 | 0 | 00cdc7b54 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:08:26Z | census-tail-chorus | 37.892 | 245.583 | 11.186 | 6.78 | 0 | 14f834ab9 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:08:27Z | census-tail-domesday | 0.402 | 0.346 | 0.034 | 0.95 | 0 | 14f834ab9 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:08:27Z | census-tail-anomalies | 0.326 | 0.275 | 0.033 | 0.94 | 0 | 14f834ab9 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:08:43Z | rebaseline | 206.876 | 563.308 | 23.692 | 2.84 | 0 | 14f834ab9 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:17:22Z | gate-commit | 81.130 | 91.607 | 21.085 | 1.39 | 0 | 14f834ab9 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:41:19Z | census-tail-chorus | 82.352 | 234.148 | 8.157 | 2.94 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:41:21Z | census-tail-domesday | 0.941 | 0.430 | 0.039 | 0.50 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:41:21Z | census-tail-anomalies | 0.731 | 0.344 | 0.035 | 0.52 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:41:48Z | rebaseline | 378.661 | 568.194 | 23.839 | 1.56 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T03:43:14Z | gate-commit | 60.461 | 88.476 | 20.549 | 1.80 | 0 | e2f901f2b | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T13:08:47Z | census-tail-chorus | 32.755 | 248.520 | 13.141 | 7.99 | 0 | cc0b9b228 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T13:08:48Z | census-tail-domesday | 0.392 | 0.338 | 0.029 | 0.94 | 0 | cc0b9b228 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T13:08:48Z | census-tail-anomalies | 0.328 | 0.269 | 0.037 | 0.93 | 0 | cc0b9b228 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T13:09:02Z | rebaseline | 165.576 | 558.290 | 25.932 | 3.53 | 0 | cc0b9b228 | campaign/the-cadastre | MacBookPro | 10 |
+| 2026-09-13T14:03:28Z | census-tail-chorus | 69.079 | 883.543 | 29.231 | 13.21 | 0 | 6540d3153 |  | lefford | 40 |
+| 2026-09-13T14:03:31Z | census-tail-domesday | 1.373 | 1.194 | 0.142 | 0.97 | 0 | 6540d3153 |  | lefford | 40 |
+| 2026-09-13T14:03:31Z | census-tail-anomalies | 0.784 | 0.672 | 0.113 | 1.00 | 0 | 6540d3153 |  | lefford | 40 |
+| 2026-09-13T14:04:02Z | sluice:artifacts | 335.829 | 2812.042 | 119.448 | 8.73 | 0 | 6540d3153 |  | lefford | 40 |
+| 2026-09-13T14:06:04Z | sluice:outboard | 121.286 | 144.730 | 95.217 | 1.98 | 0 | e63df356d |  | lefford | 40 |
+| 2026-09-13T14:22:53Z | sluice:gate | 1008.728 | 28853.998 | 1109.564 | 29.70 | 0 | b5782c836 |  | lefford | 40 |
+| 2026-09-13T14:28:32Z | sluice:clients | 337.550 | 4587.315 | 350.537 | 14.63 | 0 | e7e86ec85 |  | lefford | 40 |
+| 2026-09-13T14:37:31Z | sluice:heavy | 538.995 | 14525.044 | 340.297 | 27.58 | 0 | 7664431a0 |  | lefford | 40 |

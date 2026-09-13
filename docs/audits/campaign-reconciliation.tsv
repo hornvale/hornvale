@@ -60,6 +60,7 @@ chronicle-the-book-polish	shipped	none		published chronicle				book/src/chronicl
 chronicle-the-branches	shipped	none		published chronicle				book/src/chronicle/the-branches.md	
 chronicle-the-brattice	shipped	none		published chronicle				book/src/chronicle/the-brattice.md	
 chronicle-the-burr	shipped	none		published chronicle				book/src/chronicle/the-burr.md	
+chronicle-the-cadastre	shipped	none		published chronicle				book/src/chronicle/the-cadastre.md	
 chronicle-the-cairn	shipped	none		published chronicle				book/src/chronicle/the-cairn.md	
 chronicle-the-cant	shipped	none		published chronicle				book/src/chronicle/the-cant.md	
 chronicle-the-cartographer	shipped	none		published chronicle				book/src/chronicle/the-cartographer.md	
@@ -716,6 +717,7 @@ retro-the-book-polish	shipped	none		committed retrospective					docs/retrospecti
 retro-the-branches	shipped	none		committed retrospective					docs/retrospectives/the-branches.md
 retro-the-brattice	shipped	none		committed retrospective					docs/retrospectives/the-brattice.md
 retro-the-burr	shipped	none		committed retrospective					docs/retrospectives/the-burr.md
+retro-the-cadastre	shipped	none		committed retrospective					docs/retrospectives/the-cadastre.md
 retro-the-cairn	shipped	none		committed retrospective					docs/retrospectives/the-cairn.md
 retro-the-cant	shipped	none		committed retrospective					docs/retrospectives/the-cant.md
 retro-the-cartographer	shipped	none		committed retrospective					docs/retrospectives/the-cartographer.md
@@ -1406,3 +1408,5 @@ the-vent	shipped	none		closed 2026-09-10; Waterworld pressure-test overlay lande
 the-vent-succession	shipped	none		implementation, review, local gate, and Sluice stage gate complete	docs/superpowers/specs/2026-09-10-the-vent-succession-design.md	docs/superpowers/plans/2026-09-10-the-vent-succession.md	docs/superpowers/ledgers/2026-09-10-the-vent-succession.md	book/src/chronicle/the-living-vent.md	docs/retrospectives/the-living-vent.md
 the-ceiling	active	none		closed UNMERGED and folded into its successor food-system campaign at Nathan's ruling 2026-09-11; Stage 1 measurement complete and reviewed, Stage 2 never built; decision 0966 minted and recorded blocked-on-mechanism; branch campaign/the-ceiling carries the evidence base	docs/superpowers/specs/2026-09-11-the-ceiling-design.md	docs/superpowers/plans/2026-09-11-the-ceiling.md	docs/superpowers/ledgers/2026-09-11-the-ceiling.md		
 the-trencher	active	none		in flight; spec written and corrected 2026-09-11, plan written, ledger open, continues campaign/the-ceiling rather than merging it, no terminal closure stated in record	docs/superpowers/specs/2026-09-11-the-trencher-design.md	docs/superpowers/plans/2026-09-11-the-trencher.md	docs/superpowers/ledgers/2026-09-11-the-trencher.md		
+spec-2026-09-12-the-cadastre-design	shipped	none		ratified at G3 and shipped as decisions 0987 and 0988; all six plan tasks complete; asimov-1989 completed from a 41-item sample to its closed 301-item population (41 -> 301 items, 40 -> 401 edges, 0 cycles, 1 root), 260 items hand-scored by six independent agents with a held-out control reported at 4 of 6, chronicle and retrospective written	docs/superpowers/specs/2026-09-12-the-cadastre-design.md		docs/superpowers/ledgers/2026-09-12-the-cadastre.md		
+plan-2026-09-12-the-cadastre	shipped	none		all six tasks executed; Task 4 was discharged inside Task 3 because the cross-corpus gate spans both and they cannot occupy separate commits (ledger #13), and two spec requirements with no implementing step were closed by the plan self-review (ledger #8)		docs/superpowers/plans/2026-09-12-the-cadastre.md			
