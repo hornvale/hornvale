@@ -18,12 +18,15 @@
 //!            139/148 ordinary above the shallowest breach  (6.0 m)
 //!   STRATIFIED on tenure (quintiles, amendment R1): AUC 0.4977  z -0.034,
 //!            though the pair-weighted stratum-median direction is still
-//!            breached-deeper (430 supporting, 234 opposing)
+//!            breached-deeper (430 supporting, 234 opposing).
+//!            REPORTED, NOT ASSERTED — breached n per quintile is 1/3/5/4/19,
+//!            under `MIN_BREACHED_PER_STRATUM` in four of five strata.
 //!   R2 CENSORING ARM, breached vs ALL non-breached: AUC 0.3946  z -1.803
 //! ```
 //!
-//! # THE CONDITIONED STATISTIC HAS COLLAPSED, AND `the_separation_survives
-//! _conditioning_on_tenure` IS RED
+//! # THE CONDITIONED STATISTIC COLLAPSED, AND THE PANEL CANNOT SAY WHAT THAT
+//! MEANS — SO `the_separation_survives_conditioning_on_tenure` REPORTS IT
+//! RATHER THAN ASSERTING EITHER WAY
 //!
 //! Under the frozen five-bucket `STRATA` literal this file shipped with, the
 //! stratified `z` read 3.197 on the Murrain panel and 1.326 once the roster
@@ -40,11 +43,22 @@
 //! has gone is the part of that gap that survives holding tenure fixed. **The
 //! amendment did not cause this and must not be read as having done so:** it
 //! replaced a stratification that did not stratify, and the number it reports
-//! is what the old instrument was unable to see. Whether §5.2's claim is
-//! thereby refuted is a campaign-level judgment recorded in
-//! `docs/superpowers/ledgers/2026-09-11-the-tidemark.md`, **not** a licence to
-//! move `Z_SUPPORTS` or `BREACH_FREE_PATH_M`, which §1 of the amendment and
-//! this file's own "WHAT WOULD CHANGE THE VERDICT" both forbid in advance.
+//! is what the old instrument was unable to see.
+//!
+//! **But the null is produced by four observations, and decision 0959 rules
+//! that this is UNEVALUATED rather than refuted.** Two of the five quintiles
+//! rest on one and three breached workings, carry 20% of the pair mass, and
+//! hold the two most extreme AUCs (0.144 and 0.282). The root cause is a
+//! panel denominated in *mines* answering a question denominated in
+//! *breaches* — spec amendment E.4.2's mis-sizing, recorded before any of the
+//! campaigns involved existed. So the conditioned test **gates its assertion
+//! on power** (`MIN_BREACHED_PER_STRATUM`) and prints the readout loudly when
+//! the gate is closed; the assertion arms itself, unchanged, the moment the
+//! panel can carry it. Extending the panel belongs to The Winze. None of this
+//! is a licence to move `Z_SUPPORTS` or `BREACH_FREE_PATH_M`, which §1 of the
+//! amendment, this file's own "WHAT WOULD CHANGE THE VERDICT", and 0959 all
+//! forbid in advance — and none of it touches the POOLED assertion, which is
+//! not in doubt and still has full teeth.
 //!
 //! # THE THIRD POPULATION IS EXCLUDED, AND THAT IS A DECISION
 //!
@@ -87,15 +101,18 @@
 //! about the second. Under a per-metre hazard both are the mechanism (total
 //! metres is what the hazard integrates, and total metres is tenure times
 //! rate), but only the second rules out "the pooled gap was composition".
-//! `the_separation_survives_conditioning_on_tenure` is the test that settles
-//! it, and **on the 49-kind roster under quintile strata it does not survive**:
-//! the separation does not merely attenuate, it vanishes (pooled AUC 0.7959 →
-//! stratified 0.4977, z -0.034). The pair-weighted direction of the stratum
-//! medians is still breached-deeper (430 against 234), so the two halves of
-//! that test's assertion now disagree with each other — which is itself part of
-//! the readout and is recorded rather than reconciled. A thin stratum may
-//! reverse without overruling the aggregate conditioned evidence; here the
-//! aggregate conditioned evidence is the thing that went to zero.
+//! `the_separation_survives_conditioning_on_tenure` is the test that would
+//! settle it, and **on the 49-kind roster under quintile strata it cannot**:
+//! the measured separation does not merely attenuate, it vanishes (pooled AUC
+//! 0.7959 → stratified 0.4977, z -0.034), but it vanishes on four
+//! observations. The pair-weighted direction of the stratum medians is still
+//! breached-deeper (430 against 234), so the two halves of that test's
+//! assertion disagree with each other — on the same thin strata, which is why
+//! **both** are now under the power gate rather than one asserting and one
+//! not. A thin stratum may reverse without overruling the aggregate
+//! conditioned evidence; here the aggregate conditioned evidence is itself
+//! four observations wide, and 0959 declines to read a verdict off it in
+//! either direction.
 //!
 //! # WHAT WOULD CHANGE THE VERDICT
 //!
@@ -172,6 +189,38 @@ const Z_DECIDES: f64 = 3.0;
 /// moved through any of that, and the amendment's §1 forbids moving it: a
 /// boundary retuned to admit the number it is judging stops being a boundary.
 const Z_SUPPORTS: f64 = 1.96;
+
+/// The per-stratum breached count the conditioned comparison needs before it
+/// is **asserted** rather than **reported**.
+///
+/// **Ten, and neither half of the reason is the current numbers.**
+///
+/// - It is the conventional floor for the **normal approximation** `u_z`
+///   computes to mean anything *within* a stratum. Mann–Whitney's large-sample
+///   form is the instrument this file uses everywhere, and its usual stated
+///   requirement is n ≥ 8–10 in the smaller group; below that the exact
+///   distribution and the normal one are different objects, and a stratum
+///   contributes an `E` and a `V` to `stratify`'s sums that the approximation
+///   does not license.
+/// - It is the **lowest rung of decision 0959's own arithmetic table**, which
+///   was written to hand the panel-extension problem to The Winze: ~10 breached
+///   per stratum is ~50 breaches, which at the measured yield of 2.67 breaches
+///   per seed is ~19 seeds. The table's other rungs are ~20 (≈38 seeds) and
+///   ~30 (≈56 seeds).
+///
+/// So this floor was fixed by a textbook property of the statistic and by a
+/// ruling that predates this gate, not read off the panel it judges. It is
+/// worth saying because the panel it judges fails it badly — breached n's of
+/// 1, 3, 5, 4, 19 across the five quintiles — and a floor **chosen** to admit
+/// that data would have had to be 1, which is the reading this comment exists
+/// to foreclose.
+///
+/// **The gate re-arms itself.** Nothing here is a permanent exemption: extend
+/// the panel past the threshold and `the_separation_survives_conditioning
+/// _on_tenure` asserts `Z_SUPPORTS` again with its original teeth, with no
+/// further edit to this file. `Z_SUPPORTS` is untouched and stays untouched —
+/// see decision 0959 and the amendment's §1, which forbid moving it.
+const MIN_BREACHED_PER_STRATUM: usize = 10;
 
 /// One panel seed's world, built to the depth that runs the history bake.
 fn panel_world(seed_value: u64) -> World {
@@ -362,6 +411,12 @@ struct Stratified {
     /// Sum of `n_breached * n_other` for strata whose breached median is
     /// below the comparison median. Tied medians contribute to neither side.
     opposing_pair_weight: usize,
+    /// `(breached n, comparison n)` per stratum, in stratum order.
+    ///
+    /// Carried out of the accumulation rather than recomputed, so the power
+    /// gate below reads the *same* per-stratum membership the statistic was
+    /// computed from and cannot drift from it.
+    counts: [(usize, usize); STRATUM_COUNT],
 }
 
 /// Accumulate and print one stratified comparison of `breached` against
@@ -377,6 +432,7 @@ fn stratify(
 ) -> Stratified {
     let (mut su, mut se, mut sv, mut spairs) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
     let (mut supporting_pair_weight, mut opposing_pair_weight) = (0usize, 0usize);
+    let mut counts = [(0usize, 0usize); STRATUM_COUNT];
     for k in 0..STRATUM_COUNT {
         let (lo, hi) = (stratum_lower(cuts, k), cuts[k]);
         let pick = |g: &[Delving]| -> Vec<f64> {
@@ -389,6 +445,7 @@ fn stratify(
             v
         };
         let (bb, oo) = (pick(breached), pick(other));
+        counts[k] = (bb.len(), oo.len());
         let (n1, n2) = (bb.len() as f64, oo.len() as f64);
         let us = mann_whitney_u(&bb, &oo);
         su += us;
@@ -436,6 +493,7 @@ fn stratify(
         },
         supporting_pair_weight,
         opposing_pair_weight,
+        counts,
     }
 }
 
@@ -454,6 +512,15 @@ struct Readout {
     above: usize,
     /// Mann–Whitney `z` stratified on tenure.
     stratified_z: f64,
+    /// `ΣU / Σ(n₁n₂)` over the tenure strata — the pair-weighted conditioned
+    /// AUC. Reported beside `stratified_z` whenever the power gate is closed.
+    stratified_auc: f64,
+    /// `(breached n, ordinarily-ended n)` per tenure stratum, in stratum
+    /// order. This is what `MIN_BREACHED_PER_STRATUM` is read against.
+    stratum_counts: [(usize, usize); STRATUM_COUNT],
+    /// The derived quintile upper edges, so a report can print the cut points
+    /// the counts above were produced by rather than leaving them implicit.
+    tenure_cuts: [f64; STRATUM_COUNT],
     /// Sum of `n_breached * n_ordinary` for strata whose breached median is
     /// above the ordinary median.
     supporting_stratum_pair_weight: usize,
@@ -608,6 +675,9 @@ fn report(name: &str, seeds: &[u64], split: &Split) -> Readout {
         below,
         above,
         stratified_z,
+        stratified_auc: primary.auc,
+        stratum_counts: primary.counts,
+        tenure_cuts: cuts,
         supporting_stratum_pair_weight,
         opposing_stratum_pair_weight,
     }
@@ -689,16 +759,49 @@ fn breached_delvings_are_deeper_with_overlap() {
 /// vanished on conditioning would mean the hazard had merely re-labelled
 /// long-lived workings.
 ///
-/// **It vanishes.** Under amendment R1's quintile strata the conditioned
-/// statistic is pooled AUC 0.7959 → stratified 0.4977, z -0.034, so this test
-/// is RED and its first assertion is the one that fires. The second assertion
-/// still holds — 430 comparable cross-group pairs sit behind the
-/// breached-deeper stratum-median direction against 234 behind its reverse —
-/// and the two disagreeing is a fact of the readout, not a defect to be
-/// smoothed. The pair-weight clause admits a local reversal without letting
-/// each thin stratum exercise the same veto as the aggregate conditioned
-/// evidence; it was never meant to substitute for that evidence, so it does
-/// not rescue anything here.
+/// **It vanishes — on four observations, which is why this test now GATES its
+/// assertion on power instead of either asserting or deleting it.** Under
+/// amendment R1's quintile strata the conditioned statistic is pooled AUC
+/// 0.7959 → stratified 0.4977, z -0.034. Decision 0959 investigated that null
+/// and found it decided by strata carrying one and three breached workings:
+///
+/// ```text
+///   stratum   breached n   ordinary n   pairs   % mass   AUC
+///   Q1 e<=2        1           52         52      8%    0.144
+///   Q2 e<=6        3           26         78     12%    0.282
+///   Q3 e<=10       5           29        145     22%    0.600
+///   Q4 e<=21       4           26        104     16%    0.481
+///   Q5 e>21       19           15        285     43%    0.575
+/// ```
+///
+/// The two strata resting on one and three carry 20% of the pair mass and hold
+/// the two most extreme AUCs. **A negative verdict decided by one observation
+/// is not a negative verdict**, so 0959 records §5.2's conditioned claim as
+/// UNEVALUATED — explicitly *not* `refuted`, and explicitly not a licence to
+/// move `Z_SUPPORTS` or `BREACH_FREE_PATH_M`, which remain untouched.
+///
+/// # WHAT THIS TEST DOES ABOUT THAT, AND WHY NOT THE OBVIOUS ALTERNATIVES
+///
+/// Deleting the assertion would throw the claim away permanently and leave a
+/// test whose name promises a guard it no longer performs. Keeping it red
+/// would assert a verdict the panel cannot carry. So the claim is **deferred
+/// with a stated trigger**: `MIN_BREACHED_PER_STRATUM` gates it, and when every
+/// stratum clears that floor the ORIGINAL assertion arms itself again, at the
+/// unchanged `Z_SUPPORTS`, with no further human action and no edit to this
+/// file. Until then the conditioned readout is printed as UNEVALUATED with its
+/// per-stratum n's, its cut points, its AUC and z, and the seed arithmetic that
+/// says what would evaluate it.
+///
+/// **Both halves are gated together, deliberately.** The direction clause (the
+/// pair-weighted stratum-median comparison) currently passes while the
+/// significance clause fails, so the two contradict each other — and a
+/// direction assertion resting on the same one-and-three strata is no better
+/// evidenced than the significance one. Leaving it asserting would have kept a
+/// live guard over exactly the data 0959 ruled cannot decide anything.
+///
+/// **Extending the panel belongs to The Winze**, not here: 0959 hands over the
+/// arithmetic (2.67 breaches per seed measured, so ~19 seeds for the ~10 rung)
+/// and E.9 owns the seed count. `PANEL` is unchanged.
 ///
 /// The instrument that reported z 3.197, then 1.326, was stratifying on a
 /// literal whose top bucket spanned 21–80 epochs. That is the confound the
@@ -706,12 +809,14 @@ fn breached_delvings_are_deeper_with_overlap() {
 /// other than what this test's name claims. The replacement was preregistered
 /// with both poles named
 /// (`docs/superpowers/specs/2026-09-12-the-tidemark-survivorship-amendment.md`
-/// §5), which is what makes this red a finding rather than a regression, and
-/// what forbids answering it by moving `Z_SUPPORTS` or the strata.
+/// §5), which is what makes this a finding rather than a regression.
 ///
-/// claim: invariant(seeds: the E.9 panel — the Mann-Whitney statistic
-/// stratified on epochs dug stays above `Z_SUPPORTS`, and the pair-weighted
-/// stratum-median direction remains breached-deeper)
+/// claim: invariant(seeds: the E.9 panel — WHERE every tenure stratum carries
+/// at least `MIN_BREACHED_PER_STRATUM` breached workings, the Mann-Whitney
+/// statistic stratified on epochs dug stays above `Z_SUPPORTS` and the
+/// pair-weighted stratum-median direction remains breached-deeper; below that
+/// floor the conditioned readout is printed as UNEVALUATED and NOTHING about
+/// it is asserted — decision 0959)
 #[test]
 fn the_separation_survives_conditioning_on_tenure() {
     let split = split_over(&PANEL);
@@ -724,12 +829,23 @@ fn the_separation_survives_conditioning_on_tenure() {
         split.breached.len(),
         split.ordinary.len(),
     );
+
+    let underpowered: Vec<usize> = (0..STRATUM_COUNT)
+        .filter(|&k| r.stratum_counts[k].0 < MIN_BREACHED_PER_STRATUM)
+        .collect();
+    if !underpowered.is_empty() {
+        report_unevaluated(&r, split.breached.len(), PANEL.len(), &underpowered);
+        return;
+    }
+
     assert!(
         r.stratified_z > Z_SUPPORTS,
-        "stratified z = {:.3}, at or under {Z_SUPPORTS}, while the pooled z is {:.3}. The \
-         pooled separation is COMPOSITION: breached workings lived longer, and within a tenure \
-         stratum they are not deeper. §5.2 claims the second, so this is a finding — report it \
-         rather than reading the pooled gap as the survivorship shape.",
+        "stratified z = {:.3}, at or under {Z_SUPPORTS}, while the pooled z is {:.3} — and every \
+         tenure stratum clears {MIN_BREACHED_PER_STRATUM} breached workings, so the panel CAN \
+         carry this verdict. The pooled separation is COMPOSITION: breached workings lived \
+         longer, and within a tenure stratum they are not deeper. §5.2 claims the second, so \
+         this is a finding — report it rather than reading the pooled gap as the survivorship \
+         shape, and never answer it by moving Z_SUPPORTS or BREACH_FREE_PATH_M.",
         r.stratified_z,
         r.z,
     );
@@ -741,6 +857,85 @@ fn the_separation_survives_conditioning_on_tenure() {
         r.supporting_stratum_pair_weight,
         r.opposing_stratum_pair_weight,
         r.stratified_z,
+    );
+}
+
+/// Print the conditioned readout as an **unevaluated** result.
+///
+/// The gate above is closed, so this test PASSES — which means this print is
+/// the reader's only signal, and a quiet one would let a green tick be read as
+/// "the conditioned claim holds". It therefore carries everything needed to
+/// tell the difference: which strata are thin and by how much, the cut points
+/// that produced them, the statistic **labelled as reported and not asserted**,
+/// the measured breach yield, and how many seeds the next rung of decision
+/// 0959's table needs.
+fn report_unevaluated(
+    r: &Readout,
+    breached_total: usize,
+    seed_count: usize,
+    underpowered: &[usize],
+) {
+    let yield_per_seed = breached_total as f64 / seed_count as f64;
+    let breaches_needed = MIN_BREACHED_PER_STRATUM * STRATUM_COUNT;
+    let seeds_needed = (breaches_needed as f64 / yield_per_seed).ceil();
+
+    println!(
+        "\n=== §5.2 CONDITIONED CLAIM: UNEVALUATED (decision 0959) ===\n  \
+         THIS TEST PASSED AND THAT IS NOT A VERDICT. The conditioned claim is neither supported \
+         nor refuted here: {} of {STRATUM_COUNT} tenure strata carry fewer than \
+         {MIN_BREACHED_PER_STRATUM} breached workings, which is the floor the normal \
+         approximation behind this statistic needs per stratum. Nothing below is asserted.",
+        underpowered.len(),
+    );
+    println!("  POWER GATE — breached n per tenure stratum (need >= {MIN_BREACHED_PER_STRATUM}):");
+    for k in 0..STRATUM_COUNT {
+        let (lo, hi) = (stratum_lower(&r.tenure_cuts, k), r.tenure_cuts[k]);
+        let (nb, no) = r.stratum_counts[k];
+        println!(
+            "    Q{}  epochs {:>6}-{:<6}  breached n={:>3}  ordinary n={:>3}   {}",
+            k + 1,
+            if k == 0 {
+                "1".to_string()
+            } else {
+                format!("{lo:.1}+")
+            },
+            if hi.is_finite() {
+                format!("{hi:.1}")
+            } else {
+                "inf".to_string()
+            },
+            nb,
+            no,
+            if nb < MIN_BREACHED_PER_STRATUM {
+                format!("UNDERPOWERED (short by {})", MIN_BREACHED_PER_STRATUM - nb)
+            } else {
+                "ok".to_string()
+            },
+        );
+    }
+    println!(
+        "  REPORTED, NOT ASSERTED — stratified AUC {:.4}, z {:.3} (against Z_SUPPORTS \
+         {Z_SUPPORTS}, which is UNTOUCHED and stays untouched)",
+        r.stratified_auc, r.stratified_z,
+    );
+    println!(
+        "  REPORTED, NOT ASSERTED — pair-weighted stratum-median direction: {} supporting, {} \
+         opposing (this half currently agrees with the claim the z half does not; on these n's \
+         neither is evidence, which is why both are gated)",
+        r.supporting_stratum_pair_weight, r.opposing_stratum_pair_weight,
+    );
+    println!(
+        "  WHAT WOULD EVALUATE IT — measured yield {breached_total} breaches over {seed_count} \
+         panel seeds = {yield_per_seed:.2} per seed; {STRATUM_COUNT} strata x \
+         {MIN_BREACHED_PER_STRATUM} = {breaches_needed} breaches => ~{seeds_needed:.0} seeds \
+         against today's {seed_count}. Decision 0959's table: ~10/stratum ~19 seeds, \
+         ~20/stratum ~38 seeds, ~30/stratum ~56 seeds."
+    );
+    println!(
+        "  THIS GATE RE-ARMS ITSELF: extend the panel past the floor and the assertion above \
+         fires again at the unchanged Z_SUPPORTS, with no edit to this file. Extending the \
+         panel belongs to The Winze (E.9 owns the seed count), never to a session reading this \
+         output."
     );
 }
 

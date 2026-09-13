@@ -130,3 +130,82 @@ direction.
   attempted here.
 - It does not re-run the panel on more seeds. The panel is E.9's frozen twelve
   and stays that.
+
+---
+
+## 7. Outcome (recorded 2026-09-12, after measurement)
+
+**The predictions above are unedited and stay unedited.** This section is
+appended beneath them. A preregistration whose predictions are revised once the
+result is known measures nothing, so what follows is the result *against* what
+§5 said in advance, never a restatement of §5.
+
+Measured at `031584af1` (R1 and R2 implemented) on the frozen twelve-seed panel,
+49-kind roster:
+
+| readout | AUC | z |
+|---|---|---|
+| pooled, breached vs ordinarily-ended | 0.7959 | 5.244 |
+| **R1 primary**, stratified on tenure quintiles | 0.4977 | −0.034 |
+| **R2 arm**, breached vs all non-breached, same cuts | 0.3946 | −1.803 |
+| R2 arm, pooled (unstratified) | 0.6810 | 3.323 |
+
+### P1 — FAILED, and the pole's stated consequence was NOT taken
+
+§5 predicted the stratified `z` would **rise above 1.96** under strata that hold
+tenure fixed. It did not: it fell to **−0.034**, the P1-fails pole. The pooled
+statistic did not move.
+
+§5's own text says that pole means §5.2's claim is "unsupported at 49 kinds …
+with a decision record, and `refuted` is the registry status decision 0131
+opened for exactly this." **The decision record was written and it declined the
+`refuted` status** — see
+`docs/decisions/0959-the-winze-5-2-conditioned-claim-is-unevaluated-not-refuted.md`.
+The null is produced by four observations: the five quintiles carry breached
+n's of 1, 3, 5, 4 and 19, and the two strata resting on one and three hold 20%
+of the pair mass and the two most extreme AUCs (0.144 and 0.282). A negative
+verdict decided by one observation is not a negative verdict, so §5.2's
+conditioned claim is recorded **UNEVALUATED**.
+
+This is a limit §5 did not anticipate, and it is worth naming as such rather
+than filing under P1: §5 assumed that an instrument which *does* hold tenure
+fixed would thereby be able to answer, and the panel's size is a separate
+constraint from the stratification's validity. The panel is denominated in
+*mines*; the conditioned question is denominated in *breaches* — spec amendment
+E.4.2's mis-sizing, documented before any of the three campaigns involved
+existed. Measured yield is 2.67 breaches per seed, so ten breached per stratum
+needs ~19 seeds against today's twelve. **Extending the panel belongs to The
+Winze**, not to this campaign; `PANEL` is untouched.
+
+`windows/worldgen/tests/suite/survivorship_probe.rs` therefore **gates** the
+conditioned assertion on `MIN_BREACHED_PER_STRATUM = 10` rather than asserting
+or deleting it. Below the floor the readout prints as UNEVALUATED; at or above
+it, the original assertion arms itself at the unchanged `Z_SUPPORTS`, with no
+further human action. The **pooled** assertion is untouched and still has full
+teeth.
+
+### P2 — SPLIT: the pooled half held, the conditioned half reversed
+
+§5 predicted that including the still-open workings as non-breached would
+**weaken** the separation without reversing its direction.
+
+- **Pooled: confirmed.** AUC 0.7959 → 0.6810, weaker and still above 0.5.
+- **Conditioned: reversed.** AUC 0.4977 → **0.3946**, below 0.5, with the
+  pair-weighted stratum-median direction going 215 supporting against 1441
+  opposing.
+
+§5 says of a reversal that "the exclusion was carrying the result, and that is a
+finding about §5.2's design that outranks P1 either way." That reading is
+tempered by the same power limit: the conditioned arm is cut on the same thin
+strata, so it is no better evidenced than the primary it qualifies. What
+survives is the direction of the concern, not a measured magnitude — the
+exclusion is not *manufacturing* a conditioned result, since removing it makes
+the conditioned readout worse rather than better.
+
+### What §6 said it would not do, and did not
+
+The physics, the panel, the seeds, `Z_SUPPORTS` and `BREACH_FREE_PATH_M` are all
+unchanged. The right-censoring question is unresolved: R2 measured the
+exclusion's size, and a hazard model over censored data remains the correct
+instrument for §5.2's claim. Both that and the panel extension are handed to The
+Winze.

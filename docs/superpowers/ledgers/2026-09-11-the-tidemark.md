@@ -1199,6 +1199,13 @@ assertion, at **z = −0.034**. Its second assertion (pair-weighted median
 direction remains breached-deeper) still passes at 430 vs 234, so the test's two
 halves disagree; that disagreement is recorded rather than reconciled.
 
+> **Superseded as a statement about the test, not as a measurement.** This
+> paragraph is accurate at `031584af1` and the numbers stand. What changed is
+> what the test does with them: decision 0959 (`78dbf42ee`) ruled the
+> conditioned claim UNEVALUATED rather than refuted, and the test now gates
+> both assertions on per-stratum power. It is GREEN and reports the same
+> −0.034 as unevaluated. See "The power gate" below.
+
 ### R2 — censoring sensitivity arm
 
 Same R1 cut points, comparing breached against **all non-breached**
@@ -1264,6 +1271,70 @@ Stale committed numbers in the module's own prose were corrected to this run's
 (269/32/148/89, floor spike 21.6% vs 3.1%, medians 524.2/67.3/327.1, pooled
 AUC 0.7959 / z 5.244, median tenure 24.0 vs 6.0). Those had been carrying the
 pre-Murrain 249-working figures.
+
+### The power gate — implementing decision 0959
+
+Implements `docs/decisions/0959-the-winze-5-2-conditioned-claim-is-unevaluated-not-refuted.md`
+(`78dbf42ee`). The conditioned test was RED on four observations; 0959 ruled the
+claim UNEVALUATED, not refuted.
+
+**What was NOT done, and it is the whole point.** The assertion was not deleted.
+Deleting it would have been a silently weakened guard — a test still named
+`the_separation_survives_conditioning_on_tenure` that no longer checks anything —
+and it would have discarded the claim permanently. Neither was `Z_SUPPORTS`
+moved, nor `BREACH_FREE_PATH_M`, nor `Z_DECIDES`, nor `PANEL`, nor `CONTROL`,
+nor `STRATUM_COUNT`, nor R1/R2.
+
+**What was done.** The conditioned test gates on
+`MIN_BREACHED_PER_STRATUM = 10`: if every tenure stratum carries at least that
+many breached workings, the original assertion runs at the unchanged
+`Z_SUPPORTS` with its original teeth; otherwise the readout prints as
+UNEVALUATED and nothing about it is asserted. **The claim is deferred with a
+stated trigger, not abandoned** — extend the panel and the assertion re-arms
+itself with no further human action and no edit to the file.
+
+**Why ten, and the reason is deliberately not "because 1 and 3 were too few."**
+Two independent anchors, both fixed before this gate existed: (a) n ≥ 8–10 in
+the smaller group is the conventional floor for the normal approximation
+`u_z` computes to mean anything within a stratum — a textbook property of the
+statistic this file uses throughout; (b) it is the **lowest rung of 0959's own
+arithmetic table** (~10/stratum → ~50 breaches → ~19 seeds at the measured 2.67
+breaches/seed). The constant's doc states both. A floor chosen to admit the
+current data would have had to be 1, which is the reading the doc forecloses.
+
+**Both halves are gated together.** The significance clause was failing and the
+pair-weighted direction clause was passing, so the two contradicted each other —
+on the same one-and-three strata. A direction assertion on four observations is
+no better evidenced than a significance one, so leaving it armed would have kept
+a live guard over exactly the data 0959 ruled cannot decide anything. Recorded
+as a ruling rather than a detail because it is the half most likely to be
+re-litigated: it looks like discarding a passing assertion.
+
+**The unevaluated print carries** the per-stratum breached/ordinary n's with the
+shortfall named, the derived quintile cut points, the stratified AUC and z each
+labelled REPORTED, NOT ASSERTED, the pair-weight direction with the same label,
+the measured yield and next-rung seed arithmetic, and a pointer to 0959. The
+gate being closed means the test PASSES, so this print is the reader's only
+signal; its first line says so in as many words.
+
+**Verified in both directions** — a gate never seen to arm is not a gate.
+With `MIN_BREACHED_PER_STRATUM = 10` (committed) all four probe tests pass and
+the UNEVALUATED block prints breached n's 1/3/5/4/19, yield 2.67/seed, ~19 seeds
+needed. Temporarily lowered to 1, the gate opens and the assertion **fires**:
+`stratified z = -0.034, at or under 1.96` — nextest rc=100. Restored, tree
+clean.
+
+**Preregistration outcome appended, predictions untouched.** §7 of
+`docs/superpowers/specs/2026-09-12-the-tidemark-survivorship-amendment.md`
+records P1 FAILED (and that the pole's stated `refuted` consequence was
+declined, with 0959's reasoning) and P2 SPLIT (pooled held 0.7959 → 0.6810;
+conditioned reversed 0.4977 → 0.3946). The diff is 79 insertions, **0
+deletions** — verified, not asserted: a preregistration whose predictions are
+edited after unblinding measures nothing.
+
+**Handed to The Winze**, per 0959: extending the panel (E.9 owns the seed
+count) and the right-censoring question (a hazard model, not Mann–Whitney over
+completed cases).
 
 
 ## Follow-ups
