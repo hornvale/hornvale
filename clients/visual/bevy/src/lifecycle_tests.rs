@@ -25,6 +25,30 @@ fn surface_evidence_reports_ecs_fallback_visibility() {
         .insert(Visibility::Hidden);
     assert!(!catalog.surface_render_evidence(&world).fallback_visible);
 }
+
+#[test]
+fn surface_evidence_reports_patch_ownership_over_fallback_region() {
+    let (mut world, _mirror, mut catalog) = setup();
+    let fallback = catalog.fallback_surface.expect("anchor fallback");
+    let patch = world.spawn((Visibility::Visible,)).id();
+    catalog.surface.ready.push(ReadySurfacePatch {
+        key: SurfacePatchCacheKey {
+            revision: "current".into(),
+            macro_face: 1 << 17,
+            child_path: vec![],
+        },
+        entity: patch,
+        mesh: Handle::default(),
+        material: Handle::default(),
+        feature_entities: vec![],
+        feature_meshes: vec![],
+        feature_materials: vec![],
+        feature_color: None,
+    });
+
+    assert!(world.get::<Visibility>(fallback).is_none());
+    assert!(!catalog.surface_render_evidence(&world).fallback_visible);
+}
 #[test]
 fn reset_removes_entities_assets_and_selection_even_when_ids_repeat() {
     let (mut world, mut m, mut c) = setup();

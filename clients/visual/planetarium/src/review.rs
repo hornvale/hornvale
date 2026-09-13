@@ -357,16 +357,50 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
         .map_err(|error| format!("accept proof observation: {error}"))?;
     let film: FilmDefinition = serde_json::from_str(include_str!("../films/pilot.json"))
         .map_err(|error| format!("parse proof film: {error}"))?;
-    let camera = sample_shot(&film, 0, &positions(&mirror))
+    let mut camera = sample_shot(&film, 0, &positions(&mirror))
         .map_err(|error| format!("sample proof camera: {error}"))?;
-    let camera_sha256 = hash(
-        &serde_json::to_vec(&camera).map_err(|error| format!("serialize proof camera: {error}"))?,
-    );
+    // The proof deliberately uses a close fixed shot: the source-owned strips
+    // are narrow terrain features, so a planet-wide establishing shot would
+    // reduce them below a pixel and make a real render contribution unverifiable.
+    let zoom = 0.65;
+    camera.eye_km = std::array::from_fn(|index| {
+        camera.target_km[index] + (camera.eye_km[index] - camera.target_km[index]) * zoom
+    });
+    camera.focus_distance_km *= zoom;
+    let anchor = mirror
+        .current()
+        .and_then(|reply| {
+            reply
+                .astronomy
+                .bodies
+                .iter()
+                .find(|body| body.id == "anchor")
+        })
+        .ok_or("proof observation has no anchor")?;
+    let view_direction = {
+        let vector = std::array::from_fn::<_, 3, _>(|index| {
+            camera.eye_km[index] - anchor.position_km[index]
+        });
+        let length = vector.iter().map(|value| value * value).sum::<f64>().sqrt();
+        vector.map(|value| value / length)
+    };
+    camera.target_km = std::array::from_fn(|index| {
+        anchor.position_km[index] + view_direction[index] * anchor.radius_km.unwrap_or(7_000.0)
+    });
+    camera.vertical_fov_radians = 0.7;
+    camera.focus_distance_km = camera
+        .eye_km
+        .iter()
+        .zip(camera.target_km)
+        .map(|(eye, target)| (eye - target).powi(2))
+        .sum::<f64>()
+        .sqrt();
     let revision: SurfacePatchRevision =
         serde_json::from_value(initial["surface_revision"].clone())
             .map_err(|error| format!("parse proof revision: {error}"))?;
     let mut renderer = Renderer::new(&mirror, 1920, 1080)
         .map_err(|error| format!("create proof renderer: {error}"))?;
+    renderer.set_cosmetic_clouds_visible(false);
     let mut rss_peak = process_memory_bytes()?;
     renderer
         .set_caption_font(include_bytes!("../assets/LibreBaskerville-Regular.ttf").to_vec())
@@ -398,16 +432,6 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
         renderer.surface_render_evidence(),
     )?;
     let before = rendered_frame(&before_path, &before_metadata, None)?;
-    let anchor = mirror
-        .current()
-        .and_then(|reply| {
-            reply
-                .astronomy
-                .bodies
-                .iter()
-                .find(|body| body.id == "anchor")
-        })
-        .ok_or("proof observation has no anchor")?;
     let candidates = lifecycle::visible_surface_patches(
         &hornvale_bevy_view::camera::OrbitCamera::new(camera.clone()),
         anchor.position_km,
@@ -450,6 +474,7 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
     renderer
         .apply(&mirror, &camera)
         .map_err(|error| format!("apply proof after scene: {error}"))?;
+    renderer.set_fallback_surface_visible(false);
     rss_peak = rss_peak.max(process_memory_bytes()?);
     let mesh_material_application_ms =
         (application_start.elapsed().as_secs_f64() * 1000.).max(f64::EPSILON);
@@ -498,8 +523,9 @@ fn rendered_frame(
         &std::fs::read(metadata_path).map_err(|e| format!("read frame metadata: {e}"))?,
     )
     .map_err(|e| format!("parse frame metadata: {e}"))?;
-    let narrow_feature_pixels =
-        before_path.map_or(0, |before| feature_delta_pixels(before, path).unwrap_or(0));
+    let narrow_feature_pixels = before_path.map_or(0, |before| {
+        feature_delta_pixels(before, path, metadata.evidence.narrow_feature_color).unwrap_or(0)
+    });
     Ok(RenderedSurfaceFrame {
         png_path: path.to_path_buf(),
         png_sha256: hash(&bytes),
@@ -530,17 +556,28 @@ fn write_frame_metadata(
 fn feature_delta_pixels(
     before: &std::path::Path,
     after: &std::path::Path,
+    feature_color: Option<[u8; 3]>,
 ) -> Result<usize, String> {
     let before = image::open(before).map_err(|e| e.to_string())?.to_rgba8();
     let after = image::open(after).map_err(|e| e.to_string())?.to_rgba8();
     if before.dimensions() != after.dimensions() {
         return Err("frame dimensions differ".into());
     }
+    let Some(feature_color) = feature_color else {
+        return Ok(0);
+    };
     Ok(before
         .pixels()
         .zip(after.pixels())
         .filter(|(old, new)| {
-            old != new && new[2] > new[0].saturating_add(8) && new[2] > new[1].saturating_add(4)
+            old != new
+                && new.0[..3]
+                    .iter()
+                    .zip(feature_color)
+                    .map(|(actual, expected)| i32::from(*actual) - i32::from(expected))
+                    .map(|difference| difference * difference)
+                    .sum::<i32>()
+                    <= 40 * 40
         })
         .count())
 }
@@ -550,7 +587,7 @@ mod review_tests {
     use super::*;
 
     #[test]
-    fn feature_delta_requires_blue_feature_pixels_in_png() {
+    fn feature_delta_requires_feature_color_in_png() {
         let directory = tempfile_dir();
         let before = directory.join("before.png");
         let after = directory.join("after.png");
@@ -560,7 +597,10 @@ mod review_tests {
         let mut pixels = image::RgbaImage::from_pixel(2, 1, image::Rgba([10, 10, 10, 255]));
         pixels.put_pixel(1, 0, image::Rgba([20, 40, 100, 255]));
         pixels.save(&after).unwrap();
-        assert_eq!(feature_delta_pixels(&before, &after).unwrap(), 1);
+        assert_eq!(
+            feature_delta_pixels(&before, &after, Some([20, 40, 100])).unwrap(),
+            1
+        );
     }
 
     fn tempfile_dir() -> PathBuf {

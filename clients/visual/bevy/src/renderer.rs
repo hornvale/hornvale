@@ -331,6 +331,16 @@ impl Renderer {
     pub fn surface_render_evidence(&self) -> SurfaceRenderEvidence {
         self.catalog.surface_render_evidence(self.apps.main.world())
     }
+
+    pub fn set_cosmetic_clouds_visible(&mut self, visible: bool) {
+        self.catalog
+            .set_cosmetic_clouds_visible(self.apps.main.world_mut(), visible);
+    }
+
+    pub fn set_fallback_surface_visible(&mut self, visible: bool) {
+        self.catalog
+            .set_fallback_surface_visible(self.apps.main.world_mut(), visible);
+    }
     fn update(&mut self, timeout: Duration) -> Result<(), ViewError> {
         self.apps.update();
         self.apps

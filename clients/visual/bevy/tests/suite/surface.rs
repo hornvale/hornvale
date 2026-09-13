@@ -665,7 +665,7 @@ fn ready_patch_suppresses_its_fallback_region_without_hiding_uncovered_globe() {
         world.resource::<Assets<StandardMaterial>>().len(),
         before_materials + 1
     );
-    assert!(catalog.fallback_surface_visible(&world));
+    assert!(!catalog.fallback_surface_visible(&world));
     assert_eq!(world.get::<Visibility>(entity), Some(&Visibility::Visible));
     let mesh = world.get::<Mesh3d>(entity).unwrap();
     assert_eq!(

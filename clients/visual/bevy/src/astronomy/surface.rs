@@ -381,6 +381,13 @@ pub fn feature_strip_material(strip: &SurfacePatchStrip) -> StandardMaterial {
     }
 }
 
+/// Quantized presentation color used to identify pixels contributed by a
+/// source-owned feature ribbon in rendered review evidence.
+pub fn feature_strip_color(strip: &SurfacePatchStrip) -> [u8; 3] {
+    let color = material_color(strip.semantic_mask);
+    std::array::from_fn(|index| (color[index] * 255.0).round() as u8)
+}
+
 fn render_position(vertex: &crate::documents::SurfacePatchVertex) -> [f32; 3] {
     let position = Vec3::from_array(vertex.position.map(|value| value as f32));
     let height = (1.0 + vertex.height_m as f32 * 1e-6).max(0.001);

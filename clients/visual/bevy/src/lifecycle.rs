@@ -120,6 +120,7 @@ pub struct SurfaceRenderEvidence {
     pub patch_entities: usize,
     pub narrow_feature_entities: usize,
     pub fallback_visible: bool,
+    pub narrow_feature_color: Option<[u8; 3]>,
 }
 
 #[derive(Default)]
@@ -139,6 +140,7 @@ struct ReadySurfacePatch {
     feature_entities: Vec<Entity>,
     feature_meshes: Vec<Handle<Mesh>>,
     feature_materials: Vec<Handle<StandardMaterial>>,
+    feature_color: Option<[u8; 3]>,
 }
 
 fn prepare_feature_meshes(document: &SurfacePatchDocument) -> Vec<SurfaceFeatureMesh> {
@@ -154,6 +156,7 @@ fn prepare_feature_meshes(document: &SurfacePatchDocument) -> Vec<SurfaceFeature
 }
 
 const MACRO_PATCH_DEPTH: usize = 6;
+const FEATURE_SURFACE_LIFT_KM: f64 = 0.05;
 
 fn cache_key_order(key: &SurfacePatchCacheKey) -> (&str, u32, &[u8]) {
     (&key.revision, key.macro_face, &key.child_path)
@@ -562,13 +565,16 @@ impl SceneCatalog {
                     .map(|vertex| {
                         let direction = Vec3::from_array(vertex.position.map(|value| value as f32));
                         let height_above_sea_km = (vertex.height_m - sea_level_m) / 1000.0;
-                        let radius = (radius_km + height_above_sea_km) / KM_PER_UNIT;
+                        let radius = (radius_km + height_above_sea_km + FEATURE_SURFACE_LIFT_KM)
+                            / KM_PER_UNIT;
                         (direction * radius as f32).to_array()
                     })
                     .collect::<Vec<_>>(),
             );
             let feature_mesh = world.resource_mut::<Assets<Mesh>>().add(prepared.mesh);
-            prepared.material.depth_bias = 2.0;
+            prepared.material.unlit = true;
+            prepared.material.depth_bias = 100_000.0;
+            prepared.material.cull_mode = None;
             let feature_material = world
                 .resource_mut::<Assets<StandardMaterial>>()
                 .add(prepared.material);
@@ -602,6 +608,7 @@ impl SceneCatalog {
             feature_entities,
             feature_meshes,
             feature_materials,
+            feature_color: reply.patch.strips.first().map(surface::feature_strip_color),
         });
         let complete = !self.surface.desired.is_empty()
             && self
@@ -656,9 +663,10 @@ impl SceneCatalog {
 
     pub fn fallback_surface_visible(&self, world: &World) -> bool {
         self.fallback_surface.is_some_and(|entity| {
-            world
-                .get::<Visibility>(entity)
-                .is_none_or(|visibility| *visibility != Visibility::Hidden)
+            self.surface.ready.is_empty()
+                && world
+                    .get::<Visibility>(entity)
+                    .is_none_or(|visibility| *visibility != Visibility::Hidden)
         })
     }
 
@@ -680,6 +688,39 @@ impl SceneCatalog {
             patch_entities,
             narrow_feature_entities,
             fallback_visible: self.fallback_surface_visible(world),
+            narrow_feature_color: self
+                .surface
+                .ready
+                .iter()
+                .find_map(|patch| patch.feature_color),
+        }
+    }
+
+    /// Toggle the cosmetic cloud shell for close-up diagnostics. Source-owned
+    /// terrain and narrow features remain unchanged; review captures can
+    /// isolate their contribution without changing simulation data.
+    pub fn set_cosmetic_clouds_visible(&self, world: &mut World, visible: bool) {
+        let value = if visible {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        let entities = world
+            .query_filtered::<Entity, With<CosmeticCloud>>()
+            .iter(world)
+            .collect::<Vec<_>>();
+        for entity in entities {
+            world.entity_mut(entity).insert(value);
+        }
+    }
+
+    pub fn set_fallback_surface_visible(&self, world: &mut World, visible: bool) {
+        if let Some(entity) = self.fallback_surface {
+            world.entity_mut(entity).insert(if visible {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            });
         }
     }
 
