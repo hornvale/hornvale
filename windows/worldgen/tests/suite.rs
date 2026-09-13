@@ -147,6 +147,8 @@ mod marine_realm_agreement;
 mod marine_realm_zero_movement;
 #[path = "suite/marine_vent_representation_probe.rs"]
 mod marine_vent_representation_probe;
+#[path = "suite/marine_web_probe.rs"]
+mod marine_web_probe;
 #[path = "suite/mines_exist.rs"]
 mod mines_exist;
 #[path = "suite/murrain_population.rs"]
