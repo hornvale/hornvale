@@ -3,9 +3,13 @@
 //! without that column — truthfully.
 
 use crate::anchor::Rotation;
+use crate::ephemeris::{
+    OrbitalElements, OrbitalFrame, OrbitalState, OrbitalValidity, orbital_phase_at,
+    orbital_state_at,
+};
 use crate::sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 use crate::system::StarSystem;
-use crate::units::{Degrees, StdDays, StdInstant};
+use crate::units::{Au, Degrees, Megameters, StdDays, StdInstant};
 use hornvale_kernel::math;
 use hornvale_kernel::units::TickSpan;
 
@@ -42,8 +46,9 @@ mod tests {
     fn calendar_with_moon(sidereal_days: f64, year_days: f64) -> Calendar {
         Calendar {
             day: None,
+            anchor_orbit: Au(1.0),
             year: StdDays::new(year_days).unwrap(),
-            moon_periods: vec![StdDays::new(sidereal_days).unwrap()],
+            moon_orbits: vec![(Megameters(1.0), StdDays::new(sidereal_days).unwrap())],
             forcing: crate::forcing::OrbitalForcing {
                 obliquity_mean: 0.0,
                 obliquity_amp: 0.0,
@@ -198,9 +203,10 @@ mod tests {
         };
         let cal = Calendar {
             day: Some(TickSpan::from_std_days(1.0).unwrap()),
+            anchor_orbit: Au(1.0),
             year: StdDays::new(365.25).unwrap(),
             forcing,
-            moon_periods: Vec::new(),
+            moon_orbits: Vec::new(),
             retrograde: false,
         };
         // Obliquity is identically zero, so any season/daylight variation is
@@ -421,6 +427,16 @@ mod tests {
         assert!(cal.months_per_year(0).is_none());
     }
 
+    #[test]
+    fn synodic_month_rejects_nonpositive_and_nonfinite_periods() {
+        for sidereal in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            let mut cal = calendar_with_moon(1.0, 365.25);
+            cal.moon_orbits[0].1 = StdDays(sidereal);
+            assert!(cal.synodic_month(0).is_none());
+            assert!(cal.moon_phase(StdInstant(1.0), 0).is_none());
+        }
+    }
+
     /// The exact solar position agrees with the shipped small-angle declination
     /// at the equinoxes and solstices, and its RA advances a full turn per year.
     #[test]
@@ -606,8 +622,9 @@ pub struct Calendar {
     /// world. Stored as the integer (The Foliot) and exposed continuously by
     /// [`Calendar::day_length`]; the integer is the truth.
     day: Option<TickSpan>,
+    anchor_orbit: Au,
     year: StdDays,
-    moon_periods: Vec<StdDays>,
+    moon_orbits: Vec<(Megameters, StdDays)>,
     forcing: crate::forcing::OrbitalForcing,
     retrograde: bool,
 }
@@ -620,8 +637,13 @@ pub fn calendar_of(system: &StarSystem) -> Calendar {
     };
     Calendar {
         day,
+        anchor_orbit: system.anchor.orbit,
         year: system.anchor.year,
-        moon_periods: system.moons.iter().map(|m| m.period).collect(),
+        moon_orbits: system
+            .moons
+            .iter()
+            .map(|moon| (moon.distance, moon.period))
+            .collect(),
         forcing: system.forcing.clone(),
         retrograde,
     }
@@ -672,6 +694,38 @@ pub fn wanderer_calendar_marks(
 }
 
 impl Calendar {
+    pub(crate) fn anchor_orbital_state_at(&self, t: StdInstant) -> Option<OrbitalState> {
+        crate::ephemeris::anchor_orbital_state_at(self.anchor_orbit, self.year, &self.forcing, t)
+    }
+
+    pub(crate) fn moon_orbital_state_at(
+        &self,
+        index: usize,
+        t: StdInstant,
+    ) -> Option<OrbitalState> {
+        self.synodic_month(index)?;
+        let (semi_major_axis, period) = *self.moon_orbits.get(index)?;
+        let phase_offset = self
+            .forcing
+            .moon_phase_offsets
+            .get(index)
+            .copied()
+            .unwrap_or(0.0);
+        orbital_state_at(
+            &OrbitalElements {
+                frame: OrbitalFrame::AnchorPlaneMegameters,
+                epoch: StdInstant(0.0),
+                period,
+                semi_major_axis: semi_major_axis.get(),
+                eccentricity: 0.0,
+                mean_longitude_at_epoch_turns: self.forcing.year_phase_offset + phase_offset,
+                periapsis_longitude_turns: 0.0,
+                validity: OrbitalValidity::UNBOUNDED,
+            },
+            t,
+        )
+    }
+
     /// Project a coplanar sightline onto the local horizon at the reference
     /// meridian. Longitude uses the calendar's solar/equinox convention.
     /// `None` for locked worlds or an invalid latitude.
@@ -758,7 +812,9 @@ impl Calendar {
         // back a phase of -0.49. Byte-neutral for every existing world:
         // for a non-negative operand `trunc` and `floor` coincide, so the
         // two agree exactly.
-        (t.0 / self.year.0 + self.forcing.year_phase_offset).rem_euclid(1.0)
+        // The calendar keeps the mean-longitude compatibility projection.
+        self.anchor_orbital_state_at(t)
+            .map_or(0.0, |state| state.mean_longitude_turns)
     }
     /// Seasonal phase; present when either driver (tilt or eccentricity) acts.
     /// type-audit: bare-ok(ratio)
@@ -870,13 +926,17 @@ impl Calendar {
     /// the moon never laps the sun).
     /// type-audit: bare-ok(index)
     pub fn synodic_month(&self, index: usize) -> Option<StdDays> {
-        let sidereal = self.moon_periods.get(index)?;
-        if sidereal.0 >= self.year.0 {
+        let (_, sidereal) = self.moon_orbits.get(index)?;
+        if !sidereal.0.is_finite()
+            || sidereal.0 <= 0.0
+            || !self.year.0.is_finite()
+            || self.year.0 <= 0.0
+            || sidereal.0 >= self.year.0
+        {
             return None;
         }
-        Some(StdDays(
-            sidereal.0 * self.year.0 / (self.year.0 - sidereal.0),
-        ))
+        let synodic = sidereal.0 * self.year.0 / (self.year.0 - sidereal.0);
+        synodic.is_finite().then_some(StdDays(synodic))
     }
     /// Illumination phase of moon `index` at `t` (0 = new, 0.5 = full),
     /// cycling on the synodic month (SKY-20) and shifted by the genesis phase
@@ -893,7 +953,7 @@ impl Calendar {
         // `rem_euclid` for the same reason as `year_phase`: a phase is in
         // [0, 1) on both sides of genesis, and the two agree exactly for a
         // non-negative operand.
-        Some((t.0 / synodic.0 + offset).rem_euclid(1.0))
+        Some(orbital_phase_at(synodic, StdInstant(0.0), offset, t))
     }
     /// How many synodic months of moon `index` fit in a year.
     /// type-audit: bare-ok(index: index), bare-ok(ratio: return)
