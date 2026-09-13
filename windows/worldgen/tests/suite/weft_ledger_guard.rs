@@ -34,7 +34,29 @@ use hornvale_worldgen::seed_42_world;
 /// world carries more settlements, more occupations, more people and more
 /// species rows. A deliberate, reviewed move of the byte golden itself, not a
 /// weft change.
-const SEED_42_FACT_COUNT: usize = 23_431;
+///
+/// **23_431 -> 25_280 at The Tidemark's close (2026-09-13).** Attribution was
+/// MEASURED off the golden's own predicate histogram rather than reasoned
+/// from which commits landed — `"predicate": "x"` counts, old fixture against
+/// new:
+///
+/// ```text
+///   is-settlement    396 -> 435   (+39)
+///   is-place         396 -> 435   (+39)
+///   is-occupation   1148 -> 1259  (+111)
+///   is-ruin          752 -> 824   (+72)
+///   is-person        260 -> 255   (-5)
+/// ```
+///
+/// That shape is a SETTLEMENT-PLACEMENT move, and the bulk of it is
+/// `land_settlement selects on habitat realm, not biome` (9912bc7ab), which
+/// widened the eligible vertex set by 39 settlements. The campaign's headline
+/// mechanism — a failing vent ending the occupation it was holding up — is a
+/// small minority of the occupation delta: its own measurement (M3b,
+/// `vent_expiry.rs`) counts **2** occupations ending on a vent's failure, plus
+/// the refounds those trigger. Do not read the +1,849 as the vent ending's
+/// cost; two of the +111 occupations are its, and the rest is the realm fix.
+const SEED_42_FACT_COUNT: usize = 25_280;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

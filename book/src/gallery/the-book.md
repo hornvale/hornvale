@@ -1323,9 +1323,9 @@ The Sruasrer's own priesthood taught wrongly, and could be shown wrong by any wh
 *In truth, the Sruasrer's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the darkenings of the first hundred years number 6472.*
 
-## Volume 2: Beodoa
+## Volume 2: Boodoa
 
-Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
+Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
 The Drakro are abyssal elfs.
 The Koodzhoo are bugbears.
 The Takaz are desert dwarfs.
@@ -1354,53 +1354,53 @@ The Ṅuṅa are wood elfs.
 ### Tongues
 
 Drakro Roṅ Bobprobro. (in the abyssal-elf tongue: "The Drakro are abyssal elfs.")
-Beodoa Roṅ Bo. (in the abyssal-elf tongue: "Beodoa is the earth.")
+Boodoa Roṅ Bo. (in the abyssal-elf tongue: "Boodoa is the earth.")
 Koodzhoo Zhoa Zho Zhako. (in the bugbear tongue: "The Koodzhoo are bugbears.")
-Beodoa Boodoa Koo Zhako. (in the bugbear tongue: "Beodoa is the earth.")
+Boodoa Boodoa Koo Zhako. (in the bugbear tongue: "Boodoa is the earth.")
 Takaz Shakax Zot. (in the desert-dwarf tongue: "The Takaz are desert dwarfs.")
-Beodoa Zazaz Zot. (in the desert-dwarf tongue: "Beodoa is the earth.")
+Boodoa Zazaz Zot. (in the desert-dwarf tongue: "Boodoa is the earth.")
 Boba Bobbobra. (in the desert-elf tongue: "The Boba are desert elfs.")
-Beodoa Besrob. (in the desert-elf tongue: "Beodoa is the earth.")
+Boodoa Besrob. (in the desert-elf tongue: "Boodoa is the earth.")
 Saoza Za Ra Robbabsrob. (in the drow tongue: "The Saoza are drows.")
-Beodoa Za Srob Bo. (in the drow tongue: "Beodoa is the earth.")
+Boodoa Za Srob Bo. (in the drow tongue: "Boodoa is the earth.")
 Vogpazhap Dop Pagam. (in the duergar tongue: "The Pagam are duergars.")
-Dapvadav Dop Beodoa. (in the duergar tongue: "Beodoa is the earth.")
+Dapvadav Dop Boodoa. (in the duergar tongue: "Boodoa is the earth.")
 Ratra Bro Rokro Ra. (in the gnoll tongue: "The Ratra are gnolls.")
-Beodoa Bro Roshra Ra. (in the gnoll tongue: "Beodoa is the earth.")
+Boodoa Bro Roshra Ra. (in the gnoll tongue: "Boodoa is the earth.")
 Peerzhoe Zhagee. (in the goblin tongue: "The Peerzhoe are goblins.")
-Beodoa Peotoa. (in the goblin tongue: "Beodoa is the earth.")
+Boodoa Peotoa. (in the goblin tongue: "Boodoa is the earth.")
 Bapa Paba Wo Rob. (in the gully-dwarf tongue: "The Bapa are gully dwarfs.")
-Beodoa Bala La Rob. (in the gully-dwarf tongue: "Beodoa is the earth.")
+Boodoa Bala La Rob. (in the gully-dwarf tongue: "Boodoa is the earth.")
 Moma Frerro Memtrom. (in the high-elf tongue: "The Moma are high elfs.")
-Beodoa Frerro Me. (in the high-elf tongue: "Beodoa is the earth.")
+Boodoa Frerro Me. (in the high-elf tongue: "Boodoa is the earth.")
 Papan Znoad Wob Wop Zapap. (in the hill-dwarf tongue: "The Papan are hill dwarfs.")
-Beodoa Znoad Wob Wab Bawab. (in the hill-dwarf tongue: "Beodoa is the earth.")
+Boodoa Znoad Wob Wab Bawab. (in the hill-dwarf tongue: "Boodoa is the earth.")
 Geerjoe Rjorbe Go. (in the hobgoblin tongue: "The Geerjoe are hobgoblins.")
-Beodoa Goobeodoa Go. (in the hobgoblin tongue: "Beodoa is the earth.")
+Boodoa Goobeodoa Go. (in the hobgoblin tongue: "Boodoa is the earth.")
 Leoglo Faeblae. (in the human tongue: "The Leoglo are humans.")
-Beodoa La. (in the human tongue: "Beodoa is the earth.")
+Boodoa La. (in the human tongue: "Boodoa is the earth.")
 Sue Ze Shue. (in the kelp-tender tongue: "The Sue are kelp tenders.")
-Beodoa Fu Zufue. (in the kelp-tender tongue: "Beodoa is the earth.")
+Boodoa Fu Zufue. (in the kelp-tender tongue: "Boodoa is the earth.")
 Gnga Dsao. (in the kobold tongue: "The Gnga are kobolds.")
-Beodoa Dshooshgsoo. (in the kobold tongue: "Beodoa is the earth.")
+Boodoa Dshooshgsoo. (in the kobold tongue: "Boodoa is the earth.")
 Famfaam Foan Kxfonkxfan. (in the kuo-toa tongue: "The Famfaam are kuo toas.")
-Beodoa Foan Kxaomkxon. (in the kuo-toa tongue: "Beodoa is the earth.")
+Boodoa Foan Kxaomkxon. (in the kuo-toa tongue: "Boodoa is the earth.")
 Takan Kazavvok Vak. (in the mountain-dwarf tongue: "The Takan are mountain dwarfs.")
-Beodoa Vazavzav Vak. (in the mountain-dwarf tongue: "Beodoa is the earth.")
+Boodoa Vazavzav Vak. (in the mountain-dwarf tongue: "Boodoa is the earth.")
 Qo Poapoovoo. (in the reef-mason tongue: "The Qo are reef masons.")
-Beodoa Paoqovoo. (in the reef-mason tongue: "Beodoa is the earth.")
+Boodoa Paoqovoo. (in the reef-mason tongue: "Boodoa is the earth.")
 Muma Dra Romsrera. (in the sea-elf tongue: "The Muma are sea elfs.")
-Beodoa Dra Mesru. (in the sea-elf tongue: "Beodoa is the earth.")
+Boodoa Dra Mesru. (in the sea-elf tongue: "Boodoa is the earth.")
 Nona Ronsron Daa. (in the snow-elf tongue: "The Nona are snow elfs.")
-Beodoa No Daa. (in the snow-elf tongue: "Beodoa is the earth.")
+Boodoa No Daa. (in the snow-elf tongue: "Boodoa is the earth.")
 Kxaapxoa Kxoaq Xabxoob. (in the svirfneblin tongue: "The Kxaapxoa are svirfneblins.")
-Beodoa Kxoaq Kxoxood. (in the svirfneblin tongue: "Beodoa is the earth.")
+Boodoa Kxoaq Kxoxood. (in the svirfneblin tongue: "Boodoa is the earth.")
 Fafmex Fof Max Fafvof. (in the triton tongue: "The Fafmex are tritons.")
-Beodoa Fof Max Mefmef. (in the triton tongue: "Beodoa is the earth.")
+Boodoa Fof Max Mefmef. (in the triton tongue: "Boodoa is the earth.")
 Shaalpnge Te Sej Dee. (in the vent-commensal tongue: "The Shaalpnge are vent commensals.")
-Beodoa Bnee Sej Dee. (in the vent-commensal tongue: "Beodoa is the earth.")
+Boodoa Bnee Sej Dee. (in the vent-commensal tongue: "Boodoa is the earth.")
 Ṅuṅa Ṅeṅsleṅleṅla Sue. (in the wood-elf tongue: "The Ṅuṅa are wood elfs.")
-Beodoa Ṅesluṅ Sue. (in the wood-elf tongue: "Beodoa is the earth.")
+Boodoa Ṅesluṅ Sue. (in the wood-elf tongue: "Boodoa is the earth.")
 
 abyssal-elf: gap — planet (no entry in this lexicon)
 bugbear: gap — planet (no entry in this lexicon)
@@ -1455,10 +1455,10 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it answers Pro.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Koodzhoo tell it
 
@@ -1486,15 +1486,15 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because Pao walks the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Koodzhoo teach it
 
-Beodoa Boodoa Koo Zhazha. ("Beodoa is the earth — as it is taught.")
+Boodoa Boodoa Koo Zhazha. ("Boodoa is the earth — as it is taught.")
 
 The Drakro are abyssal elfs — rivals.
 The Koodzhoo are bugbears — ourselves.
@@ -1520,15 +1520,15 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because Pao walks the sky, slowly.
 The day returns because Paokadbo walks the sky, briskly.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Takaz tell it
 
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it answers Zata.
 The day returns because the sky must be crossed.
 The Drakro are abyssal elfs — neighbors.
@@ -1556,11 +1556,11 @@ The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Boba tell it
 
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it is Sro's kin.
 The day returns to keep the balance.
 The Drakro are abyssal elfs — neighbors.
@@ -1588,7 +1588,7 @@ The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Saoza tell it
 
@@ -1616,10 +1616,10 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it is Rob's kin.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Pagam tell it
 
@@ -1647,14 +1647,14 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it answers Zapam.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Pagam teach it
 
-Dapvadav Mvap Beodoa. ("Beodoa is the earth — as it is taught.")
+Dapvadav Mvap Boodoa. ("Boodoa is the earth — as it is taught.")
 
 The Drakro are abyssal elfs — rivals.
 The Koodzhoo are bugbears — rivals.
@@ -1680,10 +1680,10 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it answers Zapam.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Ratra tell it
 
@@ -1711,11 +1711,11 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it is Roshra's kin.
 The day returns because Rabroroshra rides the sky, briskly.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Peerzhoe tell it
 
@@ -1743,14 +1743,14 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth.
+Boodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Peerzhoe teach it
 
-Beodoa Peotoa. ("Beodoa is the earth — as it is taught.")
+Boodoa Peotoa. ("Boodoa is the earth — as it is taught.")
 
 The Drakro are abyssal elfs — neighbors.
 The Koodzhoo are bugbears — neighbors.
@@ -1776,12 +1776,12 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Mrarsorshar strides the sky, slowly.
 The day returns because Parme walks the sky, briskly.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Bapa tell it
 
@@ -1809,14 +1809,14 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth.
+Boodoa is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Bapa teach it
 
-Beodoa Bala La Rob. ("Beodoa is the earth — as it is taught.")
+Boodoa Bala La Rob. ("Boodoa is the earth — as it is taught.")
 
 The Drakro are abyssal elfs — neighbors.
 The Koodzhoo are bugbears — neighbors.
@@ -1842,16 +1842,16 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Zaba strides the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Moma tell it
 
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it answers Rom.
 The day returns because the sky must be crossed.
 The Drakro are abyssal elfs — neighbors.
@@ -1879,43 +1879,7 @@ The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
-
-##### As the priesthood of the Moma teach it
-
-Beodoa Frermo Me. ("Beodoa is the earth — as it is taught.")
-
-Beodoa is the earth with one moon.
-The moon crosses because Rom walks the sky, slowly.
-The day returns because Rom strides the sky, briskly.
-The Drakro are abyssal elfs — neighbors.
-The Koodzhoo are bugbears — neighbors.
-The Takaz are desert dwarfs — neighbors.
-The Boba are desert elfs — neighbors.
-The Saoza are drows — neighbors.
-The Pagam are duergars — neighbors.
-The Ratra are gnolls — neighbors.
-The Peerzhoe are goblins — neighbors.
-The Bapa are gully dwarfs — neighbors.
-The Moma are high elfs — ourselves.
-The Papan are hill dwarfs — neighbors.
-The Geerjoe are hobgoblins — neighbors.
-The Leoglo are humans — neighbors.
-The Sue are kelp tenders — neighbors.
-The Gnga are kobolds — neighbors.
-The Famfaam are kuo toas — neighbors.
-The Takan are mountain dwarfs — neighbors.
-The Qo are reef masons — neighbors.
-The Muma are sea elfs — neighbors.
-The Nona are snow elfs — neighbors.
-The Kxaapxoa are svirfneblins — neighbors.
-The Fafmex are tritons — neighbors.
-The Shaalpnge are vent commensals — neighbors.
-The Ṅuṅa are wood elfs — neighbors.
-
-— though the folk say The moon crosses because it answers Rom.
-
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Papan tell it
 
@@ -1943,14 +1907,14 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth.
+Boodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Papan teach it
 
-Beodoa Znoad Wap Wab Bawab. ("Beodoa is the earth — as it is taught.")
+Boodoa Znoad Wap Wab Bawab. ("Boodoa is the earth — as it is taught.")
 
 The Drakro are abyssal elfs — neighbors.
 The Koodzhoo are bugbears — neighbors.
@@ -1976,12 +1940,12 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Nadnogznod strides the sky, slowly.
 The day returns because Zabab strides the sky, briskly.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Geerjoe tell it
 
@@ -2009,14 +1973,14 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth.
+Boodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Geerjoe teach it
 
-Beodoa Goobeodoa Rja. ("Beodoa is the earth — as it is taught.")
+Boodoa Goobeodoa Rja. ("Boodoa is the earth — as it is taught.")
 
 The Drakro are abyssal elfs — rivals.
 The Koodzhoo are bugbears — rivals.
@@ -2042,16 +2006,16 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because it is Fraezrazh's kin.
 The day returns to keep the balance.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Leoglo tell it
 
-Beodoa is the earth.
+Boodoa is the earth.
 The day returns to keep the balance.
 The Drakro are abyssal elfs — neighbors.
 The Koodzhoo are bugbears — neighbors.
@@ -2078,13 +2042,13 @@ The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Leoglo teach it
 
-Beodoa La. ("Beodoa is the earth — as it is taught.")
+Boodoa La. ("Boodoa is the earth — as it is taught.")
 
-Beodoa is the earth.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Ploefofa walks the sky, slowly.
 The day returns to keep the balance.
@@ -2113,7 +2077,7 @@ The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Sue tell it
 
@@ -2141,14 +2105,14 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth.
+Boodoa is the earth.
 The day returns to keep the balance.
 
-*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Gnga tell it
 
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because Dsaasgngo strides the sky, slowly.
 The day returns, as all things return.
 The Drakro are abyssal elfs — rivals.
@@ -2176,13 +2140,13 @@ The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Gnga teach it
 
-Beodoa Dshooshgsoo. ("Beodoa is the earth — as it is taught.")
+Boodoa Dshooshgsoo. ("Boodoa is the earth — as it is taught.")
 
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because Dsaasgngo walks the sky, slowly.
 The day returns because Dsaasgngo walks the sky, briskly.
 The Drakro are abyssal elfs — rivals.
@@ -2210,7 +2174,7 @@ The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Famfaam tell it
 
@@ -2238,10 +2202,10 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it is Kxongkxfon's kin.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Takan tell it
 
@@ -2269,14 +2233,14 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because Zavan strides the sky, slowly.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Takan teach it
 
-Beodoa Vazavzav Vak. ("Beodoa is the earth — as it is taught.")
+Boodoa Vazavzav Vak. ("Boodoa is the earth — as it is taught.")
 
 The Drakro are abyssal elfs — rivals.
 The Koodzhoo are bugbears — rivals.
@@ -2302,10 +2266,10 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because Zavan walks the sky, slowly.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Qo tell it
 
@@ -2333,14 +2297,14 @@ The Kxaapxoa are svirfneblins — rivals.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth.
+Boodoa is the earth.
 The day returns because Goapo steers the sky, briskly.
 
-*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Muma tell it
 
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it answers Sro.
 The day returns because the sky must be crossed.
 The Drakro are abyssal elfs — neighbors.
@@ -2368,7 +2332,7 @@ The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Nona tell it
 
@@ -2396,15 +2360,15 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it answers Ron.
 The day returns because the sky must be crossed.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Nona teach it
 
-Beodoa No Daa. ("Beodoa is the earth — as it is taught.")
+Boodoa No Daa. ("Boodoa is the earth — as it is taught.")
 
 The Drakro are abyssal elfs — neighbors.
 The Koodzhoo are bugbears — neighbors.
@@ -2430,13 +2394,13 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because Ron walks the sky, slowly.
 The day returns to keep the balance.
 
 — though the folk say The moon crosses because it answers Ron.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Kxaapxoa tell it
 
@@ -2464,10 +2428,10 @@ The Kxaapxoa are svirfneblins — ourselves.
 The Fafmex are tritons — rivals.
 The Shaalpnge are vent commensals — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because Poat drives the sky, slowly.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Fafmex tell it
 
@@ -2495,10 +2459,10 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — ourselves.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth.
+Boodoa is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Shaalpnge tell it
 
@@ -2526,10 +2490,10 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — ourselves.
 The Ṅuṅa are wood elfs — neighbors.
-Beodoa is the earth with one moon.
+Boodoa is the earth with one moon.
 The moon crosses because it is Boajpe's kin.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Ṅuṅa tell it
 
@@ -2557,14 +2521,14 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — ourselves.
-Beodoa is the earth.
+Boodoa is the earth.
 The day returns to keep the balance.
 
-*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Ṅuṅa teach it
 
-Beodoa Ṅesluṅ Sue. ("Beodoa is the earth — as it is taught.")
+Boodoa Ṅesluṅ Sue. ("Boodoa is the earth — as it is taught.")
 
 The Drakro are abyssal elfs — neighbors.
 The Koodzhoo are bugbears — neighbors.
@@ -2590,12 +2554,12 @@ The Kxaapxoa are svirfneblins — neighbors.
 The Fafmex are tritons — neighbors.
 The Shaalpnge are vent commensals — neighbors.
 The Ṅuṅa are wood elfs — ourselves.
-Beodoa is the earth.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because it is Sloṅ's kin.
 The day returns to keep the balance.
 
-*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ### The Reckoning of Years
 
@@ -2627,9 +2591,6 @@ The priesthood of the Bapa numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
 The Bapa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Moma, the sky has darkened, now and again.
-The priesthood of the Moma numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
-The Moma's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Papan, the sky has darkened, now and again.
 The priesthood of the Papan numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
@@ -2670,7 +2631,6 @@ The Ṅuṅa's own priesthood taught wrongly, and could be shown wrong by any wh
 *In truth, the Pagam's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Peerzhoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Bapa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Moma's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Papan's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Geerjoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Leoglo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*

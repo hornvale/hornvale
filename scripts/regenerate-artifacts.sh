@@ -706,6 +706,15 @@ gen_chart_reference() {
 # carries (18 layers), counted from `occ-site` facts in the committed fixture
 # rather than guessed — and the framing states only facts present in the live
 # render.
+# THE FRAMING PROSE BELOW STATES NUMBERS ON PURPOSE, AND IT WILL ROT AGAIN.
+# `docs_consistency::the_history_page_prose_names_the_vertex_it_renders` guards
+# it, but CONDITIONALLY: it checks that every people the prose names and every
+# `the year N` the prose cites also appears in the rendered column. Prose that
+# names no people and cites no year satisfies it VACUOUSLY — and the test's own
+# comment records that dormancy happening for a whole campaign. So a campaign
+# that moves seed 42's history must re-state these numbers, not generalise them
+# into safety. Last re-stated by The Tidemark (2026-09-13), whose vent-expiry
+# ending moved the site from 18 lives founded in 350 to 15 founded in 1225.
 history_site=10472
 gen_history() {
     printf '# A Living Clearing of Seed 42\n\n'
@@ -717,14 +726,14 @@ gen_history() {
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — vertex %s — and\n' "$history_site"
-    printf 'eighteen lives have passed over it, one settling atop the ruins of\n'
+    printf 'fifteen lives have passed over it, one settling atop the ruins of\n'
     printf 'the last. Every one of them is kobold: the deepest layer was founded\n'
-    printf 'in the year 350 by settlers fleeing the ice, and the lineage has\n'
-    printf 'returned to this clearing again and again across sixteen centuries,\n'
+    printf 'in the year 1225 by settlers fleeing the ice, and the lineage has\n'
+    printf 'returned to this clearing again and again across seven centuries,\n'
     printf 'sometimes put to flight, sometimes leaving of its own accord to\n'
     printf 'carry the settlement onto ground it had just taken. The last layer\n'
-    printf 'was founded in 1925 and stands yet. There is no ruin to read — only\n'
-    printf 'a living settlement and smoke on the air.\n\n'
+    printf 'was founded in the year 1950 and stands yet. There is no ruin to\n'
+    printf 'read — only a living settlement and smoke on the air.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

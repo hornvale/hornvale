@@ -100,6 +100,31 @@ suppliers wired in worldgen (`marine_forage_supply_field`,
 `marine_chemosynthate_supply_field`). It would have passed identically on an
 empty roster and a nine-kind roster and never distinguished them.
 
+> **Correction (2026-09-13) — read the frame as well as the fact.**
+> `CHEMOSYNTHATE` is an aggregate **on `origin/main`**, the tree this brief was
+> written against and the tree every campaign branches from. It is **not** an
+> aggregate on `campaign/the-trencher`, which disaggregates it into four
+> registered metabolite axes — `HYDROGEN`, `REDUCED_IRON`, `REDUCED_SULPHUR`,
+> `METHANE`, all `kind: Field`, all in `v1_basis()`, with `CHEMOSYNTHATE`
+> retained as their sum for generalists. Verified in both trees rather than
+> relayed: `origin/main` carries ids 0-6 and no `HYDROGEN` constant at all
+> (`grep -c 'HYDROGEN'` returns 0; id 0 there is `PHOTOSYNTHATE`), and
+> `git merge-base --is-ancestor campaign/the-trencher origin/main` says **NO**.
+>
+> This does not weaken the proposal below — it sharpens it, and section 4.6
+> anticipated it without knowing the work existed. Receptors make the **prey**
+> description discriminable; metabolite axes make the **vertex** description
+> discriminable. Those are the two halves of one duality: no eater-side
+> predicate can express "this chamber has methane but no hydrogen", because that
+> is lithology, not appetite. Raised by `campaign/the-trencher`.
+>
+> One caution that campaign measured and this brief endorses: registering four
+> ids does not mean four metabolites **discriminate**. At the median, hydrogen
+> spans 0.312-0.423, reduced iron 0.292-0.415, reduced sulphur 0.053-0.556, and
+> **methane is flat at 0.025**. Three discriminate spatially; one does not, and
+> an axis nothing can usefully weight is the "registered but inert" shape this
+> repo keeps rediscovering.
+
 ### The second instance, found by the same measurement
 
 Six kinds sit at height 1.000 for a *different* reason, and it is the same
@@ -127,7 +152,8 @@ from the peoples.
 
 ### 2b. Split `MARINE_FORAGE` into a marine trophic ladder
 
-Proposed: a new `MARINE_PREY` axis (id 7; the basis is append-only, pinned by
+Proposed: a new `MARINE_PREY` axis (**the draft said id 7; that is wrong now —
+see the id correction below**; the basis is append-only, pinned by
 `the_basis_ids_are_append_only`), a `marine_prey_supply_field` mirroring
 `prey_supply_field`, and a small `next_level` change.
 
@@ -146,6 +172,14 @@ pub fn prey_supply_field(geo, forage) -> VertexMap<f64> {
 an artifact of expressing diet as *which substance-bucket you draw from* at all.
 Under a receptor model the sea gets depth with no new axis, because a reef shark
 and an urchin differ in mass band, defence and vertical band.
+
+> **Id correction (2026-09-13).** This section is **withdrawn**, so nothing live
+> depends on it — but a reader skimming a withdrawn section for a free axis id
+> is exactly the accident that costs an afternoon. On `origin/main` today ids
+> 0-6 are taken and the next free id is **7**. `campaign/the-trencher` claims
+> 7-10 and is **not merged**, so once it lands the next free id is **11**. Do
+> not take an id from this brief; take it from `kernel/src/ecology.rs` in the
+> tree you are actually on.
 
 Also recorded, because it was checked and is a hard constraint on any
 axis-based fix — from `domains/species/src/lib.rs`, authored by Task 3:

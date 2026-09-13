@@ -110,11 +110,107 @@ const WALKING_SEED: u64 = 14;
 /// has no herd attractor within two hops (the nearest is ~0.0197 of a unit
 /// sphere away, ~125 km, and the world's 12,657 herd entries occupy 917
 /// distinct walk-band rooms out of a depth-13 mesh's hundreds of millions).
-/// It is not rare in general — 13 of seeds 0..23 do derive wild bodies — so
-/// this is once again a fact about seed 42 rather than about the feature.
-/// Seed 3 is the cheapest of them (71 bodies, 14 of them wild).
+/// It is not rare in general — so this is once again a fact about a
+/// particular seed rather than about the feature.
+///
+/// **Moved 3 -> 9 at The Tidemark, and the evidence is now a committed probe
+/// rather than a cited number.** That campaign's vent-expiry ending shifts
+/// placement (`maybe_vent_failure` refounds, which mints ids and shifts every
+/// subsequent community's identity), and seed 3's flagship stopped holding
+/// wild bodies: `labels == peopled == 62`, which is the vacuity this test's
+/// first assertion exists to catch. Re-seeding to keep a test green is only
+/// legitimate when the FEATURE is intact and the seed is unlucky, so that was
+/// measured rather than assumed — see [`wild_body_rate_over_seeds`]:
+///
+/// ```text
+///   derive wild bodies: 11/24 -> [1, 6, 7, 8, 9, 10, 13, 16, 17, 21, 23]
+///   cheapest: seed 9 (38 bodies, 16 of them wild)
+/// ```
+///
+/// The Roll recorded 13/24 for the same sweep. **Do not read 13 -> 11 as this
+/// campaign's cost**: many campaigns landed between the two measurements, and
+/// nothing here ablates them apart. The claim this note makes is only the one
+/// the number supports — the feature is plainly not broken, so the seed was
+/// unlucky. An ablation against `cfg.vent_tenancy` is the instrument that
+/// would settle attribution, and it was not run.
 /// type-audit: bare-ok(index)
-const WILD_SEED: u64 = 3;
+const WILD_SEED: u64 = 9;
+
+/// The measurement `WILD_SEED`'s note cites, made reproducible.
+///
+/// The Roll (Task 7) recorded "13 of seeds 0..23 do derive wild bodies" as the
+/// evidence that a seed without wild bodies is a fact about that seed and not
+/// about the feature — but committed no probe, so the next campaign to move
+/// `WILD_SEED` had to take the claim on trust or rebuild the sweep from
+/// scratch. The Tidemark had to move it (its vent-expiry ending shifts
+/// placement, and seed 3's flagship stopped holding wild bodies), so the sweep
+/// is committed here rather than cited.
+///
+/// **Read it before re-seeding this file.** Re-picking a seed to make a test
+/// pass is only legitimate when the FEATURE is intact and the seed is unlucky,
+/// and that is exactly what the rate over 0..23 answers. A rate near The Roll's
+/// 13/24 says the feature holds; a collapsed rate says something suppressed
+/// wild bodies and a new seed would be hiding it.
+///
+/// claim: rate(forall-seed 0..24, >0 derive wild bodies) — the floor is the
+/// only thing asserted, because the point is to justify a seed choice rather
+/// than to pin a rate: a band would make this a gate on a quantity every
+/// placement-touching campaign legitimately moves. The observed 11/24 is
+/// printed, not asserted.
+///
+/// `#[ignore]`: builds 24 worlds at roughly 12 s each (~5 min). Run it with
+/// `cargo nextest run -p hornvale-vessel --test suite -E 'test(wild_body_rate_over_seeds)' --run-ignored all --no-capture`
+#[test]
+#[ignore = "cost: builds 24 worlds (~5 min); a measurement, not a gate"]
+fn wild_body_rate_over_seeds() {
+    let mut with_wild = Vec::new();
+    let mut without = Vec::new();
+    println!("\n  seed  labels  peopled  wild  cheapest-metric(bodies)");
+    for seed in 0..24u64 {
+        let w = world_at(seed);
+        let Ok((wild_session, _)) = Session::start(&w, &PossessOpts::default()) else {
+            println!("  {seed:>4}  (no session)");
+            continue;
+        };
+        let peopled = {
+            let opts = PossessOpts {
+                wild_agents: false,
+                ..PossessOpts::default()
+            };
+            match Session::start(&w, &opts) {
+                Ok((s, _)) => s.npc_labels().len(),
+                Err(_) => continue,
+            }
+        };
+        let labels = wild_session.npc_labels().len();
+        let bodies = wild_session.bodies().len();
+        let wild = wild_session
+            .bodies()
+            .iter()
+            .filter(|b| b.village.is_none())
+            .count();
+        println!("  {seed:>4}  {labels:>6}  {peopled:>7}  {wild:>4}  {bodies:>6}");
+        if labels > peopled && wild > 0 {
+            with_wild.push((seed, bodies, wild));
+        } else {
+            without.push(seed);
+        }
+    }
+    println!(
+        "\n  derive wild bodies: {}/24 -> {:?}",
+        with_wild.len(),
+        with_wild.iter().map(|(s, _, _)| *s).collect::<Vec<_>>()
+    );
+    println!("  do not: {without:?}");
+    if let Some((seed, bodies, wild)) = with_wild.iter().min_by_key(|(_, b, _)| *b) {
+        println!("  cheapest: seed {seed} ({bodies} bodies, {wild} of them wild)");
+    }
+    assert!(
+        !with_wild.is_empty(),
+        "no seed in 0..24 derives wild bodies -- the FEATURE is broken, and \
+         re-seeding `WILD_SEED` would hide it"
+    );
+}
 
 #[test]
 fn day_zero_session_is_unchanged_until_you_wait() {
@@ -666,7 +762,10 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
     // derives the fauna standing within call rather than the world's top four
     // concentrations, and seed 42's flagship has no herd attractor within two
     // hops — see `WILD_SEED`'s own note for the measurement and for why this
-    // is a fact about seed 42 rather than about the feature.
+    // is a fact about a particular seed rather than about the feature. The
+    // seed moved 3 -> 9 at The Tidemark for that same reason, and the sweep
+    // behind it is `wild_body_rate_over_seeds` in this file rather than a
+    // number quoted from a campaign nobody can re-run.
     let w = world_at(WILD_SEED);
     let (mut wild_session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
 

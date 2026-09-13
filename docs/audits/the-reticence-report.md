@@ -34,7 +34,7 @@ Computed once, at `Seed(42)` — see this function's own module doc for why a fu
 | reef-mason | folk | Spirit | Wary | 4 |
 | sea-elf | folk | Spirit | Wary | 4 |
 | snow-elf | folk | Spirit | Wary | 4 |
-| svirfneblin | folk | Spirit | Wary | 4 |
+| svirfneblin | organized | God | Guarded | 2 |
 | triton | folk | Spirit | Wary | 4 |
 | vent-commensal | folk | Spirit | Wary | 4 |
 | wood-elf | organized | God | Guarded | 2 |

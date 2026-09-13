@@ -54,7 +54,7 @@ seed 42
   junctions       4165 links across 1575 system pairs; largest network 119 systems at one band (MAP-underworld-shortcut)
   by band         undercroft:4148  shallows:7915  deeps:14072  underdeep:3376  nadir:1026  
   by rock         regolith:1942  cover:715  basement:27880  roots:0  underneath:0  off-ladder:0
-  by origin       found:30451  made:86
+  by origin       found:30483  made:54
   past run length 0   (chambers beyond their run's drawn floors)
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
@@ -138,7 +138,7 @@ seed 7
   junctions       8253 links across 3007 system pairs; largest network 118 systems at one band (MAP-underworld-shortcut)
   by band         undercroft:7923  shallows:16455  deeps:20917  underdeep:10490  nadir:3442  
   by rock         regolith:4306  cover:3540  basement:51381  roots:0  underneath:0  off-ladder:0
-  by origin       found:59167  made:60
+  by origin       found:59166  made:61
   past run length 0   (chambers beyond their run's drawn floors)
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
@@ -222,7 +222,7 @@ seed 1234
   junctions       6937 links across 2348 system pairs; largest network 128 systems at one band (MAP-underworld-shortcut)
   by band         undercroft:5910  shallows:12104  deeps:19940  underdeep:7759  nadir:2581  
   by rock         regolith:2902  cover:2650  basement:42742  roots:0  underneath:0  off-ladder:0
-  by origin       found:48135  made:159
+  by origin       found:48166  made:128
   past run length 0   (chambers beyond their run's drawn floors)
   past branch cnt 0   (chambers beyond their system's drawn branches)
 

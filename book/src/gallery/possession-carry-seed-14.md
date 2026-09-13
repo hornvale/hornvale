@@ -48,7 +48,7 @@ publishes it now name the same world.)*
 
 ```text
 [room — old-growth timber]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
+Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 > enter
 [chamber — threshold]
@@ -98,7 +98,7 @@ You close the strongbox.
 You open the strongbox. Within it: a key.
 > out
 [room — old-growth timber]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
+Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 > enter
 [chamber — threshold]

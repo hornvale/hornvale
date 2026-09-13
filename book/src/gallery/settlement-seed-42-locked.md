@@ -1,15 +1,15 @@
 # The Peoples of Seed 42
 
-The land holds 349 settlement(s).
+The land holds 366 settlement(s).
 The chief abyssal-elf settlement, Roaṅṅaoṅraoṅ, holds 21 souls amid bathypelagic.
-The chief bugbear settlement, Doo, holds 18 souls amid tropical-seasonal-forest.
+The chief bugbear settlement, Doo, holds 11 souls amid tropical-seasonal-forest.
 The chief desert-dwarf settlement, Shaxasqashax, holds 57 souls amid savanna.
 The chief desert-elf settlement, Zzoaṅgeṅṅoṅšzaṅ, holds 27 souls amid savanna.
 The chief drow settlement, Roagdaopoogpao, holds 12 souls amid ice.
 The chief duergar settlement, Bana, holds 27 souls amid savanna.
 The chief gnoll settlement, Sngaqsoxpshapzhazno, holds 30 souls amid savanna.
 The chief goblin settlement, Deota, holds 32 souls amid taiga.
-The chief gully-dwarf settlement, Kanabnabag, holds 34 souls amid savanna.
+The chief gully-dwarf settlement, Katankanabnabag, holds 35 souls amid savanna.
 The chief high-elf settlement, Zromgo, holds 24 souls amid tropical-seasonal-forest.
 The chief hill-dwarf settlement, Shababkasas, holds 35 souls amid savanna.
 The chief hobgoblin settlement, Noabano, holds 85 souls amid tropical-seasonal-forest.
@@ -40,9 +40,9 @@ The chief wood-elf settlement, Zduuṅduteuṅtau, holds 24 souls amid tropical-
  o    oo                                                    o           
   o                             o                                       
                                                                         
-                     oo o               o                               
-                   ooooo o                                              
-                    oo                                                  
+                    o o o               o                               
+                   ooo o o                                              
+                    o                                                   
                   oo ooo                 oo    ooo                      
                   ooooo                        oooo                     
                                        oo oooooooo  o                   
