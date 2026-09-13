@@ -6064,6 +6064,16 @@ impl<'w> Session<'w> {
         if column.is_empty() {
             return Turn::Out("There is no water here to go down into.".to_string());
         }
+        // REACH, asked of the BODY rather than of its realm (The Tidemark,
+        // spec §3.8). `Realm::WATERWORLD.access` is `Access::Dive`, and a
+        // body that cannot cross deep water wades the sunlit band and goes
+        // no further; a `sea-elf` carries `SWIM` and takes the whole column
+        // while still HOLDING only the shelf, which is the separation §3.8
+        // exists to make. The floor a body's own limit puts under it is
+        // named the same way the sea's own floor is, below — a refusal that
+        // does not say what stopped you reads as a parse failure.
+        let reach =
+            crate::vantage::deepest_reachable_band(column.len(), self.driven_body().locomotion());
         let next = match self.submerged {
             None => Some(column[0]),
             Some(at) => column
@@ -6071,11 +6081,18 @@ impl<'w> Session<'w> {
                 .position(|s| *s == at)
                 .and_then(|i| column.get(i + 1).copied()),
         };
+        let next = next.filter(|st| {
+            column
+                .iter()
+                .position(|s| s == st)
+                .is_some_and(|i| i < reach)
+        });
         match next {
             Some(st) => {
                 self.submerged = Some(st);
                 self.out(self.describe_here(Perceiving::Body))
             }
+            None if reach < column.len() => Turn::Out(CANNOT_SWIM_REFUSAL.to_string()),
             None => Turn::Out(format!(
                 "You are already as deep as this water goes; the floor is {}.",
                 stratum_word(*column.last().expect("a non-empty column has a last"))
@@ -11551,6 +11568,14 @@ const NO_CAVE_TO_DELVE_REFUSAL: &str = "There is no cave here to delve into.";
 /// they asked about.
 /// type-audit: bare-ok(prose)
 const NOTHING_TO_DESCEND_REFUSAL: &str = "There is nothing here to descend into.";
+
+/// `dive`'s refusal at the bottom of a body's OWN reach rather than at the
+/// sea's floor (The Tidemark, spec §3.8). Names the body's limit rather than
+/// the water's, because the water goes on and it is this body that cannot
+/// follow it down — the same reason `UNDERGROUND_DEEP_WATER_REFUSAL` names a
+/// flooded passage that "you cannot swim".
+const CANNOT_SWIM_REFUSAL: &str =
+    "The water below you goes on into the dark, and you cannot swim it.";
 
 /// `ascend`'s refusal at the walk band — there is no way up from ground
 /// level, so it says that rather than falling through to the unknown-verb

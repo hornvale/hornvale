@@ -97,6 +97,8 @@ mod possess_target;
 mod possession_facts;
 #[path = "suite/possession_moves.rs"]
 mod possession_moves;
+#[path = "suite/reach_not_residence.rs"]
+mod reach_not_residence;
 #[path = "suite/resident_folds.rs"]
 mod resident_folds;
 #[path = "suite/session.rs"]
