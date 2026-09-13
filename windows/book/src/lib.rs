@@ -4740,11 +4740,27 @@ mod tests {
         // threshold. The placed COUNT is again unmoved at fifteen.
         // `reckoning_at_...` gains the Tedash's priesthood line back in the
         // same commit — the same people, read through a different surface.
+        // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
+        // THIRTEEN organized of the same nineteen placed. `duergar` and
+        // `kuo-toa` -- two of the four peoples the absorbed Underworld
+        // Peoples work added -- join the organized set, leaving six folk-only
+        // (desert-dwarf, desert-elf, gnoll, mountain-dwarf, sea-elf,
+        // snow-elf). A WORLD change again, not a placement-rule change: Task
+        // 4 routes `EnergySource::DetritalImport` onto the `DETRITUS` axis,
+        // which was flat on all land, so subterranean rungs now carry real
+        // import and underworld congregations scale differently. The placed
+        // COUNT is unmoved at nineteen, the same signal every re-pin above
+        // reports. Corroborated on the same two independent surfaces as
+        // every previous re-pin: `diachronic::LADDER_TABLE` reads seed 1's
+        // duergar and kuo-toa at `Predictive` where it read `Counted`, and
+        // `the_reckoning_renders_the_epoch_pair` gains the Fovfav's and
+        // Wodbog's four priesthood lines each in this same commit.
         assert_eq!(
             organized,
             vec![
                 "bugbear",
                 "drow",
+                "duergar",
                 "goblin",
                 "gully-dwarf",
                 "high-elf",
@@ -4752,12 +4768,13 @@ mod tests {
                 "hobgoblin",
                 "human",
                 "kobold",
+                "kuo-toa",
                 "svirfneblin",
                 "wood-elf",
             ],
-            "seed-1: eleven of the nineteen placed peoples are organized; \
-             desert-dwarf, desert-elf, duergar, gnoll, kuo-toa, \
-             mountain-dwarf, sea-elf and snow-elf are folk-only"
+            "seed-1: thirteen of the nineteen placed peoples are organized; \
+             desert-dwarf, desert-elf, gnoll, mountain-dwarf, sea-elf and \
+             snow-elf are folk-only"
         );
         assert_eq!(
             peoples.len(),
@@ -5754,6 +5771,19 @@ mod tests {
         // every day-number are BYTE-IDENTICAL — the reckoning ARITHMETIC did
         // not move, only the drawn names, and which peoples are organized
         // (ten of fifteen) is unchanged too.
+        // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
+        // THIRTEEN organized of nineteen placed. Fovfav (duergar) and Wodbog
+        // (kuo-toa) each GAIN their three-line priesthood run — the exact
+        // inverse of the shape gnoll's and desert-elf's losses took above,
+        // and the prose face of `diachronic::LADDER_TABLE` moving seed 1's
+        // duergar and kuo-toa from `Counted` to `Predictive` in this same
+        // commit. Cause: Task 4 routes `EnergySource::DetritalImport` onto
+        // the `DETRITUS` axis, which had been flat on all land, so the
+        // underworld peoples' congregations scale differently. Every other
+        // people's autonym, count and day is BYTE-IDENTICAL and the two group
+        // counts (6472 lunar-witnessing, 4010 solar-only) do not move at all:
+        // the reckoning ARITHMETIC did not move, only who has a priesthood to
+        // report it. Six lines added, zero changed, zero removed.
         let seed1 = render_volume(&generated(1));
         assert_eq!(
             seed1.reckoning[1].lines,
@@ -5769,6 +5799,9 @@ mod tests {
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
                 "The Roašror's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Fovfav, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Fovfav numbers the darkenings: 6472.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Fovfav's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Wakdao, the sky has darkened, now and again.".to_string(),
                 "Among the Qwootoqo, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Qwootoqo numbers the darkenings: 4010.".to_string(),
@@ -5799,6 +5832,9 @@ mod tests {
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
                 "The Ngongo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Wodbog, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Wodbog numbers the darkenings: 6472.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Wodbog's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Dazhaf, the sky has darkened, now and again.".to_string(),
                 "Among the Šzuašzez, the sky has darkened, now and again.".to_string(),
                 "Among the Šroašror, the sky has darkened, now and again.".to_string(),
@@ -5811,16 +5847,18 @@ mod tests {
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
                 "The Sruasrer's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
             ],
-            "seed 1: ten organized priesthoods of fifteen placed peoples (desert-dwarf, \
-             desert-elf, gnoll, sea-elf and snow-elf are folk-only — high-elf rejoined \
-             the organized set at The Glasshouse's Stage B Task 4, the thermostat); the \
-             lunar-witnessing group numbers 6472, the solar-only group 4010"
+            "seed 1: thirteen organized priesthoods of nineteen placed peoples \
+             (desert-dwarf, desert-elf, gnoll, mountain-dwarf, sea-elf and snow-elf are \
+             folk-only — duergar and kuo-toa joined the organized set at The Trencher's \
+             repair pass); the lunar-witnessing group numbers 6472, the solar-only \
+             group 4010"
         );
         assert_eq!(
             seed1.reckoning[1].margin,
             vec![
                 "In truth, the Bao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Roašror's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Fovfav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Qwootoqo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Dazha's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Šdoašded's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
@@ -5828,6 +5866,7 @@ mod tests {
                 "In truth, the Dweowbaw's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Naavea's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Ngongo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Wodbog's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Kxsonkxzo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Sruasrer's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 6472.".to_string(),
@@ -5993,6 +6032,14 @@ mod tests {
         // vertices across all peoples, the same mechanism Underworld Tasks 8
         // and 9 moved from the other side. None of them crosses a caste
         // threshold, which is why only the Saoza's block changes here.
+        // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
+        // THIRTEEN organized of nineteen placed at seed 2. The Saoza (drow)
+        // GAIN their three-line priesthood run and their one crisis line;
+        // nothing else at this seed moves, and the witnessed counts (81 and
+        // 49) and the taught day (36337) are unchanged again, so the
+        // reckoning arithmetic is untouched and only the caste threshold
+        // moved. Corroborated by `diachronic::LADDER_TABLE` reading seed 2's
+        // drow at `Predictive` where it read `Counted`.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -6004,6 +6051,9 @@ mod tests {
                 "Among the Takaz, the sky has darkened, now and again.".to_string(),
                 "Among the Boba, the sky has darkened, now and again.".to_string(),
                 "Among the Saoza, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Saoza numbers the darkenings: 81.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Saoza's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Pagam, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Pagam numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
@@ -6058,6 +6108,7 @@ mod tests {
             seed2.reckoning[1].margin,
             vec![
                 "In truth, the Koodzhoo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Saoza's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 // The Trencher (Task 4, 2026-09-11): the Saoza — the drow —
                 // gained a priesthood, so they now have a teaching to be wrong
                 // about. The paired half of the block above, and its inverse:
@@ -6155,6 +6206,17 @@ mod tests {
         // Seed 2 exchanging with no net change while seed 3 nets +1 is the
         // "moves both ways, and not monotone in roster size" reading this
         // file has carried since The Tense, now observed a further time.
+        // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
+        // TEN organized of nineteen placed at seed 3, and this seed moves the
+        // OTHER way — the Mo (svirfneblin) LOSE their three-line priesthood
+        // run and their one crisis line, the precise shape of a culture that
+        // lost its organized cult rather than its existence. Corroborated by
+        // `diachronic::LADDER_TABLE` reading seed 3's svirfneblin at
+        // `Counted` where it read `Predictive`. Both directions on one
+        // campaign is this table's own long-standing pattern (see the
+        // LADDER_TABLE header: five gains and four losses across the five
+        // seeds), and is why nothing here reads as "the change made cults
+        // more common".
         let seed3 = render_volume(&generated(3));
         // The Glasshouse (decision 0134, the terrain epoch): SEVEN organized,
         // the largest move of the three seeds. Drow, hobgoblin and wood-elf
@@ -6236,17 +6298,15 @@ mod tests {
                 "Among the Szubze, the sky has darkened, now and again.".to_string(),
                 "Among the Šropro, the sky has darkened, now and again.".to_string(),
                 "Among the Mo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Mo numbers the darkenings: 53.".to_string(),
-                "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Mo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Rutre, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Rutre numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
                 "The Rutre's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
             ],
-            "seed 3: nine organized priesthoods of fifteen placed peoples (desert-dwarf, \
-             desert-elf, gnoll, high-elf, hobgoblin and sea-elf are folk-only); the \
-             lunar-witnessing group numbers 53, the solar-only group 32"
+            "seed 3: ten organized priesthoods of nineteen placed peoples (desert-dwarf, \
+             desert-elf, duergar, gnoll, kuo-toa, mountain-dwarf, sea-elf, snow-elf and \
+             svirfneblin are folk-only); the lunar-witnessing group numbers 53, the \
+             solar-only group 32"
         );
         assert_eq!(
             seed3.reckoning[1].margin,
@@ -6260,7 +6320,6 @@ mod tests {
                 "In truth, the Zekzoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Vaar's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Dzhaojxo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Mo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Rutre's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 53.".to_string(),
             ]
@@ -6327,11 +6386,24 @@ mod tests {
         // Dngovgngav's — the same people, read through the same surface as
         // `seed_1_doctrine_sections_render`'s high-elf rejoining the
         // organized set. Every other line is byte-identical.
+        //
+        // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
+        // the Fovfav's (duergar) and the Wodbog's (kuo-toa) crisis lines are
+        // NEW, after the Roašror's and the Ngongo's respectively — the same
+        // two peoples, read through the same surface as
+        // `seed_1_doctrine_sections_render`'s duergar and kuo-toa joining the
+        // organized set, and the same two lines this campaign added to
+        // `the_reckoning_renders_the_epoch_pair`'s own margin. The true count
+        // (6472) and every other line are BYTE-IDENTICAL, which is the point
+        // worth reading: this test's law is that `reckoning_at` equals
+        // `reckoning_epochs` at the same day, and both surfaces gained
+        // exactly the same two peoples.
         assert_eq!(
             day100.margin,
             vec![
                 "In truth, the Bao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Roašror's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Fovfav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Qwootoqo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Dazha's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Šdoašded's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
@@ -6339,6 +6411,7 @@ mod tests {
                 "In truth, the Dweowbaw's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Naavea's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Ngongo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Wodbog's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Kxsonkxzo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Sruasrer's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the darkenings by day 36525 number 6472.".to_string(),

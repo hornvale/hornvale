@@ -848,6 +848,14 @@ fn two_herds_at_one_vertex_do_not_depend_on_derivation_order() {
 /// MUTATION THIS MUST FAIL AGAINST: delete the `derived_settlements` guard in
 /// `refresh_roll_at` (the `!self.derived_settlements.contains(&village.id)`
 /// test); the second call appends the settlement a second time.
+// Named construction site (decision 0092): sculpts seed 42 and fits its
+// climate and demography ONCE, solely to reconstruct the same herd set
+// `Session::start` builds for `herd_rooms`, so this test's isolation
+// precondition can exclude herds as well as settlements (see the comment
+// inside). Never a second, independent draw the sim depends on -- the world
+// under test is `common::build(42)` above, and this derivation is read-only
+// with respect to it.
+#[allow(clippy::disallowed_methods)]
 #[test]
 fn a_settlement_coming_within_call_is_derived_once_and_only_appended() {
     let world = common::build(42).expect("seed 42 builds");
@@ -855,6 +863,48 @@ fn a_settlement_coming_within_call_is_derived_once_and_only_appended() {
     let flagship = village_info(&world).expect("seed 42 places a flagship");
     let settlements = hornvale_settlement::all_settlements(&world);
     let mut mesh_memo = RoomMeshMemo::new();
+
+    // THE ISOLATION PRECONDITION COVERS HERDS AS WELL AS SETTLEMENTS SINCE
+    // 2026-09-12 (The Trencher's repair pass, ledger #25/#26), and the
+    // omission is what this test died of rather than anything about the
+    // append path.
+    //
+    // `refresh_roll_at` derives TWO populations from its window -- every
+    // underived settlement in it AND every underived herd standing in it --
+    // and this selection only ever excluded the first. On the pre-merge world
+    // no herd happened to stand near the candidate it picked, so the
+    // assertion below held by luck. On the merged world (Task 4's
+    // per-metabolite supply change plus the absorbed four underworld peoples)
+    // fourteen do, and the roster grew by 65 rather than 51.
+    //
+    // **MEASURED, because the shape of that failure is exactly the shape a
+    // real invariant break would have.** Instrumenting the append (temporary
+    // probe, run once, not committed) showed the 65 arrivals partition as 51
+    // desert-dwarf -- the settlement's population, EXACTLY as this test
+    // claims -- plus one body each for fourteen wild herds (black-dragon,
+    // carrion-crawler, dire-wolf, giant-constrictor-snake, giant-crocodile,
+    // giant-elk, giant-hyena, giant-scorpion, otyugh, owlbear, red-dragon,
+    // rhinoceros, white-dragon, woolly-mammoth). The append path is correct
+    // and the property this test names still holds; what had lapsed was the
+    // precondition that isolates it. The herds share the settlement's room,
+    // so they cannot be told apart by `home` -- the fix has to be in the
+    // SUBJECT, not in a filter applied after the fact.
+    let herd_rooms: std::collections::BTreeSet<_> = {
+        let wc = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("seed 42 fits");
+        let report = hornvale_worldgen::demography_report_from(&world, &wc, &terrain, &climate)
+            .expect("seed 42 reports demography");
+        hornvale_worldgen::herds::wild_herds_near(&wc, &report, |_| true)
+            .into_iter()
+            .filter_map(|herd| {
+                hornvale_kernel::Facet::containing(herd.position, hornvale_locale::walk_depth(&ctx))
+                    .pack()
+                    .ok()
+            })
+            .collect()
+    };
+
     let neighbour = settlements
         .iter()
         .filter(|v| v.id != flagship.id)
@@ -865,6 +915,9 @@ fn a_settlement_coming_within_call_is_derived_once_and_only_appended() {
                     [0]
                 .clone();
             let window = rooms_within(&candidate_body.home, ROLL_HOPS, &mut mesh_memo);
+            if window.iter().any(|room| herd_rooms.contains(room)) {
+                return false;
+            }
             settlements
                 .iter()
                 .filter(|settlement| {
@@ -883,7 +936,12 @@ fn a_settlement_coming_within_call_is_derived_once_and_only_appended() {
                 == 1
         })
         .cloned()
-        .expect("seed 42 places an isolated settlement within the roll radius");
+        .expect(
+            "seed 42 places a settlement within the roll radius that is isolated from BOTH \
+             other settlements and wild herds -- if this is what fails, the append path is \
+             untestable on this world and that is a coverage finding, not a licence to drop \
+             the herd half of the precondition",
+        );
 
     // That settlement's own room, and the entity `derive_npcs` mints for it —
     // read off a THROWAWAY ledger, so nothing here is what the session under

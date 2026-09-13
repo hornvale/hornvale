@@ -196,11 +196,67 @@ use hornvale_vessel::{PossessOpts, Session};
 /// test takes two fresh walks and requires their ledger hashes to agree, while
 /// asserting the reach floors on both; if an epoch leaves this seed unable to
 /// exercise the path, those floors fail loudly.
+///
+/// **REPOINTED 17 -> 23, 2026-09-12, The Trencher's repair pass (ledger
+/// #25/#26), and the FLOORS ARE WHAT CAUGHT IT — exactly as the paragraph
+/// above promised they would.** On the merged world (Task 4's per-metabolite
+/// supply change plus the absorbed four underworld peoples) a twelve-wait
+/// possession walk at seed 17 commits **zero** `agent-at` facts, where it
+/// committed 928 before. `KnownWater` is empty on that walk, so every
+/// two-run agreement below would have been vacuous; `assert_the_floors`
+/// refused instead of passing, which is the whole reason it exists.
+///
+/// The repair is a new witness seed, never a relaxed floor. Seeds 0..=24
+/// were re-walked on the merged world (temporary probe, run once, not
+/// committed), reporting bodies / `agent-at` / belief reads / past-instant
+/// reads / wall. **Seed 17 is not marginal, it is empty** — it joins 13 and
+/// 18 as the three seeds of 25 committing no `agent-at` fact at all.
+///
+/// Seed 23 is minted in its place, by the SAME rule the original sweep used:
+/// of the seeds that clear every floor AND record past-instant reads, take
+/// the cheapest that is under the campaign's standing 60 s ceiling for a
+/// witness. Six of the 25 record past-instant reads; the per-seed figures are
+/// one twelve-wait walk, the test itself takes two:
+///
+/// ```text
+/// seed  bodies  agent_at  beliefs  past     walk     test    verdict
+///   23      87       310    77868    518   25.4 s   24.1 s   MINTED (this campaign)
+///    6      86       262    78795    229    9.1 s        —   passed over: already EMITTER_SEED
+///                                                            in two files -- the same collision
+///                                                            the original sweep passed it over for
+///    9      59      1891    25145   3179   36.0 s   88.1 s   passed over: OVER the 60 s ceiling,
+///                                                            despite the most reach on offer
+///   15      99      1658    77134   1273   50.7 s        —   passed over: over the ceiling
+///    1     108      2393    90581   3139   58.5 s        —   passed over: over the ceiling
+///   16      83      2362    47087  10527   95.3 s        —   REFUSED: over the ceiling (as before)
+///   21     106      2391    75610   4438  225.5 s        —   REFUSED: over the ceiling (as before)
+///   17      49         0    29491      0    5.7 s        —   DEAD: floors refuse
+///   17 (before the merge, for comparison)
+///          67       928    28601   1194        —   22.1 s   the retired witness
+/// ```
+///
+/// Seed 23 carries less `agent-at` and past-instant reach than the witness it
+/// replaces (310 against 928, 518 against 1,194) and nearly three times the
+/// belief reads, and it clears every floor with margin at a cost within 2 s of
+/// the retired witness's. **Seed 9 is the honest near-miss and is recorded as
+/// one**: it has the most reach of any candidate by a wide margin, and it was
+/// passed over on cost alone, measured rather than estimated (88.088 s for the
+/// test, against 24.099 s for seed 23, both on this Mac minutes apart at load
+/// averages 19.20/30.80/25.04 and 14.69/26.15/23.87). A campaign that raises
+/// the ceiling should take seed 9.
+///
+/// **The wall figures are NOT quiet-box numbers**, unlike the module doc's
+/// table, and the comparison is made on that footing deliberately: the box
+/// carried other sessions' load throughout. They are used only to rank
+/// candidates measured minutes apart under comparable load, never as this
+/// witness's durable cost — which is `docs/timings/test-baseline-<host>.tsv`'s
+/// to record, for exactly the reason the module doc gives at length.
 /// type-audit: bare-ok(index)
-const WATER_BELIEF_SEED: u64 = 17;
+const WATER_BELIEF_SEED: u64 = 23;
 
 /// The cheap second world, for the reason one world is an anecdote. It moves
-/// under control A on a quarter of seed 17's wall time; it records no
+/// under control A on a quarter of the retired seed-17 witness's wall time;
+/// it records no
 /// past-instant belief read, so it witnesses the present-instant admission
 /// only. See [`WATER_BELIEF_SEED`] on why both are pinned rather than searched.
 /// type-audit: bare-ok(index)
@@ -294,7 +350,7 @@ fn assert_the_floors(label: &str, run: &WalkRun) {
 /// the retired instrument rather than a fact about the fold: Task 3's
 /// FOLD-equals-SCAN witnesses catch control B on every real shape.
 #[test]
-fn the_kerf_seed_17_walk_is_deterministic_with_its_floors() {
+fn the_kerf_seed_23_walk_is_deterministic_with_its_floors() {
     let first = walk(WATER_BELIEF_SEED);
     let second = walk(WATER_BELIEF_SEED);
     println!(
@@ -302,11 +358,11 @@ fn the_kerf_seed_17_walk_is_deterministic_with_its_floors() {
          {} agent-at facts, {} belief reads ({} at a past instant)",
         first.ledger_hash, first.bodies, first.agent_at, first.beliefs, first.beliefs_in_the_past
     );
-    assert_the_floors("seed 17 first run", &first);
-    assert_the_floors("seed 17 second run", &second);
+    assert_the_floors("seed 23 first run", &first);
+    assert_the_floors("seed 23 second run", &second);
     assert!(
         first.beliefs_in_the_past > 0 && second.beliefs_in_the_past > 0,
-        "seed 17 is minted as the PAST-INSTANT witness: the first run made {} belief reads \
+        "seed 23 is minted as the PAST-INSTANT witness: the first run made {} belief reads \
          before a committed sighting and the second made {} — if either is now zero the seed \
          no longer buys what it was chosen for, and that is a finding about the sim, not a \
          broken test",

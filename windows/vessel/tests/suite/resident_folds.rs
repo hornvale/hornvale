@@ -164,12 +164,26 @@ const EMITTER_SEARCH_WAITS: usize = 2;
 /// seed-6 measurement that would have gone on describing a different world in
 /// silence.
 ///
+///
+/// **THE SEARCH MOVED 6 -> 1, 2026-09-12, The Trencher's repair pass (ledger
+/// #25/#26), and the constant is what made it loud — which is the whole
+/// reason it exists.** On the merged world (Task 4's per-metabolite supply
+/// change plus the absorbed four underworld peoples) the two-wait search over
+/// `common::SIGHT_SEEDS` for "the hazard fold replays an emitter's affect at
+/// a past visit day" lands on seed **1**, not seed 6. The SEARCH remains the
+/// authority and it still found a qualifying world, so the property this
+/// witness is about is intact and nothing about it is relaxed; what moved is
+/// which world exhibits it first. Recorded as the finding the assertion
+/// message asks for: the merged world's underworld energy budget changes
+/// where emitters sit relative to remembered rooms, so the halo pre-filter
+/// and terrain shortcut admit a different set of seeds to the replay path.
+///
 /// It is the same number `ledger_hash_witness.rs` pins for the same search, and
 /// deliberately a second copy rather than an import: each test module keeps its
 /// own, exactly as [`WALKING_SEED`] is a fifth copy of 14, so each site refuses
 /// on its own terms if an epoch moves the world under it.
 /// type-audit: bare-ok(index)
-const EMITTER_SEED: u64 = 6;
+const EMITTER_SEED: u64 = 1;
 
 // ---------------------------------------------------------------------------
 // Step 1: the rule-2 witness.
@@ -3485,9 +3499,9 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
     // turn 5 and 2,251 over 3,481 at turn 20 — total 2.340x, quotient FALLING
     // from 2.572 to 0.647.
     //
-    // On the 2/6 script it actually runs now, seed 6 gives **598 segments over
-    // 223 replays at turn 2 and 806 over 373 at turn 6**: the total grows
-    // **1.348x** and the per-replay quotient falls from **2.682 to 2.161
+    // On the 2/6 script it actually runs now, seed 6 gave **598 segments over
+    // 223 replays at turn 2 and 806 over 373 at turn 6**: the total grew
+    // **1.348x** and the per-replay quotient fell from **2.682 to 2.161
     // (0.81x)**, against the 1.5x allowance. All three cuts report the same two
     // shapes — a flat-or-falling quotient and a total growing slower than the
     // history — which is what makes the reading a property of the fold rather
@@ -3507,13 +3521,36 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
     // Task 5c review's one carried Important. The total guard is the only
     // discriminating half of this witness once the quotient is asserted against
     // a moving denominator, so a bare `segment_growth < history_growth` says
-    // nothing about how much room it has. Measured on the 2/6 script:
+    // nothing about how much room it has. Measured on the 2/6 script at seed 6:
     // **`history_growth` = 2.28x (549 roster facts at turn 2, 1,251 at turn 6)
-    // against `segment_growth` = 1.348x (598 segments, 806)** — the total sits
-    // at 59% of its ceiling, so the guard trips once the fold's integration
-    // work grows 1.7x faster than it does today. That is a real margin and not
+    // against `segment_growth` = 1.348x (598 segments, 806)** — the total sat
+    // at 59% of its ceiling, so the guard tripped once the fold's integration
+    // work grew 1.7x faster than it did then. That is a real margin and not
     // a generous one, and it is the number to re-read after any change to the
     // replay path.
+    //
+    // **RE-MEASURED ON SEED 1, 2026-09-12, The Trencher's repair pass (ledger
+    // #25/#26), because the search moved off seed 6 and this assertion's own
+    // message demands it.** See [`EMITTER_SEED`] for why the search moved. The
+    // two samples on the merged world, seed 1, same 2/6 script:
+    //
+    //   turn 2:   616 segments over   907 roster facts,   505 replays
+    //   turn 6:   600 segments over 2,937 roster facts, 2,197 replays
+    //   per-replay quotient 1.220 -> 0.273 (0.22x)
+    //   segment_growth 0.974x against history_growth 3.24x  (30% of ceiling)
+    //
+    // **The reading is the same shape, and stronger on both axes.** The
+    // per-replay quotient FALLS (0.22x, where seed 6 fell 0.81x) and the total
+    // does not grow at all (0.974x, where seed 6 grew 1.348x) while the roster
+    // history grows 3.24x. That is the fourth script/seed combination
+    // reporting a flat-or-falling quotient and a total growing slower than the
+    // history, which is what makes the reading a property of the fold rather
+    // than of one world or one script length. The total now sits at **30% of
+    // its ceiling** rather than 59%, so the margin WIDENED: the guard trips
+    // once the fold's integration work grows 3.3x faster than it does today.
+    // That is a looser trip point than seed 6 gave, and it is the honest cost
+    // of the search landing where it landed — the quotient guard, not the
+    // total guard, is the sharp half on this world.
     let early_per_replay = early.segments as f64 / early.replays as f64;
     let late_per_replay = late.segments as f64 / late.replays as f64;
     let history_growth = late.trail_facts as f64 / early.trail_facts.max(1) as f64;
@@ -3608,13 +3645,31 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
 /// `is_water` filter would pass vacuously — spec §3 rule 3's floor (a)
 /// failing by construction. Seed 17 was found by The Kerf's Task 1 seed
 /// sweep and is the same world `the_kerf.rs` mints its sharper hash constant
-/// on: 67 bodies, 928 `agent-at` facts, 28,601 belief reads of which 1,194
-/// run at an instant strictly before a committed sighting. Each test module
+/// on. (The retired seed-17 witness measured 67 bodies, 928 `agent-at`
+/// facts, 28,601 belief reads of which 1,194 ran at an instant strictly
+/// before a committed sighting; see the repoint note below for the seed that
+/// replaced it and why.) Each test module
 /// keeps its own copy of a seed constant, as [`WALKING_SEED`] and
 /// [`EMITTER_SEED`] already do here, so every site refuses on its own terms
 /// if an epoch moves the world under it.
+///
+/// **REPOINTED 17 -> 23, 2026-09-12, The Trencher's repair pass (ledger
+/// #25/#26).** On the merged world a twelve-wait possession walk at seed 17
+/// commits ZERO `agent-at` facts (it committed 928 before), so
+/// `kerf_fold_equals_scan`'s own anti-vacuity panic -- "the ledger holds no
+/// agent-at fact, so this sweep would be vacuous" -- fired instead of the
+/// sweep running over nothing. Seed 17 is not marginal on the merged world,
+/// it is empty: it is one of three seeds in 0..=24 committing no `agent-at`
+/// fact at all. That refusal is the guard working, and the repair is a new
+/// witness seed rather than a weaker guard. Seed 23 measures 87 bodies, 310
+/// `agent-at` facts and 77,868 belief reads of which 518 run at an instant
+/// strictly before a committed sighting. The selection sweep, the seeds
+/// passed over, and the cost ceiling that decided between them are recorded
+/// once, in `the_kerf.rs`'s `WATER_BELIEF_SEED`; this file keeps its own copy
+/// of the constant for the reason the sentence above gives, and the two must
+/// move together.
 /// type-audit: bare-ok(index)
-const KERF_WATER_SEED: u64 = 17;
+const KERF_WATER_SEED: u64 = 23;
 
 /// How many `wait`s the possession shape's script takes — the same twelve
 /// `the_kerf.rs` walks, kept as this module's own constant rather than

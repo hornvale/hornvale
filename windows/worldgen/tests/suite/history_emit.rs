@@ -718,8 +718,9 @@ fn parent_of(
     }
 }
 
-/// claim: structural(seed: [42,7,1000]) — every observed key collision is a
-/// genuine material tie, and the live panel exercises at least one collision.
+/// claim: structural(seed: [42,7,1000,3,5]) — every observed key collision is
+/// a genuine material tie, and the live panel exercises at least one
+/// collision.
 #[test]
 fn distinct_layers_tie_only_on_genuine_material_matches() {
     // Before The Salt, this test asserted the comparator was TOTAL: the
@@ -737,9 +738,28 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // founding coordinates are themselves equal, so the key is doing
     // exactly what its definition says, not silently colliding two
     // occupations the world actually distinguishes.
+    // **THE PANEL GREW BY TWO SEEDS — 2026-09-12, The Trencher's repair pass
+    // (ledger #25/#26), and the seeds are what changed, not the assertion.**
+    // On the merged world (Task 4's per-metabolite supply change plus the
+    // four absorbed underworld peoples) the original 42/7/1000 panel produced
+    // **zero** ties over 9,782 compared pairs, so every `assert_eq!` in the
+    // loop below stopped running and the `ties > 0` guard said so — which is
+    // the anti-vacuity guard working, not a broken test. Ties are rare by
+    // construction (they need two occupations at one vertex agreeing on
+    // founded, ended, peak population AND predecessor coordinates), so
+    // losing the last one to a world movement is an ordinary hazard for this
+    // panel.
+    //
+    // The repair is more corpus, never a weaker guard. A sweep of 27 seeds
+    // on the merged world (temporary probe, run once, not committed) found
+    // ties on 6 of them: seeds 2 (1 tie), 3 (2), 5 (2), 11 (1), 13 (1) and
+    // 14 (2). Seeds 3 and 5 join the panel — two seeds, not one, so a single
+    // future world movement cannot vacate it again — and 42/7/1000 stay,
+    // because the collision-free half of the corpus is still doing the
+    // "no spurious tie" work the loop's `assert_eq!`s perform.
     let mut pairs = 0u64;
     let mut ties = 0u64;
-    for seed in [42u64, 7, 1000] {
+    for seed in [42u64, 7, 1000, 3, 5] {
         let w = build_world(
             Seed(seed),
             &Default::default(),
@@ -774,7 +794,7 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     }
     assert!(
         pairs > 0,
-        "compared zero occupation pairs across seeds 42/7/1000 — this test proves nothing \
+        "compared zero occupation pairs across seeds 42/7/1000/3/5 — this test proves nothing \
          until at least one site restacks (pairs={pairs})"
     );
     assert!(

@@ -99,8 +99,87 @@ fn every_seed_42_occupation_reconstructs_to_its_committed_integral() {
     println!("clamped rectangles: {clamped_count} of {total} seed-42 occupations");
     // The Underworld Peoples re-seating introduces one clamped occupation in
     // seed 42; the reconstruction invariant above still holds for it.
+    //
+    // THE TRENCHER re-pin 1 -> 0 (2026-09-12, the repair pass, ledger
+    // #25/#26). The MERGED world -- Task 4's per-metabolite supply change
+    // plus the absorbed four peoples -- reseats the records again and seed
+    // 42's one clamped occupation is gone, returning this count to the 0 it
+    // read before the Underworld Peoples landed (which is also the value
+    // this test's module doc still describes as "the ledger's own
+    // prediction"). The reconstruction invariant is untouched: all 1,028
+    // occupations still reconstruct, and the peak+0.5 bound above still runs
+    // on every one of them.
+    //
+    // **COVERAGE CONSEQUENCE, and it is why this re-pin does not stand
+    // alone.** At 0 the `Shape::Rectangle { clamped: true }` arm of the
+    // match above never executes, so its `integral <= person_years`
+    // assertion measures nothing -- and a sweep of the tree found that arm
+    // had NO other coverage anywhere: `clamped` is constructed only in
+    // `domains/history/src/trajectory.rs`'s private `rectangle`, and no test
+    // in `domains/history` or `windows/lot` ever built one by hand. A live
+    // corpus was the whole of it. So the clamped case is now pinned
+    // DIRECTLY, in `a_clamped_rectangle_honours_the_peak_and_under_integrates`
+    // below, where no world movement can vacate it again; this count stays a
+    // descriptive readout of the committed world, which is all its own doc
+    // ever claimed it was.
     assert_eq!(
-        clamped_count, 1,
-        "the ledger's own reading of seed 42 found 1 clamped occupation; if this moved, say so"
+        clamped_count, 0,
+        "the ledger's own reading of seed 42 found 0 clamped occupations; if this moved, say so"
+    );
+}
+
+/// The clamped-`Rectangle` arm of
+/// `every_seed_42_occupation_reconstructs_to_its_committed_integral`, pinned
+/// on a HAND-BUILT case rather than on whatever the committed world happens
+/// to contain (The Trencher, 2026-09-12, ledger #25/#26).
+///
+/// Seed 42 carried one clamped occupation before this campaign and carries
+/// none after, and nothing else in the tree ever built one: `clamped` is set
+/// only inside `domains/history::trajectory`'s private `rectangle`, so for
+/// the life of that flag its only exercise was a live corpus that a world
+/// movement could -- and did -- take away silently. `shape_of` is a pure
+/// function of five numbers, so the case needs no world at all.
+///
+/// The construction: `person_years` deliberately exceeds what the span can
+/// hold at the committed peak (100 years x peak 10 admits at most 1,050
+/// person-years at the peak+0.5 bound; 5,000 is asked for), which is the
+/// real situation `rectangle`'s doc describes -- a record credited more
+/// epochs than its reconstructed tenure has room for. `p0` is set to the
+/// peak so neither the `RisePlateau` nor the `Triangle` fit can be admitted
+/// ahead of the rectangle.
+///
+/// Both halves of the clamp's contract are asserted, because each can fail
+/// without the other: the level HONOURS the peak (`population_at` never
+/// exceeds `peak + 0.5`, the guarantee `rectangle` exists to make by
+/// construction), and the integral UNDER-states the committed person-years
+/// rather than being silently wrong.
+#[test]
+fn a_clamped_rectangle_honours_the_peak_and_under_integrates() {
+    let (founded, end, peak, person_years, p0) = (0.0, 100.0, 10u32, 5_000.0, 10.0);
+    let s = shape_of(founded, end, peak, person_years, p0);
+    let Shape::Rectangle { clamped, level, .. } = s else {
+        panic!("an over-credited record reconstructs as a Rectangle, got {s:?}");
+    };
+    assert!(
+        clamped,
+        "the clamp must FIRE here, or this test pins the unclamped arm a          second time and the clamped arm stays uncovered: level {level}"
+    );
+    let bound = f64::from(peak) + 0.5;
+    assert!(
+        (level - bound).abs() < 1e-12,
+        "a clamped rectangle sits exactly at peak + 0.5, got {level}"
+    );
+    for year in [0.0, 1.0, 50.0, 99.0, 100.0] {
+        assert!(
+            population_at(&s, year) <= bound + 1e-9,
+            "a clamped rectangle honours the committed peak at year {year}: {}",
+            population_at(&s, year)
+        );
+    }
+    assert!(
+        integral(&s) < person_years,
+        "a clamped rectangle integrates to LESS than the committed \
+         person-years -- honestly short, never silently wrong: {} vs {person_years}",
+        integral(&s)
     );
 }

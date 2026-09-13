@@ -506,8 +506,24 @@ const CULVERT_WATER_WAITS: usize = 12;
 /// The seed the water-belief possession shape walks. A module-local copy of
 /// `resident_folds.rs`'s own `KERF_WATER_SEED`, for the reason
 /// [`CULVERT_WATER_WAITS`] gives.
+///
+/// **REPOINTED 17 -> 23, 2026-09-12, The Trencher's repair pass (ledger
+/// #25/#26).** On the merged world a twelve-wait possession walk at seed 17
+/// commits ZERO `agent-at` facts (it committed 928 before), so
+/// `kerf_fold_equals_scan`'s own anti-vacuity panic -- "the ledger holds no
+/// agent-at fact, so this sweep would be vacuous" -- fired instead of the
+/// sweep running over nothing. Seed 17 is not marginal on the merged world,
+/// it is empty: it is one of three seeds in 0..=24 committing no `agent-at`
+/// fact at all. That refusal is the guard working, and the repair is a new
+/// witness seed rather than a weaker guard. Seed 23 measures 87 bodies, 310
+/// `agent-at` facts and 77,868 belief reads of which 518 run at an instant
+/// strictly before a committed sighting. The selection sweep, the seeds
+/// passed over, and the cost ceiling that decided between them are recorded
+/// once, in `the_kerf.rs`'s `WATER_BELIEF_SEED`; this file keeps its own copy
+/// of the constant for the reason the sentence above gives, and the two must
+/// move together.
 /// type-audit: bare-ok(index)
-const CULVERT_WATER_SEED: u64 = 17;
+const CULVERT_WATER_SEED: u64 = 23;
 
 /// The seed-42 script's non-empty-ledger floor: how many bodies must commit
 /// at least one new fact over its sixty ticks.
@@ -528,10 +544,11 @@ const CULVERT_WATER_SEED: u64 = 17;
 /// type-audit: bare-ok(count)
 const SEED_42_MIN_BODY_COUNT: usize = 2;
 
-/// The seed-17 script's non-empty-ledger floor.
+/// The water-belief script's non-empty-ledger floor ([`CULVERT_WATER_SEED`],
+/// seed 23 since The Trencher; seed 17 when this was written).
 ///
 /// Two, and it is a floor rather than the observed value: twelve waits over a
-/// roster of 67 commit far more than two bodies' worth of facts, and pinning
+/// roster of dozens commit far more than two bodies' worth of facts, and pinning
 /// the observed count would make this witness a golden of the walk it is
 /// supposed to have stopped pinning. The floor asserts the ledger is not
 /// empty; the equality below asserts determinism; nothing here asserts a
@@ -539,7 +556,8 @@ const SEED_42_MIN_BODY_COUNT: usize = 2;
 /// type-audit: bare-ok(count)
 const WATER_MIN_BODY_COUNT: usize = 2;
 
-/// The belief-rich possession shape: seed 17, twelve `wait`s, no `look` —
+/// The belief-rich possession shape: [`CULVERT_WATER_SEED`], twelve `wait`s,
+/// no `look` —
 /// `resident_folds.rs`'s `kerf_possession_ledger` walk, reached independently
 /// here (that function is private to its own file) rather than reused, since
 /// this module has no reason to depend on `resident_folds.rs`.

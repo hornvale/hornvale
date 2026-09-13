@@ -303,7 +303,15 @@ mod tests {
         let terrain = crate::terrain_of(&world).expect("seed 42 sculpts");
         let out = render_made_population(&world, &terrain);
         for needle in [
-            "the Made population: 100 occupied columns",
+            // 100 -> 60, 2026-09-12, The Trencher's repair pass (ledger
+            // #25/#26): the merged world seats 60 historical occupied
+            // underworld columns on seed 42. The count is deliberately kept
+            // in the needle rather than loosened to a bare prefix -- it is
+            // the SAME witness `delve_seating`'s
+            // `a_historically_settled_column_is_made_at_its_seated_rung_and_nowhere_else`
+            // pins, and pinning it in both places is what makes the two
+            // readings of one number disagree loudly if they ever diverge.
+            "the Made population: 60 occupied columns",
             "heart decile <= 5:",
             "(frozen floor 0.6667; FROM Made levels TO the Heart's depth decile)",
             "doors on Made rungs:",

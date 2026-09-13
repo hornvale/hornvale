@@ -139,7 +139,29 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// classifier's corpus. This is a calibration readout, not a change to the
 /// classifier or its typological stages; the historical 18-way baseline above
 /// remains preserved in the chronicle.
-const BASELINE: f64 = 0.7625935162094764;
+///
+/// **The Trencher: 0.7625935162094764 -> 0.7633816908454227** (2026-09-12,
+/// the repair pass, ledger #25/#26). Exact rationals: 1529/2005 -> 1526/1999,
+/// so the corpus lost six words and the classifier lost three correct
+/// assignments, a rise of 0.00079. The cause is upstream of the classifier
+/// entirely: `book/src/reference/dictionary-generated.md` is a generated
+/// artifact, and it was rebuilt twice on this branch -- once at
+/// `514695d2d` (Task 4's per-metabolite subterranean supply) and once at the
+/// 169-commit absorb `c68ecde58`. A calibration READOUT, not a target;
+/// nothing in this campaign touches the classifier, the typological stages,
+/// or the dictionary generator. Never tuned.
+///
+/// PROSE SITES QUOTING AN ASSIGNMENT-ACCURACY NUMBER, swept 2026-09-12 and
+/// deliberately LEFT ALONE, because each states a reading its own campaign
+/// took and is correct in that tense: `book/src/chronicle/the-burr.md`
+/// (0.6795 -> 0.7900, and 0.7994579945799458 as "the campaign's last
+/// measurement"), `book/src/chronicle/the-mortise.md` (0.7978316326530612 ->
+/// 0.798234552332913, with its own numerator/denominator decomposition),
+/// `book/src/open-questions.md`, `docs/superpowers/specs/2026-08-16-the-burr-design.md`
+/// and `docs/superpowers/ledgers/2026-09-06-the-murrain.md`. None of them
+/// asserts the CURRENT pin, so none of them is stale; rewriting another
+/// campaign's chronicle to carry this campaign's number would make them so.
+const BASELINE: f64 = 0.7633816908454227;
 
 /// The chance floor for a 22-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

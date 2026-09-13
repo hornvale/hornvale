@@ -100,13 +100,37 @@ fn h4_positive_control_the_divergence_detector_can_fire() {
 }
 
 /// **H1 — the improvising arms are distributed as preregistered** (spec
-/// section 5). Frozen before the code: 19 peoples, organized 13, folk 6,
-/// doctrine 0. Enumerated with `hornvale_species::society_registry()` — the
-/// same fifteen-people roster Task 6's `render_reticence_report`
-/// (`windows/lab/src/reticence.rs`) already walks, so this test's
-/// denominator is provably the committed report's own. A moved number here
-/// means the WORLD moved (a genesis or lexicon change), not that the
-/// prediction was loose — chase it, do not adjust the assertion to match.
+/// section 5).
+///
+/// **THE FROZEN PREDICTION, restored verbatim 2026-09-12 (The Trencher's
+/// repair pass, ledger #25/#26): 15 peoples, organized 9, folk 6, doctrine
+/// 0.** That is what `a720d5cf2` (2026-08-26) froze before the code, and it
+/// is what this line said through The Winze's re-pin and The Murrain's. At
+/// `43208f575` (2026-09-09, "test: refresh underworld calibration
+/// witnesses") it was REWRITTEN to "19 peoples, organized 13, folk 6" — that
+/// campaign's own readout, copied over the prediction it was supposed to be
+/// tested against. A preregistration that is re-authored to equal its
+/// readout cannot be falsified by it, so the headline claim ("distributed as
+/// preregistered") had become true by construction. Restored, and separated
+/// from the readout below, so it can be wrong again.
+///
+/// **AND IT IS NOW WRONG, WHICH IS THE POINT.** The roster the prediction
+/// was frozen over held 15 peoples; it holds 19. Decision 0016's rule
+/// applies exactly: a falsified prediction is a finding, not a failure, and
+/// the honest record is that the prediction was frozen against a roster that
+/// a later campaign grew. It is not evidence about the improvising arms.
+///
+/// **THE READOUT SERIES** (each a re-pin of the assertion below, never of
+/// the prediction above): (9, 6) at The Reticence over 15 peoples; (8, 7)
+/// at The Winze; (10, 5) at The Murrain; (13, 6) at the Underworld Peoples
+/// over 19; (12, 7) here.
+///
+/// Enumerated with `hornvale_species::society_registry()` — the same roster
+/// Task 6's `render_reticence_report` (`windows/lab/src/reticence.rs`)
+/// already walks, so this test's denominator is provably the committed
+/// report's own. A moved number here means the WORLD moved (a genesis or
+/// lexicon change), not that the prediction was loose — chase it, do not
+/// adjust the assertion to match, and never adjust the PREDICTION to match.
 // Named construction site (decision 0092): sculpts/fits once, for this
 // test's own denominator — never a second, independent draw the sim depends
 // on.
@@ -135,7 +159,22 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
     // THE UNDERWORLD re-pin: (10, 5) -> (13, 6). Adding the four peoples
     // changes the roster and the deterministic lexicons this arm assignment
     // reads. A readout, not a target.
-    assert_eq!((god, spirit), (13, 6), "frozen arm counts over 19 peoples");
+    //
+    // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
+    // (13, 6) -> (12, 7). One people crosses from organized to folk on the
+    // MERGED world -- Task 4's per-metabolite supply change plus the
+    // absorbed four peoples. The roster is unmoved at 19 and the total is
+    // unmoved at 19, so this is a cult-form movement, not a placement one:
+    // the same lever `book/src/lib.rs`'s seed-1/2/3 doctrine pins record
+    // moving in both directions this campaign. A readout, not a target.
+    assert_eq!(
+        (god, spirit),
+        (12, 7),
+        "arm counts over the current 19-people roster (the FROZEN prediction \
+         is 15 peoples / 9 organized / 6 folk and is falsified by the roster \
+         having grown -- see this test's doc comment; do not copy this \
+         readout over it)"
+    );
     assert_eq!(
         god + spirit + wordless,
         19,

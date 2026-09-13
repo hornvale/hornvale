@@ -39,16 +39,25 @@ use hornvale_worldgen::{
 use std::collections::BTreeMap;
 
 fn seed42() -> World {
+    world_of(42)
+}
+
+/// The same build at an arbitrary seed. Exists because seed 42 stopped
+/// exercising `parent-of`'s multi-object case (see
+/// `a_forebear_with_more_than_one_descendant_carries_more_than_one_fact_without_contradiction`);
+/// a test whose SUBJECT has left the world needs a new subject, not a
+/// relaxed assertion.
+fn world_of(seed: u64) -> World {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     build_world_to(
-        Seed(42),
+        Seed(seed),
         &SkyPins::default(),
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
         BuildDepth::Full,
     )
-    .expect("seed 42 builds")
+    .unwrap_or_else(|e| panic!("seed {seed} builds: {e:?}"))
 }
 
 /// The promoted person who founded `community`, by reading `person-founded`
@@ -296,10 +305,27 @@ fn a_forebear_with_more_than_one_descendant_carries_more_than_one_fact_without_c
     // fact of EACH predicate satisfy the assertion without either predicate
     // individually ever needing a second object — which would have passed
     // this test even if only `KIN_OF` (not `PARENT_OF`) actually needed
-    // `functional: false` on this seed. Both are measured separately below,
-    // and both are non-vacuous on seed 42 (`parent-of`: 6 subjects with 2
-    // objects; `kin-of`: 5 subjects with up to 3).
-    let w = seed42();
+    // `functional: false` on this seed. Both are measured separately below.
+    //
+    // **THE SUBJECT MOVED OFF SEED 42 — 2026-09-12, The Trencher's repair
+    // pass (ledger #25/#26), and the seed is what changed, not the
+    // assertion.** On the merged world (Task 4's per-metabolite supply
+    // change plus the four absorbed underworld peoples) seed 42 commits 22
+    // `parent-of` facts across 22 DISTINCT subjects — max multiplicity 1 —
+    // so the `parent-of` half of this test became vacuous and said so
+    // loudly, which is the anti-vacuity guard working. `kin-of` on seed 42
+    // is untouched (73 facts, 67 subjects, max 3).
+    //
+    // The repair is a new exercising subject, never a weaker guard. A sweep
+    // of seeds 1..=48 on the merged world (temporary probe, run once, not
+    // committed) found seed 42 is the **only** one of the 48 whose
+    // `parent-of` multiplicity is 1: every other seed carries at least one
+    // forebear with two descendants. Seed 1 is taken as the witness here —
+    // `parent-of` 31 facts / 24 subjects / max 2, `kin-of` 97 facts / 82
+    // subjects / max 3 — so BOTH halves are non-vacuous on it. Seed 42's
+    // collapse is a fact about that one world, not about the predicate
+    // definitions, which is exactly why the fix is to move the witness.
+    let w = world_of(1);
     let mut parent_of_counts: BTreeMap<EntityId, usize> = BTreeMap::new();
     for f in w.ledger.find(PARENT_OF) {
         *parent_of_counts.entry(f.subject).or_insert(0) += 1;
@@ -310,13 +336,14 @@ fn a_forebear_with_more_than_one_descendant_carries_more_than_one_fact_without_c
     }
     assert!(
         parent_of_counts.values().any(|&n| n > 1),
-        "seed 42 must have at least one forebear named as the subject of more \
+        "seed 1 must have at least one forebear named as the subject of more \
          than one parent-of fact on its own — otherwise parent-of's \
-         functional: false is unexercised on this seed"
+         functional: false is unexercised on this seed (seed 42 is the one \
+         seed in 1..=48 that no longer exercises it; see the comment above)"
     );
     assert!(
         kin_of_counts.values().any(|&n| n > 1),
-        "seed 42 must have at least one forebear named as the subject of more \
+        "seed 1 must have at least one forebear named as the subject of more \
          than one kin-of fact on its own — otherwise kin-of's \
          functional: false is unexercised on this seed"
     );
@@ -355,11 +382,26 @@ fn kinship_pass_is_deterministic_across_two_independent_builds() {
 /// committed current-world baseline in
 /// `tests/fixtures/person-facts-seed-42.json`. The older
 /// `pre-kinship-person-facts-seed-42.json` remains historical evidence, but
-/// The Underworld changed seed 42's settlement roster enough that the current
-/// world carries 1,584 person facts. Comparing the live build against the
+/// The Underworld changed seed 42's settlement roster enough that those worlds
+/// are not the same one. Comparing the live build against the
 /// current serialized baseline keeps this guard
 /// meaningful without pretending those worlds are the same. A perturbed name,
 /// birth day, founding day or death day still fails this test.
+///
+/// **Refreshed 2026-09-12, The Trencher's repair pass (ledger #25/#26), and
+/// this is the THIRD world this baseline has described.** The merged world --
+/// Task 4's per-metabolite supply change plus the absorbed four underworld
+/// peoples -- promotes 227 persons where the pre-merge world promoted 249,
+/// so the baseline moved 1,584 -> 1,487 facts. The refresh is mechanical and
+/// reproducible, which the two earlier hand-authored refreshes were not: the
+/// file is exactly, for each predicate in
+/// `[is-person, name, person-born, person-founded, person-died]` in that
+/// order, every ledger fact carrying it in ledger order, serialized as
+/// 2-space-indented JSON with no trailing newline, taken from
+/// `cli/tests/fixtures/world-seed-42.json` (which `fixture.rs`'s own
+/// `the_fixture_equals_a_live_build` holds equal to `seed42()`). A refresh is
+/// only ever legitimate when the WORLD was meant to move; a red here with a
+/// still world is a real regression.
 ///
 /// `name` is the only value here that is actually `Stream`-drawn; the other
 /// four predicates are pure arithmetic over already-committed ledger facts.
@@ -385,7 +427,7 @@ fn person_facts_match_the_current_world_baseline() {
             .expect("fixture parses as Vec<Fact>");
     assert_eq!(
         baseline.len(),
-        1584,
+        1487,
         "the current-world person baseline must not drift — if this fails, \
          regenerate it from the committed seed-42 fixture after confirming the \
          world was meant to move"

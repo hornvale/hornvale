@@ -35,14 +35,16 @@ use hornvale_worldgen::seed_42_world;
 /// different competition and commits more dead layers (`is-ruin`), so the
 /// count can rise while LIVING settlements fall.
 ///
-/// **The number below is main's and is STALE.** Both sides re-pinned it --
-/// The Trencher to 24,931, the Underworld Peoples to 21,524 -- against worlds
-/// that no longer exist. The merged value is re-derived once in the repair
-/// pass (ledger #25/#26). The count is not a quality signal in either
-/// direction.
-// The Underworld Peoples delivery adds the four peoples' committed facts;
-// seed 42 now carries 21,524 ledger facts.
-const SEED_42_FACT_COUNT: usize = 21_524;
+/// **The number below is the MERGED world's, re-derived 2026-09-12 in The
+/// Trencher's repair pass (ledger #25/#26).** Both pre-merge pins are dead:
+/// The Trencher's 24,931 and the Underworld Peoples' 21,524 were each
+/// measured against a world that no longer exists. The merged world -- Task
+/// 4's per-metabolite supply change AND the four new underworld peoples
+/// together -- commits **20,518** facts. The count fell relative to both
+/// sides, which is not a quality signal in either direction: the bake sees a
+/// different competition, so living settlements and dead layers move
+/// independently of each other.
+const SEED_42_FACT_COUNT: usize = 20_518;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

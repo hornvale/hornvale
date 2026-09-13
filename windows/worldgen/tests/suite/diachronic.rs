@@ -498,6 +498,31 @@ type Row = (
 // has more settlements" should stop at that column: settlement volume moved a
 // great deal this change (826 occupations across 302 sites, against 620
 // across 217), and the witnessed counts did not move at all.
+//
+// RE-PINNED AGAIN 2026-09-12, The Trencher's repair pass (ledger #25/#26),
+// against the MERGED world: Task 4's per-metabolite supply change plus the
+// absorbed four underworld peoples. Regenerated with
+// `dump_the_live_ladder_table` (the #[ignore]d sweep above), not by hand.
+// **Nine of 95 rows moved, FIVE gains and FOUR losses, net +1 predictive —
+// and the pattern this table keeps recording about itself held for a fourth
+// consecutive re-pin.** Still 95 rows, the same 95 pairs; every epoch-1 rung
+// still `Unknown`; `Predictive` still carries a prediction day in every case
+// and `Counted` still carries `None` in every case, so the structural law
+// asserted beside this table is intact.
+//
+// AND THE WITNESSED COUNT IS BYTE-IDENTICAL ON ALL NINE MOVED ROWS
+// (6472 -> 6472 twice, 81 -> 81, 53 -> 53, 3785 -> 3785 twice, 500 -> 500
+// three times). The moved rows are:
+//   seed 1 duergar, seed 1 kuo-toa, seed 2 drow, seed 4 kuo-toa,
+//   seed 5 kuo-toa            Counted    -> Predictive
+//   seed 3 svirfneblin, seed 4 duergar, seed 5 mountain-dwarf,
+//   seed 5 snow-elf           Predictive -> Counted
+// Seven of the nine are underworld peoples, which is where this campaign's
+// food change lands — but the rung did NOT move because the observation
+// stream moved (it did not move at all), it moved because `doctrine_from`'s
+// organized-cult gate answered differently. A reader tempted to explain this
+// by "more/fewer settlements" should stop at the witnessed-count column, as
+// the note above says of the previous three re-pins.
 // Post-unblinding re-measure, declared per decision 0016.
 const LADDER_TABLE: &[Row] = &[
     (
@@ -534,6 +559,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         1,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        6472,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -598,6 +631,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         1,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        6472,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        6472,
+        None,
+    ),
+    (
+        1,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -611,6 +660,14 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Counted,
         6472,
         None,
+    ),
+    (
+        1,
+        "svirfneblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        6472,
+        Some(36531.74198950235),
     ),
     (
         1,
@@ -648,9 +705,17 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         81,
-        None,
+        Some(36337.174658835705),
+    ),
+    (
+        2,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        81,
+        Some(36337.174658835705),
     ),
     (
         2,
@@ -718,6 +783,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         2,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
+    ),
+    (
+        2,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        81,
+        Some(36337.174658835705),
+    ),
+    (
+        2,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -731,6 +812,14 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Predictive,
         81,
         Some(36337.174658835705),
+    ),
+    (
+        2,
+        "svirfneblin",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
     ),
     (
         2,
@@ -774,6 +863,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         3,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -838,6 +935,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         3,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -847,6 +960,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         3,
         "snow-elf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
+        "svirfneblin",
         LadderRung::Unknown,
         LadderRung::Counted,
         53,
@@ -894,6 +1015,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         4,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
+    ),
+    (
+        4,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -958,6 +1087,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         4,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        3785,
+        Some(36540.36159622378),
+    ),
+    (
+        4,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        3785,
+        Some(36540.36159622378),
+    ),
+    (
+        4,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -967,6 +1112,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         4,
         "snow-elf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
+    ),
+    (
+        4,
+        "svirfneblin",
         LadderRung::Unknown,
         LadderRung::Counted,
         3785,
@@ -1014,6 +1167,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        500,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -1078,6 +1239,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "kuo-toa",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        500,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        500,
+        None,
+    ),
+    (
+        5,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -1087,6 +1264,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         5,
         "snow-elf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        500,
+        None,
+    ),
+    (
+        5,
+        "svirfneblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
         500,
@@ -1098,168 +1283,6 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         304,
-        Some(36556.47532198732),
-    ),
-    // Underworld peoples added by the campaign, measured by
-    // `dump_the_live_ladder_table` on the merged product.
-    (
-        1,
-        "duergar",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        6472,
-        None,
-    ),
-    (
-        1,
-        "kuo-toa",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        6472,
-        None,
-    ),
-    (
-        1,
-        "mountain-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        6472,
-        None,
-    ),
-    (
-        1,
-        "svirfneblin",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        6472,
-        Some(36531.74198950235),
-    ),
-    (
-        2,
-        "duergar",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
-    ),
-    (
-        2,
-        "kuo-toa",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        81,
-        None,
-    ),
-    (
-        2,
-        "mountain-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
-    ),
-    (
-        2,
-        "svirfneblin",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        81,
-        None,
-    ),
-    (
-        3,
-        "duergar",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        53,
-        None,
-    ),
-    (
-        3,
-        "kuo-toa",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        53,
-        None,
-    ),
-    (
-        3,
-        "mountain-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        53,
-        None,
-    ),
-    (
-        3,
-        "svirfneblin",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        53,
-        Some(36125.669504115634),
-    ),
-    (
-        4,
-        "duergar",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        3785,
-        Some(36540.36159622378),
-    ),
-    (
-        4,
-        "kuo-toa",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        3785,
-        None,
-    ),
-    (
-        4,
-        "mountain-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        3785,
-        Some(36540.36159622378),
-    ),
-    (
-        4,
-        "svirfneblin",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        3785,
-        None,
-    ),
-    (
-        5,
-        "duergar",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
-    ),
-    (
-        5,
-        "kuo-toa",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        500,
-        None,
-    ),
-    (
-        5,
-        "mountain-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
-    ),
-    (
-        5,
-        "svirfneblin",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        500,
         Some(36556.47532198732),
     ),
 ];

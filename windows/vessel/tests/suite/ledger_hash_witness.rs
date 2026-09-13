@@ -328,14 +328,14 @@ fn emitter_bearing_world() -> (u64, hornvale_kernel::World) {
 
 /// The seed [`emitter_bearing_world`] lands on today.
 ///
-/// **The search lands on seed 6 on this tree, and this constant exists so
+/// **The search lands on seed 1 on this tree, and this constant exists so
 /// that a future move is loud.** The search remains the authority; the
 /// constant records the currently measured landing seed for the sibling
 /// witnesses and makes a world-selection change fail explicitly.
 ///
-/// **The script is two waits now, not eight** (see [`EMITTER_SCRIPT_WAITS`]),
-/// and the seed remains 6 on this tree — which is the one thing that had to
-/// be checked before cutting it. The witness prints the current replay,
+/// **The script is two waits now, not eight** (see [`EMITTER_SCRIPT_WAITS`]);
+/// the seed was 6 when that cut was taken, which was the one thing that had to
+/// be checked before cutting it, and is 1 since The Trencher (below). The witness prints the current replay,
 /// emitter-scan, and digest counts; older wait-count measurements are not
 /// silently reused.
 ///
@@ -355,13 +355,26 @@ fn emitter_bearing_world() -> (u64, hornvale_kernel::World) {
 /// **two** reach it — seed 28 with 14 replays and seed 55 with 20 — which is
 /// why this witness searches instead of assuming.
 ///
+/// **THE SEARCH MOVED 6 -> 1, 2026-09-12, The Trencher's repair pass (ledger
+/// #25/#26), and the constant is what made it loud — which is the whole
+/// reason it exists.** On the merged world (Task 4's per-metabolite supply
+/// change plus the absorbed four underworld peoples) the two-wait search over
+/// `common::SIGHT_SEEDS` for "the hazard fold replays an emitter's affect at
+/// a past visit day" lands on seed **1**, not seed 6. The SEARCH remains the
+/// authority and it still found a qualifying world, so the property this
+/// witness is about is intact and nothing about it is relaxed; what moved is
+/// which world exhibits it first. Recorded as the finding the assertion
+/// message asks for: the merged world's underworld energy budget changes
+/// where emitters sit relative to remembered rooms, so the halo pre-filter
+/// and terrain shortcut admit a different set of seeds to the replay path.
+///
 /// **Every replay count in this file carries its script length, because they
 /// differ and a bare number invites the wrong comparison.** The sweep above
 /// ran ten waits; the fixed script this witness hashed then ran eight, and
 /// reported **10** replays on seed 28 rather than that sweep's 14. It runs
 /// [`EMITTER_SCRIPT_WAITS`] (2) today. All three are correct measurements of
 /// different scripts.
-pub(crate) const EMITTER_SEED: u64 = 6;
+pub(crate) const EMITTER_SEED: u64 = 1;
 
 /// A canonical, order-fixed rendering of every body's hazard memory.
 ///

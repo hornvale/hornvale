@@ -14117,9 +14117,20 @@ mod tests {
         // THE UNDERWORLD re-pin: 2.4285714285714284 -> 2.5. Adding the four
         // peoples changes seed 42's settlement and naming substrate; the
         // metric claim is unchanged and the exact value is re-measured here.
+        //
+        // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
+        // 2.5 -> 2.347826086956522 (exact rational 54/23). The MERGED world -- Task 4's
+        // per-metabolite supply change plus the absorbed four peoples --
+        // reseats seed 42's site pool once more, which changes which goblin
+        // names are drawn. Still inside the 2-3 target, which is the row's
+        // actual claim; the exact value is a world-byte tripwire.
+        // **NOT corroborated against a canonical census**: this campaign's
+        // refresh happens once, at pre-merge close on lefford, and has not
+        // been run -- `census_sentinel` and `tripwire` are deliberately left
+        // red for exactly that reason.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.5)
+            MetricValue::Number(2.347826086956522)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14353,9 +14364,23 @@ mod tests {
         // THE UNDERWORLD re-pin: 2.8 -> 2.3518518518518516. Adding the four
         // peoples changes the seed-42 settlement substrate and therefore the
         // named-site sample; the metric remains inside its stated 2-3 target.
+        //
+        // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
+        // 2.3518518518518516 -> 2.323529411764706 (exact rational 79/34).
+        // Same cause as the goblin pin above: the MERGED world -- Task 4's
+        // per-metabolite supply change plus the absorbed four peoples --
+        // reseats seed 42's settlements and with them kobold's named-site
+        // sample. Nothing in this campaign touches phonology, wear or the
+        // namer. The metric remains inside its stated 2-3 target, which is
+        // the row's actual claim. **This pin did not appear in the campaign's
+        // first red list** -- `assert_eq!` stops at the first failure, so the
+        // goblin pin above masked it until that one was repaired; a file
+        // pinning several values in one test reveals them one run at a time.
+        // NOT corroborated against a canonical census, for the same reason as
+        // every pin above.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.3518518518518516)
+            MetricValue::Number(2.323529411764706)
         );
     }
 
@@ -14600,7 +14625,27 @@ mod tests {
         // THE UNDERWORLD re-pin: 0.6905537459283387 -> 0.6707692307692308,
         // from the same deterministic settlement substrate change that moved
         // the syllable pin above. The distribution claim is unchanged.
-        assert_eq!(share, 0.6707692307692308, "seed 42 transparency drifted");
+        //
+        // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
+        // 0.6707692307692308 -> 0.6867469879518072, from the same merged-world
+        // substrate change that moved the syllable pin above. The distribution
+        // claim (a distribution, not a constant) is unchanged.
+        //
+        // On the open question this comment block has been tracking, the
+        // numbers are MEASURED, not inferred: both shares are exact rationals
+        // over the glossed-settlement denominator, counted off the committed
+        // seed-42 world fixture. Before: 218/325. After: 228/332. So the
+        // denominator ROSE by 7 (+2.2%) and the share rose 1.6 pp -- a small
+        // move in n beside a small move in the share, which is CONSISTENT
+        // with the denominator story rather than against it, unlike the
+        // previous re-pin (10.8 pp across a 15% rise). That makes the tally
+        // one re-pin against and one for, which is still not a finding. The
+        // measurement that would actually settle it is unchanged and still
+        // unrun: share against n ACROSS seeds, not seed 42 alone.
+        //
+        // **NOT corroborated against a canonical census** for the same reason
+        // the syllable pin above is not.
+        assert_eq!(share, 0.6867469879518072, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
