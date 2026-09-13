@@ -331,6 +331,33 @@ impl WaterWorld {
     }
 }
 
+/// The present succession phase of one stable vent source at an exact instant.
+///
+/// The cheap read, and the one a caller with no globe-wide question wants:
+/// [`WaterWorld::at`] answers the same thing for every vent at once and costs
+/// a whole-overlay pass to do it, which is the wrong instrument for a history
+/// bake asking about the single vertex one community sits on. Both route
+/// through the same private `vent_phase`, so the two cannot disagree.
+///
+/// Draws nothing, mutates nothing — the succession is exact integer
+/// arithmetic over `(time, vent.phase_offset_ticks)`.
+#[must_use]
+pub fn vent_state_at(vent: &WaterVent, time: WorldTime) -> VentState {
+    vent_phase(vent, time).state
+}
+
+/// Where `vent`'s influence presently sits, given its own candidate ring.
+///
+/// `None` for an `Absent` or `Failed` source — a vent that is contributing
+/// nothing is nowhere, which is [`select_vent_position`]'s own rule and is
+/// what makes "the vent under this community" a question about the ring
+/// rather than about the present position (see [`crate::vent_tenancy`]).
+#[must_use]
+pub fn vent_position_at(vent: &WaterVent, ring: &[Vertex], time: WorldTime) -> Option<Vertex> {
+    let phase = vent_phase(vent, time);
+    select_vent_position(ring, phase.state, phase.cycle_index)
+}
+
 #[derive(Clone, Copy, Debug)]
 struct VentPhase {
     state: VentState,

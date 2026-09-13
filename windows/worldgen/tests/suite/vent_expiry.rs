@@ -123,7 +123,8 @@ use hornvale_worldgen::waterworld::{
 };
 use hornvale_worldgen::{
     BuildDepth, EraAdjust, EraInvariantSupply, MarineHabitat, PELAGIC_BANDS, SettlementPins,
-    WorldComponents, build_world_to_with_artifacts, climate_from, per_species_capacity_at,
+    VentTenancy, WorldComponents, build_world_to_with_artifacts, climate_from,
+    per_species_capacity_at,
 };
 
 /// How many instants each sweep takes. Twelve is enough to put every one of
@@ -508,5 +509,119 @@ fn m3a_the_marine_habitat_expires_over_world_time() {
         "capacity at a vent-moved vertex must stay strictly positive across the whole sweep — \
          this is WHY the preregistered capacity counter reads {c}, and it is a property of \
          the niche's summed axes, not of the habitat failing to expire"
+    );
+}
+
+/// **M3b — the reachability half: how often does the real bake actually put a
+/// people on a vent that then fails?** The Tidemark, Task 5; spec §4.
+///
+/// # A zero here is a REACHABILITY finding, not a falsification
+///
+/// The plan says so explicitly, and the reason is measured rather than
+/// assumed. Task 2 found the vent layer reaches *capacity* but not *siting*:
+/// two synthetic marine probes placed four occupations each through the real
+/// bake at seed 42 and neither landed on a vent-improved vertex. If this reads
+/// zero it means the bake's siting does not put anyone on a vent — a fact
+/// about where communities go, not about whether an expiring habitat expires,
+/// which `m3a_the_marine_habitat_expires_over_world_time` and the four direct
+/// mechanism tests in `history_bake.rs` already answer independently.
+///
+/// **Nothing here is tuned to make it non-zero.**
+///
+/// # What is counted, in three widening rings
+///
+/// 1. **hosted** — occupied sites sitting in some vent's candidate ring at
+///    all. This is the ceiling: the rule cannot fire anywhere else.
+/// 2. **failed during tenure** — of those, the sites where every hosting
+///    source is `Failed` at some epoch instant inside the occupation's own
+///    `[founded, ended]` span. This is the plan's "transitions into `Failed`
+///    across the bake".
+/// 3. **ended ON the failure** — of those, the occupations whose recorded end
+///    year is the FIRST such epoch. That is the rule firing, attributable
+///    without instrumenting the bake: no other ending path is a function of
+///    vent phase, so an ending landing exactly on the first failed epoch is
+///    this one.
+///
+/// The three are nested by construction, which is asserted rather than
+/// assumed — a count that broke the nesting would mean the walk and the bake
+/// disagree about which years an occupation was alive through.
+#[test]
+fn m3b_how_often_the_bake_seats_a_people_on_a_vent_that_then_fails() {
+    let fixture = fixture(Seed(42));
+    let water = waterworld_from(
+        &fixture.world,
+        &fixture.terrain,
+        &fixture.climate,
+        WaterWorldConfig { enabled: true },
+    );
+    let tenancy = VentTenancy::from_overlay(&water);
+    assert!(
+        tenancy.vent_count() > 0 && tenancy.hosted_vertex_count() > 0,
+        "seed 42 must admit vents and host vertices, or every count below is vacuous"
+    );
+
+    let wc = WorldComponents::assemble().expect("the shipped component roster assembles");
+    let history = hornvale_worldgen::history_for(
+        Seed(42),
+        &SkyPins::default(),
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        &wc,
+    )
+    .expect("seed 42 bakes a history");
+
+    // The bake's own epoch grid, read off the same config the bake used
+    // rather than restated as literals here.
+    let cfg = hornvale_worldgen::BakeConfig::default_millennia();
+    let epochs: Vec<f64> = {
+        let mut years = Vec::new();
+        let mut year = cfg.start_year;
+        while year < cfg.end_year {
+            years.push(year);
+            year += cfg.epoch_years;
+        }
+        years
+    };
+
+    let mut hosted = 0_usize;
+    let mut failed_during_tenure = 0_usize;
+    let mut ended_on_the_failure = 0_usize;
+    for record in &history.records {
+        if !tenancy.is_hosted(record.core.site) {
+            continue;
+        }
+        hosted += 1;
+        let last = record.core.ended.unwrap_or(cfg.end_year);
+        let first_failed = epochs
+            .iter()
+            .copied()
+            .filter(|&y| y >= record.core.founded && y <= last)
+            .find(|&y| tenancy.failed_at(record.core.site, VentTenancy::instant_of_bake_year(y)));
+        if let Some(first) = first_failed {
+            failed_during_tenure += 1;
+            if record.core.ended == Some(first) {
+                ended_on_the_failure += 1;
+            }
+        }
+    }
+
+    println!(
+        "M3b (seed 42, the real bake): {} occupations total; {hosted} on ground a vent hosts; \
+         {failed_during_tenure} of those saw every hosting source FAIL during their own \
+         tenure; {ended_on_the_failure} ended on that exact epoch. The overlay admits {} vents \
+         over {} hosted vertices.",
+        history.records.len(),
+        tenancy.vent_count(),
+        tenancy.hosted_vertex_count()
+    );
+
+    assert!(
+        !history.records.is_empty(),
+        "seed 42 must bake some occupations, or the zeroes above say nothing about siting"
+    );
+    assert!(
+        failed_during_tenure <= hosted && ended_on_the_failure <= failed_during_tenure,
+        "the three counts nest by construction: {ended_on_the_failure} <= \
+         {failed_during_tenure} <= {hosted}"
     );
 }

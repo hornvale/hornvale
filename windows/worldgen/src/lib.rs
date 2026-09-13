@@ -132,6 +132,7 @@ pub mod social_projection;
 pub mod streams;
 pub mod traversal;
 pub mod underworld_readout;
+pub mod vent_tenancy;
 pub mod vestige;
 pub mod volcano;
 pub mod warp;
@@ -234,6 +235,7 @@ pub use social_projection::{
     project_social_cohort,
 };
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
+pub use vent_tenancy::VentTenancy;
 pub use vestige::{
     HazardKind, SealState, Valence, Vestige, VestigeKind, prehuman_vestige,
     vestige_from_occupation, vestiges_at, vestiges_field,
@@ -245,7 +247,7 @@ pub use warp::{
 };
 pub use waterworld::{
     VentState, WaterFields, WaterStocks, WaterSubstrate, WaterVent, WaterWorld, WaterWorldConfig,
-    WaterWorldSnapshot, waterworld_from,
+    WaterWorldSnapshot, vent_position_at, vent_state_at, waterworld_from,
 };
 pub use waterworld_render::{
     WaterWorldDetail, WaterWorldObservation, observe_waterworld, observe_waterworld_snapshot,
@@ -8564,6 +8566,26 @@ fn bake_history_from(
             )
         })
         .collect();
+    // THE EXPIRING HABITAT'S INPUT (The Tidemark, Task 5; spec §4). The bake
+    // holds no overlay and imports no terrain, so the one thing it needs from
+    // the Waterworld — which vertices a hydrothermal source underlies, and
+    // what that source is doing at a named instant — is indexed here, at the
+    // one layer that holds both, and handed over on the config beside the
+    // authored species maps above.
+    //
+    // Built from the SAME `waterworld` the marine habitat was hoisted off a
+    // few lines up, deliberately: an overlay constructed twice is two
+    // opportunities to disagree about which vertices carry a vent, and
+    // placement and expiry would then be reasoning about different seas.
+    //
+    // It carries no instant of its own. `EraInvariantSupply::build_at` reads
+    // the succession ONCE, at `WorldTime::GENESIS`, because placement is a
+    // genesis-time act; the ending rule reads it at each epoch's own year,
+    // because an ending is not. That is spec §4's whole distinction — the
+    // habitat is scored when the people arrive and re-asked while they stay —
+    // and it is expressible only because the tenancy defers the instant to
+    // the caller rather than baking one in.
+    cfg.vent_tenancy = crate::vent_tenancy::VentTenancy::from_overlay(&waterworld);
     let era_substrates: Vec<_> = era_adjusts
         .iter()
         .map(|adjust| substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust))
