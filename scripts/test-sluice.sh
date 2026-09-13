@@ -28,6 +28,20 @@ fi
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# THE BASE REF THE ENQUEUE-PATH FIXTURES ARE BUILT ON. `origin/main` is the
+# one remote-tracking ref this repository can assume exists: it is what every
+# clone fetches, what `git fetch --prune` can never collect, and what
+# sluice-request.sh itself defaults HV_SLUICE_BASE to. See the long note at the
+# `pushed_base=` line below for the ref that used to sit there and what
+# happened when it was pruned.
+#
+# It is a VARIABLE rather than a literal so the failure path can be exercised:
+# point it at a ref that does not exist and the guard below must report a
+# named, legible refusal instead of a raw `fatal: ambiguous argument`. That is
+# the only way to know the guard works, and the absence of such a seam is why
+# the original failure surfaced as an unexplained phase red.
+HV_SLUICE_BASE_REF="${HV_SLUICE_BASE_REF:-origin/main}"
+
 # BUILD tools/sluice's release binary ONCE, HERE — after the flock skip guard
 # above (so a host with no flock, which exits before this line, never pays
 # for a build it will never use), and before the very first test that
@@ -2463,9 +2477,9 @@ fi
 echo "== request: durable-before-nudge — a failed remote enqueue prints no success line"
 # A fake `ssh` on PATH, standing in for the real canonical-box connection.
 # FAKE_SSH_RESULT picks whether the "remote" sluice-queue.sh add succeeded.
-# Real, already-pushed refs (this repo's own origin/main and
-# origin/campaign/the-sluice tips) so the REF-is-pushed check above this one
-# in sluice-request.sh passes and execution actually reaches the ssh call.
+# A real, already-pushed ref (this repo's own origin/main tip) so the
+# REF-is-pushed check above this one in sluice-request.sh passes and execution
+# actually reaches the ssh call.
 mkdir -p "$tmp/bin"
 cat > "$tmp/bin/ssh" <<'FAKESSH'
 #!/usr/bin/env bash
@@ -2482,15 +2496,57 @@ chmod +x "$tmp/bin/ssh"
 
 # A pushed ref THAT CARRIES A HEADLINE TRAILER. These tests are about the
 # enqueue path — how sluice-request.sh reacts to ssh's exit code — and they
-# must reach the ssh call to test anything. Since the headline check now
-# refuses a kind=merge submission with no `Sluice-Headline:` trailer, a bare
-# real ref (origin/campaign/the-sluice, which predates the convention) is
+# must reach the ssh call to test anything. Since the headline check refuses a
+# kind=merge submission with no `Sluice-Headline:` trailer, a bare real ref is
 # turned away before the ssh call and every assertion below it reads as an
-# enqueue failure. Mint a commit on top of that ref with the trailer, and
-# publish it under refs/remotes/ so the is-it-pushed check passes too. Its
-# parent is an ancestor of `main`, so the `main..sha` range the check runs
-# over is exactly this one commit.
-pushed_base="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" rev-parse origin/campaign/the-sluice)"
+# enqueue failure. So: mint a commit on top of the base with the trailer, and
+# publish it under refs/remotes/ so the is-it-pushed check passes too. The base
+# is `origin/main`, which makes the child's parent an ancestor of `main` by
+# construction, so the `$HV_SLUICE_BASE..sha` range the check runs over is
+# exactly this one commit.
+#
+# THE BASE MUST BE A REF GIT ITSELF GUARANTEES, AND THIS LINE ONCE WAS NOT.
+# It read `origin/campaign/the-sluice` — chosen because that branch predates
+# the headline convention, which reads like a reason and is not one: the base's
+# own trailer is irrelevant, since the range is measured from
+# $HV_SLUICE_BASE to the CHILD and the child is the only commit in it.
+# `origin/main` satisfies every real requirement identically.
+#
+# What the old choice actually depended on was a remote-tracking ref for a
+# branch that had already been merged and DELETED from origin. It survived only
+# as local residue on one machine. On 2026-09-13 a `git fetch origin --prune`
+# on lefford collected it, and this suite — and therefore the whole `outboard`
+# phase, and therefore every merge candidate — went red on a raw
+# `fatal: ambiguous argument`. Two candidates died at it before anyone read
+# past the phase name, at roughly 940 s of canonical-box time each. A fresh
+# clone had never had the ref at all, so this would also have reddened
+# `outboard` on day one of any rebuilt box, with nothing in the tree to
+# explain why.
+#
+# The rule this encodes, for whoever adds the next fixture ref: depend on
+# `origin/main`, or MINT the ref you need and publish it yourself the way
+# scripts/test-sluice-vet.sh does with its zz-vet-* probes. Never depend on a
+# branch whose continued existence is somebody else's housekeeping.
+pushed_base="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" \
+    rev-parse --verify --quiet "${HV_SLUICE_BASE_REF}^{commit}" 2>/dev/null || true)"
+if [ -z "$pushed_base" ]; then
+    bad "the enqueue-path fixtures need a resolvable base ref and '$HV_SLUICE_BASE_REF' does not resolve in $repo_root — this is a broken suite, not a failing property"
+    # AND THEN KEEP THE FILE ALIVE, which is the half a bare `bad` does not do.
+    # `bad` records and returns; the very next statement peels `$pushed_base^{tree}`,
+    # so an empty base aborts the whole script under `set -e` with the same raw
+    # `fatal: ambiguous argument` this change exists to stop printing — and takes
+    # the seventeen sections below with it, including the final
+    # "the real repository was never touched" assertion, which is the most
+    # important one in the file.
+    #
+    # A placeholder orphan commit costs nothing and keeps the abort from
+    # happening. The fixtures built on it will fail their own assertions, which
+    # is correct — they ARE broken, and `bad` above has already said why. Same
+    # empty-tree idiom scripts/test-sluice-vet.sh uses for its negative control.
+    pushed_base="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree \
+        "$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" hash-object -t tree /dev/null)" \
+        -m 'placeholder base: the real base ref did not resolve')"
+fi
 pushed_ref="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree \
     "$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" rev-parse "$pushed_base^{tree}")" \
     -p "$pushed_base" -m "chore: a commit for the enqueue-path tests

@@ -1441,11 +1441,13 @@ hornvale-lab::hornvale_lab$diff::tests::csv_round_trip_diffs_through_render_diff
 hornvale-lab::hornvale_lab$diff::tests::header_reports_row_and_refusal_counts
 hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_292_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -1505,6 +1507,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_meas
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
+hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
 hornvale-lab::hornvale_lab$domesday::guard::loading_never_builds_a_world
 hornvale-lab::hornvale_lab$domesday::render::tests::a_bare_citation_outside_any_paren_is_redacted_with_its_possessive
@@ -1767,6 +1770,7 @@ hornvale-lab::suite$health_calibration::one_stuck_creature_among_nine_recovering
 hornvale-lab::suite$health_calibration::searching_is_not_distress
 hornvale-lab::suite$health_calibration::the_chronic_threshold_is_exact_at_chronic_ticks
 hornvale-lab::suite$hearth_population_calibration::the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close
+hornvale-lab::suite$hearth_population_calibration::the_hearth_never_worsens_a_planted_cold_built_population
 hornvale-lab::suite$individuation::awakening_is_a_fact_and_the_large_owlbear_stays_large
 hornvale-lab::suite$individuation::mighty_things_in_the_cold_north
 hornvale-lab::suite$individuation::the_roster_passes_integrity_and_stays_out_of_the_canon
@@ -2679,6 +2683,7 @@ hornvale-terrain::hornvale_terrain$render::tests::interpolation_stays_within_the
 hornvale-terrain::hornvale_terrain$render::tests::lithology_png_is_well_formed_and_byte_deterministic
 hornvale-terrain::hornvale_terrain$render::tests::refinement_respects_the_prior
 hornvale-terrain::hornvale_terrain$render::tests::sediment_color_diverges_red_white_blue
+hornvale-terrain::hornvale_terrain$render::tests::sediment_png_is_well_formed_and_byte_deterministic
 hornvale-terrain::hornvale_terrain$rift::tests::clip_is_one_far_from_seams_and_single_craton_is_uncut
 hornvale-terrain::hornvale_terrain$rift::tests::conjugate_margins_fit_by_construction
 hornvale-terrain::hornvale_terrain$rift::tests::rift_draws_one_scalar_and_derives_seams_per_pair
@@ -3549,6 +3554,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -4065,7 +4071,6 @@ hornvale-worldgen::suite$history_emit::end_of_life_facts_are_day_stamped_at_ende
 hornvale-worldgen::suite$history_emit::founded_from_and_ended_by_resolve_to_the_right_entities
 hornvale-worldgen::suite$history_emit::occupation_records_round_trip_every_committed_field
 hornvale-worldgen::suite$history_emit::outbreak_events_emit_as_a_paired_dated_fact
-hornvale-worldgen::suite$history_emit::person_years_matches_epochs_credited_at_their_end
 hornvale-worldgen::suite$history_emit::present_frame_crosses_the_bake_year_by_days_per_year
 hornvale-worldgen::suite$history_emit::same_day_layers_order_by_material_facts_not_mint_order
 hornvale-worldgen::suite$history_emit::territories_group_alive_occupations_by_people
