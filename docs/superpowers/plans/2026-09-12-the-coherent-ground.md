@@ -158,7 +158,7 @@
 - [ ] **Step 7: Run focused proof, full visual checks, and local commit gate.** Run the proof filter, `make visual-check-run`, and `make gate-commit`; inspect `git diff --check` and the capture manifest.
 - [ ] **Step 8: Commit proof evidence and submit the stage gate.** Commit with `test: prove visible coherent ground`, push the full SHA, and submit `make sluice-stage BRANCH=campaign/the-coherence REF=<full-sha>`.
 
-### Task 5: G6 review and merge close
+### Task 5: G6 review and merge close — pre-Sluice close package complete; queue submission and merge-product refreeze remain external
 
 **Files:**
 
@@ -182,7 +182,7 @@ During implementation, use the cheapest relevant check first:
 
 ## Plan status
 
-- Stage 1: Not Started
-- Stage 2: Not Started
-- Stage 3: Not Started
-- Stage 4: Not Started
+- Stage 1: Complete
+- Stage 2: Complete
+- Stage 3: Complete
+- Stage 4: Complete

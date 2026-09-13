@@ -5,9 +5,10 @@ the Planetarium's terrain and surface detail.
 Branch: `campaign/the-coherence`. Autopilot is engaged; G3 design review and
 G6 close remain hard stops.
 
-**Current status:** G2 design direction approved in conversation; Astra review
-incorporated; revised design package awaits G3 approval. No implementation has
-started.
+**Current status:** implementation complete on `campaign/the-coherence`; local
+rendered proof and independent review are green; pre-Sluice close artifacts are
+being prepared. The branch remains active until the merge queue validates the
+merge product.
 
 ## #1 [G1] — What problem is this campaign solving?
 
@@ -167,14 +168,14 @@ reconciliation row records the Astra revision review.
 
 The Planetarium proof now renders the fixed seed-42 camera twice through the
 production Bevy renderer. It reads back distinct before/after PNG bytes and
-records the shared camera digest and source revision in the returned frame
-evidence. The after frame observed one ready patch, 39,608 source-owned narrow
-feature entities, and no visible fallback overlap. The local Apple M1 Max run
-measured 10,585 ms source generation, 35,734 ms mesh/material application,
-2,004 ms first-visible capture, 540 ms steady-state capture, and 1,330,561,024
-bytes peak RSS. These are observations, not acceptance thresholds; the large
-feature count and application cost are useful evidence for a future bounded
-feature-budget refinement.
+records independently serialized camera and source-revision metadata. The
+after frame observed one ready patch, 44,831 source-owned narrow-feature
+entities, 1,136 causal feature pixels, and regional fallback behavior without
+covered-region overlap. The final local Apple M1 Max run measured 3,363 ms
+source generation and 1,576,468,480 bytes peak RSS; the proof also records
+separate mesh/material application, first-visible, and steady-state capture
+measurements. These are observations, not acceptance thresholds; the feature
+count and application cost motivate a future bounded feature-budget study.
 
 The proof remains bounded: it establishes one camera-visible patch and does
 not prove global coverage, dynamic weather, Level-8 macro authority, or a
