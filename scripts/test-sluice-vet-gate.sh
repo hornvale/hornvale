@@ -171,6 +171,39 @@ else
     bad "a clean candidate did not get a clear 'none'"
 fi
 
+echo "== an absent but WELL-FORMED sha is refused, not vetted"
+# THE CONFIDENT-SILENCE CASE. `git rev-parse <40-hex>` does not verify: it
+# echoes an unknown sha back and exits 0. The vet's emptiness guard therefore
+# never fired, and it printed a complete, plausible, entirely empty report --
+# no decisions, no census, no surfaces, a clean Definition of Done -- for a
+# commit that does not exist. Found by pasting a 12-character prefix padded out
+# by hand, which is exactly how an operator produces one of these.
+absent=de4f0c3b989a8bbd99b18f5c5e3eafaba5a8fcba
+if g rev-parse --verify --quiet "$absent^{commit}" >/dev/null 2>&1; then
+    bad "the fixture sha exists in this repository — pick another; this case is now vacuous"
+else
+    ok "CONTROL: the fixture sha is genuinely absent (so the case below can mean something)"
+    set +e
+    out="$(bash scripts/sluice-vet.sh campaign/zz-absent "$absent" 2>&1)"
+    rc=$?
+    set -e
+    if [ "$rc" -ne 0 ]; then
+        ok "an absent sha is refused (rc=$rc), not vetted"
+    else
+        bad "the vet exited 0 on a sha that does not exist"
+    fi
+    if printf '%s' "$out" | grep -q "GATE MACHINERY"; then
+        bad "it produced a report for a nonexistent commit — the confident silence itself"
+    else
+        ok "it produces no report at all, so there is nothing to act on"
+    fi
+    if printf '%s' "$out" | grep -qi "not a commit"; then
+        ok "the refusal says what is wrong"
+    else
+        bad "the refusal does not say what is wrong: $out"
+    fi
+fi
+
 echo "== this suite left the surrounding worktree's index alone"
 _index_after="$(g write-tree 2>/dev/null || echo unavailable)"
 if [ "$_index_before" = "unavailable" ] || [ "$_index_after" = "unavailable" ]; then

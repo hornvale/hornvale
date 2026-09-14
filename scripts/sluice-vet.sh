@@ -244,9 +244,29 @@ cd "$root" || exit 1
 git fetch -q origin "+refs/heads/${branch}:refs/remotes/origin/${branch}" 2>/dev/null
 git fetch -q origin 2>/dev/null
 
-sha="$(git rev-parse "$ref" 2>/dev/null)"
+# --verify, AND ^{commit}, AND both are load-bearing.
+#
+# `git rev-parse <40-hex>` does NOT verify: given a well-formed sha for an
+# object this repository has never seen, it ECHOES IT BACK and exits 0. So the
+# emptiness test below never fired, `$sha` was set to a commit that does not
+# exist, and every git command after it returned nothing --- quietly, since
+# each one is `2>/dev/null` or `|| true`. The vet then printed a complete,
+# plausible, entirely empty report: no decisions minted, no census, no
+# surfaces, no gate machinery, a clean Definition of Done.
+#
+# That is the worst failure available to an instrument whose whole job is to
+# say what a candidate contains. A refusal is read; a clean report is acted on.
+# Found 2026-09-14 by pasting a 12-character prefix padded out by hand --- the
+# vet answered as confidently for the invented sha as for a real one.
+#
+# ^{commit} rejects a well-formed object that is not a commit (a tree, a blob,
+# an annotated tag pointing at one), which --verify alone admits. This is the
+# same pair sluice-mouth.sh already uses; the two now agree.
+sha="$(git rev-parse --verify --quiet "${ref}^{commit}" 2>/dev/null)"
 if [ -z "$sha" ]; then
-    echo "sluice-vet: $ref does not resolve" >&2
+    echo "sluice-vet: '$ref' is not a commit in this repository." >&2
+    echo "  Nothing was vetted. If this is a 40-character sha, it may be well-formed" >&2
+    echo "  and absent — fetch the branch, or check the ref was copied and not typed." >&2
     exit 2
 fi
 printf 'ref      %s\n' "$sha"
