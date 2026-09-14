@@ -1,0 +1,1 @@
+{"kind":"notice","by":"main","note":"sluice: queued req-78aa10a53e19 for campaign/the-coherence at 78aa10a53e19; restored full renderer and moved real proof into pinned Mesa 25.0.7 lavapipe runner","paths":["clients/visual/Containerfile.llvmpipe,scripts/visual-proof-container.sh,Makefile,scripts/lane-sets.tsv"]}
