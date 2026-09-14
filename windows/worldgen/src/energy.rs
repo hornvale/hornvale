@@ -518,6 +518,172 @@ pub struct ChemicalSupply {
     pub detritus: f64,
 }
 
+/// How much of one metabolite a place carries, on that metabolite's **own**
+/// scale — the vocabulary a species author reasons in when asking "can a
+/// methane-eater live here?".
+///
+/// # Why this is per-axis and not the corpus ladder
+///
+/// `domains/climate`'s `E_INERT..E_TEEMING` ladder bands the **aggregate**
+/// `ENERGY` ruler, which is bounded to `[0,1]` by
+/// `EnvironmentVector`'s contract. These four axes are raw, unbounded
+/// magnitudes on four differently-shaped distributions, and reusing that
+/// ladder's words for them would be the same quantity-wearing-another's-frame
+/// error this campaign has already made twice (ledger #31a, #45). Different
+/// quantity, different scale, different words.
+///
+/// **The axes genuinely are not alike**, which is why one shared threshold set
+/// cannot serve them (measured over 104,845 readings, 12 seeds x 5 rungs, at
+/// the shipped yield form):
+///
+/// | axis | p10 | median | p90 | exactly zero |
+/// | --- | --- | --- | --- | --- |
+/// | `HYDROGEN` | 0.000 | 0.643 | 0.958 | **39.0%** |
+/// | `REDUCED_IRON` | 0.386 | 0.645 | 1.175 | 0.02% |
+/// | `REDUCED_SULPHUR` | 0.179 | 0.461 | 1.463 | 4.5% |
+/// | `METHANE` | 0.313 | 0.546 | 0.867 | **0.0%** |
+///
+/// Hydrogen is absent from two vertices in five; methane is absent from none,
+/// anywhere. A single ladder would call methane "present" everywhere — true,
+/// and useless — while saying nothing else.
+///
+/// # The bands do not replace the number
+///
+/// `ChemicalSupply`'s raw `f64` fields stay public and authoritative. This is
+/// a **named view over** a magnitude, never a substitute for it: a niche may
+/// weight the raw axis, and a rule may ask for a band, and the two never
+/// disagree because one is computed from the other.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum MetaboliteBand {
+    /// No supply at all on this axis — every gating term is shut. Distinct
+    /// from [`MetaboliteBand::Trace`] on purpose: "none" and "nearly none"
+    /// are different affordances, and collapsing them is exactly the lossy
+    /// abstraction the per-axis basis exists to avoid.
+    Absent,
+    /// Detectable but not enough to sustain a specialist.
+    Trace,
+    /// Enough for a specialist to hold on.
+    Thin,
+    /// Enough for a specialist to do well.
+    Ample,
+    /// Enough to carry a population that eats little else.
+    Abundant,
+}
+
+/// One axis's three cut points, in that axis's own raw units, ascending.
+/// `Absent` is `== 0.0` and takes no cut; the three below separate
+/// `Trace | Thin | Ample | Abundant`.
+///
+/// **Authored, not fitted.** Chosen as round values against the distribution
+/// table on [`MetaboliteBand`] so an author can hold them in their head, then
+/// *checked* for occupancy rather than solved for it —
+/// `metabolite_band_probe.rs` asserts every reachable `(axis, band)` pair
+/// actually occurs. A quantile computed at runtime was considered and refused:
+/// it would make a chamber's description a function of whichever world is
+/// loaded, so the same place would change its name when an unrelated seed
+/// moved.
+/// type-audit: bare-ok(ratio: trace_max), bare-ok(ratio: thin_max), bare-ok(ratio: ample_max)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct MetaboliteCuts {
+    /// Upper bound of `Trace`, inclusive.
+    pub trace_max: f64,
+    /// Upper bound of `Thin`, inclusive.
+    pub thin_max: f64,
+    /// Upper bound of `Ample`, inclusive; above this is `Abundant`.
+    pub ample_max: f64,
+}
+
+/// `HYDROGEN`'s cuts, and the one set that was **re-placed after measuring
+/// occupancy** rather than authored once and kept.
+///
+/// The axis is strongly bimodal: 39% of readings are exactly zero, and when
+/// hydrogen is present at all it is almost always substantial. Even quarter-
+/// steps (`0.25 / 0.50 / 0.75`) were tried first and measured degenerate —
+/// over three seeds they put **75** readings in `Trace` and **57** in `Thin`
+/// against 5,670 in `Ample` and 7,503 in `Abundant`, i.e. two of the five
+/// bands held 0.2% of the axis between them. That passes an occupancy guard
+/// and is still a bad ladder: a band holding one reading in four hundred is a
+/// category no author would ever have cause to name.
+///
+/// So the cuts sit where the mass is. `Trace` now absorbs the whole thin tail
+/// below `0.50` deliberately — for this axis "a little hydrogen" really is one
+/// rare condition, not three — and the three bands above it split the
+/// population that actually exists.
+/// plumb: universal(an authored band ladder on the HYDROGEN supply axis -- the same vocabulary in every world by design, since a cut that varied per world would make a chamber change its description when an unrelated seed moved; re-placed once after measuring occupancy, see the doc above)
+pub const HYDROGEN_CUTS: MetaboliteCuts = MetaboliteCuts {
+    trace_max: 0.50,
+    thin_max: 0.70,
+    ample_max: 0.90,
+};
+
+/// `REDUCED_IRON`'s cuts, set higher than hydrogen's because the axis is
+/// richer throughout: its p10 (0.386) is near hydrogen's median, and 36% of
+/// readings exceed 1.0.
+/// plumb: universal(an authored band ladder on the REDUCED_IRON supply axis -- the same vocabulary in every world by design; set higher than hydrogen because the axis is richer throughout)
+pub const REDUCED_IRON_CUTS: MetaboliteCuts = MetaboliteCuts {
+    trace_max: 0.40,
+    thin_max: 0.70,
+    ample_max: 1.00,
+};
+
+/// `REDUCED_SULPHUR`'s cuts. The widest axis (p10 0.179, p90 1.463) and the
+/// one with real depth structure — it wins **zero** readings at
+/// `Band::Undercroft` and 28.7% at `Band::Underdeep` — so its cuts are spread
+/// to keep that gradient legible as a change of band, not just of number.
+/// plumb: universal(an authored band ladder on the REDUCED_SULPHUR supply axis -- the same vocabulary in every world by design; spread wide to keep the depth gradient legible as a change of band)
+pub const REDUCED_SULPHUR_CUTS: MetaboliteCuts = MetaboliteCuts {
+    trace_max: 0.25,
+    thin_max: 0.60,
+    ample_max: 1.00,
+};
+
+/// `METHANE`'s cuts, the narrowest axis (p10 0.313, p90 0.867) and the only
+/// one that is **never zero anywhere**, so its `Absent` band is unreachable by
+/// construction — see `metabolite_band_probe.rs`'s exemption roster, which is
+/// where that fact is asserted rather than assumed.
+/// plumb: universal(an authored band ladder on the METHANE supply axis -- the same vocabulary in every world by design; the narrowest axis and the only one never zero anywhere)
+pub const METHANE_CUTS: MetaboliteCuts = MetaboliteCuts {
+    trace_max: 0.35,
+    thin_max: 0.55,
+    ample_max: 0.80,
+};
+
+/// Classify one axis's raw supply into its band.
+///
+/// `Absent` is `value <= 0.0` exactly, not a small-epsilon window: a zero here
+/// means a gating term was shut, which the geometric-mean yield form preserves
+/// exactly (`0^(1/k) == 0`), so the zero population is a real physical set and
+/// not float noise. A negative cannot occur — every yield is a root of a
+/// product of non-negative terms — and is folded into `Absent` rather than
+/// panicking, because a band readout is not the place to discover it.
+/// type-audit: bare-ok(ratio: value)
+pub fn metabolite_band(value: f64, cuts: MetaboliteCuts) -> MetaboliteBand {
+    if value <= 0.0 {
+        MetaboliteBand::Absent
+    } else if value <= cuts.trace_max {
+        MetaboliteBand::Trace
+    } else if value <= cuts.thin_max {
+        MetaboliteBand::Thin
+    } else if value <= cuts.ample_max {
+        MetaboliteBand::Ample
+    } else {
+        MetaboliteBand::Abundant
+    }
+}
+
+impl ChemicalSupply {
+    /// This reading's four metabolite bands, in `SUPPLY_AXIS_ORDER`'s
+    /// metabolite order: hydrogen, reduced iron, reduced sulphur, methane.
+    pub fn metabolite_bands(&self) -> [MetaboliteBand; 4] {
+        [
+            metabolite_band(self.hydrogen, HYDROGEN_CUTS),
+            metabolite_band(self.reduced_iron, REDUCED_IRON_CUTS),
+            metabolite_band(self.reduced_sulphur, REDUCED_SULPHUR_CUTS),
+            metabolite_band(self.methane, METHANE_CUTS),
+        ]
+    }
+}
+
 impl ChemicalSupply {
     /// Nothing supplied on any lightless axis — the reading for a vertex with
     /// no chamber at all, and the second argument of the capacity loops'

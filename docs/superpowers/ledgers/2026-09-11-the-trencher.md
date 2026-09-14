@@ -4006,3 +4006,104 @@ advisory.
 unfalsifiable by the world, so its guard must be a drift check over its own
 distribution.* That generalises to anything a simulation computes before its
 reader exists.
+
+## #47 [G5] — Task 16: the per-axis bands, and three statistics the guard itself falsified
+
+The bands ship as an **interface** rather than a description, per #46's
+amendment to #42: authored cuts in raw units, per axis, with the raw `f64`
+fields still public and authoritative. Everything below was found by writing
+the guard and running it, not by designing it.
+
+### The cuts, and why one set was re-placed
+
+Measured at the shipped yield form (12 seeds x 5 rungs, 104,845 readings):
+hydrogen `0.000 / 0.643 / 0.958` with **39.0% exactly zero**; iron
+`0.386 / 0.645 / 1.175`; sulphur `0.179 / 0.461 / 1.463`; methane
+`0.313 / 0.546 / 0.867` with **0.0% zero**. Four differently-shaped
+distributions, so one shared ladder cannot serve them — which is the
+measurement backing Nathan's "per-axis bands", not a preference.
+
+**Hydrogen's cuts were authored, measured, and re-placed.** Round quarter-steps
+(`0.25 / 0.50 / 0.75`) put **75** readings in `Trace` and **57** in `Thin`
+against 5,670 and 7,503 above — two of five bands holding 0.2% of the axis
+between them. That *passes* an occupancy guard and is still a bad ladder: a
+band holding one reading in four hundred is a category no author would name.
+Re-placed to `0.50 / 0.70 / 0.90`, giving `132 / 3,787 / 5,801 / 3,585`. This
+is the occupancy guard doing its job, not a fit-to-result: the cut moved
+because a band was vestigial, not to reach a number.
+
+### The empty-band roster needed TWO reasons, not one
+
+The guard's first run failed on `reduced_iron/Absent` — empty over three seeds.
+Exempting it as unreachable would have been **false**: the 12-seed run measures
+iron's zero share at `0.0002`, about 1 in 5,000, so 29,305 readings expect ~6
+and observing none is ordinary. The band is real; this sample cannot resolve
+it.
+
+So `EXPECTED_EMPTY` carries a `WhyEmpty` discriminant:
+
+- `NeverOccurs` — the world **cannot** produce it. Two-way guarded: if one ever
+  occurs the claim was false and the row must go. Carries `METHANE/Absent`
+  (the three gating terms are never simultaneously zero).
+- `BelowSampleResolution { per_100k }` — the world **does** produce it, more
+  rarely than this probe resolves. Carries the measured frequency so a reader
+  can check the arithmetic instead of taking the word "rare", and is
+  deliberately **not** two-way guarded, because observing one would confirm the
+  row rather than refute it.
+
+Collapsing these into one row type would have let an "it cannot happen" that
+is really an "I did not look hard enough" sit here looking identical to a true
+claim.
+
+### THREE statistics I chose were wrong, and the guard caught all three
+
+1. **Ratio spread, where absolute was the question.** The geometric mean
+   compressed every axis's `p90/p10` hard — methane `19.7x -> 2.8x` — which
+   read as a flattened world. Bands use **absolute** thresholds, and in
+   absolute terms methane's range *grew* 35% (`.411 -> .554`) and sulphur's
+   held. I nearly reopened Task 15 over the wrong statistic.
+2. **Modal band, where a distribution shift was the question.** K2's first form
+   compared each axis's modal band shallow-vs-deep and reported **1 of 4** axes
+   moving. That was an artifact: a mode moves only when the bulk crosses a cut
+   and is blind to a distribution sliding underneath it. Re-measured as the
+   `Ample+Abundant` share, **4 of 4** axes shift, by 12 to 46 points:
+
+   | axis | Undercroft | Nadir | shift |
+   | --- | --- | --- | --- |
+   | hydrogen | 0.158 | 0.384 | +0.226 |
+   | reduced_iron | 0.549 | 0.670 | +0.121 |
+   | reduced_sulphur | **0.000** | 0.460 | **+0.460** |
+   | methane | 0.272 | 0.580 | +0.308 |
+
+   Sulphur reading exactly `0.000` at `Undercroft` independently reproduces the
+   ΔT-front physics from the dominance measurement — two instruments, one fact.
+3. **Plain median, on a bimodal axis.** The drift guard's first form tracked
+   each axis's median and **hydrogen's is exactly `0.0000`**, because 54.6% of
+   its readings are absent. A statistic pinned to zero cannot report drift: it
+   sits still while the present-population moves anywhere, then jumps when the
+   absent share crosses one half. Replaced by the pair *(zero share,
+   median-where-present)*, degenerate on no axis.
+
+### The drift guard is the deliberate stand-in for the missing consumer
+
+With no niche weighting these axes, a distribution can slide arbitrarily far
+with no settlement moving and no artifact drifting — the bands would quietly
+start meaning something else while every ordinary instrument stayed green.
+`each_axis_still_sits_where_its_cuts_were_authored` is the only thing in the
+tree that objects. **Mutation-proved**: multiplying methanogenesis by 1.5 moves
+median-where-present `0.5423 -> 0.8134` and reds with the intended diagnostic.
+
+### Four gates the new surface had to satisfy, each a real requirement
+
+`world-build-sites.tsv` (a second `artifacts` row), type-audit
+(`bare-ok(ratio: ...)` on four new pub primitives), plumb (`universal(...)` on
+the four cut constants — `pending(wave-N)` was available and would have been
+dishonest, since these are authored now with full provenance, not deferred),
+and both audit reports regenerated. Worth recording because two of the three
+`make *-report` targets are drift **checks** that name the regeneration command
+rather than running it — reading the target name as the fix costs a gate cycle.
+
+**Ideonomy passes / overturns:** one — *a summary statistic can be wrong for
+the question in three different ways (wrong normalisation, wrong order
+statistic, degenerate on the distribution's shape), and writing the guard is
+what exposes each.*
