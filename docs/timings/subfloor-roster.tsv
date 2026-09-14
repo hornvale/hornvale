@@ -1526,7 +1526,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -1770,7 +1769,6 @@ hornvale-lab::suite$health_calibration::one_stuck_creature_among_nine_recovering
 hornvale-lab::suite$health_calibration::searching_is_not_distress
 hornvale-lab::suite$health_calibration::the_chronic_threshold_is_exact_at_chronic_ticks
 hornvale-lab::suite$hearth_population_calibration::the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close
-hornvale-lab::suite$hearth_population_calibration::the_hearth_never_worsens_a_planted_cold_built_population
 hornvale-lab::suite$individuation::awakening_is_a_fact_and_the_large_owlbear_stays_large
 hornvale-lab::suite$individuation::mighty_things_in_the_cold_north
 hornvale-lab::suite$individuation::the_roster_passes_integrity_and_stays_out_of_the_canon
@@ -3554,6 +3552,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -3723,7 +3722,6 @@ hornvale-worldgen::hornvale_worldgen$hazard::tests::a_transform_boundary_is_seis
 hornvale-worldgen::hornvale_worldgen$hazard::tests::an_amagmatic_vertex_never_erupts
 hornvale-worldgen::hornvale_worldgen$hazard::tests::an_empty_or_reversed_window_yields_nothing
 hornvale-worldgen::hornvale_worldgen$hazard::tests::busier_ground_produces_more_events
-hornvale-worldgen::hornvale_worldgen$hazard::tests::events_in_is_a_pure_read
 hornvale-worldgen::hornvale_worldgen$hazard::tests::events_lie_inside_the_window_and_are_ordered
 hornvale-worldgen::hornvale_worldgen$hazard::tests::every_interval_lies_inside_its_authored_bracket
 hornvale-worldgen::hornvale_worldgen$hazard::tests::hazard_is_pure_and_carries_no_state
@@ -4485,6 +4483,7 @@ hornvale::suite$observations::observations_export_neighbors_resolves_declared_wo
 hornvale::suite$observations::observations_export_refuses_every_non_existing_capability_state_by_name
 hornvale::suite$observations::observations_export_refuses_needs_simulation_extension
 hornvale::suite$observations::observations_fixture_is_a_valid_internal_record
+hornvale::suite$observations::observations_hv_009_neighbor_fixture_is_producer_backed
 hornvale::suite$observations::observations_missing_count_unit_is_refused
 hornvale::suite$observations::observations_missing_object_or_scale_is_refused
 hornvale::suite$observations::observations_non_finite_frame_rate_and_time_are_refused
