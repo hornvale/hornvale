@@ -128,6 +128,7 @@ run "gnomon injection" bash scripts/test-gnomon-injection.sh
 run "sluice drain"    bash scripts/test-sluice-drain.sh
 run "sluice status"   bash scripts/test-sluice-status.sh
 run "sluice watch"    bash scripts/test-sluice-watch.sh
+run "sluice failures" bash scripts/test-sluice-failures.sh
 run "sluice vet"      bash scripts/test-sluice-vet.sh
 # The delivery classification, wired in the same commit that fixed it — a test
 # nothing runs is a test that does not exist, and this file has had to be
