@@ -12,8 +12,9 @@ use bevy::{
     app::{AppLabel, SubApps},
     asset::RenderAssetUsages,
     camera::RenderTarget,
-    light::{Atmosphere, cluster::GlobalClusterSettings},
+    light::Atmosphere,
     pbr::AtmosphereSettings,
+    post_process::dof::DepthOfField,
     prelude::*,
     render::{
         RenderApp, RenderPlugin,
@@ -23,7 +24,7 @@ use bevy::{
             CachedPipelineState, Extent3d, PipelineCache, PollType, TextureDimension,
             TextureFormat, TextureUsages,
         },
-        renderer::RenderDevice,
+        renderer::{RenderAdapterInfo, RenderDevice},
         texture::GpuImage,
         view::screenshot::{Screenshot, ScreenshotCaptured},
     },
@@ -34,6 +35,7 @@ use std::{
     path::Path,
     time::{Duration, Instant},
 };
+use wgpu_types::DeviceType;
 pub struct VisualPlugin;
 impl Plugin for VisualPlugin {
     fn build(&self, app: &mut App) {
@@ -99,11 +101,6 @@ impl Renderer {
         app.finish();
         app.cleanup();
         let world = app.world_mut();
-        // Bevy selects clustering capabilities during plugin finish; override them
-        // afterwards so this renderer uses CPU light clustering even on llvmpipe.
-        if let Some(mut settings) = world.get_resource_mut::<GlobalClusterSettings>() {
-            settings.gpu_clustering = None;
-        }
         let mut target = Image::new_uninit(
             Extent3d {
                 width,
@@ -170,6 +167,29 @@ impl Renderer {
         self.set_caption("");
         Ok(())
     }
+    /// Opt a proof into reduced effects on software adapters before its first frame.
+    /// Hardware adapters retain their normal settings; ordinary capture/live paths
+    /// do not opt in. The atmosphere entity remains available for scene transforms.
+    pub fn apply_software_proof_profile(&mut self) {
+        if self
+            .apps
+            .main
+            .world()
+            .resource::<RenderAdapterInfo>()
+            .device_type
+            != DeviceType::Cpu
+        {
+            return;
+        }
+        self.disable_atmosphere();
+        self.apps
+            .main
+            .world_mut()
+            .entity_mut(self.camera)
+            .insert(Msaa::Off)
+            .remove::<DepthOfField>();
+    }
+
     /// Disable volume scattering for an explicit material comparison.
     pub fn disable_atmosphere(&mut self) {
         self.atmosphere_enabled = false;
@@ -524,23 +544,65 @@ impl Renderer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn offscreen_renderer_uses_cpu_light_clustering() {
+
+    fn renderer() -> Renderer {
         let mut mirror =
             ObservationMirror::new(include_str!("../tests/fixtures/initial.json")).unwrap();
         mirror.request(0).unwrap();
         mirror
             .accept(include_str!("../tests/fixtures/reply.json"))
             .unwrap();
-        let renderer = Renderer::new(&mirror, 64, 64).unwrap();
-        assert!(
+        Renderer::new(&mirror, 64, 64).unwrap()
+    }
+
+    #[test]
+    fn software_proof_profile_cpu_disables_effects_and_preserves_atmosphere_entity() {
+        let mut renderer = renderer();
+        renderer
+            .apps
+            .main
+            .world_mut()
+            .resource_mut::<RenderAdapterInfo>()
+            .device_type = DeviceType::Cpu;
+        // Selecting a CPU adapter alone must not change ordinary capture/live settings.
+        assert!(renderer.atmosphere_enabled);
+        assert_eq!(
+            renderer.apps.main.world().get::<Msaa>(renderer.camera),
+            Some(&Msaa::Sample4)
+        );
+        renderer.apply_software_proof_profile();
+        renderer.apply_software_proof_profile();
+        let world = renderer.apps.main.world();
+        assert!(!renderer.atmosphere_enabled);
+        assert!(world.get::<Atmosphere>(renderer.atmosphere).is_none());
+        assert!(world.get::<Transform>(renderer.atmosphere).is_some());
+        assert!(world.get::<AtmosphereSettings>(renderer.camera).is_none());
+        assert_eq!(world.get::<Msaa>(renderer.camera), Some(&Msaa::Off));
+        assert!(world.get::<DepthOfField>(renderer.camera).is_none());
+    }
+
+    #[test]
+    fn software_proof_profile_leaves_non_cpu_adapters_unchanged() {
+        let mut renderer = renderer();
+        for device_type in [
+            DeviceType::DiscreteGpu,
+            DeviceType::IntegratedGpu,
+            DeviceType::VirtualGpu,
+            DeviceType::Other,
+        ] {
             renderer
                 .apps
                 .main
-                .world()
-                .resource::<GlobalClusterSettings>()
-                .gpu_clustering
-                .is_none()
-        );
+                .world_mut()
+                .resource_mut::<RenderAdapterInfo>()
+                .device_type = device_type;
+            renderer.apply_software_proof_profile();
+            let world = renderer.apps.main.world();
+            assert!(renderer.atmosphere_enabled);
+            assert!(world.get::<Atmosphere>(renderer.atmosphere).is_some());
+            assert!(world.get::<AtmosphereSettings>(renderer.camera).is_some());
+            assert_eq!(world.get::<Msaa>(renderer.camera), Some(&Msaa::Sample4));
+            assert!(world.get::<DepthOfField>(renderer.camera).is_some());
+        }
     }
 }

@@ -2581,6 +2581,7 @@ dependencies = [
  "libm",
  "serde",
  "serde_json",
+ "wgpu-types",
 ]
 
 [[package]]

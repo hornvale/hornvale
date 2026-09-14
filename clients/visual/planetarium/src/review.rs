@@ -399,6 +399,7 @@ pub fn run_rendered_surface_proof(seed: u64) -> Result<RenderedSurfaceProof, Str
             .map_err(|error| format!("parse proof revision: {error}"))?;
     let mut renderer = Renderer::new(&mirror, 1920, 1080)
         .map_err(|error| format!("create proof renderer: {error}"))?;
+    renderer.apply_software_proof_profile();
     renderer.set_cosmetic_clouds_visible(false);
     let mut rss_peak = process_memory_bytes()?;
     renderer
