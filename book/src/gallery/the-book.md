@@ -928,43 +928,43 @@ The sky keeps no dates to number.
 #### In the hundredth year
 
 Among the Bao, the sky has darkened, now and again.
-The priesthood of the Bao numbers the darkenings: 6472.
+The priesthood of the Bao numbers the darkenings: 6469.
 The next darkening, it teaches, comes on day 36531.
 The Bao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Bazap, the sky has darkened, now and again.
 Among the Ruašre, the sky has darkened, now and again.
 Among the Roašror, the sky has darkened, now and again.
-The priesthood of the Roašror numbers the darkenings: 6472.
+The priesthood of the Roašror numbers the darkenings: 6469.
 The next darkening, it teaches, comes on day 36531.
 The Roašror's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Fovfav, the sky has darkened, now and again.
 Among the Wakdao, the sky has darkened, now and again.
 Among the Qwootoqo, the sky has darkened, now and again.
-The priesthood of the Qwootoqo numbers the darkenings: 4010.
+The priesthood of the Qwootoqo numbers the darkenings: 4004.
 The next darkening, it teaches, comes on day 36531.
 The Qwootoqo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Dazha, the sky has darkened, now and again.
-The priesthood of the Dazha numbers the darkenings: 4010.
+The priesthood of the Dazha numbers the darkenings: 4004.
 The next darkening, it teaches, comes on day 36531.
 The Dazha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Šdoašded, the sky has darkened, now and again.
-The priesthood of the Šdoašded numbers the darkenings: 6472.
+The priesthood of the Šdoašded numbers the darkenings: 6469.
 The next darkening, it teaches, comes on day 36531.
 The Šdoašded's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Dashav, the sky has darkened, now and again.
-The priesthood of the Dashav numbers the darkenings: 4010.
+The priesthood of the Dashav numbers the darkenings: 4004.
 The next darkening, it teaches, comes on day 36531.
 The Dashav's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Dweowbaw, the sky has darkened, now and again.
-The priesthood of the Dweowbaw numbers the darkenings: 4010.
+The priesthood of the Dweowbaw numbers the darkenings: 4004.
 The next darkening, it teaches, comes on day 36531.
 The Dweowbaw's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Naavea, the sky has darkened, now and again.
-The priesthood of the Naavea numbers the darkenings: 4010.
+The priesthood of the Naavea numbers the darkenings: 4004.
 The next darkening, it teaches, comes on day 36531.
 The Naavea's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Ngongo, the sky has darkened, now and again.
-The priesthood of the Ngongo numbers the darkenings: 6472.
+The priesthood of the Ngongo numbers the darkenings: 6469.
 The next darkening, it teaches, comes on day 36531.
 The Ngongo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Wodbog, the sky has darkened, now and again.
@@ -972,11 +972,11 @@ Among the Dazhaf, the sky has darkened, now and again.
 Among the Šzuašzez, the sky has darkened, now and again.
 Among the Šroašror, the sky has darkened, now and again.
 Among the Kxsonkxzo, the sky has darkened, now and again.
-The priesthood of the Kxsonkxzo numbers the darkenings: 6472.
+The priesthood of the Kxsonkxzo numbers the darkenings: 6469.
 The next darkening, it teaches, comes on day 36531.
 The Kxsonkxzo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Sruasrer, the sky has darkened, now and again.
-The priesthood of the Sruasrer numbers the darkenings: 4010.
+The priesthood of the Sruasrer numbers the darkenings: 4004.
 The next darkening, it teaches, comes on day 36531.
 The Sruasrer's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
@@ -991,7 +991,7 @@ The Sruasrer's own priesthood taught wrongly, and could be shown wrong by any wh
 *In truth, the Ngongo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Kxsonkxzo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Sruasrer's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the darkenings of the first hundred years number 6472.*
+*In truth, the darkenings of the first hundred years number 6469.*
 
 ## Volume 2: Boodoa
 
@@ -1946,74 +1946,74 @@ The sky keeps no dates to number.
 #### In the hundredth year
 
 Among the Koodzhoo, the sky has darkened, now and again.
-The priesthood of the Koodzhoo numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Koodzhoo numbers the darkenings: 77.
+The next darkening, it teaches, comes on day 36368.
 The Koodzhoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Takaz, the sky has darkened, now and again.
 Among the Boba, the sky has darkened, now and again.
 Among the Saoza, the sky has darkened, now and again.
 Among the Pagam, the sky has darkened, now and again.
-The priesthood of the Pagam numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Pagam numbers the darkenings: 77.
+The next darkening, it teaches, comes on day 36368.
 The Pagam's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Ratra, the sky has darkened, now and again.
 Among the Peerzhoe, the sky has darkened, now and again.
-The priesthood of the Peerzhoe numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Peerzhoe numbers the darkenings: 47.
+The next darkening, it teaches, comes on day 36368.
 The Peerzhoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Bapa, the sky has darkened, now and again.
-The priesthood of the Bapa numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Bapa numbers the darkenings: 47.
+The next darkening, it teaches, comes on day 36368.
 The Bapa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Moma, the sky has darkened, now and again.
-The priesthood of the Moma numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Moma numbers the darkenings: 77.
+The next darkening, it teaches, comes on day 36368.
 The Moma's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Papan, the sky has darkened, now and again.
-The priesthood of the Papan numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Papan numbers the darkenings: 47.
+The next darkening, it teaches, comes on day 36368.
 The Papan's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Geerjoe, the sky has darkened, now and again.
-The priesthood of the Geerjoe numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Geerjoe numbers the darkenings: 47.
+The next darkening, it teaches, comes on day 36368.
 The Geerjoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Leoglo, the sky has darkened, now and again.
-The priesthood of the Leoglo numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Leoglo numbers the darkenings: 47.
+The next darkening, it teaches, comes on day 36368.
 The Leoglo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Gnga, the sky has darkened, now and again.
-The priesthood of the Gnga numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Gnga numbers the darkenings: 77.
+The next darkening, it teaches, comes on day 36368.
 The Gnga's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Famfaam, the sky has darkened, now and again.
 Among the Takan, the sky has darkened, now and again.
-The priesthood of the Takan numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Takan numbers the darkenings: 77.
+The next darkening, it teaches, comes on day 36368.
 The Takan's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Muma, the sky has darkened, now and again.
 Among the Nona, the sky has darkened, now and again.
-The priesthood of the Nona numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Nona numbers the darkenings: 77.
+The next darkening, it teaches, comes on day 36368.
 The Nona's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Kxaapxoa, the sky has darkened, now and again.
 Among the Ṅuṅa, the sky has darkened, now and again.
-The priesthood of the Ṅuṅa numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36337.
+The priesthood of the Ṅuṅa numbers the darkenings: 47.
+The next darkening, it teaches, comes on day 36368.
 The Ṅuṅa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
-*In truth, the Koodzhoo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Pagam's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Peerzhoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Bapa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Moma's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Papan's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Geerjoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Leoglo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Gnga's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Takan's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Nona's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Ṅuṅa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the darkenings of the first hundred years number 81.*
+*In truth, the Koodzhoo's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Pagam's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Peerzhoe's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Bapa's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Moma's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Papan's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Geerjoe's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Leoglo's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Gnga's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Takan's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Nona's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the Ṅuṅa's priesthood taught the darkening would come on day 35360; it came on day 35609 instead.*
+*In truth, the darkenings of the first hundred years number 77.*
 
 ## Volume 3: Dodoa
 
@@ -2939,67 +2939,56 @@ The sky keeps no dates to number.
 #### In the hundredth year
 
 Among the Dokdoo, the sky has darkened, now and again.
-The priesthood of the Dokdoo numbers the darkenings: 53.
-The next darkening, it teaches, comes on day 36125.
-The Dokdoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The priesthood of the Dokdoo numbers the darkenings: 55.
+The next darkening, it teaches, comes on day 36703.
+None among the Dokdoo have shown the priesthood's teaching false.
 Among the Bafak, the sky has darkened, now and again.
 Among the Rupre, the sky has darkened, now and again.
 Among the Šrobro, the sky has darkened, now and again.
-The priesthood of the Šrobro numbers the darkenings: 53.
-The next darkening, it teaches, comes on day 36125.
-The Šrobro's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The priesthood of the Šrobro numbers the darkenings: 55.
+The next darkening, it teaches, comes on day 36703.
+None among the Šrobro have shown the priesthood's teaching false.
 Among the Gafag, the sky has darkened, now and again.
 Among the Plawplaw, the sky has darkened, now and again.
 Among the Rekroeg, the sky has darkened, now and again.
 The priesthood of the Rekroeg numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36125.
-The Rekroeg's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The next darkening, it teaches, comes on day 36703.
+None among the Rekroeg have shown the priesthood's teaching false.
 Among the Gapag, the sky has darkened, now and again.
 The priesthood of the Gapag numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36125.
-The Gapag's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The next darkening, it teaches, comes on day 36703.
+None among the Gapag have shown the priesthood's teaching false.
 Among the Šzopze, the sky has darkened, now and again.
-The priesthood of the Šzopze numbers the darkenings: 53.
-The next darkening, it teaches, comes on day 36125.
-The Šzopze's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The priesthood of the Šzopze numbers the darkenings: 55.
+The next darkening, it teaches, comes on day 36703.
+None among the Šzopze have shown the priesthood's teaching false.
 Among the Gapap, the sky has darkened, now and again.
 The priesthood of the Gapap numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36125.
-The Gapap's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The next darkening, it teaches, comes on day 36703.
+None among the Gapap have shown the priesthood's teaching false.
 Among the Zekzoe, the sky has darkened, now and again.
 The priesthood of the Zekzoe numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36125.
-The Zekzoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The next darkening, it teaches, comes on day 36703.
+None among the Zekzoe have shown the priesthood's teaching false.
 Among the Vaar, the sky has darkened, now and again.
 The priesthood of the Vaar numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36125.
-The Vaar's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The next darkening, it teaches, comes on day 36703.
+None among the Vaar have shown the priesthood's teaching false.
 Among the Dzhaojxo, the sky has darkened, now and again.
-The priesthood of the Dzhaojxo numbers the darkenings: 53.
-The next darkening, it teaches, comes on day 36125.
-The Dzhaojxo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The priesthood of the Dzhaojxo numbers the darkenings: 55.
+The next darkening, it teaches, comes on day 36703.
+None among the Dzhaojxo have shown the priesthood's teaching false.
 Among the Vnagva, the sky has darkened, now and again.
 Among the Gava, the sky has darkened, now and again.
 Among the Szubze, the sky has darkened, now and again.
 Among the Šropro, the sky has darkened, now and again.
 Among the Mo, the sky has darkened, now and again.
-The priesthood of the Mo numbers the darkenings: 53.
-The next darkening, it teaches, comes on day 36125.
-The Mo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The priesthood of the Mo numbers the darkenings: 55.
+The next darkening, it teaches, comes on day 36703.
+None among the Mo have shown the priesthood's teaching false.
 Among the Rutre, the sky has darkened, now and again.
 The priesthood of the Rutre numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36125.
-The Rutre's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The next darkening, it teaches, comes on day 36703.
+None among the Rutre have shown the priesthood's teaching false.
 
-*In truth, the Dokdoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Šrobro's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Rekroeg's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Gapag's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Šzopze's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Gapap's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Zekzoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Vaar's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Dzhaojxo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Mo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Rutre's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the darkenings of the first hundred years number 53.*
+*In truth, the darkenings of the first hundred years number 55.*

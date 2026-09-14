@@ -7561,3 +7561,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-14T15:59:07Z | sluice:clients | 317.125 | 4668.105 | 365.701 | 15.87 | 0 | c82604e38 |  | lefford | 40 |
 | 2026-09-14T16:08:11Z | sluice:heavy | 543.734 | 15670.318 | 311.711 | 29.39 | 0 | b28306cf3 |  | lefford | 40 |
 | 2026-09-14T18:07:21Z | gate-commit | 73.120 | 106.020 | 30.443 | 1.87 | 0 | ba3338ddc | campaign/anchor-orbital-coherence | MacBookPro | 10 |
+| 2026-09-14T18:26:59Z | census-tail-chorus | 72.467 | 1048.142 | 29.929 | 14.88 | 0 | e2aad7ad6 |  | lefford | 40 |
+| 2026-09-14T18:42:27Z | census-study-the-census | 927.521 | 34586.741 | 156.690 | 37.46 | 0 | e2aad7ad6 |  | lefford | 40 |
+| 2026-09-14T18:48:17Z | census-study-the-meeting | 349.766 | 12663.638 | 146.241 | 36.62 | 0 | e2aad7ad6 |  | lefford | 40 |
+| 2026-09-14T18:48:19Z | census-tail-domesday | 1.243 | 1.060 | 0.126 | 0.95 | 0 | e2aad7ad6 |  | lefford | 40 |
+| 2026-09-14T18:48:19Z | census-tail-anomalies | 0.640 | 0.561 | 0.079 | 1.00 | 0 | e2aad7ad6 |  | lefford | 40 |
+| 2026-09-14T18:48:48Z | census | 1606.469 | 50641.652 | 443.636 | 31.80 | 0 | e2aad7ad6 |  | lefford | 40 |
+| 2026-09-14T18:56:41Z | gnomon-injection | 469.654 | 5670.833 | 168.291 | 12.43 | 0 | e2aad7ad6 |  | lefford | 40 |

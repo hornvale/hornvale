@@ -49,7 +49,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 0 | 3 | 2974 | 17.37 |
+| 0 | 0 | 0 | 3 | 2967 | 17.292 |
 
 ### `day-length-hours`
 
@@ -163,7 +163,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 21 | 202 | 594 | 10017 | 590.038 |
+| 0 | 20 | 203.5 | 595 | 10018 | 589.949 |
 
 ### `months-per-year-innermost`
 
@@ -240,7 +240,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 32 | 320.5 | 954 | 13394 | 824.964 |
+| 0 | 32 | 319 | 952 | 13390 | 824.905 |
 
 ### `star-class`
 
@@ -309,8 +309,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `coincidence-days-per-century`
 
-- **D3**: p25..p75 spans 3 (0.10% of the 2974 min..max range), under the 5% bar
-- **D4**: median 0 equals the min (0 .. 2974)
+- **D3**: p25..p75 spans 3 (0.10% of the 2967 min..max range), under the 5% bar
+- **D4**: median 0 equals the min (0 .. 2967)
 
 ### `genesis-note-count`
 

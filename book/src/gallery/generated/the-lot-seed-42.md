@@ -77,7 +77,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in 2 huts. [30]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in temperate latitudes, and temperate-forest country. [5] [31] [9]
-The sun was wholly taken 1 time over this life, the first at age 14. [32]
+The sun was never wholly taken in this life. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -264,7 +264,7 @@ They paid tribute to Zavadxanapdadash, a mountain-dwarf community. [30] [31]
 They lived in 2 huts. [32]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and temperate-forest country. [5] [33] [9]
-The sun was wholly taken 1 time over this life, the first at age 3. [34]
+The sun was wholly taken 1 time over this life, the first at age 2. [34]
 The ground under them gave nothing — the ground held for the whole of this life. [35]
 They ate other living things — prey, detritus, or their remains. [36]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -357,7 +357,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in 3 huts. [27]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in temperate latitudes, and temperate-forest country. [5] [28] [9]
-The sun was wholly taken 1 time over this life, the first at age 32. [29]
+The sun was never wholly taken in this life. [29]
 The ground under them gave nothing — the ground held for the whole of this life. [30]
 They ate other living things — prey, detritus, or their remains. [31]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -533,7 +533,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in one hut. [30]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in temperate latitudes, and taiga country. [5] [31] [9]
-The sun was wholly taken 1 time over this life, the first at age 54. [32]
+The sun was never wholly taken in this life. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -715,7 +715,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in 3 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in temperate latitudes, and temperate-forest country. [5] [30] [9]
-The sun was wholly taken 1 time over this life, the first at age 44. [31]
+The sun was wholly taken 2 times over this life, the first at age 30. [31]
 The ground under them gave nothing — the ground held for the whole of this life. [32]
 They ate other living things — prey, detritus, or their remains. [33]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -897,7 +897,7 @@ Nothing in the record says who they answered to: no `pays-tribute-to` fact stand
 They lived in 3 huts. [27]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in temperate latitudes, and temperate-forest country. [5] [28] [9]
-The sun was never wholly taken in this life. [29]
+The sun was wholly taken 1 time over this life, the first at age 50. [29]
 The ground under them gave nothing — the ground held for the whole of this life. [30]
 They ate other living things — prey, detritus, or their remains. [31]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.

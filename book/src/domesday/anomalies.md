@@ -133,7 +133,7 @@ Score **18**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 
 | metric | depth | value |
 |---|---|---|
-| `lunar-eclipses-per-century` | 0 | 10017 |
+| `lunar-eclipses-per-century` | 0 | 10018 |
 | `sediment-volume` | 0 | 620405.23 |
 | `solar-eclipses-per-century` | 0.001001001 | 10237 |
 | `goblin-settlement-count` | 0.002002002 | 107 |
@@ -322,9 +322,9 @@ Score **14**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 |---|---|---|
 | `alignment-drift-deg-per-kyr` | 0 | 0.0000024415012 |
 | `hypsometric-bimodality` | 0 | 4.464955 |
-| `lunar-eclipses-per-century` | 0.002002002 | 8203 |
+| `lunar-eclipses-per-century` | 0.002002002 | 8201 |
 | `weft-coherence-morans-i-overhang` | 0.002004008 | 0.98541 |
-| `solar-eclipses-per-century` | 0.003003003 | 8371 |
+| `solar-eclipses-per-century` | 0.003003003 | 8367 |
 | `cave-fraction` | 0.005005005 | 0.043397107 |
 | `granary-raids-in-depleted-half` | 0.0060301508 | 0.040201005 |
 | `warp-found-fraction-spring` | 0.0065130261 | 0.5 |
@@ -416,22 +416,22 @@ Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | `warp-max-class-rate-thicket` | 0.005005005 | 0.12605042 |
 | `goblin-flagship-surplus` | 0.0065130261 | 0.675 |
 
-### Seed `149`
+### Seed `578`
 
 Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `warp-channel-null-erratic` | 0 | 0.010186685 |
-| `warp-channel-null-overhang` | 0.001001001 | 0.010777136 |
-| `pantheon-size-kobold` | 0.001529052 | 16 |
-| `warp-channel-mi-erratic` | 0.003003003 | 0.010826375 |
-| `warp-channel-mi-thicket` | 0.003003003 | 0.021543035 |
-| `warp-channel-null-thicket` | 0.003003003 | 0.011393468 |
-| `weft-existence-density-any` | 0.003003003 | 0.12109605 |
-| `warp-oracle-gain-thicket` | 0.006006006 | 0.018723177 |
-| `aquifer-fraction` | 0.007007007 | 0.42490322 |
-| `fertile-land-fraction` | 0.007007007 | 0 |
+| `warp-false-sign-net-spring` | 0 | 0.0014645933 |
+| `capacity-by-abs-latitude` | 0.001001001 | 42.527686 |
+| `divergence-magnitude-goblin` | 0.001001001 | 9 |
+| `lot-witness-community-end-share` | 0.002002002 | 0.225 |
+| `name-syllables-goblin` | 0.004008016 | 1.9285714 |
+| `insolation-rel` | 0.005005005 | 1.0998798 |
+| `zone-position` | 0.005005005 | 0.008368312 |
+| `warp-learner-gain-thicket` | 0.006006006 | 0.045626708 |
+| `climate-displacement-events` | 0.007007007 | 1977 |
+| `warp-max-class-rate-thicket` | 0.007007007 | 0.43333333 |
 
 ## Excluded columns
 
