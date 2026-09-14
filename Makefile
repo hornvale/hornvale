@@ -1081,6 +1081,7 @@ visual-check-run:
 	cd clients/visual && cargo +1.96.1 fmt --check
 	cargo +1.96.1 clippy --locked --manifest-path clients/visual/Cargo.toml --workspace --all-targets -- -D warnings
 	cargo +1.96.1 test --locked --manifest-path clients/visual/Cargo.toml --workspace
+	bash scripts/test-visual-proof-container.sh
 	if [ "$${HV_VISUAL_PROOF_CONTAINER:-0}" = 1 ]; then \
 		bash scripts/visual-proof-container.sh; \
 	else \
