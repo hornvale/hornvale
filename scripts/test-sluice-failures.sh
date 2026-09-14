@@ -31,10 +31,16 @@ if out="$(bash "$S" "$tmp/good.log" 2>&1)"; then
 else
     bad "a complete log was refused: $out"
 fi
-printf '%s' "$out" | grep -q "failing tests (5 distinct)" \
-    && ok "it counts the distinct failures" || bad "wrong distinct count"
-printf '%s' "$out" | grep -q "ok: the list is not shorter" \
-    && ok "the cross-check passes and says so" || bad "no cross-check line"
+if printf '%s' "$out" | grep -q "failing tests (5 distinct)"; then
+    ok "it counts the distinct failures"
+else
+    bad "wrong distinct count"
+fi
+if printf '%s' "$out" | grep -q "ok: the list is not shorter"; then
+    ok "the cross-check passes and says so"
+else
+    bad "no cross-check line"
+fi
 
 echo "== THE DEFECT: a list shorter than the run reported must REFUSE"
 # 20 failures reported, only 7 FAIL lines present -- precisely the shape a
@@ -45,10 +51,16 @@ if bash "$S" "$tmp/truncated.log" >"$tmp/t.out" 2>&1; then
 else
     ok "a truncated list is refused (exit non-zero)"
 fi
-grep -q "REFUSING" "$tmp/t.out" && ok "the refusal says REFUSING" || bad "no REFUSING in the output"
-grep -q "subset wearing the whole list" "$tmp/t.out" \
-    && ok "it names what is wrong with quoting the list anyway" \
-    || bad "the refusal does not warn against quoting the subset"
+if grep -q "REFUSING" "$tmp/t.out"; then
+    ok "the refusal says REFUSING"
+else
+    bad "no REFUSING in the output"
+fi
+if grep -q "subset wearing the whole list" "$tmp/t.out"; then
+    ok "it names what is wrong with quoting the list anyway"
+else
+    bad "the refusal does not warn against quoting the subset"
+fi
 
 echo "== a log with several nextest invocations uses the LARGEST reported count"
 mklog "$tmp/multi.log" 3 9
@@ -69,8 +81,11 @@ fi
 echo "== no summary at all: say so, do not crash and do not pretend"
 printf '        FAIL [ 1.000s] (1/2) crate::suite mod::only\n' > "$tmp/nosum.log"
 if out="$(bash "$S" "$tmp/nosum.log" 2>&1)"; then
-    printf '%s' "$out" | grep -q "cross-check below cannot run" \
-        && ok "it says the cross-check cannot run" || bad "silent about the missing summary"
+    if printf '%s' "$out" | grep -q "cross-check below cannot run"; then
+        ok "it says the cross-check cannot run"
+    else
+        bad "silent about the missing summary"
+    fi
 else
     bad "a log with no summary exited non-zero"
 fi
@@ -87,10 +102,26 @@ out="$(bash "$S" "$tmp/after.log" "$tmp/before.log" 2>&1)"
 fixed="$(printf '%s' "$out" | sed -n '/FIXED/,/NEW/p' | grep -c 'mod::' || true)"
 newf="$(printf '%s' "$out"  | sed -n '/NEW/,/STILL/p'  | grep -c 'mod::' || true)"
 still="$(printf '%s' "$out" | sed -n '/STILL/,$p'      | grep -c 'mod::' || true)"
-[ "$fixed" = 2 ] && ok "FIXED names the two that stopped failing" || bad "FIXED=$fixed, want 2"
-[ "$newf"  = 2 ] && ok "NEW names the two that started failing"   || bad "NEW=$newf, want 2"
-[ "$still" = 1 ] && ok "STILL names the one that never stopped"   || bad "STILL=$still, want 1"
-printf '%s' "$out" | grep -q "mod::a" && ok "the fixed set is named, not just counted" || bad "no names in the diff"
+if [ "$fixed" = 2 ]; then
+    ok "FIXED names the two that stopped failing"
+else
+    bad "FIXED=$fixed, want 2"
+fi
+if [ "$newf"  = 2 ]; then
+    ok "NEW names the two that started failing"
+else
+    bad "NEW=$newf, want 2"
+fi
+if [ "$still" = 1 ]; then
+    ok "STILL names the one that never stopped"
+else
+    bad "STILL=$still, want 1"
+fi
+if printf '%s' "$out" | grep -q "mod::a"; then
+    ok "the fixed set is named, not just counted"
+else
+    bad "no names in the diff"
+fi
 
 echo "== a truncated PREVIOUS log is refused too"
 if bash "$S" "$tmp/good.log" "$tmp/truncated.log" >"$tmp/p.out" 2>&1; then

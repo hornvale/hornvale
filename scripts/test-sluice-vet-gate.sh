@@ -46,11 +46,16 @@ g show "$base:scripts/lane-sets.tsv" > "$tmp/roster"
 printf '# probe line\n' >> "$tmp/roster"
 c_roster="$(mint roster scripts/lane-sets.tsv "$tmp/roster")"
 out="$(section roster "$c_roster")"
-printf '%s' "$out" | grep -q "lane-sets.tsv" && ok "the roster edit is named" \
-    || bad "a lane-sets.tsv edit was not reported at all"
-printf '%s' "$out" | grep -q "INERT HERE" \
-    && ok "it says the change is INERT for this run" \
-    || bad "it did not say the roster edit is inert — this is the silence that cost two merge slots"
+if printf '%s' "$out" | grep -q "lane-sets.tsv"; then
+    ok "the roster edit is named"
+else
+    bad "a lane-sets.tsv edit was not reported at all"
+fi
+if printf '%s' "$out" | grep -q "INERT HERE"; then
+    ok "it says the change is INERT for this run"
+else
+    bad "it did not say the roster edit is inert — this is the silence that cost two merge slots"
+fi
 
 echo "== a change to a target a phase runs is reported as TAKING EFFECT"
 # visual-check-run is reached via clients-check-run, which is what the roster
@@ -58,11 +63,16 @@ echo "== a change to a target a phase runs is reported as TAKING EFFECT"
 g show "$base:Makefile" | sed 's/^visual-check-run:.*/&\n\t@echo probe/' > "$tmp/mk"
 c_mk="$(mint makefile Makefile "$tmp/mk")"
 out="$(section makefile "$c_mk")"
-printf '%s' "$out" | grep -q "visual-check-run" \
-    && ok "a target reached THROUGH a roster target is found (one-level expansion)" \
-    || bad "the expansion missed visual-check-run — roster-named targets only is not enough"
-printf '%s' "$out" | grep -q "TAKES EFFECT" \
-    && ok "it says the change takes effect on this run" || bad "no TAKES EFFECT line"
+if printf '%s' "$out" | grep -q "visual-check-run"; then
+    ok "a target reached THROUGH a roster target is found (one-level expansion)"
+else
+    bad "the expansion missed visual-check-run — roster-named targets only is not enough"
+fi
+if printf '%s' "$out" | grep -q "TAKES EFFECT"; then
+    ok "it says the change takes effect on this run"
+else
+    bad "no TAKES EFFECT line"
+fi
 
 echo "== an ordinary Makefile edit is NOT reported (no crying wolf)"
 g show "$base:Makefile" | sed 's/^sweep-dry:.*/&\n\t@echo probe/' > "$tmp/mk2"
@@ -79,9 +89,11 @@ g show "$base:docs/README.md" > "$tmp/doc" 2>/dev/null || echo x > "$tmp/doc"
 printf '\n<!-- probe -->\n' >> "$tmp/doc"
 c_doc="$(mint none docs/README.md "$tmp/doc")"
 out="$(section none "$c_doc")"
-printf '%s' "$out" | grep -q "none — no gate machinery" \
-    && ok "it says 'none' rather than printing an empty header" \
-    || bad "a clean candidate did not get a clear 'none'"
+if printf '%s' "$out" | grep -q "none — no gate machinery"; then
+    ok "it says 'none' rather than printing an empty header"
+else
+    bad "a clean candidate did not get a clear 'none'"
+fi
 
 printf '\ntest-sluice-vet-gate: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
