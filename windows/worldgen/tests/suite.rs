@@ -137,6 +137,8 @@ mod kinship_facts;
 mod lantern_probe;
 #[path = "suite/lot_probe.rs"]
 mod lot_probe;
+#[path = "suite/metabolite_variety_probe.rs"]
+mod metabolite_variety_probe;
 #[path = "suite/metaphysics_gate.rs"]
 mod metaphysics_gate;
 #[path = "suite/mines_exist.rs"]
