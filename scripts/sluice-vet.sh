@@ -20,6 +20,12 @@
 
 set -u
 
+# The shared conflict/author classifier, so the vet, the mouth and the chamber
+# cannot disagree about which conflicts are bookkeeping. One implementation,
+# several callers --- the rule decision 0079 applies to the host check.
+# shellcheck source=/dev/null
+HV_PHASES_LIB=1 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sluice-phases.sh"
+
 # The allocator's ledger. HV_BLOCK_DIR is scripts/decision-block.sh's own
 # variable, honoured here so the two agree about where the ledger lives and so
 # a test can point both at a scratch copy.
@@ -228,6 +234,103 @@ ${branch#campaign/}"
         "$(printf '%s ' $keys)"
 }
 
+# Will this candidate still merge once the candidates AHEAD of it have landed?
+#
+# THE ONE GAP THE MOUTH HAS, and it is expensive every time it opens. The mouth
+# checks a candidate against TODAY's main, where it merges cleanly and is
+# correctly admitted. The chamber merges main AT DISPATCH TIME, by which point
+# the rows ahead have landed. So a candidate can pass the mouth, take the
+# strictly serial claim, fail at the <merge> step with rc=10, and have tested
+# nothing --- a whole slot for no information. campaign/the-weft did exactly
+# this on 2026-09-04; it is why the overlap advisory exists, and the advisory
+# reports SHARED PATHS, which is a weaker statement than this one.
+#
+# Measured by hand on campaign/anchor-orbital-coherence, 2026-09-14, which is
+# why this exists: 48 conflicts against a simulated main-plus-the-tidemark, of
+# which the chamber regenerates 10 and cannot touch 38. The overlap advisory
+# saw the shared paths and could not say the merge would FAIL.
+#
+# IT IS A PROJECTION, NOT A VERDICT, and it says so. A row ahead may red and
+# never land --- campaign/the-kerf was once held for a collision with a
+# candidate that died on a formatting check twenty minutes later. So this
+# prints and never gates, like every other line here.
+#
+# Rows are folded on in queue order with merge-tree, so the simulated main is
+# built the same way the chamber will build the real one. A row that conflicts
+# with the simulation is dropped from it rather than aborting the projection:
+# it will not land either, so leaving it out is the better guess.
+projected_merge() {
+    local sha="$1" branch="$2" ahead simulated tree rbranch rsha
+    local mine_ts conf real noise a p decl
+    mine_ts="$(awk -F'\t' -v s="$sha" '$4==s{print $1; exit}' \
+        "${HV_SLUICE_DIR:-$HOME/.local/state/hornvale/sluice}/queue.tsv" 2>/dev/null)"
+    [ -n "$mine_ts" ] || return 0   # not queued: nothing is ahead of it
+    ahead="$(awk -F'\t' -v t="$mine_ts" -v b="$branch" \
+        '($5=="queued"||$5=="running") && $6=="merge" && $1<t && $3!=b {print $1"\t"$3"\t"$4}' \
+        "${HV_SLUICE_DIR:-$HOME/.local/state/hornvale/sluice}/queue.tsv" 2>/dev/null | sort)"
+    echo
+    echo "PROJECTED MERGE (after the rows ahead of this one land)"
+    if [ -z "$ahead" ]; then
+        printf '  nothing queued ahead — the mouth verdict against main is the whole story\n'
+        return 0
+    fi
+    simulated="$(git rev-parse origin/main)"
+    while IFS=$'\t' read -r _ rbranch rsha; do
+        [ -n "$rsha" ] || continue
+        # FOLD THE ROW ON EVEN WHEN IT CONFLICTS, and this is the correction
+        # that makes the projection usable at all. `merge-tree --write-tree`
+        # emits a tree on its first line whether or not the merge conflicted,
+        # and the first draft of this dropped any conflicting row instead ---
+        # which silently removed campaign/the-tidemark from the projection,
+        # because its conflict with the row ahead of it was almost entirely
+        # ARTIFACTS-authored bookkeeping the chamber regenerates. Dropping it
+        # reported campaign/anchor-orbital-coherence as merging cleanly when a
+        # hand-run of the same simulation found 38 unresolvable conflicts. A
+        # false CLEAN is the one direction this section must never fail in.
+        tree="$(git merge-tree --write-tree "$simulated" "$rsha" 2>/dev/null | head -1)"
+        if [ -z "$tree" ]; then
+            printf '  UNRESOLVED %-34s merge-tree produced nothing; left out of the projection\n' "$rbranch"
+            continue
+        fi
+        simulated="$(git commit-tree "$tree" -p "$simulated" -p "$rsha" \
+            -m "projected: $rbranch" 2>/dev/null)"
+        printf '  folded on  %-34s %s\n' "$rbranch" "$(git rev-parse --short=9 "$rsha")"
+    done <<AHEAD
+$ahead
+AHEAD
+    if git merge-tree --write-tree "$simulated" "$sha" >/dev/null 2>&1; then
+        printf '  still merges cleanly against that projection\n'
+        return 0
+    fi
+    conf="$(git merge-tree --write-tree --name-only "$simulated" "$sha" 2>&1 \
+        | awk 'length($0)==40 && /^[0-9a-f]+$/ {seen=1;next} seen && /^$/ {exit} seen {print}')"
+    decl="$(mktemp)"; git show "$sha:docs/generated-paths.txt" > "$decl" 2>/dev/null || : > "$decl"
+    real=""; noise=0
+    while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        a="$(sluice_path_author "$p" "$decl")"
+        if [ "$a" = artifacts ]; then noise=$((noise + 1)); else real="$real$p
+"; fi
+    done <<PATHS
+$conf
+PATHS
+    rm -f "$decl"
+    real="${real%
+}"
+    if [ -z "$real" ]; then
+        printf '  conflicts on %s path(s), ALL artifacts-authored — the chamber regenerates those\n' "$noise"
+        return 0
+    fi
+    printf '  >> WILL NOT MERGE: %s path(s) the chamber cannot regenerate\n' \
+        "$(printf '%s\n' "$real" | grep -c .)"
+    printf '%s\n' "$real" | sed 's/^/       /' | head -12
+    [ "$(printf '%s\n' "$real" | grep -c .)" -gt 12 ] && printf '       ... and %s more\n' \
+        "$(( $(printf '%s\n' "$real" | grep -c .) - 12 ))"
+    [ "$noise" -gt 0 ] && printf '  (%s artifacts-authored conflicts not listed; the chamber resolves those)\n' "$noise"
+    printf '     This candidate would pass the mouth against TODAY main, take the claim,\n'
+    printf '     and die at <merge> rc=10 having tested nothing. Absorb and resubmit.\n'
+}
+
 # HV_VET_LIB=1 sources the adjudication functions above --- decision blocks,
 # census freshness and census pins --- without vetting anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
 # verdict is a DECISION RULE, and a decision rule that cannot be driven
@@ -386,6 +489,7 @@ done
 # `lab metrics.rs` surface below --- campaign/the-tidemark's metrics.rs change
 # was entirely inside `mod tests` and was a false alarm on both lines. Reading
 # the hunks is the operator's job; this narrows where to look.
+projected_merge "$sha" "$branch"
 census_freshness "$sha"
 census_pins "$sha"
 
