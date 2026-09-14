@@ -3362,3 +3362,223 @@ figures appear above as the *prediction's* reference point, not as a live
 reading. Re-derive them.
 
 **Ideonomy passes / overturns:** none.
+
+## #40 [Q] — CORRECTION: my own H4 falsifier could never have fired, and it failed open in the direction I wanted
+
+Two corrections to entry **#39**, both found by the Task 15 implementer and
+both verified against the code before being accepted here.
+
+### 1. H4 was vacuous, and vacuous in the flattering direction
+
+I wrote H4 as *"the median leader margin stays ≥ 0.02"* and called it "THE
+FALSIFIER FOR THE WHOLE APPROACH". The quantity it names already existed:
+`leader_margin` in `metabolite_variety_probe.rs` (line 481) returns
+
+```rust
+s.sort_by(|a, b| b.total_cmp(a));
+s[0] / s[1]
+```
+
+— a **ratio of the leader to the runner-up**, which after a descending sort is
+bounded below by `1.0` by construction. A `>= 0.02` threshold on it is
+satisfied at every reading that exists, under every arm, no matter how
+degenerate. **The one check I designated as able to sink the whole approach was
+the one check that could not fail.**
+
+The direction matters more than the fact. H4 was supposed to be the clause that
+stopped a compressing transform from shipping; written this way it would have
+returned HELD for a transform that flattened all four axes into a tie. It
+failed open, toward the answer I had already argued for two paragraphs earlier
+in the same entry.
+
+**The repair (the implementer's, and it is the right one):** a new
+`leader_margin_diff` — absolute `leader − second` on the axis-value scale,
+where compression genuinely drives it toward zero — with H4 adjudicated against
+that. Both readings happen to hold on the measured arms, which is luck and not
+evidence the clause was working.
+
+The class is one this campaign has now produced twice: *a check that can never
+fire is worse than an absent one*, and its cause here is the narrower rule —
+**a preregistered numeric threshold must name the QUANTITY and its UNIT, not
+just a number.** "Margin" named two different quantities (a ratio and a
+difference) that differ by whether 0.02 is trivial or decisive, and I never
+said which. The probe was free to pick either, and the honest implementer
+picked the one under which the prediction could lose.
+
+### 2. The arity table in #39 mis-stated sulphide oxidation
+
+#39's table calls `SulphideOxidation` *"3, each shaped"*. Verified false:
+`buffer.metamorphic_grade` (`energy.rs:574`) is a raw `pub` field on the
+material buffer (`domains/terrain/src/lithology.rs:96`), used directly with no
+`bump()` or `water_gate()` — exactly like `carbonate` and `porosity` in
+methanogenesis. So sulphide oxidation is a 3-term product carrying **one raw
+factor**.
+
+The arity argument survives unchanged (both 3-term sources have k=3, and that
+is what the geometric mean addresses). What does not survive is the sharper
+rhetorical claim standing beside it — that methanogenesis is the *lone* bare
+product of raw fields. It is the only **all**-raw one; it is not the only one
+with raw factors. I wrote the stronger version because it made a cleaner story.
+
+**Ideonomy passes / overturns:** none.
+
+## #41 [Ruling] — Task 15: GEO ships. H1 is falsified and the target was mine to mis-set. And the ladder worry was a conflation, not a defect in the transform.
+
+### The conflation, first, because it is what the entry is for
+
+I had been treating "which yield form ships" and "how a raw magnitude maps onto
+the corpus ladder" as one question. They are two, and they are **orthogonal**:
+
+- The yield form decides **which axis wins where** — dominance, variety, the
+  depth handoff. That is what a chamber's *character* is made of.
+- The ladder decides **where a magnitude sits between LEAN and TEEMING**. That
+  is what a chamber's *reading* is.
+
+They do not interact, and the reason is mechanical: the saturating transfer
+this project already uses, `f(x) = x/(1+x)`, has `f'(x) = 1/(1+x)^2 > 0`, so it
+is **strictly monotone** and preserves `argmax` exactly. Dominance shares are
+identical with or without it. So no choice about band mapping can change the
+yield-form answer, and no yield form can fix a band-mapping problem.
+
+I asked the implementer whether GEO pushes the other three axes into `.5–1.0`
+and breaks the ladder at the top the way CONTROL breaks it at the bottom. The
+answer is **yes, exactly as framed** — CONTROL's four medians occupy the bottom
+two bands, GEO's occupy the top two — and it is **not an argument against GEO**,
+because it is not a fact about GEO. It is a fact about measuring four axes
+against one shared ladder.
+
+### The ruling: GEO ships
+
+| | CONTROL | **GEO** | SELECTIVE (k=3 only) |
+| --- | --- | --- | --- |
+| dominance H / Fe / S / CH₄ | .369 / .419 / .169 / **.043** | .287 / .402 / .206 / **.105** | — / — / — / **.242** |
+| spread (max − min) | .376 | **.297** | — |
+| sulphur wins @ Undercroft | 0 | **0** | **2,347 / 20,969 (11.2%)** |
+
+GEO wins the question the yield form actually answers: the spread falls
+`.376 → .297`, methane's dominance nearly triples, sulphur rises `.169 → .206`,
+and H2/H3/H4/H5 all hold. The two depressed axes are exactly the two fed by
+`k=3` sources (sulphur ← SulphideOxidation, methane ← Methanogenesis) while
+hydrogen and iron are fed by `k=2` sources — so the arity mechanism predicts
+the observed pattern, and the correction moves the right two axes.
+
+### H1 is FALSIFIED, and the target was miscalibrated by me
+
+Methane reaches `.105` against my predicted `≥ .18`; spread `.297` against my
+`< .215`. **Arity does not fully explain the deficit.**
+
+The honest decomposition, kept separate on purpose so the second does not
+launder the first:
+
+1. **The prediction is falsified.** Correcting arity leaves methane well short
+   of parity. That is the finding and it ships as the finding.
+2. **The target was built on a number that no longer existed.** I extrapolated
+   `≥ .18` from Task 12's `.124`, which Task 13 had already invalidated by
+   widening `carbonate`. On this tree CONTROL methane is **`.043`**, so GEO's
+   `.105` is a **2.4x** improvement against the real baseline rather than the
+   1.5x my target imagined.
+
+(2) is a defect in my preregistration, not evidence for the hypothesis. The
+direction is confirmed and large; the magnitude claim is dead. Both are true
+and neither rescues the other. Per decision 0016 the constant is not being
+retuned to reach `.18`, and the chronicle will carry the falsification.
+
+### SELECTIVE is REFUSED, and its mechanism is the best argument for uniformity
+
+Geometric mean on the two `k=3` sources alone gives a better ladder spread AND
+better methane dominance (`.242`) — and falsifies **H2**: sulphur wins 11.2% of
+`Band::Undercroft` readings where the ΔT-front physics says ~0 and where both
+CONTROL and GEO report exactly zero.
+
+The implementer's mechanism, which is the durable part and is stronger than my
+own arity argument: **a cube root inflates a near-zero value far more, in
+relative terms, than a square root does.** Boost sulphur without boosting the
+axes it competes against and it leaks into shallow depths it has no physical
+business occupying. Under uniform GEO, hydrogen and iron get the same *kind* of
+boost, so the ordering that keeps sulphur at zero near the surface survives.
+
+Stated generally: **what preserves an invariant is the boost DIFFERENTIAL
+across competing axes, not any one axis's correction in isolation.** A
+non-uniform fix can break a physical invariant that a uniform one preserves.
+That argues for uniformity better than "it is a principled rule" does, because
+it names a thing that actually breaks.
+
+### The fourth candidate is DECLINED, on two independent grounds
+
+The proposal: apply `x/(1+x)` per-axis before band classification, reusing the
+corpus ladder. Declined because —
+
+1. **Nathan already ruled it out.** *"I believe we want per-axis bands... so I
+   think we want raw numbers and [no] lossy abstractions."* Forcing four axes
+   through one saturating transfer onto one shared `E_LEAN..E_TEEMING` ladder
+   is precisely the lossy abstraction that ruling rejects.
+2. **`E_TEEMING` would be unreachable by construction.** `f(x) = x/(1+x)`
+   reaches `0.75` only at `x = 3` and **approaches 1.0 asymptotically without
+   ever attaining it**. Every axis's top band would be a category nothing can
+   ever occupy — the same defect as this campaign's own vacuous H4 (#40), one
+   level up. A band no reading can enter is not a band.
+
+The observation underneath it is still valuable and is kept: iron and sulphur
+**already** exceed 1.0 in 31% and 16% of CONTROL readings, before Task 15
+touches anything. The per-axis mismatch is pre-existing and is Task 16's to
+answer.
+
+### What Task 16 therefore is
+
+Set band thresholds **per axis, against that axis's own post-GEO distribution**,
+in raw units. The compression worry dissolves: it existed only because four
+axes were being read against one ladder. Per-axis bands do not care that
+methane's median is `.644` and sulphur's `.541` — they care whether each axis
+discriminates *within itself*, which is the question "are there methane-eating
+fungi in this chamber" actually asks.
+
+**Ideonomy passes / overturns:** one — the boost-differential finding above
+generalises past this campaign and belongs in the retrospective.
+
+### Addendum — arm D looks best on the summary statistics, and that is an artifact of what was being watched
+
+Re-running the probe myself reproduced every headline figure exactly (CONTROL
+`.3692/.4190/.1689/.0429`; GEO methane `.1052`, spread `.2965`; SELECTIVE's
+sulphur leak `2,347/20,969`; all five verdicts). One thing deserves stating
+because it argues *against* the arm the numbers flatter.
+
+**Arm D — a cube root on methane alone — beats GEO on every summary statistic
+reported:** spread `.2357` vs `.2965`, methane dominance `.2963` vs `.1052`,
+and the best ladder-band spread of any arm (medians in three distinct bands
+against GEO's two). It also holds H2, because it does not touch sulphur.
+
+*(Arm D's dominance figures are the implementer's; my own re-run printed a
+dominance block only for SELECTIVE. What I did reproduce directly is the
+structural fact below, and it is the one the argument rests on.)*
+
+**In my run, arm D's per-axis rows for hydrogen, reduced_iron and
+reduced_sulphur are byte-identical to CONTROL** — `.368150` / `.331819` /
+`.080173` medians, to six places — and only methane moves. That is what makes
+the flattering statistics legible:
+
+1. **Dominance is `argmax`, so it is zero-sum.** Methane's rise from `.043` to
+   `.296` is necessarily taken from the other three. Hydrogen falls
+   `.369 → .165` — a 55% relative demotion of an axis *nothing about which
+   changed*. The spread "improved" because the distribution happened to land
+   nearer uniform, not because any axis is better calibrated.
+2. **The ladder-band spread is an artifact of the same thing.** Three axes stay
+   at their low CONTROL values and one is lifted into a higher band. Occupying
+   three bands is arithmetic, not evidence of better band behaviour.
+3. **And the check that would have caught it was not written.** SELECTIVE was
+   refused because H2 preregistered a *sulphur* invariant, and SELECTIVE
+   boosted sulphur. **No equivalent invariant was preregistered for hydrogen**,
+   which is the axis arm D damages. So "arm D holds H2" is much weaker evidence
+   than it reads as: H2 does not watch the axis arm D moves.
+
+That is the boost-differential finding again, from the other side: the same
+mechanism that let SELECTIVE leak sulphur into the Undercroft lets arm D demote
+hydrogen, and only the first was instrumented. **A targeted fix is not safer
+than a uniform one for being narrower — it is only less likely to trip a guard,
+because the guards were written for the axis somebody was already worried
+about.** GEO corrects every axis for its own arity so the comparison stays
+like-for-like; arm D inflates one axis until it wins more often. The first is a
+calibration, the second is a thumb on the scale, and the summary statistics
+cannot tell them apart.
+
+**Carried to the retrospective**, because it generalises past this campaign:
+*an asymmetric invariant set makes narrow fixes look safe.*

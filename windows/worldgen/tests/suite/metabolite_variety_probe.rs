@@ -114,6 +114,14 @@ const E_FED: f64 = 0.5;
 /// `domains/climate/src/underworld.rs`'s authored `E_RICH` corpus value.
 const E_RICH: f64 = 0.75;
 
+/// `domains/climate/src/underworld.rs`'s authored `E_TEEMING` corpus value —
+/// the ladder's top rung. Task 15 needs it (unlike Task 12, which only ever
+/// classified into `band_of`'s four buckets, `RICH+` being the open-ended
+/// top): the coordinator's question is specifically whether GEO pushes axes
+/// PAST this ceiling, which `band_of`'s `RICH+` bucket cannot distinguish
+/// from merely reaching it.
+const E_TEEMING: f64 = 1.0;
+
 /// Below this a metabolite supply is treated as ABSENT rather than merely
 /// small — the threshold the "is this axis ever present at all?" count uses.
 /// Chosen well under the smallest published per-rung median (methane's
@@ -192,11 +200,26 @@ struct Reading {
     metamorphic_grade: f64,
     /// This rung's `Substrate::moisture` — methane arm input.
     moisture: f64,
+    /// [`EnergySource::Serpentinization`]'s own raw (pre-modifier) yield —
+    /// stored separately from `raw[0]` (which is already `serp_raw +
+    /// radiolysis_raw`, `chemical_supply`'s own hydrogen summation) because
+    /// Task 15's GEO arm (below) must take the geometric-mean transform of
+    /// *each source* before summing, not of their sum.
+    serp_raw: f64,
+    /// [`EnergySource::Radiolysis`]'s own raw yield — see `serp_raw`.
+    radiolysis_raw: f64,
+    /// [`EnergySource::Geothermal`]'s own raw yield — the gradient term that
+    /// feeds `chemical_supply`'s `1 + gain * g` modifier. Not part of `raw`
+    /// (which holds only the four routed metabolite axes) because Geothermal
+    /// routes to [`SupplyRoute::Modifier`], not to an axis.
+    geothermal_raw: f64,
 }
 
 impl Reading {
     /// The post-modifier supplies a consumer actually sees, axis order
-    /// [`AXES`] — what `chemical_supply` returns.
+    /// [`AXES`] — what `chemical_supply` returns. This IS Task 15's CONTROL
+    /// arm: the shipped yield form, unmodified, re-derived from this tree's
+    /// own live fields rather than cited from Task 12's stale baseline.
     fn post(&self) -> [f64; 4] {
         [
             self.raw[0] * self.modifier,
@@ -205,6 +228,141 @@ impl Reading {
             self.raw[3] * self.modifier,
         ]
     }
+
+    /// Task 15's GEO arm: every [`EnergySource`]'s yield replaced by the
+    /// geometric mean of its own gating terms (the k-th root of its own
+    /// product, k = [`source_arity`]), axis order [`AXES`]. `gain` is the
+    /// geothermal modifier's gain, recovered once for the whole sample by
+    /// [`recovered_geothermal_gain`] rather than re-derived per reading.
+    ///
+    /// Each of the six per-metabolite sources' `yield_at` arm is a PURE
+    /// product of `source_arity` factors (verified by reading all seven arms
+    /// — see the module doc's seven-arm table), so the k-th root of the
+    /// already-computed raw yield IS the geometric mean of its factors; there
+    /// is no need to decompose `bump()`/`water_gate()` by hand.
+    fn geo_axes(&self, gain: f64) -> [f64; 4] {
+        let h = geo_yield(EnergySource::Serpentinization, self.serp_raw)
+            + geo_yield(EnergySource::Radiolysis, self.radiolysis_raw);
+        let fe = geo_yield(EnergySource::IronReduction, self.raw[1]);
+        let s = geo_yield(EnergySource::SulphideOxidation, self.raw[2]);
+        let ch4 = geo_yield(EnergySource::Methanogenesis, self.raw[3]);
+        let g = geo_yield(EnergySource::Geothermal, self.geothermal_raw);
+        let modifier = 1.0 + gain * g;
+        [h * modifier, fe * modifier, s * modifier, ch4 * modifier]
+    }
+
+    /// The THIRD arm: geometric mean applied ONLY to the two sources whose
+    /// arity exceeds the population's mode (`SulphideOxidation`,
+    /// `Methanogenesis`, both k=3) — every k=2 source (`Serpentinization`,
+    /// `Radiolysis`, `IronReduction`, `Geothermal`) is left exactly as
+    /// shipped, an unmodified product. This isolates the coordinator's
+    /// question directly: does correcting ONLY the excess-arity sources
+    /// capture GEO's benefit, or does GEO's benefit actually come from the
+    /// general upward push a k-th root applies to every source it touches,
+    /// including the ones that were never over-multiplied?
+    ///
+    /// Because Geothermal (k=2) is untouched here, its yield and therefore
+    /// the modifier are IDENTICAL to CONTROL's — no independent gain recovery
+    /// is needed; `self.modifier` (already recovered from shipped data) is
+    /// exactly right.
+    fn selective_geo_axes(&self) -> [f64; 4] {
+        let h = self.raw[0]; // serp_raw + radiolysis_raw, shipped (k=2 each)
+        let fe = self.raw[1]; // shipped (k=2)
+        let s = geo_yield(EnergySource::SulphideOxidation, self.raw[2]); // k=3
+        let ch4 = geo_yield(EnergySource::Methanogenesis, self.raw[3]); // k=3
+        [
+            h * self.modifier,
+            fe * self.modifier,
+            s * self.modifier,
+            ch4 * self.modifier,
+        ]
+    }
+}
+
+/// The number of factors [`EnergySource::yield_at`]'s own product multiplies
+/// for `source` — verified by reading all seven `yield_at` arms (Task 15,
+/// ledger #39): six are 2-term products (`Serpentinization`, `IronReduction`,
+/// `Radiolysis`, `Geothermal`, `DetritalImport` — the last unused by this
+/// file, since it routes to `Detritus` rather than one of [`AXES`]) and two
+/// are 3-term products (`SulphideOxidation`, `Methanogenesis`). **Correction
+/// to ledger #39's own table**: it reads `SulphideOxidation` as "3, each
+/// shaped", but `metamorphic_grade` is a raw `MaterialBuffer` fraction with
+/// no `bump()`/`water_gate()` applied to it, the same as `Methanogenesis`'s
+/// `carbonate` and `porosity` — so `SulphideOxidation` is a 3-term product
+/// with one raw factor and two shaped ones (`front`, `water_gate`), not three
+/// shaped ones. The arity — which is what the geometric-mean transform
+/// actually depends on — is unaffected: both `SulphideOxidation` and
+/// `Methanogenesis` are 3-term products and every other arm is 2-term.
+fn source_arity(source: EnergySource) -> f64 {
+    match source {
+        EnergySource::SulphideOxidation | EnergySource::Methanogenesis => 3.0,
+        EnergySource::Serpentinization
+        | EnergySource::IronReduction
+        | EnergySource::Radiolysis
+        | EnergySource::Geothermal
+        | EnergySource::DetritalImport => 2.0,
+    }
+}
+
+/// The geometric-mean transform of one source's own raw yield: the k-th root
+/// of the product `yield_at` already computed, k = [`source_arity`]. Uses
+/// [`math::powf`] rather than `f64::sqrt`/`cbrt`: `cbrt` is on `clippy.toml`'s
+/// disallowed-methods list (platform libm divergence, decision 0041) and a
+/// single spelling covers both k=2 and k=3 — the same posture `methane_arms`'
+/// arm D already takes.
+fn geo_yield(source: EnergySource, raw_product: f64) -> f64 {
+    math::powf(raw_product.max(0.0), 1.0 / source_arity(source))
+}
+
+/// Readings with a raw geothermal yield below this are excluded from
+/// [`recovered_geothermal_gain`]'s recovery: `(modifier - 1) / geothermal_raw`
+/// is numerically unstable as `geothermal_raw -> 0` (and, at exact zero,
+/// `modifier` is identically `1.0` regardless of gain — unrecoverable, not
+/// merely noisy).
+const GAIN_RECOVERY_FLOOR: f64 = 0.3;
+
+/// Maximum spread allowed across [`recovered_geothermal_gain`]'s recovered
+/// candidates before it refuses. `chemical_supply`'s modifier is `1 + gain *
+/// g` with one constant `gain` — a real spread beyond ordinary float noise
+/// would mean the modifier is not that constant-gain form, which this probe
+/// assumes when building the GEO arm's own modifier.
+const GAIN_AGREEMENT_TOLERANCE: f64 = 1e-9;
+
+/// Recovers `energy.rs`'s private `GEOTHERMAL_MODIFIER_GAIN` from the shipped
+/// per-reading modifier ([`Reading::modifier`], itself recovered from shipped
+/// data by [`collect_readings`]) and this file's own re-derived raw
+/// geothermal yield ([`Reading::geothermal_raw`]) — mirroring the "recover,
+/// don't hardcode" posture the module doc already uses for the modifier
+/// itself, since the gain constant is private to `energy.rs` and this file
+/// must not depend on its literal value. A positive control, not merely a
+/// derivation: every candidate above [`GAIN_RECOVERY_FLOOR`] must agree
+/// within [`GAIN_AGREEMENT_TOLERANCE`], which fails loudly if the modifier
+/// were ever something other than one constant times the geothermal yield.
+fn recovered_geothermal_gain(readings: &[Reading]) -> f64 {
+    let mut candidates: Vec<f64> = readings
+        .iter()
+        .filter(|r| r.geothermal_raw > GAIN_RECOVERY_FLOOR)
+        .map(|r| (r.modifier - 1.0) / r.geothermal_raw)
+        .collect();
+    assert!(
+        candidates.len() >= 100,
+        "only {} readings clear the geothermal-yield recovery floor of {GAIN_RECOVERY_FLOOR} \
+         — cannot recover the modifier gain",
+        candidates.len()
+    );
+    candidates.sort_by(f64::total_cmp);
+    let gain = candidates[candidates.len() / 2];
+    let max_dev = candidates
+        .iter()
+        .map(|c| (c - gain).abs())
+        .fold(0.0_f64, f64::max);
+    assert!(
+        max_dev <= GAIN_AGREEMENT_TOLERANCE,
+        "recovered geothermal gain disagrees by {max_dev} across {} candidate readings — the \
+         shipped modifier is not the single-constant-gain form this probe's GEO arm assumes",
+        candidates.len()
+    );
+    gain
 }
 
 /// Which index of a four-vector is largest. Ties go to the LOWER index, which
@@ -330,6 +488,37 @@ fn band_of(x: f64) -> usize {
     }
 }
 
+/// The five-rung classification Task 15 needs and [`band_of`] cannot give:
+/// `band_of`'s top bucket is open-ended (`RICH+`, everything `>= E_RICH`), so
+/// it cannot tell "reaches `E_RICH`" from "exceeds `E_TEEMING`" — exactly the
+/// distinction the coordinator's question turns on (does GEO merely reach the
+/// top of the ladder, or push past it the way `EnvironmentVector::new`'s
+/// `[0,1]` contract would refuse?). `0` below `E_LEAN`, `1` in
+/// `[E_LEAN, E_FED)`, `2` in `[E_FED, E_RICH)`, `3` in `[E_RICH, E_TEEMING)`,
+/// `4` at or above `E_TEEMING`.
+fn ladder_band(x: f64) -> usize {
+    if x < E_LEAN {
+        0
+    } else if x < E_FED {
+        1
+    } else if x < E_RICH {
+        2
+    } else if x < E_TEEMING {
+        3
+    } else {
+        4
+    }
+}
+
+/// Human-readable labels for [`ladder_band`]'s five indices, in order.
+const LADDER_BAND_LABELS: [&str; 5] = [
+    "below LEAN",
+    "LEAN-FED",
+    "FED-RICH",
+    "RICH-TEEMING",
+    "at/above TEEMING",
+];
+
 /// One initial per axis, in [`AXES`] order, for the ordering key. **Not the
 /// axis names' own first letters**: `reduced_iron` and `reduced_sulphur` both
 /// begin with `r`, so a key built from first letters collapses distinct
@@ -365,6 +554,32 @@ fn leader_margin(v: &[f64; 4]) -> f64 {
         return f64::INFINITY;
     }
     s[0] / s[1]
+}
+
+/// The absolute difference between a reading's largest and second-largest
+/// metabolite supply — leader minus runner-up. `NaN` when the reading
+/// supplies nothing at all (same guard as [`leader_margin`]); otherwise
+/// always finite and `>= 0`, including the single-metabolite case where it
+/// equals the leader outright (no `INFINITY` branch needed, unlike the
+/// ratio).
+///
+/// **Task 15 needs this, not [`leader_margin`], to adjudicate ledger #39's
+/// H4.** H4's threshold (`0.02`) is stated on the scale the axis VALUES
+/// themselves occupy (post-modifier metabolite supplies run roughly
+/// `[0, 1.6]` in this sample), and [`leader_margin`]'s ratio is bounded below
+/// by `1.0` by construction — the leader is sorted first — so a `>= 0.02`
+/// bound on the ratio holds at *every* reading regardless of how compressed
+/// the four axes are, making it a vacuous test of H4 rather than the
+/// discriminating one the ledger's prose describes ("all four axes read
+/// nearly equal everywhere"). The difference is the only reading under which
+/// H4 can fail, and is what [`report_task15_yield_form_measurement`] uses.
+fn leader_margin_diff(v: &[f64; 4]) -> f64 {
+    let mut s = *v;
+    s.sort_by(|a, b| b.total_cmp(a));
+    if s[0] <= PRESENCE_EPSILON {
+        return f64::NAN;
+    }
+    s[0] - s[1]
 }
 
 /// The four candidate methane yields at one reading, in the brief's own
@@ -424,8 +639,11 @@ fn collect_readings(wc: &WorldComponents) -> [Vec<Reading>; 6] {
                 let y = |s: EnergySource| {
                     s.yield_at(&material, gradient, depth_m, sub.moisture, drainage)
                 };
+                let serp_raw = y(EnergySource::Serpentinization);
+                let radiolysis_raw = y(EnergySource::Radiolysis);
+                let geothermal_raw = y(EnergySource::Geothermal);
                 let raw = [
-                    y(EnergySource::Serpentinization) + y(EnergySource::Radiolysis),
+                    serp_raw + radiolysis_raw,
                     y(EnergySource::IronReduction),
                     y(EnergySource::SulphideOxidation),
                     y(EnergySource::Methanogenesis),
@@ -470,6 +688,9 @@ fn collect_readings(wc: &WorldComponents) -> [Vec<Reading>; 6] {
                     porosity: material.porosity,
                     metamorphic_grade: material.metamorphic_grade,
                     moisture: sub.moisture,
+                    serp_raw,
+                    radiolysis_raw,
+                    geothermal_raw,
                 });
             }
         }
@@ -872,4 +1093,398 @@ fn report_the_metabolite_variety_measurement() {
         }
     }
     println!("  readings where arm A is ~0: {a_zero}; of those, B/C/D non-zero at {disagree}");
+}
+
+/// One arm's summary statistics over the pooled sample, printed by
+/// [`report_task15_yield_form_measurement`] and also returned so the H1-H5
+/// verdicts can be computed from the same numbers the printout shows rather
+/// than a second, silently-divergent calculation.
+struct ArmSummary {
+    /// Pooled dominance share per axis, [`AXES`] order.
+    dominance: [f64; 4],
+    /// `dominance`'s max minus its min.
+    spread: f64,
+    /// How many of `Band::Undercroft`'s readings this arm's reduced-sulphur
+    /// axis (index 2) wins.
+    sulphur_undercroft_wins: usize,
+    /// Bit-exact distinct value count per axis over the whole pooled sample.
+    distinct: [usize; 4],
+    /// Median leader-margin RATIO (leader/second, [`leader_margin`]) over
+    /// finite readings. Reported for continuity with Task 12's own
+    /// "leader >= Nx runner-up" framing; NOT what H4 is adjudicated against
+    /// (see [`leader_margin_diff`]'s doc).
+    median_leader_margin_ratio: f64,
+    /// Median leader-margin DIFFERENCE (leader minus second,
+    /// [`leader_margin_diff`]) over non-`NaN` readings — the quantity ledger
+    /// #39's H4 threshold (`0.02`) is actually stated on.
+    median_leader_margin_diff: f64,
+    /// Per-axis p10, [`AXES`] order.
+    axis_p10: [f64; 4],
+    /// Per-axis median, [`AXES`] order — what decides the ladder-band
+    /// classification in item 1 of the coordinator's question.
+    axis_median: [f64; 4],
+    /// Per-axis p90, [`AXES`] order.
+    axis_p90: [f64; 4],
+    /// Per-axis fraction of readings that are EXACTLY zero, [`AXES`] order.
+    axis_zero_frac: [f64; 4],
+    /// Per-axis fraction of readings that EXCEED `1.0` (`E_TEEMING`),
+    /// [`AXES`] order — item 2 of the coordinator's question:
+    /// `EnvironmentVector::new` rejects anything outside `[0,1]`, so this is
+    /// how much of each axis would be out of range if handed to it raw.
+    axis_over_teeming_frac: [f64; 4],
+}
+
+/// Computes and prints one arm's full Task 15 measurement (dominance overall
+/// and per rung, spread, Undercroft sulphur wins, distinct-value counts,
+/// leader-margin distribution, and per-axis value distribution), returning
+/// the subset [`ArmSummary`] needs for the H1-H5 verdicts. `axes_of` is the
+/// arm's own axis function — [`Reading::post`] for CONTROL, [`Reading::geo_axes`]
+/// (closed over the recovered gain) for GEO.
+fn measure_arm(
+    label: &str,
+    pooled: &[Reading],
+    per_rung: &[Vec<Reading>; 6],
+    axes_of: impl Fn(&Reading) -> [f64; 4],
+) -> ArmSummary {
+    println!("\n---- arm: {label} ----");
+    let n = pooled.len() as f64;
+
+    // 1. dominance, pooled and per rung.
+    let mut pooled_hist = [0usize; 4];
+    let mut rung_hist: [[usize; 4]; 6] = [[0usize; 4]; 6];
+    for &rung in &UNDERGROUND_RUNGS {
+        let idx = rung as usize;
+        for r in &per_rung[idx] {
+            let w = argmax4(&axes_of(r));
+            pooled_hist[w] += 1;
+            rung_hist[idx][w] += 1;
+        }
+    }
+    let dominance: [f64; 4] = std::array::from_fn(|k| pooled_hist[k] as f64 / n);
+    let row: Vec<String> = AXES
+        .iter()
+        .zip(dominance)
+        .map(|(name, s)| format!("{name}={s:.4}"))
+        .collect();
+    println!("dominance POOLED: {}", row.join("  "));
+    let spread = dominance.iter().copied().fold(f64::MIN, f64::max)
+        - dominance.iter().copied().fold(f64::MAX, f64::min);
+    println!("spread (max dominance - min dominance): {spread:.4}");
+
+    println!("dominance per rung:");
+    for &rung in &UNDERGROUND_RUNGS {
+        let idx = rung as usize;
+        let m = per_rung[idx].len().max(1) as f64;
+        let row: Vec<String> = AXES
+            .iter()
+            .enumerate()
+            .map(|(k, name)| format!("{name}={:.4}", rung_hist[idx][k] as f64 / m))
+            .collect();
+        println!("  {rung:?} (n={}): {}", per_rung[idx].len(), row.join("  "));
+    }
+    let undercroft_idx = Band::Undercroft as usize;
+    let sulphur_undercroft_wins = rung_hist[undercroft_idx][2];
+    println!(
+        "sulphur wins at Undercroft: {sulphur_undercroft_wins} of {}",
+        per_rung[undercroft_idx].len()
+    );
+
+    // 2. distinct-value count per axis, bit-exact, over the whole sample.
+    let mut distinct = [0usize; 4];
+    for (k, name) in AXES.iter().enumerate() {
+        let mut seen: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+        for r in pooled {
+            seen.insert(axes_of(r)[k].to_bits());
+        }
+        distinct[k] = seen.len();
+        println!("distinct {name}: {}", distinct[k]);
+    }
+
+    // 3. leader-margin distribution — both readings (see leader_margin_diff's
+    // doc for why the RATIO cannot adjudicate H4).
+    let ratios: Vec<f64> = pooled.iter().map(|r| leader_margin(&axes_of(r))).collect();
+    let mut finite_ratio: Vec<f64> = ratios.iter().copied().filter(|m| m.is_finite()).collect();
+    finite_ratio.sort_by(f64::total_cmp);
+    let median_leader_margin_ratio = pct(&finite_ratio, 0.50);
+    println!(
+        "leader margin RATIO (finite only, n={}): p10={:.6} p25={:.6} median={:.6} p75={:.6} \
+         p90={:.6}",
+        finite_ratio.len(),
+        pct(&finite_ratio, 0.10),
+        pct(&finite_ratio, 0.25),
+        median_leader_margin_ratio,
+        pct(&finite_ratio, 0.75),
+        pct(&finite_ratio, 0.90),
+    );
+
+    let diffs: Vec<f64> = pooled
+        .iter()
+        .map(|r| leader_margin_diff(&axes_of(r)))
+        .collect();
+    let mut finite_diff: Vec<f64> = diffs.iter().copied().filter(|m| !m.is_nan()).collect();
+    finite_diff.sort_by(f64::total_cmp);
+    let median_leader_margin_diff = pct(&finite_diff, 0.50);
+    println!(
+        "leader margin DIFFERENCE (non-NaN only, n={}): p10={:.6} p25={:.6} median={:.6} \
+         p75={:.6} p90={:.6}",
+        finite_diff.len(),
+        pct(&finite_diff, 0.10),
+        pct(&finite_diff, 0.25),
+        median_leader_margin_diff,
+        pct(&finite_diff, 0.75),
+        pct(&finite_diff, 0.90),
+    );
+
+    // 4. per-axis value distribution, including the >E_TEEMING fraction the
+    // coordinator's item 2 asks for.
+    println!("per-axis value distribution:");
+    let mut axis_p10 = [0.0; 4];
+    let mut axis_median = [0.0; 4];
+    let mut axis_p90 = [0.0; 4];
+    let mut axis_zero_frac = [0.0; 4];
+    let mut axis_over_teeming_frac = [0.0; 4];
+    for (k, name) in AXES.iter().enumerate() {
+        let mut v: Vec<f64> = pooled.iter().map(|r| axes_of(r)[k]).collect();
+        let zero_frac = v.iter().filter(|x| **x == 0.0).count() as f64 / n;
+        let over_teeming_frac = v.iter().filter(|x| **x > E_TEEMING).count() as f64 / n;
+        v.sort_by(f64::total_cmp);
+        axis_p10[k] = pct(&v, 0.10);
+        axis_median[k] = pct(&v, 0.50);
+        axis_p90[k] = pct(&v, 0.90);
+        axis_zero_frac[k] = zero_frac;
+        axis_over_teeming_frac[k] = over_teeming_frac;
+        println!(
+            "  {name:<18} p10={:.6} median={:.6} p90={:.6} zero_frac={:.4} \
+             over_teeming_frac={:.4}",
+            axis_p10[k], axis_median[k], axis_p90[k], zero_frac, over_teeming_frac
+        );
+    }
+
+    ArmSummary {
+        dominance,
+        spread,
+        sulphur_undercroft_wins,
+        distinct,
+        median_leader_margin_ratio,
+        median_leader_margin_diff,
+        axis_p10,
+        axis_median,
+        axis_p90,
+        axis_zero_frac,
+        axis_over_teeming_frac,
+    }
+}
+
+/// THE TRENCHER, Task 15: does the geometric-mean yield form fix methane's
+/// arity deficit without destroying discrimination? Ledger #39 froze five
+/// predictions (H1-H5) BEFORE this code existed; this test measures CONTROL
+/// (the shipped yield form) and GEO (every yield replaced by the k-th root of
+/// its own product — see [`source_arity`]/[`geo_yield`]) over the same
+/// twelve-seed sample [`report_the_metabolite_variety_measurement`] uses, and
+/// prints the numbers that adjudicate each prediction.
+///
+/// **Re-measured on THIS tree, not cited from Task 12.** Task 12's dominance
+/// shares (H .258 / Fe .339 / S .280 / CH4 .124, quoted in ledger #39 only as
+/// the prediction's reference point) predate Task 13's widening of
+/// `carbonate` (2 -> 19,681 distinct values) and `metamorphic_grade` (5 ->
+/// 4,248) — both of which feed yields this ruling is about — so CONTROL below
+/// is this probe's own live control, not a citation.
+///
+/// **This file ships no behaviour change.** `energy.rs` is untouched; GEO is
+/// alternative arithmetic over [`Reading`]'s already-computed raw per-source
+/// yields, the same posture section 6 above takes for the four methane arms.
+///
+/// claim: readout(off-gate, prints every number ledger #39's H1-H5
+/// predictions need and states each as HELD/FALSIFIED with the deciding
+/// figure; asserts only that the sample is non-vacuous and the geothermal
+/// gain recovery is self-consistent — no H1-H5 verdict is itself an
+/// assertion, because a falsified prediction is a legitimate finding here
+/// (decision 0016) and encoding "H4 must hold" as a test failure would
+/// forbid printing the result this probe exists to produce).
+#[test]
+#[ignore = "probe: Task 15's CONTROL-vs-GEO yield-form comparison over twelve seeds at \
+            BuildDepth::Terrain (twelve world builds); run by hand (The Trencher, Task 15, \
+            ledger #39)"]
+fn report_task15_yield_form_measurement() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let per_rung = collect_readings(&wc);
+    let pooled: Vec<Reading> = per_rung.iter().flatten().copied().collect();
+    assert!(
+        pooled.len() > 10_000,
+        "only {} readings across {} seeds — vacuous",
+        pooled.len(),
+        Q6_SEEDS.len()
+    );
+
+    let gain = recovered_geothermal_gain(&pooled);
+    println!("== Task 15: CONTROL vs GEO ==");
+    println!(
+        "readings pooled: {}   recovered geothermal modifier gain: {gain:.9}",
+        pooled.len()
+    );
+
+    let control = measure_arm("CONTROL (shipped)", &pooled, &per_rung, Reading::post);
+    let geo = measure_arm(
+        "GEO (geometric mean of each source's own factors)",
+        &pooled,
+        &per_rung,
+        |r| r.geo_axes(gain),
+    );
+
+    // Task 12's arm D (cbrt on methane alone, everything else held as
+    // shipped) — the ledger's named fallback if GEO fails H4. Computed and
+    // printed unconditionally, not only when H4 fails, so the report is
+    // reproducible from its own printed numbers alone.
+    println!("\n---- fallback comparison: Task 12's arm D (methane cbrt alone) ----");
+    let arm_d_axes = |r: &Reading| -> [f64; 4] {
+        let p = r.post();
+        let methane_d = methane_arms(r.carbonate, r.porosity, r.moisture)[3] * r.modifier;
+        [p[0], p[1], p[2], methane_d]
+    };
+    let arm_d = measure_arm(
+        "Task 12 arm D (methane cbrt, H/Fe/S shipped)",
+        &pooled,
+        &per_rung,
+        arm_d_axes,
+    );
+
+    // A THIRD arm, requested by the coordinator: geometric mean applied ONLY
+    // to the two k=3 sources (SulphideOxidation, Methanogenesis), every k=2
+    // source left exactly as shipped. Isolates whether GEO's benefit comes
+    // from correcting excess arity specifically, or from the general upward
+    // push a k-th root applies to every source it touches (including the
+    // ones that were never over-multiplied) — see `selective_geo_axes`'s doc.
+    println!("\n---- third arm: SELECTIVE (geo-mean only the two k=3 sources) ----");
+    let selective = measure_arm(
+        "SELECTIVE (SulphideOxidation + Methanogenesis geo-meaned; H/Fe/Geothermal shipped)",
+        &pooled,
+        &per_rung,
+        Reading::selective_geo_axes,
+    );
+
+    // ---- H1-H5, adjudicated against GEO's own printed numbers ----------
+    println!("\n== H1-H5 verdicts (ledger #39) ==");
+
+    let h1 = geo.dominance[3] >= 0.18 && geo.spread < 0.215;
+    println!(
+        "H1 (arity explains the deficit): methane dominance={:.4} (need >=0.18), spread={:.4} \
+         (need <0.215) -> {}",
+        geo.dominance[3],
+        geo.spread,
+        if h1 { "HELD" } else { "FALSIFIED" }
+    );
+
+    let h2 = geo.sulphur_undercroft_wins == 0;
+    println!(
+        "H2 (depth structure survives): sulphur wins {} readings at Undercroft (need 0) -> {}",
+        geo.sulphur_undercroft_wins,
+        if h2 { "HELD" } else { "FALSIFIED" }
+    );
+
+    let geo_max_dominance = geo.dominance.iter().copied().fold(f64::MIN, f64::max);
+    let geo_min_distinct = geo.distinct.iter().copied().min().unwrap_or(0);
+    let h3 = geo_max_dominance <= 0.60 && geo_min_distinct >= 1_000;
+    println!(
+        "H3 (no degeneracy): max axis dominance={:.4} (need <=0.60), min distinct values={} \
+         (need >=1000) -> {}",
+        geo_max_dominance,
+        geo_min_distinct,
+        if h3 { "HELD" } else { "FALSIFIED" }
+    );
+
+    // H4 is adjudicated on the DIFFERENCE reading, not the ratio
+    // (leader_margin_diff's doc explains why the ratio cannot ever fail a
+    // >=0.02 bound). The ratio is printed above for reference and would have
+    // reported HELD unconditionally, which is itself part of this finding.
+    let h4 = geo.median_leader_margin_diff >= 0.02;
+    println!(
+        "H4 (DECISIVE — discrimination survives): median leader margin DIFFERENCE={:.6} (need \
+         >=0.02) -> {}   [median RATIO={:.6}, printed for reference only — see \
+         leader_margin_diff's doc for why the ratio cannot adjudicate this]",
+        geo.median_leader_margin_diff,
+        if h4 { "HELD" } else { "FALSIFIED" },
+        geo.median_leader_margin_ratio,
+    );
+    if !h4 {
+        println!(
+            "  H4 FALSIFIED: the uniform geometric mean is REFUSED regardless of H1-H3. Arm D \
+             (methane cbrt alone) median leader margin DIFFERENCE={:.6}, methane \
+             dominance={:.4}, spread={:.4}.",
+            arm_d.median_leader_margin_diff, arm_d.dominance[3], arm_d.spread
+        );
+    }
+
+    let h5 = geo.dominance[3] <= 0.35;
+    println!(
+        "H5 (overshoot is also a finding): methane dominance={:.4} (overcorrection if >0.35) -> {}",
+        geo.dominance[3],
+        if h5 {
+            "HELD"
+        } else {
+            "FALSIFIED (overcorrected)"
+        }
+    );
+
+    println!(
+        "\nfor reference, CONTROL's own re-measured dominance: {}",
+        AXES.iter()
+            .zip(control.dominance)
+            .map(|(name, s)| format!("{name}={s:.4}"))
+            .collect::<Vec<_>>()
+            .join("  ")
+    );
+
+    // ---- coordinator follow-up: does GEO discriminate the LADDER, or just
+    // relocate the compression from the bottom to the top? -----------------
+    println!("\n== coordinator follow-up: per-axis value distributions, all arms ==");
+    let arms: [(&str, &ArmSummary); 4] = [
+        ("CONTROL", &control),
+        ("GEO", &geo),
+        ("SELECTIVE (k=3 sources only)", &selective),
+        ("arm D (methane cbrt fallback)", &arm_d),
+    ];
+    for (label, s) in &arms {
+        println!("  {label}:");
+        for (k, name) in AXES.iter().enumerate() {
+            println!(
+                "    {name:<18} p10={:.6} median={:.6} p90={:.6} zero_frac={:.4} \
+                 over_teeming_frac={:.4}",
+                s.axis_p10[k],
+                s.axis_median[k],
+                s.axis_p90[k],
+                s.axis_zero_frac[k],
+                s.axis_over_teeming_frac[k]
+            );
+        }
+    }
+
+    println!(
+        "\n== coordinator item 1: how many of the four axes' MEDIANS fall in each ladder band \
+         ==\n(ladder: below LEAN <{E_LEAN} | LEAN-FED [{E_LEAN},{E_FED}) | FED-RICH \
+         [{E_FED},{E_RICH}) | RICH-TEEMING [{E_RICH},{E_TEEMING}) | at/above TEEMING \
+         >={E_TEEMING})"
+    );
+    for (label, s) in &arms {
+        let mut band_counts = [0usize; 5];
+        for &m in &s.axis_median {
+            band_counts[ladder_band(m)] += 1;
+        }
+        let row: Vec<String> = LADDER_BAND_LABELS
+            .iter()
+            .zip(band_counts)
+            .filter(|(_, c)| *c > 0)
+            .map(|(label, c)| format!("{label}={c}"))
+            .collect();
+        println!("  {label:<32} {}", row.join("  "));
+    }
+
+    println!("\n== coordinator item 2: fraction of readings exceeding E_TEEMING (1.0) ==");
+    for (label, s) in &arms {
+        let row: Vec<String> = AXES
+            .iter()
+            .zip(s.axis_over_teeming_frac)
+            .map(|(name, f)| format!("{name}={f:.4}"))
+            .collect();
+        println!("  {label:<32} {}", row.join("  "));
+    }
 }
