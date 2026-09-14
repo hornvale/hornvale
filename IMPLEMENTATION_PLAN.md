@@ -6,7 +6,7 @@ Detailed task plan: `docs/superpowers/plans/2026-09-13-anchor-orbital-coherence.
 **Goal**: Expose a stable typed anchor evaluation and descriptive physical errors.
 **Success Criteria**: `anchor_state_at` is deterministic, explicit-time, and returns typed failures.
 **Tests**: Anchor contract, negative time, malformed input, convergence, astronomy suite.
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 2: Calendar and Insolation
 **Goal**: Route calendar solar geometry and instantaneous insolation through the shared state.
