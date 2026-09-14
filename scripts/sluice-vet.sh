@@ -20,6 +20,91 @@
 
 set -u
 
+# The allocator's ledger. HV_BLOCK_DIR is scripts/decision-block.sh's own
+# variable, honoured here so the two agree about where the ledger lives and so
+# a test can point both at a scratch copy.
+ledger="${HV_BLOCK_DIR:-$HOME/.local/state/hornvale/decision-blocks}/blocks.tsv"
+
+# Which campaign's reserved block contains a decision number, if any. Prints
+# "<campaign>\t<lo>-<hi>", or nothing when the allocator has never issued it.
+# The campaign column is written both bare and `campaign/`-prefixed over the
+# ledger's history, so it is normalised here rather than at every call site.
+block_owner_of() {
+    [ -s "$ledger" ] || return 0
+    awk -F'\t' -v n="$((10#$1))" '
+        NF >= 4 {
+            lo = $3 + 0; hi = $4 + 0
+            if (n >= lo && n <= hi) {
+                name = $2; sub(/^campaign\//, "", name)
+                printf "%s\t%04d-%04d\n", name, lo, hi
+            }
+        }' "$ledger" | tail -1
+}
+
+# THREE-VALUED, and the third value is the point. This answers "can that
+# campaign still mint into its block?", which is the question an operator
+# actually has when a candidate mints a number someone else reserved --- and
+# which this script used to hand back as homework ("verify ... its owner
+# finished"). It was done by hand three times before being written down.
+#
+#   CLOSED  - no pushed branch is ahead of main AND main carries the campaign's
+#             chronicle and retrospective. Nothing more can come from it, so a
+#             number inside its block is permanently free.
+#   LIVE    - a pushed branch is ahead of main. It can still mint.
+#   UNKNOWN - neither. A campaign running in a worktree that has never pushed
+#             looks exactly like this, so UNKNOWN must never be read as safe.
+#
+# The allocator has no release operation, so a CLOSED campaign's unused tail
+# is dead space: nobody else will ever be issued it either, which is precisely
+# why reusing it is safe rather than merely tolerated.
+campaign_status() {
+    local slug="$1" ref="refs/remotes/origin/campaign/$1"
+    if git rev-parse --verify --quiet "$ref" >/dev/null 2>&1; then
+        if ! git merge-base --is-ancestor "$ref" origin/main 2>/dev/null; then
+            echo LIVE; return
+        fi
+    fi
+    if git cat-file -e "origin/main:book/src/chronicle/$slug.md" 2>/dev/null &&
+        git cat-file -e "origin/main:docs/retrospectives/$slug.md" 2>/dev/null; then
+        echo CLOSED; return
+    fi
+    echo UNKNOWN
+}
+
+# Report one minted number that falls outside the candidate's own block.
+adjudicate_number() {
+    local n="$1" own owner range status
+    own="$(block_owner_of "$n")"
+    if [ -z "$own" ]; then
+        printf '  >> %s lies in NO reserved block — the allocator has never issued it\n' "$n"
+        return
+    fi
+    owner="${own%%	*}"; range="${own##*	}"
+    status="$(campaign_status "$owner")"
+    case "$status" in
+    CLOSED)
+        printf '  >> %s lies inside the %s block reserved by %s, which is CLOSED\n' "$n" "$range" "$owner"
+        printf '     (no branch ahead of main; chronicle and retrospective both landed) — the number is safe\n'
+        ;;
+    LIVE)
+        printf '  >> %s lies inside the %s block reserved by %s, which is LIVE and can still mint it\n' "$n" "$range" "$owner"
+        printf '     COLLISION RISK — check that branch before dispatching\n'
+        ;;
+    *)
+        printf '  >> %s lies inside the %s block reserved by %s, whose state is UNKNOWN\n' "$n" "$range" "$owner"
+        printf '     (no pushed branch and no close package — it may be running unpushed). Do NOT read this as safe\n'
+        ;;
+    esac
+}
+
+# HV_VET_LIB=1 sources the block-adjudication functions above without vetting
+# anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
+# verdict is a DECISION RULE, and a decision rule that cannot be driven
+# directly is one that gets tested through whatever end-to-end path happens to
+# exist --- which is how the truncation this whole script exists to prevent
+# survived a session.
+[ "${HV_VET_LIB:-0}" = 1 ] && return 0
+
 branch="${1:?usage: sluice-vet.sh <branch> <full-sha>}"
 ref="${2:?usage: sluice-vet.sh <branch> <full-sha>}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -55,7 +140,6 @@ conflicts="$(printf '%s\n' "$mouth" | grep -c 'conflict:')"
 # --- decisions and their block ---------------------------------------------
 echo
 echo "DECISIONS"
-ledger="$HOME/.local/state/hornvale/decision-blocks/blocks.tsv"
 block="$(grep -iE "	(campaign/)?${branch#campaign/}	" "$ledger" 2>/dev/null | awk -F'\t' '{print $3"-"$4}')"
 # ADDED files only. `--diff-filter=A` is the whole fix and it is not cosmetic:
 # a three-dot diff lists every decision file the branch TOUCHED, and an
@@ -79,11 +163,16 @@ if [ -n "$minted" ] && [ -n "$block" ]; then
     lo="${block%%-*}"; hi="${block##*-}"
     for n in $minted; do
         d=$((10#$n))
-        [ "$d" -ge "$((10#$lo))" ] && [ "$d" -le "$((10#$hi))" ] \
-            || printf '  >> %s is OUTSIDE %s — check the ledger before assuming a mis-mint\n' "$n" "$block"
+        if [ "$d" -lt "$((10#$lo))" ] || [ "$d" -gt "$((10#$hi))" ]; then
+            printf '  >> %s is OUTSIDE the block this candidate reserved (%s)\n' "$n" "$block"
+            adjudicate_number "$n"
+        fi
     done
 elif [ -n "$minted" ]; then
-    printf '  >> minted with no reserved block — verify the range is free and its owner finished\n'
+    printf '  minted with no reserved block of its own — each number adjudicated below\n'
+    for n in $minted; do
+        adjudicate_number "$n"
+    done
 fi
 
 # --- cross-branch decision collisions ---------------------------------------
@@ -105,10 +194,14 @@ vet_refs() {
 }
 for n in $minted; do
     d=$((10#$n)); nn="$(printf '%04d' "$d")"
-    owner="$(awk -F'\t' -v d="$d" '$3+0<=d && d<=$4+0 {print $2}' "$ledger" 2>/dev/null | tail -1)"
-    if [ -n "$owner" ] && [ "${owner#campaign/}" != "${branch#campaign/}" ]; then
-        printf '  >> %s falls inside a block reserved by %s — NOT this campaign\n' "$nn" "$owner"
-    fi
+    # The ledger question — whose block is this number in, and can that
+    # campaign still mint into it — is answered ONCE, by adjudicate_number in
+    # the DECISIONS section above. A weaker second copy lived here and did its
+    # own awk over the ledger to say only "NOT this campaign": the alarm
+    # without the adjudication, in a different voice, immediately under a line
+    # that had already called the same number safe. Deleted rather than kept
+    # as a cross-check, because it was not an independent derivation — same
+    # script, same ledger, strictly less information.
     for r in $(vet_refs); do
         case "$r" in origin/"${branch#origin/}"|"$branch") continue ;; esac
         if git ls-tree -r --name-only "$r" -- docs/decisions/ 2>/dev/null \
