@@ -90,3 +90,21 @@ bounded transformation `elements + instant -> state + validity -> projection`.
 
 **Capture actions:** Anchor-first architecture, migration order, and explicit
 future extension boundary in the design spec.
+
+## #6 [G4] — Is the approved spec sufficiently decomposed for execution?
+
+**Decision:** Proceed with the four-stage plan: physical contract, calendar /
+insolation migration, eclipse / scene migration, and qualification / closure.
+
+**Why:** Each stage has a bounded owner, an independently testable result, and
+the plan preserves the spec's anchor-only scope and explicit-time boundary.
+
+**Alternatives discarded:** A single generalized all-body implementation was
+rejected as speculative; a test-only plan was rejected because it would leave
+the duplicated physical seams in place.
+
+**Ideonomy passes / overturns:** 1 / 0. Abstraction-lift confirmed the
+elements-plus-instant transformation and its decomposable body-family shape.
+
+**Capture actions:** Detailed implementation plan and root stage tracker;
+execution uses fresh implementers with review after each task.
