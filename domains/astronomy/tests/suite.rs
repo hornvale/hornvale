@@ -11,6 +11,8 @@
 
 #[path = "suite/anchor_radius.rs"]
 mod anchor_radius;
+#[path = "suite/anchor_state.rs"]
+mod anchor_state;
 #[path = "suite/calendar_negative_time.rs"]
 mod calendar_negative_time;
 #[path = "suite/constellation_candidates.rs"]

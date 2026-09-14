@@ -50,10 +50,11 @@ pub use eclipses::{
     solar_eclipse_sight, solar_eclipse_threshold_deg, sub_solar_longitude_deg, sun_angular_rel_at,
 };
 pub use ephemeris::{
-    OrbitalPosition, StellarIllumination, StellarLight, WandererAppearance, WandererEvent,
-    WandererEventKind, WandererVisibility, anchor_relative_longitude_at, stellar_illumination_at,
-    stellar_positions_at, wanderer_events, wanderer_phase_at, wanderer_position_at,
-    wanderer_recurrence, wanderer_visibility,
+    AnchorState, OrbitalError, OrbitalPosition, StellarIllumination, StellarLight,
+    WandererAppearance, WandererEvent, WandererEventKind, WandererVisibility,
+    anchor_relative_longitude_at, anchor_state_at, stellar_illumination_at, stellar_positions_at,
+    wanderer_events, wanderer_phase_at, wanderer_position_at, wanderer_recurrence,
+    wanderer_visibility,
 };
 pub use figures::{
     FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,

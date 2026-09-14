@@ -21,6 +21,111 @@ pub struct OrbitalPosition {
     pub y_au: f64,
 }
 
+/// A physically evaluated state of the anchor world in the system orbital plane.
+///
+/// Positions and radii are in astronomical units, velocities are in AU per
+/// standard day, and longitudes are normalized turns in `[0, 1)`.
+/// type-audit: bare-ok(identifier-text: frame), pending(wave-1: position_au), pending(wave-1: velocity_au_per_day), pending(wave-1: radius_au), bare-ok(ratio: mean_longitude_turns), bare-ok(ratio: true_longitude_turns)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AnchorState {
+    /// The explicit instant at which this state was evaluated.
+    pub instant: StdInstant,
+    /// Stable name of the coordinate frame and distance unit.
+    pub frame: &'static str,
+    /// Epoch from which the orbital phase is advanced.
+    pub epoch: StdInstant,
+    /// Cartesian position in the system orbital plane, in AU.
+    pub position_au: [f64; 2],
+    /// Cartesian velocity in the system orbital plane, in AU per standard day.
+    pub velocity_au_per_day: [f64; 2],
+    /// Distance from the orbital center, in AU.
+    pub radius_au: f64,
+    /// Mean longitude, in normalized turns.
+    pub mean_longitude_turns: f64,
+    /// True longitude, in normalized turns.
+    pub true_longitude_turns: f64,
+    /// Inclusive beginning of the evaluator's validity interval, or unbounded.
+    pub valid_from: Option<StdInstant>,
+    /// Inclusive end of the evaluator's validity interval, or unbounded.
+    pub valid_until: Option<StdInstant>,
+}
+
+/// Failure to evaluate a physical orbit at an explicit instant.
+/// type-audit: bare-ok(identifier-text: InvalidInput.parameter), pending(wave-1: InvalidInput.value), bare-ok(identifier-text: DegenerateOrbit.parameter), pending(wave-1: DegenerateOrbit.value), bare-ok(prose: DegenerateOrbit.reason), bare-ok(count: SolverDidNotConverge.iterations), pending(wave-1: SolverDidNotConverge.residual)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum OrbitalError {
+    /// A required input was not finite.
+    InvalidInput {
+        /// Name of the invalid input.
+        parameter: &'static str,
+        /// Invalid value supplied to the evaluator.
+        value: f64,
+    },
+    /// The requested instant lies outside the orbit's validity interval.
+    UnsupportedTime {
+        /// Instant the caller requested.
+        instant: StdInstant,
+        /// Inclusive beginning of the supported interval.
+        valid_from: StdInstant,
+        /// Inclusive end of the supported interval.
+        valid_until: StdInstant,
+    },
+    /// Finite orbital parameters do not describe an evaluable ellipse.
+    DegenerateOrbit {
+        /// Name of the degenerate parameter.
+        parameter: &'static str,
+        /// Degenerate value supplied to the evaluator.
+        value: f64,
+        /// Required domain for the parameter.
+        reason: &'static str,
+    },
+    /// Kepler's equation did not meet the residual tolerance.
+    SolverDidNotConverge {
+        /// Fixed Newton iteration budget that was exhausted.
+        iterations: usize,
+        /// Absolute residual after the final iteration.
+        residual: f64,
+    },
+}
+
+impl std::fmt::Display for OrbitalError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidInput { parameter, value } => {
+                write!(formatter, "orbital {parameter} must be finite, got {value}")
+            }
+            Self::UnsupportedTime {
+                instant,
+                valid_from,
+                valid_until,
+            } => write!(
+                formatter,
+                "orbital instant {} is outside the supported interval [{}, {}]",
+                instant.get(),
+                valid_from.get(),
+                valid_until.get()
+            ),
+            Self::DegenerateOrbit {
+                parameter,
+                value,
+                reason,
+            } => write!(
+                formatter,
+                "orbital {parameter} is degenerate: {value} ({reason})"
+            ),
+            Self::SolverDidNotConverge {
+                iterations,
+                residual,
+            } => write!(
+                formatter,
+                "orbital solver did not converge after {iterations} iterations (residual {residual})"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for OrbitalError {}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum OrbitalFrame {
     SystemPlaneAu,
@@ -119,29 +224,69 @@ pub(crate) fn orbital_state_at(
     elements: &OrbitalElements,
     instant: StdInstant,
 ) -> Option<OrbitalState> {
-    if !elements.validity.contains(instant)
-        || !instant.get().is_finite()
-        || !elements.epoch.get().is_finite()
-        || !elements.period.get().is_finite()
-        || elements.period.get() <= 0.0
-        || !elements.semi_major_axis.is_finite()
-        || elements.semi_major_axis <= 0.0
-        || !(0.0..1.0).contains(&elements.eccentricity)
-        || !elements.mean_longitude_at_epoch_turns.is_finite()
-        || !elements.periapsis_longitude_turns.is_finite()
-        || !((instant.get() - elements.epoch.get()) / elements.period.get()
-            + elements.mean_longitude_at_epoch_turns)
-            .is_finite()
-    {
-        return None;
+    orbital_state_result_at(elements, instant).ok()
+}
+
+fn orbital_state_result_at(
+    elements: &OrbitalElements,
+    instant: StdInstant,
+) -> Result<OrbitalState, OrbitalError> {
+    for (parameter, value) in [
+        ("instant", instant.get()),
+        ("epoch", elements.epoch.get()),
+        ("period", elements.period.get()),
+        ("semi-major axis", elements.semi_major_axis),
+        ("eccentricity", elements.eccentricity),
+        (
+            "mean longitude at epoch",
+            elements.mean_longitude_at_epoch_turns,
+        ),
+        ("periapsis longitude", elements.periapsis_longitude_turns),
+    ] {
+        if !value.is_finite() {
+            return Err(OrbitalError::InvalidInput { parameter, value });
+        }
+    }
+    if !elements.validity.contains(instant) {
+        return Err(OrbitalError::UnsupportedTime {
+            instant,
+            valid_from: elements.validity.from,
+            valid_until: elements.validity.until,
+        });
+    }
+    if elements.period.get() <= 0.0 {
+        return Err(OrbitalError::DegenerateOrbit {
+            parameter: "period",
+            value: elements.period.get(),
+            reason: "must be positive",
+        });
+    }
+    if elements.semi_major_axis <= 0.0 {
+        return Err(OrbitalError::DegenerateOrbit {
+            parameter: "semi-major axis",
+            value: elements.semi_major_axis,
+            reason: "must be positive",
+        });
+    }
+    if !(0.0..1.0).contains(&elements.eccentricity) {
+        return Err(OrbitalError::DegenerateOrbit {
+            parameter: "eccentricity",
+            value: elements.eccentricity,
+            reason: "must be in [0, 1)",
+        });
     }
 
-    let mean_longitude_turns = orbital_phase_at(
-        elements.period,
-        elements.epoch,
-        elements.mean_longitude_at_epoch_turns,
-        instant,
-    );
+    let unnormalized_mean_longitude = (instant.get() - elements.epoch.get())
+        / elements.period.get()
+        + elements.mean_longitude_at_epoch_turns;
+    if !unnormalized_mean_longitude.is_finite() {
+        return Err(OrbitalError::InvalidInput {
+            parameter: "evaluated mean longitude",
+            value: unnormalized_mean_longitude,
+        });
+    }
+
+    let mean_longitude_turns = normalize_turns(unnormalized_mean_longitude);
     let mean_anomaly_turns =
         normalize_turns(mean_longitude_turns - elements.periapsis_longitude_turns);
     let mean_anomaly = TAU * mean_anomaly_turns;
@@ -151,6 +296,14 @@ pub(crate) fn orbital_state_at(
         eccentric_anomaly -=
             (eccentric_anomaly - eccentricity * math::sin(eccentric_anomaly) - mean_anomaly)
                 / (1.0 - eccentricity * math::cos(eccentric_anomaly));
+    }
+    let residual =
+        (eccentric_anomaly - eccentricity * math::sin(eccentric_anomaly) - mean_anomaly).abs();
+    if !residual.is_finite() || residual > 1e-12 {
+        return Err(OrbitalError::SolverDidNotConverge {
+            iterations: 16,
+            residual,
+        });
     }
 
     let cos_e = math::cos(eccentric_anomaly);
@@ -193,6 +346,29 @@ pub(crate) fn orbital_state_at(
         && state.radius.is_finite()
         && state.true_longitude_turns.is_finite())
     .then_some(state)
+    .ok_or(OrbitalError::SolverDidNotConverge {
+        iterations: 16,
+        residual,
+    })
+}
+
+fn anchor_orbital_elements(
+    orbit: Au,
+    year: StdDays,
+    forcing: &crate::forcing::OrbitalForcing,
+    instant: StdInstant,
+) -> OrbitalElements {
+    OrbitalElements {
+        frame: OrbitalFrame::SystemPlaneAu,
+        epoch: StdInstant(0.0),
+        period: year,
+        semi_major_axis: orbit.get(),
+        eccentricity: forcing.eccentricity_at(instant.get()),
+        mean_longitude_at_epoch_turns: forcing.year_phase_offset,
+        // The forcing convention puts periapsis at year phase 0.25.
+        periapsis_longitude_turns: 0.25,
+        validity: OrbitalValidity::UNBOUNDED,
+    }
 }
 
 /// The single construction seam for the anchor's osculating elements.
@@ -203,19 +379,55 @@ pub(crate) fn anchor_orbital_state_at(
     instant: StdInstant,
 ) -> Option<OrbitalState> {
     orbital_state_at(
-        &OrbitalElements {
-            frame: OrbitalFrame::SystemPlaneAu,
-            epoch: StdInstant(0.0),
-            period: year,
-            semi_major_axis: orbit.get(),
-            eccentricity: forcing.eccentricity_at(instant.get()),
-            mean_longitude_at_epoch_turns: forcing.year_phase_offset,
-            // The forcing convention puts periapsis at year phase 0.25.
-            periapsis_longitude_turns: 0.25,
-            validity: OrbitalValidity::UNBOUNDED,
-        },
+        &anchor_orbital_elements(orbit, year, forcing, instant),
         instant,
     )
+}
+
+/// Evaluate the anchor world's physical orbit at an explicit instant.
+pub fn anchor_state_at(
+    system: &StarSystem,
+    instant: StdInstant,
+) -> Result<AnchorState, OrbitalError> {
+    for (parameter, value) in [
+        ("eccentricity mean", system.forcing.ecc_mean),
+        ("eccentricity amplitude", system.forcing.ecc_amp),
+        ("eccentricity phase", system.forcing.ecc_phase),
+    ] {
+        if !value.is_finite() {
+            return Err(OrbitalError::InvalidInput { parameter, value });
+        }
+    }
+    let elements = anchor_orbital_elements(
+        system.anchor.orbit,
+        system.anchor.year,
+        &system.forcing,
+        instant,
+    );
+    let state = orbital_state_result_at(&elements, instant)?;
+    debug_assert_eq!(state.frame, OrbitalFrame::SystemPlaneAu);
+    Ok(AnchorState {
+        instant,
+        frame: "system-plane-au",
+        epoch: elements.epoch,
+        position_au: state.position,
+        velocity_au_per_day: state.velocity_per_day,
+        radius_au: state.radius,
+        mean_longitude_turns: state.mean_longitude_turns,
+        true_longitude_turns: state.true_longitude_turns,
+        valid_from: elements
+            .validity
+            .from
+            .get()
+            .is_finite()
+            .then_some(elements.validity.from),
+        valid_until: elements
+            .validity
+            .until
+            .get()
+            .is_finite()
+            .then_some(elements.validity.until),
+    })
 }
 
 fn circular_state(
