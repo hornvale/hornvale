@@ -1008,8 +1008,9 @@ mod tests {
         system.forcing.ecc_amp = 0.0;
         let calendar = crate::calendar::calendar_of(&system);
         let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
-        // Periapsis and apoapsis on either side of genesis. The existing
-        // scene is circular; the eclipse diameter keeps its first-order scale.
+        // Periapsis and apoapsis on either side of genesis. The compatibility
+        // position remains circular while eclipse diameter uses physical
+        // radius from the shared state.
         for (years, phase, radius_ratio, y_sign) in
             [(-0.875, 0.25, 0.8, 1.0), (0.625, 0.75, 1.2, -1.0)]
         {

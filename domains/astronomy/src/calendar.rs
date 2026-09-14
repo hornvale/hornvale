@@ -806,7 +806,8 @@ impl Calendar {
         // two agree exactly.
         // The calendar keeps the mean-longitude compatibility clock. Solar
         // geometry uses `solar_longitude_turns`, while eclipse and scene
-        // consumers retain this projection until their dedicated migration.
+        // consumers that intentionally retain the compatibility projection
+        // continue to read this method.
         self.anchor_orbital_state_at(t)
             .map_or(0.0, |state| state.mean_longitude_turns)
     }
