@@ -586,6 +586,65 @@ const AQUITARD_MAX_POROSITY: f64 = 0.15;
 /// spring ceiling was calibrated against a porosity axis that no longer
 /// exists; re-placing it needs its own measurement and is deliberately not
 /// done here.
+///
+/// # THE FOUR NUMBERS THE TWO PARAGRAPHS ABOVE STATE DO NOT REPRODUCE
+///
+/// Task 14 re-ran the sweep at the shipped value, on the same three seeds, at
+/// the same mesh level, and got a different answer every time. The value
+/// `0.53` is **not** what moved and is left alone; what follows corrects the
+/// RECORD beside it, which a future author would otherwise act on.
+///
+/// ```text
+///                        recorded here    re-measured (Task 14)
+///   aquifer, seed  0        15.77%            19.78%
+///   spring,  seed  0         7.36%             7.82%
+///   spring,  seed  7         8.71%             9.29%
+///   spring,  seed 42        10.54%            11.10%
+///   admissible band, s0  [0.466, 0.574]    [0.476, 0.592]
+///   admissible band, s7  [0.458, 0.578]    [0.470, 0.588]
+///   admissible band, s42 [0.486, 0.586]    [0.496, 0.600]
+/// ```
+///
+/// **The re-measurement is the one with a positive control.** It is
+/// `aquifer_shape_probe.rs`'s two arms: the first computes the guard's own two
+/// shares with the guard's own expressions, and the second cross-checks its
+/// reproduced copy of the three private constants above against the shipped
+/// [`hydrogeology`] on every land vertex before it sweeps a single threshold.
+/// Run against the PRE-Task-13 tree it reproduces the committed census's
+/// `aquifer-fraction` column to all eight significant digits at seeds 0 and 7
+/// (0.21615415, 0.26039727) — so the instrument is pinned to an artifact this
+/// campaign did not author. The recorded column has no such anchor; its
+/// admissible bands are low by a consistent 0.010-0.014 across all three
+/// seeds, which is an offset rather than noise, so the harness that produced
+/// it was measuring a slightly different population.
+///
+/// **Two consequences, and only the second is comfortable.** First, the
+/// spring share at seed 0 is **0.0782 against the guard's 0.08 ceiling** —
+/// 2.3% of headroom, where the record above promised 8%. A future change that
+/// moves porosity at all reds
+/// `a_real_world_produces_a_porous_non_carbonate_vertex_in_bounded_shares`
+/// with no warning from this doc. Second, `0.53` survives the correction on
+/// its merits: the re-measured intersection is `[0.496, 0.588]` and `0.53`
+/// sits at 37% of it — off-centre where the record claimed 50.0%, but
+/// comfortably inside, so the placement stands and no retune is owed.
+///
+/// **The "disjoint intervals" claim is also not quite right, and the
+/// conclusion it supports survives anyway.** Re-measured, the three seeds'
+/// aquifer-admissible bands intersect in `[0.496, 0.588]` and their
+/// spring-admissible bands in `[0.586, 0.620]`, so `[0.586, 0.588]` satisfies
+/// all six constraints at once. That is a two-thousandth-wide window, which is
+/// a coincidence rather than a placement — a constant put there is one
+/// re-measurement from falling out of it. So the ruling stands exactly as
+/// written: the spring share is not fixable by moving this constant.
+///
+/// **And the mechanism sentence above is half right, which is why it is kept
+/// rather than deleted.** `Spring` does track the aquifer set's perimeter, and
+/// that perimeter did roughly double (margin/area 0.25 -> 0.44-0.55). But
+/// "fragments that set" invites a picture of speckle that is false: the set
+/// broke into more, raggeder bodies of ~70-100 vertices, not into dust.
+/// Isolated vertices are 0.3-0.5% of it. See `aquifer_shape_probe.rs`'s module
+/// doc for the before/after table and for why an extent rule on
+/// `promote_to_spring` cannot recover the old share.
 /// plumb: pending(wave-1)
 const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.53;
 
@@ -1726,6 +1785,19 @@ mod tests {
         // 15.77%, spring 7.36%. The spring figure has doubled and the
         // constant's doc records why — `Spring` tracks the aquifer set's
         // PERIMETER, and a continuous porosity field fragments that set.
+        //
+        // **THOSE TWO FIGURES ARE WRONG AND THIS TEST IS NEARER RED THAN THEY
+        // SAY** (The Trencher, Task 14). Re-measured at the shipped `0.53`,
+        // with the expressions below and nothing else, seed 0 reads **aquifer
+        // 0.1978, spring 0.0782**. The spring ceiling is `0.08`: the margin is
+        // 2.3%, not the 8% "7.36%" implies. The correction, its positive
+        // control (the committed census's `aquifer-fraction` column, matched
+        // to eight significant digits on the pre-Task-13 tree) and the reason
+        // `0.53` nonetheless stands are in `CLASTIC_AQUIFER_MIN_POROSITY`'s
+        // doc. Neither band is moved here — the spring ceiling was calibrated
+        // against a porosity axis that no longer exists, and re-placing it is
+        // a campaign decision, not a repair. Anything that moves porosity
+        // should expect to red this assertion.
         let geo = Geosphere::new(6);
         let outcome = generate(Seed(0), &geo, &TerrainPins::default()).unwrap();
         let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);

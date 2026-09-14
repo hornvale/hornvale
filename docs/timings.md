@@ -7688,3 +7688,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-14T15:18:57Z | rebaseline | 230.078 | 640.252 | 22.524 | 2.88 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-14T15:20:11Z | gate-commit | 70.043 | 218.011 | 55.741 | 3.91 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-14T15:54:22Z | gate-commit | 43.546 | 83.467 | 20.046 | 2.38 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T16:13:47Z | gate-commit | 39.738 | 50.416 | 15.111 | 1.65 | 0 | 508787528 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T16:15:32Z | gate-commit | 90.233 | 381.425 | 48.290 | 4.76 | 0 | 508787528 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T16:16:35Z | gate-commit | 44.033 | 83.194 | 19.947 | 2.34 | 0 | 508787528 | campaign/the-trencher | MacBookPro | 10 |

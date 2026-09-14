@@ -9,6 +9,8 @@
 //! `tests/suite/`). This collapses 8 separate integration-test
 //! binaries into 1.
 
+#[path = "suite/aquifer_shape_probe.rs"]
+mod aquifer_shape_probe;
 #[path = "suite/carve_properties.rs"]
 mod carve_properties;
 #[path = "suite/cave_construction_proof.rs"]

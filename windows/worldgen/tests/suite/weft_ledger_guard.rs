@@ -98,6 +98,28 @@ use hornvale_worldgen::seed_42_world;
 // report the measurement, do not tune to a downstream count), so this pin
 // records the world as it is and the band breach is the campaign's to decide.
 // If that decision moves the settlement count, this number moves with it.
+//
+// **THE "LIKELY DRIVER" SENTENCE IS FALSE, AND IT WAS FALSIFIED BY RUNNING
+// THE THING** (The Trencher, Task 14). `Hydro::Spring` has exactly two
+// readers in the whole tree: `windows/worldgen`'s `is_spring_vertex`, which
+// is consumed ONLY by the linguistic exposure classifier (whether a people is
+// `Steeped` in the concept "spring"), and one lab metric. Nothing on the
+// settlement path reads it — the deep-history bake places settlements from
+// `carrying_capacity`, which never asks about hydrogeology. Measured rather
+// than argued: with the promotion neutralised so the world contains ZERO
+// springs, the counts are unchanged to the settlement —
+//
+//   seeds 0 / 7 / 42, `all_settlements` at `build_world`
+//     pre-Task-13            266 / 282 / 332
+//     shipped                325 / 340 / 411
+//     shipped, springs off   325 / 340 / 411
+//
+// — so no achievable change to `promote_to_spring` can move this pin by one
+// fact. The rise is Task 13's porosity move reaching carrying capacity
+// through rock, soil and fertility, and it is +22% on ALL THREE seeds: seed
+// 42 breaches the band because it started nearest the ceiling (332 of 400),
+// not because seed 42 is special. Whoever settles the band breach should
+// start there and not at the spring rule.
 const SEED_42_FACT_COUNT: usize = 23_810;
 
 /// Pinned to an exact count, not a floor, for the same reason

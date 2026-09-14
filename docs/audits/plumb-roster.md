@@ -202,12 +202,12 @@ counts are already the Coverage table above. 47 finding(s).
 | `domains/species/src/lib.rs:6745` | `DROW_WATER` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6750` | `DROW_SUBSTRATE` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6754` | `DROW_LIGHT` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/terrain/src/lithology.rs:630` | `LEY_REACH` | per-world | the width of a world's ley-lines is a property of that world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:637` | `LEY_GAIN` | per-world | ley intensity is a property of a world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:644` | `WELL_RADIUS_RAD` | per-world | the reach of a mana-well is a property of a world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:650` | `WELL_GAIN` | per-world | mana-well intensity is a property of a world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:658` | `HALLOW_AGE_MIN` | per-world | how much deep time it takes to charge ground is a property of a world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:665` | `HALLOW_GAIN` | per-world | the residue deep time leaves is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:689` | `LEY_REACH` | per-world | the width of a world's ley-lines is a property of that world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:696` | `LEY_GAIN` | per-world | ley intensity is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:703` | `WELL_RADIUS_RAD` | per-world | the reach of a mana-well is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:709` | `WELL_GAIN` | per-world | mana-well intensity is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:717` | `HALLOW_AGE_MIN` | per-world | how much deep time it takes to charge ground is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:724` | `HALLOW_GAIN` | per-world | the residue deep time leaves is a property of a world's magic, not of this code |
 | `windows/vessel/src/liveness.rs:307` | `SUSTENANCE` | per-species | a creature's own metabolism sets how fast thirst/foraging need accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
 | `windows/vessel/src/liveness.rs:385` | `FURNISHING_COLD_C` | per-people | whether a room's people build around a fire tracks that people's own cold tolerance and culture, not a fixed climate cutoff for every people -- doc: a room's people build around a fire |
 | `windows/vessel/src/liveness.rs:469` | `THERMAL_FEAR_SPAN_C` | per-species | how WIDE a creature's comfort band is before fear ramps to full weight is a trait separate from where the band is centered -- a stenotherm and a eurytherm can share an optimum and differ entirely in span |
