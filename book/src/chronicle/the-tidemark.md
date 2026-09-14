@@ -391,6 +391,11 @@ useful result than either supported or refuted, and `refuted` would assert a
 negative the data cannot carry. The measured yield is 2.67 breaches per seed, so
 ten per stratum needs about nineteen seeds against today's twelve.
 
+The expanded settlement roster also had a visible local consequence: on seed 2,
+the Moma retained only the qualitative record that the sky had darkened; their
+counted-priesthood line, next-darkening prediction, and priesthood correction
+were no longer present.
+
 What shipped is a power gate rather than a deletion or a re-tuning. The
 assertion is armed only when every stratum clears ten breached workings, and
 otherwise prints an explicit *unevaluated* report naming the shortfall per

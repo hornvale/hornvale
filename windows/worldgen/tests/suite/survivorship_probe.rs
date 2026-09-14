@@ -45,7 +45,7 @@
 //! replaced a stratification that did not stratify, and the number it reports
 //! is what the old instrument was unable to see.
 //!
-//! **But the null is produced by four observations, and decision 0959 rules
+//! **But the null is produced by four observations, and decision 0996 rules
 //! that this is UNEVALUATED rather than refuted.** Two of the five quintiles
 //! rest on one and three breached workings, carry 20% of the pair mass, and
 //! hold the two most extreme AUCs (0.144 and 0.282). The root cause is a
@@ -56,7 +56,7 @@
 //! the gate is closed; the assertion arms itself, unchanged, the moment the
 //! panel can carry it. Extending the panel belongs to The Winze. None of this
 //! is a licence to move `Z_SUPPORTS` or `BREACH_FREE_PATH_M`, which §1 of the
-//! amendment, this file's own "WHAT WOULD CHANGE THE VERDICT", and 0959 all
+//! amendment, this file's own "WHAT WOULD CHANGE THE VERDICT", and 0996 all
 //! forbid in advance — and none of it touches the POOLED assertion, which is
 //! not in doubt and still has full teeth.
 //!
@@ -111,7 +111,7 @@
 //! **both** are now under the power gate rather than one asserting and one
 //! not. A thin stratum may reverse without overruling the aggregate
 //! conditioned evidence; here the aggregate conditioned evidence is itself
-//! four observations wide, and 0959 declines to read a verdict off it in
+//! four observations wide, and 0996 declines to read a verdict off it in
 //! either direction.
 //!
 //! # WHAT WOULD CHANGE THE VERDICT
@@ -202,7 +202,7 @@ const Z_SUPPORTS: f64 = 1.96;
 ///   distribution and the normal one are different objects, and a stratum
 ///   contributes an `E` and a `V` to `stratify`'s sums that the approximation
 ///   does not license.
-/// - It is the **lowest rung of decision 0959's own arithmetic table**, which
+/// - It is the **lowest rung of decision 0996's own arithmetic table**, which
 ///   was written to hand the panel-extension problem to The Winze: ~10 breached
 ///   per stratum is ~50 breaches, which at the measured yield of 2.67 breaches
 ///   per seed is ~19 seeds. The table's other rungs are ~20 (≈38 seeds) and
@@ -219,7 +219,7 @@ const Z_SUPPORTS: f64 = 1.96;
 /// the panel past the threshold and `the_separation_survives_conditioning
 /// _on_tenure` asserts `Z_SUPPORTS` again with its original teeth, with no
 /// further edit to this file. `Z_SUPPORTS` is untouched and stays untouched —
-/// see decision 0959 and the amendment's §1, which forbid moving it.
+/// see decision 0996 and the amendment's §1, which forbid moving it.
 const MIN_BREACHED_PER_STRATUM: usize = 10;
 
 /// One panel seed's world, built to the depth that runs the history bake.
@@ -762,7 +762,7 @@ fn breached_delvings_are_deeper_with_overlap() {
 /// **It vanishes — on four observations, which is why this test now GATES its
 /// assertion on power instead of either asserting or deleting it.** Under
 /// amendment R1's quintile strata the conditioned statistic is pooled AUC
-/// 0.7959 → stratified 0.4977, z -0.034. Decision 0959 investigated that null
+/// 0.7959 → stratified 0.4977, z -0.034. Decision 0996 investigated that null
 /// and found it decided by strata carrying one and three breached workings:
 ///
 /// ```text
@@ -776,7 +776,7 @@ fn breached_delvings_are_deeper_with_overlap() {
 ///
 /// The two strata resting on one and three carry 20% of the pair mass and hold
 /// the two most extreme AUCs. **A negative verdict decided by one observation
-/// is not a negative verdict**, so 0959 records §5.2's conditioned claim as
+/// is not a negative verdict**, so 0996 records §5.2's conditioned claim as
 /// UNEVALUATED — explicitly *not* `refuted`, and explicitly not a licence to
 /// move `Z_SUPPORTS` or `BREACH_FREE_PATH_M`, which remain untouched.
 ///
@@ -797,9 +797,9 @@ fn breached_delvings_are_deeper_with_overlap() {
 /// significance clause fails, so the two contradict each other — and a
 /// direction assertion resting on the same one-and-three strata is no better
 /// evidenced than the significance one. Leaving it asserting would have kept a
-/// live guard over exactly the data 0959 ruled cannot decide anything.
+/// live guard over exactly the data 0996 ruled cannot decide anything.
 ///
-/// **Extending the panel belongs to The Winze**, not here: 0959 hands over the
+/// **Extending the panel belongs to The Winze**, not here: 0996 hands over the
 /// arithmetic (2.67 breaches per seed measured, so ~19 seeds for the ~10 rung)
 /// and E.9 owns the seed count. `PANEL` is unchanged.
 ///
@@ -816,7 +816,7 @@ fn breached_delvings_are_deeper_with_overlap() {
 /// statistic stratified on epochs dug stays above `Z_SUPPORTS` and the
 /// pair-weighted stratum-median direction remains breached-deeper; below that
 /// floor the conditioned readout is printed as UNEVALUATED and NOTHING about
-/// it is asserted — decision 0959)
+/// it is asserted — decision 0996)
 #[test]
 fn the_separation_survives_conditioning_on_tenure() {
     let split = split_over(&PANEL);
@@ -868,7 +868,7 @@ fn the_separation_survives_conditioning_on_tenure() {
 /// tell the difference: which strata are thin and by how much, the cut points
 /// that produced them, the statistic **labelled as reported and not asserted**,
 /// the measured breach yield, and how many seeds the next rung of decision
-/// 0959's table needs.
+/// 0996's table needs.
 fn report_unevaluated(
     r: &Readout,
     breached_total: usize,
@@ -880,7 +880,7 @@ fn report_unevaluated(
     let seeds_needed = (breaches_needed as f64 / yield_per_seed).ceil();
 
     println!(
-        "\n=== §5.2 CONDITIONED CLAIM: UNEVALUATED (decision 0959) ===\n  \
+        "\n=== §5.2 CONDITIONED CLAIM: UNEVALUATED (decision 0996) ===\n  \
          THIS TEST PASSED AND THAT IS NOT A VERDICT. The conditioned claim is neither supported \
          nor refuted here: {} of {STRATUM_COUNT} tenure strata carry fewer than \
          {MIN_BREACHED_PER_STRATUM} breached workings, which is the floor the normal \
@@ -928,7 +928,7 @@ fn report_unevaluated(
         "  WHAT WOULD EVALUATE IT — measured yield {breached_total} breaches over {seed_count} \
          panel seeds = {yield_per_seed:.2} per seed; {STRATUM_COUNT} strata x \
          {MIN_BREACHED_PER_STRATUM} = {breaches_needed} breaches => ~{seeds_needed:.0} seeds \
-         against today's {seed_count}. Decision 0959's table: ~10/stratum ~19 seeds, \
+         against today's {seed_count}. Decision 0996's table: ~10/stratum ~19 seeds, \
          ~20/stratum ~38 seeds, ~30/stratum ~56 seeds."
     );
     println!(

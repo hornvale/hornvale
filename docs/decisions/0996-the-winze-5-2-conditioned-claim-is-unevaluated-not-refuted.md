@@ -1,4 +1,4 @@
-# 0959. The Winze §5.2's conditioned claim is unevaluated, not refuted
+# 0996. The Winze §5.2's conditioned claim is unevaluated, not refuted
 
 **Status:** Accepted (2026-09-12) · **Decider:** Nathan · **Campaign:** The Tidemark
 

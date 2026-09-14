@@ -1206,7 +1206,7 @@ halves disagree; that disagreement is recorded rather than reconciled.
 
 > **Superseded as a statement about the test, not as a measurement.** This
 > paragraph is accurate at `031584af1` and the numbers stand. What changed is
-> what the test does with them: decision 0959 (`78dbf42ee`) ruled the
+> what the test does with them: decision 0996 (`78dbf42ee`) ruled the
 > conditioned claim UNEVALUATED rather than refuted, and the test now gates
 > both assertions on per-stratum power. It is GREEN and reports the same
 > −0.034 as unevaluated. See "The power gate" below.
@@ -1277,10 +1277,10 @@ Stale committed numbers in the module's own prose were corrected to this run's
 AUC 0.7959 / z 5.244, median tenure 24.0 vs 6.0). Those had been carrying the
 pre-Murrain 249-working figures.
 
-### The power gate — implementing decision 0959
+### The power gate — implementing decision 0996
 
-Implements `docs/decisions/0959-the-winze-5-2-conditioned-claim-is-unevaluated-not-refuted.md`
-(`78dbf42ee`). The conditioned test was RED on four observations; 0959 ruled the
+Implements `docs/decisions/0996-the-winze-5-2-conditioned-claim-is-unevaluated-not-refuted.md`
+(`78dbf42ee`). The conditioned test was RED on four observations; 0996 ruled the
 claim UNEVALUATED, not refuted.
 
 **What was NOT done, and it is the whole point.** The assertion was not deleted.
@@ -1302,7 +1302,7 @@ itself with no further human action and no edit to the file.
 Two independent anchors, both fixed before this gate existed: (a) n ≥ 8–10 in
 the smaller group is the conventional floor for the normal approximation
 `u_z` computes to mean anything within a stratum — a textbook property of the
-statistic this file uses throughout; (b) it is the **lowest rung of 0959's own
+statistic this file uses throughout; (b) it is the **lowest rung of 0996's own
 arithmetic table** (~10/stratum → ~50 breaches → ~19 seeds at the measured 2.67
 breaches/seed). The constant's doc states both. A floor chosen to admit the
 current data would have had to be 1, which is the reading the doc forecloses.
@@ -1311,14 +1311,14 @@ current data would have had to be 1, which is the reading the doc forecloses.
 pair-weighted direction clause was passing, so the two contradicted each other —
 on the same one-and-three strata. A direction assertion on four observations is
 no better evidenced than a significance one, so leaving it armed would have kept
-a live guard over exactly the data 0959 ruled cannot decide anything. Recorded
+a live guard over exactly the data 0996 ruled cannot decide anything. Recorded
 as a ruling rather than a detail because it is the half most likely to be
 re-litigated: it looks like discarding a passing assertion.
 
 **The unevaluated print carries** the per-stratum breached/ordinary n's with the
 shortfall named, the derived quintile cut points, the stratified AUC and z each
 labelled REPORTED, NOT ASSERTED, the pair-weight direction with the same label,
-the measured yield and next-rung seed arithmetic, and a pointer to 0959. The
+the measured yield and next-rung seed arithmetic, and a pointer to 0996. The
 gate being closed means the test PASSES, so this print is the reader's only
 signal; its first line says so in as many words.
 
@@ -1359,12 +1359,12 @@ after any `mv`-based restore.
 **Preregistration outcome appended, predictions untouched.** §7 of
 `docs/superpowers/specs/2026-09-12-the-tidemark-survivorship-amendment.md`
 records P1 FAILED (and that the pole's stated `refuted` consequence was
-declined, with 0959's reasoning) and P2 SPLIT (pooled held 0.7959 → 0.6810;
+declined, with 0996's reasoning) and P2 SPLIT (pooled held 0.7959 → 0.6810;
 conditioned reversed 0.4977 → 0.3946). The diff is 79 insertions, **0
 deletions** — verified, not asserted: a preregistration whose predictions are
 edited after unblinding measures nothing.
 
-**Handed to The Winze**, per 0959: extending the panel (E.9 owns the seed
+**Handed to The Winze**, per 0996: extending the panel (E.9 owns the seed
 count) and the right-censoring question (a hazard model, not Mann–Whitney over
 completed cases).
 

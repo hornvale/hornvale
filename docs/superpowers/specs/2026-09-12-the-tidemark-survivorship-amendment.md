@@ -160,7 +160,7 @@ statistic did not move.
 with a decision record, and `refuted` is the registry status decision 0131
 opened for exactly this." **The decision record was written and it declined the
 `refuted` status** — see
-`docs/decisions/0959-the-winze-5-2-conditioned-claim-is-unevaluated-not-refuted.md`.
+`docs/decisions/0996-the-winze-5-2-conditioned-claim-is-unevaluated-not-refuted.md`.
 The null is produced by four observations: the five quintiles carry breached
 n's of 1, 3, 5, 4 and 19, and the two strata resting on one and three hold 20%
 of the pair mass and the two most extreme AUCs (0.144 and 0.282). A negative
