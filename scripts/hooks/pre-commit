@@ -406,12 +406,41 @@ if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant
     # warns about. The row lands, and the very next ordinary commit runs the
     # alarm against it and refuses until a human records the finding. The look is
     # still forced; it simply happens when it is possible to record.
+    # BOTH DURATION CHECKS STAND DOWN, NOT ONE, AND THE SECOND ONE COST A RUN.
+    #
+    # The block above describes this hazard exactly and fixed it for the ALARM:
+    # a delivery commit cannot satisfy a check keyed to a row it is in the act
+    # of committing. `the_latest_census_is_under_the_refusal_ceiling` was added
+    # later (The Sluice), reads the same latest row of the same working-tree
+    # docs/timings.md, and was never added here — so it reintroduced the
+    # identical defect one severity up.
+    #
+    # WHAT THAT COSTS IS NOT A FAILED COMMIT, IT IS A DEADLOCK. A census over
+    # the ceiling writes its own row, is refused, and leaves its goldens staged
+    # in the SHARED census worktree; the next attempt re-measures (still slow),
+    # `reset --hard`s that worktree — destroying the previous attempt's output —
+    # and is refused again. Measured on 2026-09-13: campaign/the-tidemark's
+    # 1898.859 s run was refused and its 109 moved goldens were destroyed by the
+    # following run, at ~30 minutes of canonical-box time per attempt.
+    #
+    # AND THE ONLY ESCAPE WAS TO MOVE THE GUARD. That campaign re-derived the
+    # duration pair honestly — from the established five-run series, explicitly
+    # NOT from the red reading, with the derivation committed — which is the
+    # sanctioned path and was well done. But "the campaign that needs the
+    # threshold raised is the campaign that raises it" is the shape decision
+    # 0016 exists to keep out of measurement, and a deadlock whose only exit is
+    # a guard change manufactures that shape on demand. Removing the deadlock
+    # removes the pressure; it does not lower the bar.
+    #
+    # DEFERRED, NOT DISCHARGED, on exactly the terms the alarm already has: the
+    # merge of the delivery branch runs the full suite and demands the
+    # re-statement from the campaign that submits it.
     docs_tests_exclude=""
     if [ -n "${HV_CENSUS_DELIVERY:-}" ]; then
-        docs_tests_exclude="a_census_over_the_alarm_threshold_owes_a_profiling_followup"
-        echo "pre-commit: HV_CENSUS_DELIVERY=1 — standing down the yellow-census alarm for this delivery." >&2
-        echo "pre-commit: it is keyed to this run's own timestamp and cannot be satisfied before the row exists." >&2
-        echo "pre-commit: the obligation is DEFERRED, not discharged — the next ordinary commit will demand it." >&2
+        docs_tests_exclude="test(a_census_over_the_alarm_threshold_owes_a_profiling_followup) or test(the_latest_census_is_under_the_refusal_ceiling)"
+        echo "pre-commit: HV_CENSUS_DELIVERY=1 — standing down BOTH census duration checks for this delivery." >&2
+        echo "pre-commit: both are keyed to this run's own row and cannot be satisfied before it exists." >&2
+        echo "pre-commit: the obligation is DEFERRED, not discharged — the merge of this delivery branch demands it." >&2
     fi
     if ! HV_DOCS_TESTS_EXCLUDE="$docs_tests_exclude" make docs-tests; then
         echo "pre-commit: 'make docs-tests' failed — a staged docs change breaks a test whose subject is prose." >&2

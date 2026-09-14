@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: worktree-reap worktree-reap-dry context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run visual-check visual-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: worktree-reap worktree-reap-dry context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-drain sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck observation-check census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run visual-check visual-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -505,10 +505,18 @@ sluice-ack: ## Adjudicate an out-of-band landing on main (REASON='what you check
 	@test -n "$(REASON)" || { echo "usage: make sluice-ack REASON='what you checked'" >&2; exit 2; }
 	@bash scripts/sluice-ack.sh "$(REASON)"
 
-sluice-status: ## The queue: what is queued, running, held, landed, reported (reads the canonical box over ssh)
-	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; \
-	    cat "$$d/queue.tsv" 2>/dev/null || true' \
+sluice-status: ## The queue: who is draining it, then every LIVE row and a short tail of finished ones (ALL=1 for the raw file)
+	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && \
+	    if [ -x scripts/sluice-drainers.sh ]; then scripts/sluice-drainers.sh; \
+	    else echo "drainers: unavailable — the canonical box checkout predates The Watchman, so no drainer holds a lock there yet"; fi' || true
+	@echo
+	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && \
+	    if [ -x scripts/sluice-status.sh ]; then HV_STATUS_ALL=$(if $(ALL),1,0) scripts/sluice-status.sh; \
+	    else d=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; cat "$$d/queue.tsv" 2>/dev/null; fi' \
 	    | column -t -s "$$(printf '\t')" || true
+
+sluice-drain: ## Drain the queue continuously (KINDS=merge,stage,census); one drainer per kind, canonical box only
+	@bash scripts/sluice-drain.sh watch $(if $(KINDS),--kinds=$(KINDS),) $(if $(MAX_JOBS),--max-jobs=$(MAX_JOBS),)
 
 sluice-log: ## Read a finished merge-queue job back (JOB=<id>, or omit for the most recent; reads the canonical box over ssh)
 	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; \
@@ -665,11 +673,20 @@ nextest-check: ## Fail with an install hint if cargo-nextest is missing
 		exit 1; }
 
 # HV_DOCS_TESTS_EXCLUDE narrows this roster for ONE caller only: a census
-# delivery commit, which cannot satisfy the yellow-census alarm by construction
-# (see scripts/hooks/pre-commit's HV_CENSUS_DELIVERY block). Empty for every
-# other caller, so the default roster is unchanged.
+# delivery commit, which cannot satisfy EITHER duration check by construction --
+# both read the latest row of docs/timings.md, and the row the delivery is
+# committing is that latest row (see scripts/hooks/pre-commit's
+# HV_CENSUS_DELIVERY block). Empty for every other caller, so the default roster
+# is unchanged.
+#
+# IT CARRIES A FILTER EXPRESSION, NOT A TEST NAME. It held a bare name until
+# The Stilling, and `not test($(VAR))` could therefore express exactly one
+# exclusion -- which is why the refusal ceiling could not join the alarm that
+# was already stood down beside it, and why a census slower than the ceiling
+# could not deliver its own goldens at all. Passing an expression costs the same
+# and has no arity.
 docs-tests: nextest-check ## The prose-subject tests -- run by pre-commit when only docs are staged (The Nettle)
-	@cargo nextest run -p hornvale --test suite -E '(test(docs_consistency) or test(generated_paths) or test(census_duration) or test(repose_byte_identity) or test(audio_artifacts) or test(lexicon_guard) or test(subfloor_roster_coverage) or test(architecture) or test(temp_path_ratchet))$(if $(HV_DOCS_TESTS_EXCLUDE), and not test($(HV_DOCS_TESTS_EXCLUDE)),)'
+	@cargo nextest run -p hornvale --test suite -E '(test(docs_consistency) or test(generated_paths) or test(census_duration) or test(repose_byte_identity) or test(audio_artifacts) or test(lexicon_guard) or test(subfloor_roster_coverage) or test(architecture) or test(temp_path_ratchet))$(if $(HV_DOCS_TESTS_EXCLUDE), and not ($(HV_DOCS_TESTS_EXCLUDE)),)'
 
 absorb: ## Absorb main into this campaign branch, regenerating artifacts it cannot merge
 	@bash scripts/absorb.sh
