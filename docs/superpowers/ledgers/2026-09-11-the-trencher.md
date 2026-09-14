@@ -3295,3 +3295,70 @@ already records the river half as shipped (The Confluence); springs are the
 half nobody wired.
 
 **Ideonomy passes / overturns:** none.
+
+## #39 [Prereg] — Task 15: the yield form. Methane's deficit is ARITY, not chemistry — frozen before the code that moves it
+
+**Written before any Task 15 code exists** (decision 0016). The predictions
+below are falsifiable and H4 is the one that would sink the whole approach.
+
+### The structural reading
+
+Reading all seven yields in `windows/worldgen/src/energy.rs` (`yield_at`), six
+of seven are products of terms each individually shaped into `[0,1]`:
+
+| source | form | terms |
+| --- | --- | --- |
+| Serpentinization | `bump(silica) · moisture` | 2 |
+| IronReduction | `bump(silica) · water_gate(moisture)` | 2 |
+| Radiolysis | `bump(silica) · water_gate(moisture)` | 2 |
+| SulphideOxidation | `metamorphic_grade · front · water_gate` | 3, each shaped |
+| **Methanogenesis** | **`carbonate · porosity · moisture`** | **3, raw** |
+| Geothermal | `t/(t+reach) · water_gate` | 2 |
+| DetritalImport | `depth_falloff · drainage_term` | 2 |
+
+A product of *k* terms each ~U[0,1] has mean `1/2^k`. So a 3-product sits
+structurally at half a 2-product **whatever the chemistry says**, and Task 12's
+measured dominance — H .258 / Fe .339 / S .280 / CH₄ .124 — is what that
+predicts. Methane is not rare because methanogenesis is hard; it is rare
+because it was modelled with one more factor than its neighbours.
+
+That is the argument for the **geometric mean** as the general rule: yield
+becomes the *k*-th root of a *k*-term product, so it reads "typical gate
+satisfaction" instead of "joint probability", and a source is not penalised for
+being described in more detail. It is a rule, not a tuned constant — which is
+the only reason it is admissible at all under 0016.
+
+### Frozen predictions
+
+- **H1 (arity explains the deficit).** Under geometric-mean-everywhere,
+  methane's dominance share rises from **0.124 to ≥ 0.18**, and the spread
+  (max − min dominance across the four axes) falls below the current
+  **0.215** (0.339 − 0.124).
+- **H2 (depth structure survives).** Sulphur still wins **zero** readings at
+  `Band::Undercroft`. Any sulphur win at Undercroft falsifies H2 and says the
+  transform destroyed the depth handoff Task 12 found.
+- **H3 (no degeneracy).** No axis exceeds **0.60** dominance, and each axis
+  keeps **≥ 1,000 distinct values** over the sample. Task 13 bought carbonate
+  19,681 distinct values; a transform that collapses that is a loss, not a fix.
+- **H4 (THE FALSIFIER FOR THE WHOLE APPROACH — discrimination survives).** A
+  geometric mean compresses toward the middle. If it compresses far enough, all
+  four axes read nearly equal everywhere, no chamber can be named by its
+  chemistry, and step 5's leader-and-margin readout is dead on arrival.
+  Prediction: the **median leader margin stays ≥ 0.02**. Below that, the
+  uniform geometric mean is REFUSED regardless of how good H1–H3 look, and the
+  fallback is the narrower change (methane alone, Task 12's arm D).
+- **H5 (overshoot is also a finding).** If methane's dominance lands **above
+  0.35** it has become the leader too often and the rule has overcorrected.
+
+### What must be measured against the POST-Task-13 world
+
+Task 12's numbers were taken before Task 13 widened `carbonate` (2 → 19,681
+distinct) and `metamorphic_grade` (5 → 4,248). Both feed yields in this table —
+carbonate is one of methanogenesis's three terms and metamorphic grade is one
+of sulphide oxidation's. **So the Task 12 baseline is stale for exactly the two
+sources this ruling is about**, and the probe must re-measure the current forms
+as its own control rather than citing 0.124/0.339 from the earlier entry. Those
+figures appear above as the *prediction's* reference point, not as a live
+reading. Re-derive them.
+
+**Ideonomy passes / overturns:** none.
