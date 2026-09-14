@@ -904,18 +904,18 @@ const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 /// pulled to 0.2) concentrates catchments along river corridors rather than
 /// spreading them over broad riverless-but-moist land, and the old
 /// `THRESHOLD = 10.0` condensed only 79 seed-42 settlements — below the
-/// [100, 400] sane band (`windows/worldgen/tests/confluence.rs`,
+/// historical calibration window (`windows/worldgen/tests/confluence.rs`,
 /// `settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint`).
 ///
 /// A naive re-fit is not enough: lowering `THRESHOLD` alone trades settlement
 /// COUNT against T2's keystone (`settlements_condense_near_rivers_emergently`)
 /// — a sweep found both move together non-monotonically in a narrow band
-/// (e.g. 0.9–1.5 clears the [100, 400] count band comfortably but the
+/// (e.g. 0.9–1.5 clears the then-current [100, 400] count band comfortably but the
 /// near-river fraction hovers right AT the keystone's 0.7 floor, 0.6991–
 /// 0.7018, effectively zero margin; 2.5+ gives the keystone real headroom but
 /// drops the count below 100). `1.7` was chosen as the best point found in
-/// that sweep: seed 42 condenses 108 settlements (comfortably inside the
-/// band, well clear of its 100 floor) while the near-river fraction reads
+/// that sweep: seed 42 condenses 108 settlements (comfortably inside that
+/// window, well clear of its 100 floor) while the near-river fraction reads
 /// 0.7222 — a real, if modest, margin over the keystone floor rather than
 /// sitting on top of it. A save-format constant from here on. Module scope
 /// (hoisted from the settlement-genesis stage closure, Task A16a) so

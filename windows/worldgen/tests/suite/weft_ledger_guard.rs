@@ -87,17 +87,30 @@ use hornvale_worldgen::seed_42_world;
 // The +3_291 total is those four families and their dependents; nothing new
 // is emitted and no predicate appeared or vanished.
 //
-// **AN OPEN FINDING RIDES WITH THIS NUMBER, AND IT IS NOT SETTLED BY PINNING
-// IT.** 413 settlements puts seed 42 outside the `[75, 400]` "sane band"
-// three other tests assert (`confluence`, `history_placement`,
-// `history_tumult`), by 3%. The likely driver is the `Hydro::Spring` share,
+// **A FINDING RODE WITH THIS NUMBER, AND IT IS NOW SETTLED — BUT NOT BY
+// MOVING THE COUNT.** Seed 42 cleared the `400` ceiling three other tests
+// asserted (`confluence`, `history_placement`, `history_tumult`). State the
+// two readings separately, because an earlier draft of this note merged them
+// into "413 settlements" and they are not the same measurement: the committed
+// full-build fixture carries **413** `is-settlement` facts (counted directly
+// in `cli/tests/fixtures/world-seed-42.json`, where `is-place` and
+// `population` agree at 413), while `all_settlements` on a live
+// `BuildDepth::Settlements` build reads **411** — the figure a red from those
+// three tests actually prints. Both clear 400; neither is the other. The likely driver is the `Hydro::Spring` share,
 // which doubled (3.69% -> 7.36% of land) because `promote_to_spring` scores
 // the aquifer set's PERIMETER and a continuous porosity field fragments that
 // set — see `CLASTIC_AQUIFER_MIN_POROSITY`'s doc for the measurement. That
 // was deliberately NOT chased by nudging a porosity constant (decision 0016:
 // report the measurement, do not tune to a downstream count), so this pin
-// records the world as it is and the band breach is the campaign's to decide.
-// If that decision moves the settlement count, this number moves with it.
+// records the world as it is.
+//
+// **THE CEILING IS GONE INSTEAD.** Those three tests now assert a minimum
+// viable floor and no upper bound, adopting verbatim the treatment The
+// Tidemark reached independently (`b5edf6106`, "subsequent world growth is a
+// valid success, not calibration drift"). A two-sided band was measuring the
+// wrong quantity: settlement count grows without bound as races are added, so
+// a fixed ceiling reports a healthy world as a regression. The world was not
+// tuned to fit the old ceiling and this number was not chosen to satisfy it.
 //
 // **THE "LIKELY DRIVER" SENTENCE IS FALSE, AND IT WAS FALSIFIED BY RUNNING
 // THE THING** (The Trencher, Task 14). `Hydro::Spring` has exactly two

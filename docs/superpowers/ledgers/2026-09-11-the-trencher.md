@@ -3201,3 +3201,97 @@ prose number nothing checks. Recorded in the row's instance list.
 
 **Ideonomy passes / overturns:** none; a task acceptance plus a protocol found
 not to fit its case.
+
+## #38 [Ruling] — The settlement ceiling retired, adopting The Tidemark's treatment verbatim; and two docs my own change falsified
+
+**Nathan's ruling.** *"The [75, 400] settlement sane band is actually
+nonsensical (as we add races, we're going to increase settlements without
+bound), and is being dealt with in a separate campaign, The Tidemark — feel
+free to look at their worktree to see how they addressed it."*
+
+**What The Tidemark did** (`b5edf6106`, `campaign/the-tidemark`, worktree
+`.claude/worktrees/the-shoal`, **not merged to main** — verified with
+`git merge-base --is-ancestor`): replaced the two-sided band with a
+minimum-viable floor in three tests, raising the floor 40 → 75 in two of them
+and deleting the ceiling in all three. Their words: *"subsequent world growth
+is a valid success, not calibration drift"*; *"growth above the old
+calibration window is healthy and must remain observable."* They also renamed
+"sane band" to "historical calibration window" throughout, which is the honest
+name — it was never a sanity check.
+
+**Adopted by applying their patch, not by retyping it.** `git apply --3way` of
+their four-file diff landed cleanly on this branch. That is deliberate: both
+branches merge into main, so byte-identical text merges without conflict while
+an independently-worded equivalent would collide for no gain. Three tests pass
+(`confluence` 4.872 s, `history_placement` 4.585 s, `history_tumult` 7.635 s).
+
+**Mutation-proved rather than assumed.** A floor of 75 against a reading in the
+400s could be a guard that can never fire. Raising `MIN_LIVE_SETTLEMENTS` to
+500 reds `emergent_settlement_count_stays_in_the_sane_band` with *"regressed
+settlement count: 411 (minimum viable floor 500)"*. Restored.
+
+### The mutation surfaced a conflation I was about to propagate
+
+That red printed **411**, where the note I was editing said **413**. They are
+different measurements and this campaign's own text had merged them:
+
+- **413** — `is-settlement` facts in the committed full-build fixture
+  `cli/tests/fixtures/world-seed-42.json` (counted directly; `is-place` and
+  `population` agree at 413).
+- **411** — `all_settlements` on a live `BuildDepth::Settlements` build, which
+  is the number a red from those three tests actually prints.
+
+Both clear 400, so the finding is unchanged — but "413 settlements" was a fact
+count wearing a settlement count's frame, and I had preserved it verbatim while
+rewriting the paragraph around it. Same class as ledger #31a's three peer
+errors: *a true number carried into a frame where it means something else.*
+Corrected in `weft_ledger_guard.rs` by stating both readings and what separates
+them.
+
+### Two docs my change falsified, fixed in the same commit
+
+1. **`staple_d2_probe.rs`'s `SETTLEMENT_COUNT_BAR`** doc claimed to be *"the
+   live settlement-count sane band in `history_tumult.rs`"*. Nothing enforced
+   that — it is a hand-transcribed copy with **no source-scan** — so my edit to
+   `history_tumult.rs` silently made it false. Rewritten to say what it is: The
+   Staple D2's **frozen preregistered bar**. The constant is left at `40..=400`
+   untouched; decision 0016 forbids retuning another campaign's preregistered
+   bar, and The Tidemark left it alone too.
+
+2. **`lib.rs`'s `CONDENSATION_THRESHOLD` sweep record**, two lines below the
+   line The Tidemark *did* fix, still read `[100, 400] count band` as a live
+   gate. Marked historical ("the then-current", "that window"). A freshness
+   sweep skipping the doc adjacent to its own diff is a recorded pattern.
+
+### A finding filed, not fixed: the probe's upper bar is now probably dead
+
+`staple_d2_probe` counts **treatment-only** breaches — a world where control
+*and* treatment breach is deliberately not counted. That is not inferred; the
+probe's own positive control pins it
+(`demographic_instability_counts_only_treatment_only_bar_breaches`, whose
+`pairs[1]` sets control **and** treatment to 401 and expects a count of 1, from
+the unrelated `39` case). So once the baseline settlement count clears 400
+everywhere, both arms breach on every world and the settlement half of that
+instability detector **can never fire again**. Both live probes are
+`#[ignore]`d, so nothing has observed it; the next run would read a silent zero
+as health.
+
+Filed in the constant's own doc rather than repaired: it is The Staple D2's
+bar, the decision is theirs, and whoever re-runs it should re-derive the counts
+rather than trust my note. Class: *a guard over a lifecycle population expires
+when the lifecycle advances.*
+
+### Nathan's springs observation, recorded as he asked
+
+*"Springs would be a really good place to have settlements, I'd think. Maybe we
+should record that for later."* Filed as
+`SOC-springs-are-invisible-to-settlement-siting` (raw / high, 581 chars against
+the 600 cap). It is a **missing join, not a tuning gap**, and Task 14 already
+measured it: `Hydro::Spring` has exactly two readers — the linguistic exposure
+classifier and one lab metric — while the bake sites settlements from
+`carrying_capacity`, whose freshwater term reads river proximity only. Zeroing
+springs entirely left counts identical on seeds 0/7/42 (325/340/411). `DOM-5`
+already records the river half as shipped (The Confluence); springs are the
+half nobody wired.
+
+**Ideonomy passes / overturns:** none.

@@ -15,8 +15,26 @@ use hornvale_worldgen::{
 const PROBE_WORLD_DENOMINATOR: usize = 200;
 const PROBE_SEEDS: std::ops::RangeInclusive<u64> = 1..=200;
 
-/// The live settlement-count sane band in `history_tumult.rs`, whose source
-/// assertion delegates to the same band in `history_placement.rs`.
+/// The Staple D2's FROZEN preregistered settlement-count bar. It read as "the
+/// live band in `history_tumult.rs`" until The Trencher retired that band's
+/// ceiling (adopting The Tidemark's `b5edf6106`): `history_tumult` and
+/// `history_placement` now assert a minimum viable floor and NO upper bound,
+/// so this constant no longer mirrors anything live. It is left at `40..=400`
+/// deliberately — decision 0016 forbids retuning another campaign's
+/// preregistered bar — but it is a frozen bar, not a reflection.
+///
+/// **AND ITS UPPER HALF IS NOW PROBABLY DEAD, WHICH IS A FINDING, NOT A
+/// REPAIR ORDER.** This probe counts TREATMENT-ONLY breaches: a world where
+/// control and treatment both breach is deliberately not counted, which
+/// `demographic_instability_counts_only_treatment_only_bar_breaches` pins
+/// directly (its `pairs[1]` sets control AND treatment to 401 and expects a
+/// count of 1, from the unrelated `39` case). So once the world's baseline
+/// settlement count clears 400 everywhere — seed 42 reads 413 on this branch
+/// — both arms breach on every world and this bar's settlement half can
+/// never fire again. Both live probes are `#[ignore]`d, so nothing has
+/// observed that yet; the next run would read a silent zero as health. Whoever
+/// re-runs The Staple D2 owns the decision, and should re-derive the counts
+/// rather than trusting this note.
 const SETTLEMENT_COUNT_BAR: std::ops::RangeInclusive<usize> = 40..=400;
 
 /// The live depopulation ceiling. The D2 design names `history_tumult.rs` as
