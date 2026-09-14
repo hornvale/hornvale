@@ -180,6 +180,7 @@
 //! module encodes one directly. Task 5's implementer should meet that
 //! deliberately rather than discover it.
 
+use hornvale_kernel::math;
 use hornvale_kernel::{Band, Geosphere, VertexMap};
 use hornvale_terrain::delve::rung_evaluation_depth_m;
 use hornvale_terrain::{GeneratedTerrain, GeothermalGradient, MaterialBuffer, delta_t_range_of};
@@ -214,6 +215,74 @@ fn bump(x: f64, center: f64, half_width: f64) -> f64 {
 /// *quantity*.
 fn water_gate(moisture: f64, saturate_at: f64) -> f64 {
     smoothstep(0.0, saturate_at, moisture)
+}
+
+/// The geometric mean of `terms`: the *k*-th root of their product, so a
+/// source modelled with more `[0,1]`-shaped terms is not structurally
+/// penalised relative to one modelled with fewer — a plain product of *k*
+/// terms each `~U[0,1]` has mean `1/2^k`, so a 3-term source sits at half a
+/// 2-term source's typical yield *whatever the chemistry says* (The
+/// Trencher, ledger #39/#41, Task 15: the uniform geometric mean ships for
+/// every [`EnergySource::yield_at`] arm). This is [`windows/worldgen/tests/
+/// suite/metabolite_variety_probe.rs`]'s `geo_yield`/`source_arity`
+/// reference form, generalized to read its own arity off `terms.len()`
+/// instead of a separate lookup.
+///
+/// A zero term must still yield zero — a missing gate means no yield — and
+/// it does: `math::powf(0.0, _)` is `0.0`. `.max(0.0)` guards only the
+/// float-noise case where the product lands a shade below zero at the
+/// boundary; it does not change the zero case. Uses [`math::powf`] rather
+/// than `f64::powf`/`f64::cbrt`: both are on `clippy.toml`'s
+/// disallowed-methods list (platform libm divergence, decision 0041), and
+/// one spelling covers every arity this module uses.
+/// type-audit: bare-ok(ratio: return)
+/// The combination rule for a source's gating terms: the `k`-th root of their
+/// product, so a yield reads "typical gate satisfaction" rather than "joint
+/// probability" and a source is not penalised for being modelled with more
+/// factors. A product of `k` terms each in `[0,1]` has mean `1/2^k`, so a
+/// 3-term source sits structurally at half a 2-term one whatever its chemistry
+/// says — which is what depressed `REDUCED_SULPHUR` and `METHANE` (both fed by
+/// `k = 3` sources) against `HYDROGEN` and `REDUCED_IRON` (both `k = 2`). See
+/// The Trencher's ledger #39/#41.
+///
+/// A zero term still yields zero (`0^(1/k) == 0`): a gate that is shut shuts
+/// the source, exactly as the product did.
+///
+/// # Scope: the five sources that COMPETE, and not the two that do not
+///
+/// This is applied to `Serpentinization`, `IronReduction`, `Radiolysis`,
+/// `SulphideOxidation` and `Methanogenesis` — every source routed to one of
+/// the four metabolite axes — and **not** to `Geothermal` or `DetritalImport`.
+/// That is narrower than "uniform", and ledger #41 rejected a *different*
+/// narrow variant, so the distinction has to be exact rather than convenient:
+///
+/// - #41's rejected `SELECTIVE` boosted **some** members of the competing set
+///   (the two `k = 3` sources, leaving the `k = 2` ones alone). That creates a
+///   boost differential *within* a competition, and it measurably broke the
+///   depth handoff — sulphur took 11.2% of `Band::Undercroft` where the ΔT
+///   front says ~0. What preserves an invariant is the differential across
+///   competing axes, not any one axis's correction in isolation.
+/// - This applies to **all** members of that set, so no differential is
+///   created inside it, and the probe's `GEO` arm confirms the handoff holds
+///   (sulphur wins 0 at Undercroft).
+/// - `Geothermal` routes to `SupplyRoute::Modifier`, a **common factor** over
+///   all four metabolite axes. A common positive factor cannot change an
+///   `argmax`, so it is outside the competition by construction.
+/// - `DetritalImport` is the only source on `SupplyRoute::Detritus`, a
+///   different axis with different consumers. It competes with nothing, so
+///   arity fairness has no purchase on it — and unlike the metabolite axes it
+///   is heavily **consumed**: six niches in `domains/species` weight
+///   `DETRITUS`, three of them at `1.0`. Changing its magnitude is a
+///   recalibration of those niches, not a fairness correction. Measured, The
+///   Trencher ledger #45: geometric-meaning this one source alone accounts for
+///   **100%** of the world movement the change produced, and the world's
+///   response to its magnitude is non-monotone — the shipped product sits on a
+///   local maximum, with both `0.0` and a constant `1.0` scoring lower. Any
+///   future move here owes those six niches a re-fit and owes itself a
+///   multi-seed measurement.
+fn geometric_mean(terms: &[f64]) -> f64 {
+    let product: f64 = terms.iter().product();
+    math::powf(product.max(0.0), 1.0 / terms.len() as f64)
 }
 
 /// `Band::Underdeep`'s ΔT range (K above the surface datum), read live from
@@ -540,25 +609,30 @@ impl EnergySource {
     ) -> f64 {
         match self {
             EnergySource::Serpentinization => {
-                bump(
+                let silica_band = bump(
                     buffer.silica,
                     SERPENTINIZATION_SILICA_CENTER,
                     SERPENTINIZATION_SILICA_HALF_WIDTH,
-                ) * moisture
+                );
+                geometric_mean(&[silica_band, moisture])
             }
             EnergySource::IronReduction => {
-                bump(
+                let silica_band = bump(
                     buffer.silica,
                     IRON_REDUCTION_SILICA_CENTER,
                     IRON_REDUCTION_SILICA_HALF_WIDTH,
-                ) * water_gate(moisture, IRON_REDUCTION_MOISTURE_SATURATE)
+                );
+                let water = water_gate(moisture, IRON_REDUCTION_MOISTURE_SATURATE);
+                geometric_mean(&[silica_band, water])
             }
             EnergySource::Radiolysis => {
-                bump(
+                let silica_band = bump(
                     buffer.silica,
                     RADIOLYSIS_SILICA_CENTER,
                     RADIOLYSIS_SILICA_HALF_WIDTH,
-                ) * water_gate(moisture, RADIOLYSIS_MOISTURE_SATURATE)
+                );
+                let water = water_gate(moisture, RADIOLYSIS_MOISTURE_SATURATE);
+                geometric_mean(&[silica_band, water])
             }
             EnergySource::SulphideOxidation => {
                 let delta_t = gradient.get() * depth_m.max(0.0) / 1000.0;
@@ -571,16 +645,18 @@ impl EnergySource {
                 // scaling by metamorphic grade and the water gate. r is
                 // Underdeep's ΔT midpoint (see the module doc, fix round 2).
                 let front = 4.0 * r * delta_t / (r + delta_t).powi(2);
-                buffer.metamorphic_grade
-                    * front
-                    * water_gate(moisture, SULPHIDE_OXIDATION_MOISTURE_SATURATE)
+                let water = water_gate(moisture, SULPHIDE_OXIDATION_MOISTURE_SATURATE);
+                geometric_mean(&[buffer.metamorphic_grade, front, water])
             }
-            EnergySource::Methanogenesis => buffer.carbonate * buffer.porosity * moisture,
+            EnergySource::Methanogenesis => {
+                geometric_mean(&[buffer.carbonate, buffer.porosity, moisture])
+            }
             EnergySource::Geothermal => {
                 let temp_rise_k = depth_m.max(0.0) * gradient.get() / 1000.0;
                 let (reach, _) = underdeep_delta_t_range();
-                (temp_rise_k / (temp_rise_k + reach))
-                    * water_gate(moisture, GEOTHERMAL_MOISTURE_SATURATE)
+                let thermal = temp_rise_k / (temp_rise_k + reach);
+                let water = water_gate(moisture, GEOTHERMAL_MOISTURE_SATURATE);
+                thermal * water
             }
             EnergySource::DetritalImport => {
                 let d = depth_m.max(0.0);

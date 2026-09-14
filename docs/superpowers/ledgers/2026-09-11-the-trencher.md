@@ -3582,3 +3582,327 @@ cannot tell them apart.
 
 **Carried to the retrospective**, because it generalises past this campaign:
 *an asymmetric invariant set makes narrow fixes look safe.*
+
+## #42 [Prereg] — Task 16: per-axis bands. The RULES are frozen here; the numbers are not chosen yet, and that ordering is the point.
+
+Written **before** the post-GEO distributions exist. Task 15's shipping change
+is still in flight, so the world these thresholds describe has not been
+measured yet. That is deliberate: thresholds picked after looking at the
+distribution are fitted, and I would not be able to tell my judgement from the
+data's shape. What follows freezes **how** a threshold is chosen and **what
+would make the scheme fail** — not one number.
+
+### What Nathan asked for, quoted, because the design answers it directly
+
+> *"I believe we want per-axis bands — we're trying to determine which flora
+> and fauna are in which particular zones, e.g. allow wild or cultivated
+> methane-eating fungi as a basic nutrient for a Drow empire or whatever, so I
+> think we want raw numbers and [no] lossy abstractions."*
+
+Three requirements, taken separately:
+
+1. **Per-axis**, not one shared ladder. Justified by measurement rather than
+   taste: under GEO the four axes are not alike. Hydrogen is **absent in 39%**
+   of readings while methane is **never zero anywhere** (`zero_frac` `.3899` vs
+   `.0000`). A single threshold set cannot serve both — it would call methane
+   "present" everywhere, which is true and useless, and hydrogen's absence
+   would be the only thing it ever said.
+2. **Raw numbers preserved.** Bands are a *named view over* the raw magnitude,
+   never a replacement for it. The raw per-axis value stays available to every
+   consumer; a species requirement may cite either. This is what "no lossy
+   abstractions" forbids — a band that discards the number it summarises.
+3. **Bands exist to answer "what can live here."** So the test of a band is
+   whether it *partitions habitat*, not whether it looks tidy.
+
+### The threshold rule (frozen)
+
+- Thresholds are **authored constants with stated provenance**, per axis, in
+  **raw units** — not quantiles computed at runtime. A runtime quantile would
+  make every band a function of whatever world is loaded, so the same chamber
+  would change its description when an unrelated seed moved. Bands must be a
+  property of the *chemistry*, not of the sample.
+- Each threshold's provenance comment names the distribution it was read
+  against **and the date**, because a committed baseline is a claim with a date.
+- No threshold may be moved to rescue a downstream count (decision 0016).
+
+### THE ANTI-VACUITY GUARD, which is this campaign's own finding turned into a test
+
+Ledger #41 declined per-axis saturation onto the corpus ladder partly because
+`x/(1+x)` approaches `1.0` asymptotically without attaining it, so `E_TEEMING`
+would have been **a category nothing could ever enter**. That is the same
+defect as this campaign's vacuous H4 (#40), one level up, and it is the failure
+mode most likely to recur here.
+
+So the guard is **two-way and mandatory**:
+
+- **Every band, on every axis, must be occupied** by at least a stated minimum
+  fraction of readings over the probe's seed/rung sample. An unreachable top
+  band fails. A bottom band nothing falls into fails too.
+- The guard asserts **occupancy of each band**, never merely that the
+  thresholds are ordered — ordering is what the type system already gives, and
+  a guard the type system guarantees is not a guard.
+
+### Frozen predictions
+
+- **K1.** A per-axis threshold set exists, for all four axes, satisfying the
+  occupancy guard. *Falsifier:* if some axis's distribution is so concentrated
+  that no threshold set makes every band non-empty, that axis **cannot be
+  banded at this resolution** — report it as a finding and reduce that axis's
+  band count rather than forcing thresholds to fit.
+- **K2.** The bands partition **habitat**, not just numbers: on at least one
+  axis, band membership varies across the five depth rungs rather than being
+  constant with depth. *Falsifier:* if every axis reads the same band at every
+  rung, the bands describe the world no better than a constant does, and the
+  scheme has failed at its stated purpose whatever the occupancy numbers say.
+- **K3.** Hydrogen's 39% zero population lands in a band that **names absence**
+  rather than being pooled with merely-low readings. "Absent" and "poor" are
+  different affordances for a species requirement; collapsing them is exactly
+  the lossy abstraction requirement 2 forbids.
+
+**Ideonomy passes / overturns:** none.
+
+## #43 [Q] — CORRECTION: the deliberately-red set is 53, not "~64". I had restated an unmeasured figure four times.
+
+The repair round's scope has been carried in this campaign's own text as
+*"roughly 64 workspace tests are deliberately red"*, and I have repeated it in
+that form across several entries and one dispatch brief without ever running
+the suite to check.
+
+**Measured** on the unmodified tree at `b97dbf3a8`, one full
+`cargo nextest run --workspace --no-fail-fast` (6,234 tests):
+
+```
+grep -E '^\s+FAIL \[' /tmp/hv-before.txt | sed -E 's/^.*\)[[:space:]]+//' | sort -u | wc -l
+53
+```
+
+**53**, not 64. The sorted list is preserved as the attribution baseline for
+Task 15's shipping change, which is the only reason the number got measured at
+all — the dispatch needed a before-set, and producing one falsified the figure
+in passing.
+
+Where 64 came from is not recoverable from the record, which is itself the
+finding: **no entry ever cites a command or a date for it.** It may have been
+true when first written and shrunk as Tasks 12–14 repaired things incidentally,
+or it may never have been counted. Both readings are consistent with the
+evidence and neither is better than measuring.
+
+This is the same class as **#27** (a rotted reason restated three times) and
+**#32** (a claim repeated eleven times, asserted zero times), and it is the
+third instance in this one campaign. The tell was available each time: *I wrote
+the same number in the same breath as the same instruction, and agreement with
+myself felt like corroboration.* The rule the three share, stated once:
+**a count with no command beside it is an estimate wearing a measurement's
+clothes** — and a scope figure is exactly the kind that gets planned against.
+
+No downstream decision changes: the repair round's plan was "one round, after
+Tasks 15–17 settle", which is indifferent to whether the set is 53 or 64. The
+correction matters because the next reader would have sized the work off it.
+
+**Ideonomy passes / overturns:** none.
+
+## #44 [Q] — STOP: the geometric mean costs 40% of seed 42's population, and every code path I can read says it should have done the opposite
+
+Task 15's shipping change is implemented and correct-as-specified (seven arms,
+verified arities, `math::powf`, zero term still yields zero, fmt/clippy clean).
+It is **not committed**, because measuring the world it produces turned up a
+regression large enough to reopen the ruling.
+
+### The measurement
+
+`fixture::the_fixture_equals_a_live_build` reds: the committed fixture holds
+**23,810** facts, a live build now produces **13,262** — a 44% fall. Predicate
+families, counted directly from a freshly generated seed-42 world against the
+committed one:
+
+| predicate | shipped | GEO | |
+| --- | --- | --- | --- |
+| `is-settlement` / `is-place` / `population` | 413 | **256** | −38% |
+| `is-occupation` | 1,211 | **560** | −54% |
+| `is-ruin` | 800 | **306** | −62% |
+| `is-person` | 244 | 234 | −4% |
+
+**The benign explanation was tested and failed.** If higher carrying capacity
+had merely consolidated people into fewer, larger settlements, total population
+would hold and median size would rise. It does not:
+
+| | settlements | total population | median size | max size |
+| --- | --- | --- | --- | --- |
+| shipped | 411 | **11,726** | 26 | 84 |
+| GEO | 254 | **7,001** | 27 | 84 |
+
+Settlement *sizes* are unchanged to the person at both ends. The world supports
+**40% fewer people** in the same-sized settlements. It got poorer, not denser.
+
+### Why this is a stop and not a repair
+
+**Every path I can read says the number should have gone UP.** The geometric
+mean of terms in `[0,1]` is ≥ their product, so every one of the seven yields
+rises; `chemical_supply` sums them and multiplies by a geothermal modifier that
+also rises; and the capacity loop's use of the result is monotone —
+`axis_supply_with` is a plain weighted sum (`lib.rs:1576`) and `score_at`
+saturates it with `supply / (1.0 + supply)`, which is strictly increasing.
+`EnvironmentVector::new`'s `[0,1]` rejection, my first hypothesis, is not on
+this path at all: the per-axis values never reach it, only the saturated
+aggregate does. The one surface consumer,
+`marine_chemosynthate_supply_field`, is documented as reaching **no** consumer
+("No `Surface`-realm kind weights `CHEMOSYNTHATE`") and cannot be the cause.
+
+So a change that raises every input reduced the population by 40%, and reading
+the code does not explain it. **That is the finding.** Either there is a
+compensating normalisation I have not found, or the effect runs through species
+*assignment and competition* rather than capacity — a different species mix
+winning the underworld and proving less productive. Both are worth knowing;
+neither is established, and I will not guess at it in a chronicle.
+
+Applying the campaign's own rule (#41, #43): *a mechanism read from the code is
+a hypothesis until counted.* I have counted the effect and not the cause.
+
+### What is NOT in doubt
+
+The Task 15 *measurement* stands unchanged — GEO does improve metabolite
+variety on every axis it was chosen for (spread `.376 → .297`, methane's
+dominance nearly tripled, H2–H5 held). Nothing above touches that. What is now
+in doubt is whether that improvement is worth its price, and the price was
+invisible until the world was built, because the probe measured **supply
+fields** and never built a **world**.
+
+That is the transferable lesson and it is one this project keeps relearning:
+**a probe over a field is not a probe over a world.** The four-metabolite probe
+sampled 104,845 readings and could not have seen this, because population is
+downstream of a history bake the probe never runs.
+
+### Held for Nathan
+
+Three options, none taken unilaterally — this is a ruling about what the world
+is for, not a repair:
+
+1. **Investigate the mechanism first**, then decide. Cost: one focused
+   measurement pass. My recommendation, because shipping or reverting on an
+   unexplained 40% is the same mistake in either direction.
+2. **Ship GEO and accept a poorer, more chemically varied world.**
+3. **Keep the shipped yield forms** and take the narrower methane-only
+   correction, which #41's addendum already argued against on its own merits.
+
+**Ideonomy passes / overturns:** none.
+
+## #45 [Ruling] — Root cause found: one non-metabolite arm did all of it, the four metabolite axes have NO CONSUMERS, and #44's "40%" was seed 42's anecdote
+
+Investigated under `systematic-debugging`. Four phases, no fix proposed before
+the cause was established.
+
+### Positive control first
+
+Neutralising `geometric_mean` to a plain product restores seed 42 to **23,810**
+facts — the committed fixture exactly. The change is the sole cause; the
+rebaseline and the absorb contributed nothing.
+
+### The bisection: six arms cost nothing, one costs everything
+
+Env-gated per-arm instrumentation, one build, nine runs, seed 42:
+
+| arm | mask | facts |
+| --- | --- | --- |
+| all off (control) | `0000000` | 23,810 |
+| Serpentinization → `HYDROGEN` | `1000000` | 23,810 |
+| IronReduction → `REDUCED_IRON` | `0100000` | 23,810 |
+| Radiolysis → `HYDROGEN` | `0010000` | 23,810 |
+| SulphideOxidation → `REDUCED_SULPHUR` | `0001000` | 23,810 |
+| Methanogenesis → `METHANE` | `0000100` | 23,810 |
+| Geothermal → Modifier | `0000010` | 23,810 |
+| **DetritalImport → `DETRITUS`** | `0000001` | **13,262** |
+| all on | `1111111` | 13,262 |
+
+`DetritalImport` alone reproduces the entire collapse. **The four metabolite
+axes — Task 15's whole subject — cost exactly nothing.**
+
+### THE ROOT CAUSE: the metabolite axes have no consumers
+
+Counted in `domains/species/src/lib.rs`: the number of niche weights on
+`HYDROGEN`, `REDUCED_IRON`, `REDUCED_SULPHUR` and `METHANE` is **zero, on all
+four**. Only the `CHEMOSYNTHATE` aggregate is weighted, once. `DETRITUS`, by
+contrast, is weighted by **six** niches — three at `1.0`, one at `0.7`, two
+(the underworld peoples) at `0.50`.
+
+So the asymmetry is total. The metabolites are **measured but never eaten**;
+`DETRITUS` is eaten by six species whose weights were calibrated when its
+supply was a flat `DETRITUS_AMBIENT = 0.2` land-mask (this campaign's own Task
+4 made it variable). Changing a metabolite axis is invisible to the world;
+changing `DETRITUS` rescales six niches' entire food supply.
+
+**Positive control on the instrument, because "no change" and "dead
+instrument" look identical.** Running the Task 15 probe with the metabolite
+mask on, its `CONTROL` arm — which calls production `yield_at` — reads
+`.2873/.4017/.2057/.1052`, GEO's exact values, against `.3692/.4190/.1689/
+.0429` unmasked. The fields genuinely moved. The world did not.
+
+### CORRECTION to #44: "40% of the population" was one seed
+
+#44 reported a 40% population loss as the effect. It is seed 42's anecdote.
+Across five seeds, the `DetritalImport` change:
+
+| seed | shipped | geo-detritus | delta |
+| --- | --- | --- | --- |
+| 0 | 17,340 | 16,892 | −2.6% |
+| 7 | 15,213 | 13,536 | −11.0% |
+| 13 | 36,987 | 36,961 | −0.1% |
+| **42** | 23,810 | 13,262 | **−44.3%** |
+| 100 | 7,178 | 6,318 | −12.0% |
+
+The effect is real and systematic — negative 5/5 — and its typical magnitude is
+around 10%, not 40%. Seed 42 is a 3–4× outlier. **One world is an anecdote**,
+and I published one as an effect size in the entry immediately above.
+
+The response is also **non-monotone**, which is why magnitude reasoning failed:
+holding everything else fixed and varying only the detritus yield gives 20,840
+(zero), 19,431 (quarter), 19,104 (half), **23,810 (shipped product)**, 20,205
+(double), 13,262 (sqrt), 22,857 (constant 1.0). Since `product ∈ [0,1]`,
+`sqrt(product)` lies *between* product and 1.0 — and both endpoints score
+~23,000 while the midpoint scores 13,262. The outcome tracks the capacity
+field's **ordering**, which the bake consumes discontinuously, not its
+magnitude. That is why every monotone argument I made from reading the code
+was correct about the inputs and useless about the result.
+
+### The ruling
+
+The geometric mean ships on the **five sources routed to the four metabolite
+axes**, and not on `Geothermal` or `DetritalImport`. Verified world-neutral:
+seeds 0/7/13/42/100 produce 17,340 / 15,213 / 36,987 / 23,810 / 7,178 — byte-
+identical to shipped, and `fixture::the_fixture_equals_a_live_build` passes.
+
+**Why this is not the narrow fix #41 rejected**, stated exactly because it
+looks like one:
+
+- #41's `SELECTIVE` boosted **some** members of the competing set (the two
+  `k = 3` sources), creating a boost differential *inside* a competition, and
+  it measurably broke the depth handoff.
+- This boosts **all five** members of that set, so no differential is created
+  within it, and H2 holds by construction (the probe's `GEO` arm reads sulphur
+  winning 0 at Undercroft).
+- `Geothermal` is a **common factor** across all four metabolite axes, and a
+  common positive factor cannot change an `argmax` — outside the competition by
+  construction, not by choice.
+- `DetritalImport` is alone on a different axis with different consumers. It
+  competes with nothing, so arity fairness has no purchase; and it is the one
+  arm with real consumers to decalibrate.
+
+The full argument lives on `geometric_mean`'s own doc comment, not only here.
+
+### The finding that outlives this task
+
+**We have built a chemistry that nothing eats.** Four metabolite axes, a
+calibrated yield form, per-axis distributions, a 104,845-reading probe — and
+zero species that consume any of it. That is not a defect in the work; it is
+exactly the gap Nathan's own goal names ("allow wild or cultivated
+methane-eating fungi as a basic nutrient for a Drow empire"). It does mean the
+honest description of Tasks 12–17 is **preparatory**: they make the chemistry
+coherent and describable so that something can be authored to live on it.
+
+It also explains why Task 15's shipping change is free, and why that freedom is
+temporary: the first species that weights `METHANE` makes every one of these
+choices world-affecting, and the multi-seed discipline this entry had to
+discover will be mandatory from that moment.
+
+**Ideonomy passes / overturns:** one — *an axis with no consumer is
+unfalsifiable by the world*, which generalises to any field a simulation
+computes and nothing reads.
