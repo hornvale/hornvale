@@ -28,12 +28,20 @@ fn native_basis_preserves_calendar_sightline_and_handedness() {
             let phase = std::f64::consts::TAU * c.year_phase(t);
             near(p.x_au, s.anchor.orbit.get() * math::cos(phase));
             near(p.y_au, s.anchor.orbit.get() * math::sin(phase));
+            let state = anchor_state_at(&s, t).unwrap();
             let b = anchor_body_to_frame_at(&s, t);
-            let eq = c.solar_equatorial(t);
+            let eq = equatorial_at(
+                &EclipticCoord {
+                    lon_deg: 360.0 * state.true_longitude_turns,
+                    lat_deg: 0.0,
+                },
+                s.forcing.obliquity_at(t.get()),
+                0.0,
+            );
             let v = math::unit_sphere_from_lat_lon(eq.dec_deg, sub_solar_longitude_deg(&c, t));
             let mapped: [f64; 3] = std::array::from_fn(|r| (0..3).map(|i| b[i][r] * v[i]).sum());
-            near(mapped[0], -p.x_au / s.anchor.orbit.get());
-            near(mapped[1], -p.y_au / s.anchor.orbit.get());
+            near(mapped[0], -state.position_au[0] / state.radius_au);
+            near(mapped[1], -state.position_au[1] / state.radius_au);
             near(mapped[2], 0.0);
             for i in 0..3 {
                 for j in 0..3 {

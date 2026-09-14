@@ -130,7 +130,6 @@ impl std::error::Error for OrbitalError {}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum OrbitalFrame {
     SystemPlaneAu,
-    AnchorPlaneMegameters,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -181,20 +180,15 @@ pub(crate) struct OrbitalState {
 }
 
 impl OrbitalState {
-    /// Shipped scene projection: keep the mean longitude and circular radius.
+    /// Compatibility position: keep the mean longitude and circular radius.
     /// The exact eccentric position remains `position`; this projection preserves
-    /// the existing byte contract without constructing a second orbit.
+    /// callers not yet migrated to the physical state without constructing a
+    /// second orbit.
     fn legacy_circular_position(self) -> OrbitalPosition {
         OrbitalPosition {
             x_au: self.semi_major_axis * math::cos(TAU * self.mean_longitude_turns),
             y_au: self.semi_major_axis * math::sin(TAU * self.mean_longitude_turns),
         }
-    }
-
-    /// Shipped eclipse approximation, with periapsis at mean longitude 0.25.
-    /// Preserve the original sine and operation order for byte compatibility.
-    pub(crate) fn legacy_anchor_radius_ratio(self) -> f64 {
-        1.0 - self.eccentricity * math::sin(TAU * self.mean_longitude_turns)
     }
 }
 
@@ -467,17 +461,30 @@ pub fn anchor_position_at(system: &StarSystem, t: StdInstant) -> OrbitalPosition
 
 /// Anchor surface orientation, as columns (longitude zero, longitude 90, north).
 ///
-/// Converts the exact calendar equatorial frame with Rz(pi) Rx(-obliquity),
-/// then rotates its prime meridian by solar RA minus native subsolar longitude.
+/// Converts the physical anchor longitude into the equatorial frame with
+/// Rz(pi) Rx(-obliquity), then rotates its prime meridian by solar RA minus
+/// native subsolar longitude. Malformed anchor state retains the established
+/// total mean-longitude orientation fallback.
 /// The half-turn reconciles calendar solar phase with the center sightline.
 /// Retrograde and locked conventions belong to the calendar; a locked world's
 /// prime meridian follows the orbital center rather than remaining inertial.
 /// type-audit: bare-ok(ratio: return)
 pub fn anchor_body_to_frame_at(system: &StarSystem, instant: StdInstant) -> [[f64; 3]; 3] {
     let calendar = calendar_of(system);
-    let angle = (calendar.solar_equatorial(instant).ra_deg
-        - crate::sub_solar_longitude_deg(&calendar, instant))
-    .to_radians();
+    let solar_ra = anchor_state_at(system, instant)
+        .map(|state| {
+            crate::equatorial_at(
+                &crate::EclipticCoord {
+                    lon_deg: 360.0 * state.true_longitude_turns,
+                    lat_deg: 0.0,
+                },
+                system.forcing.obliquity_at(instant.get()),
+                0.0,
+            )
+            .ra_deg
+        })
+        .unwrap_or_else(|_| calendar.solar_equatorial(instant).ra_deg);
+    let angle = (solar_ra - crate::sub_solar_longitude_deg(&calendar, instant)).to_radians();
     let tilt = system.forcing.obliquity_at(instant.get()).to_radians();
     let (c, s) = (math::cos(angle), math::sin(angle));
     let (ce, se) = (math::cos(tilt), math::sin(tilt));
@@ -500,9 +507,7 @@ pub fn moon_position_at(
 ) -> Option<[f64; 3]> {
     let moon = system.moons.get(index)?;
     let calendar = calendar_of(system);
-    let state = calendar.moon_orbital_state_at(index, instant)?;
-    debug_assert_eq!(state.frame, OrbitalFrame::AnchorPlaneMegameters);
-    let longitude = 360.0 * state.true_longitude_turns;
+    let longitude = crate::moon_ecliptic_longitude_deg(&calendar, index, instant)?;
     let latitude = crate::moon_ecliptic_latitude_deg(&calendar, moon, index, instant)?;
     let direction = math::unit_sphere_from_lat_lon(latitude, longitude);
     let radius = moon.distance.get();

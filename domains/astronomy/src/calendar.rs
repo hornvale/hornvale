@@ -3,10 +3,7 @@
 //! without that column — truthfully.
 
 use crate::anchor::Rotation;
-use crate::ephemeris::{
-    AnchorState, OrbitalElements, OrbitalError, OrbitalFrame, OrbitalState, OrbitalValidity,
-    orbital_phase_at, orbital_state_at,
-};
+use crate::ephemeris::{AnchorState, OrbitalError, OrbitalState, orbital_phase_at};
 use crate::sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 use crate::system::StarSystem;
 use crate::units::{Degrees, Megameters, StdDays, StdInstant};
@@ -706,7 +703,7 @@ pub fn wanderer_calendar_marks(
 }
 
 impl Calendar {
-    fn anchor_state_at(&self, t: StdInstant) -> Result<AnchorState, OrbitalError> {
+    pub(crate) fn anchor_state_at(&self, t: StdInstant) -> Result<AnchorState, OrbitalError> {
         crate::ephemeris::anchor_state_at(&self.system, t)
     }
 
@@ -717,34 +714,6 @@ impl Calendar {
             self.system.anchor.orbit,
             self.system.anchor.year,
             &self.system.forcing,
-            t,
-        )
-    }
-
-    pub(crate) fn moon_orbital_state_at(
-        &self,
-        index: usize,
-        t: StdInstant,
-    ) -> Option<OrbitalState> {
-        self.synodic_month(index)?;
-        let (semi_major_axis, period) = *self.moon_orbits.get(index)?;
-        let phase_offset = self
-            .forcing
-            .moon_phase_offsets
-            .get(index)
-            .copied()
-            .unwrap_or(0.0);
-        orbital_state_at(
-            &OrbitalElements {
-                frame: OrbitalFrame::AnchorPlaneMegameters,
-                epoch: StdInstant(0.0),
-                period,
-                semi_major_axis: semi_major_axis.get(),
-                eccentricity: 0.0,
-                mean_longitude_at_epoch_turns: self.forcing.year_phase_offset + phase_offset,
-                periapsis_longitude_turns: 0.0,
-                validity: OrbitalValidity::UNBOUNDED,
-            },
             t,
         )
     }
@@ -1113,8 +1082,8 @@ impl Calendar {
     /// The sun's equatorial position at `t` (exact spherical form; the shipped
     /// small-angle `solar_declination` is the coarse tier of the same object).
     pub fn solar_equatorial(&self, t: StdInstant) -> EquatorialCoord {
-        // Scene and eclipse orientation retain this compatibility projection
-        // until their dedicated migration in Task 3.
+        // Preserve this total mean-longitude compatibility projection for
+        // consumers outside the anchor-state migration.
         let lam = (360.0 * self.year_phase(t)).to_radians();
         let e = self.forcing.obliquity_at(t.0).to_radians();
         EquatorialCoord {

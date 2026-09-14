@@ -138,21 +138,16 @@ pub fn moon_ecliptic_latitude_deg(
     Some(math::asin((sin_i * sin_u).clamp(-1.0, 1.0)).to_degrees())
 }
 
-/// The sun's apparent angular diameter (Luna-units) at `t`: the mean
-/// orbital value scaled by the existing first-order eccentricity approximation.
-/// The apsidal convention keeps perihelion at year phase 0.25. Evaluated at
-/// the event, never cached (the tidal-braking seam). The exact orbital radius
-/// remains available from `Calendar::anchor_orbital_state_at` for later
-/// physical consumers without moving this committed compatibility output.
+/// The sun's apparent angular diameter (Luna-units) at `t`, evaluated from
+/// the shared physical anchor radius at the event rather than cached (the
+/// tidal-braking seam).
 /// Invalid anchor state yields zero angular diameter (no eclipse cross-section).
 /// type-audit: pending(wave-1)
 pub fn sun_angular_rel_at(system: &StarSystem, calendar: &Calendar, t: StdInstant) -> f64 {
-    let Some(state) = calendar.anchor_orbital_state_at(t) else {
+    let Ok(state) = calendar.anchor_state_at(t) else {
         return 0.0;
     };
-    let mean =
-        crate::star::sun_angular_diameter_rel(&system.star, crate::Au(state.semi_major_axis));
-    mean / state.legacy_anchor_radius_ratio()
+    crate::star::sun_angular_diameter_rel(&system.star, crate::Au(state.radius_au))
 }
 
 /// Which body is darkened.
@@ -274,11 +269,10 @@ pub fn moon_ecliptic_longitude_deg(
     t: StdInstant,
 ) -> Option<f64> {
     // Preserve the established synodic-phase evaluation order. The lunar
-    // orbit is circular in this substrate, so this is the same geometry as
-    // `moon_orbital_state_at`, but retaining the legacy expression keeps
-    // eclipse thresholds and committed prose byte-stable.
+    // orbit is circular in this substrate, while the solar longitude comes
+    // from the shared physical anchor state.
     let phase = calendar.moon_phase(t, index)?;
-    let l_sun = 360.0 * calendar.year_phase(t);
+    let l_sun = 360.0 * calendar.anchor_state_at(t).ok()?.true_longitude_turns;
     Some((l_sun + 360.0 * phase).rem_euclid(360.0))
 }
 

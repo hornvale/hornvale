@@ -124,7 +124,10 @@ pub fn astronomy_at_scene_in(
         kind: "anchor".into(),
         position_km: [0.0; 3],
         radius_km: Some(radius.get() * KM_PER_MM),
-        body_to_frame: Some(ephemeris::anchor_body_to_frame_at(system, instant)),
+        body_to_frame: Some(ephemeris::anchor_body_to_frame_at(
+            system,
+            anchor_state.instant,
+        )),
     }];
     let relative = |p: ephemeris::OrbitalPosition| {
         [

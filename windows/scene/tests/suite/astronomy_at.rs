@@ -1,19 +1,29 @@
-use hornvale_astronomy::{SkyPins, StdInstant, StellarTopology, ephemeris::*};
-use hornvale_kernel::{Seed, WorldTime};
+use hornvale_astronomy::{
+    Degrees, EclipticCoord, RotationPin, SkyPins, SpinPin, StdInstant, StellarTopology,
+    calendar_of, ephemeris::*, equatorial_at, sub_solar_longitude_deg,
+};
+use hornvale_kernel::{Seed, WorldTime, math};
 use hornvale_scene::*;
 fn world(topology: StellarTopology) -> hornvale_kernel::World {
+    world_with_pins(&SkyPins {
+        topology: Some(topology),
+        ..Default::default()
+    })
+}
+fn world_with_pins(pins: &SkyPins) -> hornvale_kernel::World {
     hornvale_worldgen::build_world_to(
         Seed(42),
-        &SkyPins {
-            topology: Some(topology),
-            ..Default::default()
-        },
+        pins,
         &Default::default(),
         &Default::default(),
         &hornvale_worldgen::components::WorldComponents::assemble().unwrap(),
         hornvale_worldgen::BuildDepth::Astronomy,
     )
     .unwrap()
+}
+
+fn near(left: f64, right: f64) {
+    assert!((left - right).abs() < 1e-10, "{left} != {right}");
 }
 #[test]
 fn astronomy_at_matches_native_all_topologies_and_preserves_missing_dimensions() {
@@ -147,4 +157,69 @@ fn astronomy_at_rejects_epochs_with_nonphysical_native_luminosity() {
     assert!(
         matches!(result,Err(SceneError::AstronomyQuery(ref message)) if message.contains("luminosity"))
     );
+}
+
+/// Reintroducing mean-phase orientation would point the physical subsolar
+/// surface normal away from the star on an eccentric orbit.
+#[test]
+fn scene_anchor_orientation_coherence_uses_physical_state_for_all_spin_regimes() {
+    for (rotation, spin) in [
+        (RotationPin::PeriodHours(24.0), Some(SpinPin::Prograde)),
+        (RotationPin::PeriodHours(24.0), Some(SpinPin::Retrograde)),
+        (RotationPin::Locked, None),
+    ] {
+        let w = world_with_pins(&SkyPins {
+            topology: Some(StellarTopology::Single),
+            rotation: Some(rotation),
+            spin,
+            obliquity: Some(Degrees::new(35.0).unwrap()),
+            ..Default::default()
+        });
+        let ctx = AstronomyContext::build(&w).unwrap();
+        let sky = hornvale_worldgen::sky_of(&w).unwrap();
+        let system = sky.system();
+        let calendar = calendar_of(system);
+        for ticks in [-12_345_678_i64, 0, 98_765_432] {
+            let at = WorldTime::from_ticks(ticks);
+            let instant = StdInstant::new(at.as_std_days()).unwrap();
+            let state = hornvale_astronomy::anchor_state_at(system, instant).unwrap();
+            let scene = astronomy_at_scene_in(&ctx, at).unwrap();
+            let basis = scene.bodies[0].body_to_frame.unwrap();
+            let solar_equatorial = equatorial_at(
+                &EclipticCoord {
+                    lon_deg: 360.0 * state.true_longitude_turns,
+                    lat_deg: 0.0,
+                },
+                system.forcing.obliquity_at(instant.get()),
+                0.0,
+            );
+            let body_normal = math::unit_sphere_from_lat_lon(
+                solar_equatorial.dec_deg,
+                sub_solar_longitude_deg(&calendar, instant),
+            );
+            let mapped: [f64; 3] = std::array::from_fn(|row| {
+                (0..3)
+                    .map(|column| basis[column][row] * body_normal[column])
+                    .sum()
+            });
+            let expected_star_direction = [
+                -state.position_au[0] / state.radius_au,
+                -state.position_au[1] / state.radius_au,
+                0.0,
+            ];
+
+            for component in 0..3 {
+                near(mapped[component], expected_star_direction[component]);
+            }
+            let primary = &scene.bodies[1].position_km;
+            let distance: f64 = primary.iter().map(|value| value * value).sum();
+            let distance = distance.sqrt();
+            for component in 0..3 {
+                near(
+                    primary[component] / distance,
+                    expected_star_direction[component],
+                );
+            }
+        }
+    }
 }
