@@ -28,6 +28,33 @@ case "$command_output" in
     *"proof::rendered_proof_reads_distinct_frames_and_patch_readiness"*) ok "runs only the rendered proof";;
     *) bad "missing exact proof selector: $command_output";;
 esac
+revision="$(git -C "$root" rev-parse HEAD)"
+clean="$(git -C "$root" status --porcelain | grep -q . && echo false || echo true)"
+case "$command_output" in
+    *"PLANETARIUM_BUILD_PROVENANCE_REVISION=$revision"*) ok "passes the host checkout revision";;
+    *) bad "missing host checkout revision: $command_output";;
+esac
+case "$command_output" in
+    *"PLANETARIUM_BUILD_PROVENANCE_CLEAN=$clean"*) ok "passes the host checkout clean state";;
+    *) bad "missing host checkout clean state: $command_output";;
+esac
+
+echo "== visual proof container: provenance contract"
+if visual_proof_validate_provenance "$(printf 'a%.0s' {1..40})" true; then
+    ok "accepts a complete valid provenance pair"
+else
+    bad "rejected a complete valid provenance pair"
+fi
+if ! visual_proof_validate_provenance "not-a-revision" true; then
+    ok "rejects an invalid revision"
+else
+    bad "accepted an invalid revision"
+fi
+if ! visual_proof_validate_provenance "$(printf 'a%.0s' {1..40})" maybe; then
+    ok "rejects an invalid clean state"
+else
+    bad "accepted an invalid clean state"
+fi
 
 echo "== visual proof container: Make dispatch"
 make_target="$(sed -n '/^visual-check-run:/,/^game-check:/p' "$root/Makefile")"

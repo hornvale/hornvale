@@ -14,15 +14,42 @@ visual_proof_validate_pins() {
         && [ "${3:-}" = "$vulkan_tools_version" ]
 }
 
+visual_proof_validate_provenance() {
+    [[ "${1:-}" =~ ^[[:xdigit:]]{40}$ ]] \
+        && { [ "${2:-}" = true ] || [ "${2:-}" = false ]; }
+}
+
+visual_proof_build_provenance() {
+    local checkout="${1:?checkout path required}"
+    local revision status clean
+    revision="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$checkout" rev-parse HEAD)"
+    status="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$checkout" status --porcelain)"
+    if [ -n "$status" ]; then
+        clean=false
+    else
+        clean=true
+    fi
+    visual_proof_validate_provenance "$revision" "$clean" || {
+        echo "visual-proof-container: checkout provenance is invalid" >&2
+        return 1
+    }
+    printf '%s\n%s\n' "$revision" "$clean"
+}
+
 visual_proof_container_command() {
     local checkout="${1:?checkout path required}"
     local selector="${2:?test selector required}"
+    local revision clean
+    revision="$(visual_proof_build_provenance "$checkout" | sed -n '1p')"
+    clean="$(visual_proof_build_provenance "$checkout" | sed -n '2p')"
     printf '%q ' docker run --rm --network=host \
         --tmpfs /tmp:exec \
         -e WGPU_BACKEND=vulkan \
         -e VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
         -e LIBGL_ALWAYS_SOFTWARE=1 \
         -e CARGO_TARGET_DIR=/tmp/hornvale-target \
+        -e "PLANETARIUM_BUILD_PROVENANCE_REVISION=$revision" \
+        -e "PLANETARIUM_BUILD_PROVENANCE_CLEAN=$clean" \
         -w /workspace \
         -v "$checkout:/workspace:ro" \
         "$image" \
@@ -38,6 +65,9 @@ build_image() {
 }
 
 run_proof() {
+    local revision clean
+    revision="$(visual_proof_build_provenance "$root" | sed -n '1p')"
+    clean="$(visual_proof_build_provenance "$root" | sed -n '2p')"
     local command=(
         docker run --rm --network=host
         --tmpfs /tmp:exec
@@ -45,6 +75,8 @@ run_proof() {
         -e VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
         -e LIBGL_ALWAYS_SOFTWARE=1
         -e CARGO_TARGET_DIR=/tmp/hornvale-target
+        -e "PLANETARIUM_BUILD_PROVENANCE_REVISION=$revision"
+        -e "PLANETARIUM_BUILD_PROVENANCE_CLEAN=$clean"
         -w /workspace
         -v "$root:/workspace:ro"
         "$image"
