@@ -180,6 +180,54 @@ census_pins() {
     printf "     Reproduce in seconds: cargo nextest run -p hornvale-lab -E 'test(calibration::)'\n"
 }
 
+# The reconciliation row for a candidate, or an honest absence.
+#
+# A BRANCH NAME IS NOT A CAMPAIGN SLUG, and assuming it is reported a false
+# absence on a live candidate. campaign/the-coherence's campaign is
+# `the-coherent-ground`: the row was present and correct, the substring
+# fallback below could not reach it ("the-coherence" is not a substring of
+# "the-coherent-ground" --- they diverge at the eleventh character), and the
+# vet told the operator there was NO ROW at the exact moment the operator was
+# deciding whether the close package was complete.
+#
+# The authority is what the candidate ADDS under book/src/chronicle/ and
+# docs/retrospectives/: a merge is the last act of a campaign, so those files
+# name the campaign whose row this is. The branch-derived name stays as a
+# fallback for a candidate that adds neither.
+#
+# The absence is still worth reporting honestly --- 440 rows read `active`, so
+# a genuinely missing row is a real signal --- which is why a miss names every
+# key it tried rather than just the last one.
+reconciliation_disposition() {
+    local sha="$1" branch="$2" tsv keys k row
+    tsv="$(git show "$sha:docs/audits/campaign-reconciliation.tsv" 2>/dev/null)"
+    keys="$(git diff --name-only --diff-filter=A "origin/main...$sha" 2>/dev/null \
+        -- book/src/chronicle/ docs/retrospectives/ | sed 's|.*/||; s|\.md$||' | sort -u)"
+    keys="$keys
+${branch#campaign/}"
+    for k in $keys; do
+        [ -n "$k" ] || continue
+        row="$(printf '%s\n' "$tsv" | awk -F'\t' -v k="$k" '$1==k{print $2; exit}')"
+        if [ -n "$row" ]; then
+            printf '  reconciliation disposition: %s  (key: %s)\n' "$row" "$k"
+            return 0
+        fi
+    done
+    # Older rows use a `plan-<date>-campaign-<name>` key rather than the bare
+    # name, so a substring match is tried for every key before reporting none.
+    for k in $keys; do
+        [ -n "$k" ] || continue
+        row="$(printf '%s\n' "$tsv" | awk -F'\t' -v k="$k" 'index($1,k){print $2" (key: "$1")"; exit}')"
+        if [ -n "$row" ]; then
+            printf '  reconciliation disposition: %s\n' "$row"
+            return 0
+        fi
+    done
+    # shellcheck disable=SC2086  # deliberate word-split of the key list
+    printf '  reconciliation disposition: <NO ROW; tried %s>\n' \
+        "$(printf '%s ' $keys)"
+}
+
 # HV_VET_LIB=1 sources the adjudication functions above --- decision blocks,
 # census freshness and census pins --- without vetting anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
 # verdict is a DECISION RULE, and a decision rule that cannot be driven
@@ -363,16 +411,7 @@ printf '  headline trailer: %s\n' \
 # branch has none by design and asking is noise.
 case "$branch" in
     campaign/*)
-        recon_key="${branch#campaign/}"
-        # Exact key first. Older rows use a `plan-<date>-campaign-<name>` key
-        # rather than the bare campaign name, so fall back to a suffix match
-        # before reporting an absence -- 440 rows still read `active`, so a
-        # genuinely missing row is a real signal and worth not faking.
-        recon_row="$(git show "$sha:docs/audits/campaign-reconciliation.tsv" 2>/dev/null \
-            | awk -F'\t' -v k="$recon_key" '$1==k{print $2; exit}')"
-        [ -n "$recon_row" ] || recon_row="$(git show "$sha:docs/audits/campaign-reconciliation.tsv" 2>/dev/null \
-            | awk -F'\t' -v k="$recon_key" 'index($1,k){print $2" (key: "$1")"; exit}')"
-        printf '  reconciliation disposition: %s\n' "${recon_row:-<NO ROW for $recon_key>}"
+        reconciliation_disposition "$sha" "$branch"
         ;;
     *)
         printf '  reconciliation disposition: <n/a — not a campaign branch>\n'
