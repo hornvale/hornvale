@@ -553,6 +553,23 @@ pub struct ChemicalSupply {
 /// a **named view over** a magnitude, never a substitute for it: a niche may
 /// weight the raw axis, and a rule may ask for a band, and the two never
 /// disagree because one is computed from the other.
+///
+/// # What comparing two AXES' bands means, and what it does not
+///
+/// This type is `Ord`, so `supply.methane_band() > supply.hydrogen_band()`
+/// compiles. It is meaningful, and it does **not** mean what a first reading
+/// suggests.
+///
+/// It compares **relative standing on each axis's own ladder** — "this place
+/// suits a methane specialist better than a hydrogen specialist" — which is a
+/// real and useful question, and the one a generalist choosing a food source
+/// is asking.
+///
+/// It is **not** a comparison of magnitudes. The cuts differ per axis by
+/// design: `Ample` starts at `0.70` on hydrogen and `0.55` on methane, so two
+/// readings can share a band at different raw values, and the higher band can
+/// belong to the lower number. **For "which metabolite is most abundant here",
+/// use the raw fields or [`dominant_source`], never the bands.**
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum MetaboliteBand {
     /// No supply at all on this axis — every gating term is shut. Distinct
@@ -674,13 +691,40 @@ pub fn metabolite_band(value: f64, cuts: MetaboliteCuts) -> MetaboliteBand {
 impl ChemicalSupply {
     /// This reading's four metabolite bands, in `SUPPLY_AXIS_ORDER`'s
     /// metabolite order: hydrogen, reduced iron, reduced sulphur, methane.
+    ///
+    /// **Prefer the named accessors** ([`ChemicalSupply::methane_band`] and
+    /// its three siblings) anywhere you want one axis. This array is for
+    /// iterating all four in a fixed order — a tally, a readout — and its
+    /// indices are exactly the frame-loss hazard this campaign kept meeting:
+    /// `bands[2]` is correct for sulphur and silently wrong the day anyone
+    /// reorders the axes, whereas `reduced_sulphur_band()` cannot be.
     pub fn metabolite_bands(&self) -> [MetaboliteBand; 4] {
         [
-            metabolite_band(self.hydrogen, HYDROGEN_CUTS),
-            metabolite_band(self.reduced_iron, REDUCED_IRON_CUTS),
-            metabolite_band(self.reduced_sulphur, REDUCED_SULPHUR_CUTS),
-            metabolite_band(self.methane, METHANE_CUTS),
+            self.hydrogen_band(),
+            self.reduced_iron_band(),
+            self.reduced_sulphur_band(),
+            self.methane_band(),
         ]
+    }
+
+    /// This reading's `HYDROGEN` band.
+    pub fn hydrogen_band(&self) -> MetaboliteBand {
+        metabolite_band(self.hydrogen, HYDROGEN_CUTS)
+    }
+
+    /// This reading's `REDUCED_IRON` band.
+    pub fn reduced_iron_band(&self) -> MetaboliteBand {
+        metabolite_band(self.reduced_iron, REDUCED_IRON_CUTS)
+    }
+
+    /// This reading's `REDUCED_SULPHUR` band.
+    pub fn reduced_sulphur_band(&self) -> MetaboliteBand {
+        metabolite_band(self.reduced_sulphur, REDUCED_SULPHUR_CUTS)
+    }
+
+    /// This reading's `METHANE` band.
+    pub fn methane_band(&self) -> MetaboliteBand {
+        metabolite_band(self.methane, METHANE_CUTS)
     }
 }
 

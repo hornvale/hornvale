@@ -75,12 +75,22 @@ enum WhyEmpty {
     /// claim was false and the row must be deleted.
     NeverOccurs,
     /// The world **does** produce this pair, but more rarely than this
-    /// probe's sample can resolve. Carries the frequency measured on the
-    /// 12-seed, 104,845-reading run so a reader can check the arithmetic
-    /// rather than take the word "rare". NOT two-way guarded — seeing one
-    /// would confirm the row, not refute it.
+    /// probe's sample can resolve.
+    ///
+    /// `per_100k` is **asserted, not decorative** — see
+    /// [`a_rarity_claim_is_checked_against_what_actually_occurs`]. The first
+    /// draft of this variant carried the number for a reader to check by hand
+    /// and nothing read it, which is a seventh instance of
+    /// `PROC-prose-claims-no-assertion-checks` authored by the very campaign
+    /// that logged the first six. A frequency nothing compares against is a
+    /// claim, not a measurement.
+    ///
+    /// It is not guarded in the *other* direction (observing zero confirms
+    /// rarity rather than refuting it), so the assertion is one-sided by
+    /// design: the falsifier for "rare" is "common".
     BelowSampleResolution {
-        /// Occurrences per 100,000 readings, measured 2026-09-14.
+        /// Occurrences per 100,000 readings, measured 2026-09-14 over the
+        /// 12-seed, 104,845-reading run.
         per_100k: f64,
     },
 }
@@ -379,18 +389,35 @@ fn median(v: &mut [f64]) -> f64 {
 /// MOVED, not a value that has wobbled. A tight window would redden on
 /// ordinary terrain work and be trained away, which is the failure mode
 /// `EXPECTED_EMPTY`'s own comment describes.
-const AUTHORED_SHAPE: [(usize, f64, f64); 4] = [
-    (0, 0.5460, 0.7509),
-    (1, 0.0000, 0.9955),
-    (2, 0.0304, 0.4700),
-    (3, 0.0000, 0.5423),
+/// `(axis, authored zero share, its tolerance, authored median-where-present,
+/// its tolerance)`.
+///
+/// # The tolerances are PER AXIS, and one shared number was the same mistake twice
+///
+/// The first draft used a single `ZERO_SHARE_TOLERANCE = 0.08` for all four.
+/// Against zero shares of `0.546 / 0.0000 / 0.0304 / 0.0000` that is ~15%
+/// relative on hydrogen and unbounded on the two axes that are never zero: iron
+/// could acquire an 8% absent population — 8,000 per 100,000, against a
+/// `BelowSampleResolution` row declaring 20 — without the guard moving. So the
+/// drift check was four hundred times looser than the claim it was supposed to
+/// protect, on exactly the axis that needed it.
+///
+/// That is **the same error this file's own band cuts exist to avoid**, made
+/// one level up: four differently-shaped distributions do not share a
+/// threshold. A tolerance is a threshold. The bands were given per-axis cuts
+/// after measuring; their guard was not, until it was.
+const AUTHORED_SHAPE: [(usize, f64, f64, f64, f64); 4] = [
+    // Hydrogen: a large, real absent population, so an absolute band around it.
+    (0, 0.5460, 0.0600, 0.7509, 0.1200),
+    // Iron: essentially never zero; a tight cap, because any real absent
+    // population here refutes the rarity row above rather than being drift.
+    (1, 0.0000, 0.0050, 0.9955, 0.1200),
+    // Sulphur: a small but genuine absent population, gated by the ΔT front.
+    (2, 0.0304, 0.0200, 0.4700, 0.1200),
+    // Methane: never zero anywhere, and `METHANE/Absent` is claimed
+    // NeverOccurs — so the tolerance is the tightest of the four.
+    (3, 0.0000, 0.0020, 0.5423, 0.1200),
 ];
-
-/// How far a zero share may drift (absolute, as a fraction of readings).
-const ZERO_SHARE_TOLERANCE: f64 = 0.08;
-
-/// How far a median-where-present may drift, in raw axis units.
-const MEDIAN_TOLERANCE: f64 = 0.12;
 
 /// claim: invariant(forall-axis, distribution-has-not-drifted) — the stand-in
 /// for the missing ecological consumer. See [`AUTHORED_SHAPE`].
@@ -399,7 +426,7 @@ fn each_axis_still_sits_where_its_cuts_were_authored() {
     let wc = WorldComponents::assemble().expect("registries");
     let (_, values, _) = tally(&wc);
     let mut drifted = Vec::new();
-    for (axis, authored_zero, authored_median) in AUTHORED_SHAPE {
+    for (axis, authored_zero, zero_tol, authored_median, median_tol) in AUTHORED_SHAPE {
         let all = &values[axis];
         let zeros = all.iter().filter(|v| **v <= 0.0).count();
         let zero_share = zeros as f64 / all.len() as f64;
@@ -418,13 +445,13 @@ fn each_axis_still_sits_where_its_cuts_were_authored() {
             zero_share - authored_zero,
             m - authored_median
         );
-        if (zero_share - authored_zero).abs() > ZERO_SHARE_TOLERANCE {
+        if (zero_share - authored_zero).abs() > zero_tol {
             drifted.push(format!(
                 "{} zero share: authored {authored_zero:.4}, live {zero_share:.4}",
                 AXES[axis]
             ));
         }
-        if (m - authored_median).abs() > MEDIAN_TOLERANCE {
+        if (m - authored_median).abs() > median_tol {
             drifted.push(format!(
                 "{} median-where-present: authored {authored_median:.4}, live {m:.4}",
                 AXES[axis]
@@ -439,4 +466,44 @@ fn each_axis_still_sits_where_its_cuts_were_authored() {
          against the new distribution, re-check occupancy, and re-author both this shape and the \
          cuts in the same commit."
     );
+}
+
+/// How far above its declared rate an occurrence count may sit before the
+/// rarity claim is refused. Generous because the counts are small and Poisson:
+/// at 20 per 100,000 this probe's ~29,300 readings expect ~6, and a run that
+/// happened to see 20 says nothing. A row wrong by the 400x that the zero-share
+/// tolerance alone would have permitted is caught easily.
+const RARITY_SLACK: f64 = 10.0;
+
+/// claim: invariant(forall-rarity-claim, declared-rate-is-checked) — a
+/// `BelowSampleResolution` row states a frequency, and this is what makes that
+/// number mean something. Without it the field is prose: the zero-share drift
+/// guard alone tolerates 0.08, i.e. 8,000 per 100,000, so a row declaring 20
+/// could be wrong by four hundred times and nothing would object.
+#[test]
+fn a_rarity_claim_is_checked_against_what_actually_occurs() {
+    let wc = WorldComponents::assemble().expect("registries");
+    let (counts, values, _) = tally(&wc);
+    for (axis, band, why, reason) in EXPECTED_EMPTY {
+        let WhyEmpty::BelowSampleResolution { per_100k } = why else {
+            continue;
+        };
+        let b = BANDS.iter().position(|x| *x == band).expect("known band");
+        let readings = values[axis].len() as f64;
+        let expected = per_100k / 100_000.0 * readings;
+        let ceiling = expected * RARITY_SLACK + RARITY_SLACK;
+        let observed = counts[axis][b] as f64;
+        eprintln!(
+            "BAND rarity {}/{band:?} declared={per_100k}/100k over {readings:.0} readings \
+             expects {expected:.1}, observed {observed:.0}, ceiling {ceiling:.1}",
+            AXES[axis]
+        );
+        assert!(
+            observed <= ceiling,
+            "{}/{band:?} declares {per_100k} per 100,000 — \"{reason}\" — but {observed:.0} of \
+             {readings:.0} readings land in it, over the {ceiling:.1} this rate allows. The \
+             declared rate is wrong, or the pair is no longer rare and the row should go.",
+            AXES[axis]
+        );
+    }
 }

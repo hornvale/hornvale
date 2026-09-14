@@ -4107,3 +4107,87 @@ rather than running it — reading the target name as the fix costs a gate cycle
 the question in three different ways (wrong normalisation, wrong order
 statistic, degenerate on the distribution's shape), and writing the guard is
 what exposes each.*
+
+## #48 [Q] — Nathan asked whether #47's design points would bite later. Four would, and two of them were this campaign's own lessons re-committed.
+
+Asked directly: *"do you think those design points are likely to cause issues
+down the road?"* Checked rather than judged. Four found, all fixed, and the
+two that matter most are failures I had already diagnosed **in writing** before
+committing them again one file over.
+
+### 1. A declared frequency that nothing read (the seventh instance)
+
+`WhyEmpty::BelowSampleResolution { per_100k: 20.0 }` carried the measured rate
+"so a reader can check the arithmetic". `grep per_100k` returned **two** hits:
+the field declaration and the one construction. Nothing consumed it. That is
+`PROC-prose-claims-no-assertion-checks` — the row this campaign minted, whose
+instance list I extended to six in ledger #37 — authored a seventh time by me,
+in the file whose entire purpose is guarding an unfalsifiable surface.
+
+**Fixed:** `a_rarity_claim_is_checked_against_what_actually_occurs` compares the
+observed count against the declared rate with Poisson slack. One-sided by
+design: the falsifier for "rare" is "common", and observing zero confirms the
+row rather than refuting it. **Mutation-proved** — shutting iron reduction
+above a silica threshold puts 12,340 of 29,305 readings in the band against a
+ceiling of 68.6, and the failure quotes the false claim back.
+
+### 2. One tolerance for four differently-shaped axes — the same error, one level up
+
+`ZERO_SHARE_TOLERANCE = 0.08`, shared, against authored zero shares of
+`0.546 / 0.0000 / 0.0304 / 0.0000`. On hydrogen that is ~15% relative; on the
+two axes that are **never** zero it is unbounded in relative terms. Concretely:
+iron could acquire an 8% absent population — **8,000 per 100,000, against a
+`BelowSampleResolution` row declaring 20** — with the drift guard silent. The
+check protecting the claim was 400x looser than the claim.
+
+This is precisely the argument the band cuts themselves are built on: four
+differently-shaped distributions cannot share a threshold, and **a tolerance is
+a threshold**. I gave the bands per-axis cuts after measuring and then handed
+their guard a single shared number.
+
+**Fixed:** per-axis tolerances, tightest on the axes claimed never-zero
+(`0.0020` methane, `0.0050` iron). **Proved load-bearing rather than argued** —
+a perturbation putting iron's zero share at `0.0133` sits *under* the old
+shared `0.08` and *over* the new `0.0050`: the old guard passes it silently,
+the new one reds. Both this and the rarity guard catch it, independently.
+
+*A mutation that proves nothing, recorded because it nearly counted as
+evidence:* the first attempt used `silica > 0.80` and produced **zero** absent
+readings — silica never exceeds 0.80 in these worlds, so the mutation could not
+have moved and its green said nothing. Bisecting to 0.74 found the
+discriminating case.
+
+### 3. Positional indices on a four-element array
+
+`metabolite_bands()` returned `[MetaboliteBand; 4]` and `bands[2]` is correct
+for sulphur exactly until someone reorders the axes. **Fixed:** named
+accessors (`methane_band()` and three siblings) are now the primary API and the
+array is built from them, so there is one axis-to-cuts pairing in the codebase
+rather than one per call site.
+
+### 4. A mismatch the type system permits
+
+`metabolite_band(chem.methane, HYDROGEN_CUTS)` type-checks and is wrong — two
+`f64`-shaped arguments with no relation the compiler can see. The named
+accessors remove the need to pair them by hand; the free function stays public
+for authors reasoning about a threshold directly.
+
+### And one thing that LOOKED like a defect and is not
+
+`MetaboliteBand` derives `Ord`, so `methane_band() > hydrogen_band()` compiles
+across axes with different cuts. First read: a frame-loss bug. Second read: it
+is meaningful, and the doc now says exactly what it means — **relative standing
+on each axis's own ladder** ("this place suits a methane specialist better than
+a hydrogen specialist"), which is a real question a generalist asks. What it is
+**not** is a magnitude comparison, since `Ample` begins at `0.70` on hydrogen
+and `0.55` on methane. Documented with the correct instrument named for the
+other question (`dominant_source`).
+
+**The pattern worth carrying:** three of the four defects are *the same
+defect* — a threshold, an index, or a number that means something only in a
+context the code does not carry. And I wrote the first two immediately after
+writing the paragraphs explaining why they were wrong.
+
+**Ideonomy passes / overturns:** one — *diagnosing a defect class in prose
+confers no immunity to committing it; the campaign that logs the instance list
+is as likely to author the next instance as anyone.*
