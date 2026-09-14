@@ -176,6 +176,93 @@ case "$branch" in
         ;;
 esac
 
+# --- does this candidate change the gate that judges it? ---------------------
+#
+# WHY THIS SECTION EXISTS. A campaign can change its own gate, and should be
+# able to: the chamber cds into the merge product to run each phase, so the
+# Makefile target a roster line names is the CANDIDATE'S. That is the sanctioned
+# lever and it is completely unguarded -- gutting `clients-check-run` or
+# `gate-suite-run` weakens the very phase that would have objected, and no
+# instrument shows it.
+#
+# It is not enforceable mechanically: a gate change can be a repair, a
+# tightening, or a retreat, and only a reader can tell which. So this REPORTS,
+# like every other line here, at the one moment a human is deciding.
+#
+# THE SECOND HALF IS THE ONE THAT COST A CYCLE. Some gate machinery is read
+# from MAIN, not from the candidate, so editing it has NO EFFECT on the run that
+# judges it:
+#
+#   scripts/lane-sets.tsv     sluice-run.sh:502 reads $repo_root/scripts/…,
+#                             and repo_root is the script's own location: the
+#                             MAIN checkout.
+#   scripts/sluice-*.sh       sluice-drain.sh runs $repo_root/scripts/…, same
+#                             main checkout. The chamber is main's program.
+#
+# campaign/the-coherence registered a container runner in lane-sets.tsv on
+# 2026-09-14, correctly, and the chamber never read it -- the run took the
+# native path and segfaulted exactly as before. Two hours and two merge slots.
+# Nothing said the change was inert. This does.
+#
+# DIRECTION THIS ENFORCES: it names gate machinery the candidate touches and
+# says whether this run will read it. It does NOT judge whether the change is
+# good, and it does not detect a gate weakened through a path not listed here.
+echo
+echo "GATE MACHINERY (does this candidate change what judges it?)"
+_gate_touched=0
+_changed="$(git diff --name-only "origin/main...$sha" 2>/dev/null)"
+
+# Read from MAIN: editing these cannot affect this run.
+for p in scripts/lane-sets.tsv scripts/sluice-run.sh scripts/sluice-drain.sh \
+         scripts/sluice-queue.sh scripts/sluice-mouth.sh; do
+    if printf '%s\n' "$_changed" | grep -qx "$p"; then
+        _gate_touched=1
+        printf '  %-34s INERT HERE — the chamber reads this from MAIN\n' "$p"
+    fi
+done
+
+# Read from the CANDIDATE: these take effect on this very run.
+if printf '%s\n' "$_changed" | grep -q '^scripts/hooks/'; then
+    _gate_touched=1
+    printf '  %-34s TAKES EFFECT — core.hooksPath is relative, so the\n' "scripts/hooks/"
+    printf '  %-34s   chamber runs the hooks from THIS candidate\n' ""
+fi
+
+# The Makefile targets the roster actually names, DERIVED from the roster rather
+# than hardcoded — a hardcoded copy is the drift cli/tests/suite/lane_sets.rs
+# exists to fail on.
+if printf '%s\n' "$_changed" | grep -qx Makefile; then
+    # ONE LEVEL OF EXPANSION, because the roster names an AGGREGATE. The
+    # `clients` row invokes `clients-check-run`, whose recipe fans out to six
+    # others -- and campaign/the-coherence changed `visual-check-run`, which
+    # the roster never mentions. Checking only roster-named targets missed the
+    # very change that motivated this section.
+    _roster="$(grep -v '^#' "$root/scripts/lane-sets.tsv" 2>/dev/null \
+        | awk -F'\t' 'NF>=5{print $5}' | grep -oE '[a-z0-9-]+(-run|-check)' | sort -u)"
+    _called=""
+    for _r in $_roster; do
+        _called="$_called $(git show "$sha:Makefile" 2>/dev/null \
+            | awk -v t="$_r:" '$0 ~ "^"t {f=1;next} f && /^[^\t]/ {f=0} f' \
+            | grep -oE '[a-z0-9-]+(-run|-check)' | sort -u)"
+    done
+    _targets="$(printf '%s %s' "$_roster" "$_called" | tr ' ' '\n' | grep -v '^$' | sort -u)"
+    for t in $_targets; do
+        _before="$(git show "origin/main:Makefile" 2>/dev/null | awk -v t="$t:" '$0 ~ "^"t {f=1;next} f && /^[^\t]/ {f=0} f')"
+        _after="$(git show "$sha:Makefile" 2>/dev/null | awk -v t="$t:" '$0 ~ "^"t {f=1;next} f && /^[^\t]/ {f=0} f')"
+        if [ "$_before" != "$_after" ]; then
+            _gate_touched=1
+            printf '  %-34s TAKES EFFECT — a phase runs this target\n' "Makefile: $t"
+        fi
+    done
+fi
+
+if [ "$_gate_touched" = 0 ]; then
+    echo "  none — no gate machinery in this diff"
+else
+    echo "  ^ read the diff for these before dispatching. A gate change may be a"
+    echo "    repair or a retreat and only you can tell which."
+fi
+
 echo
 echo "SHAPE"
 git diff --shortstat "origin/main...$sha" 2>/dev/null | sed 's/^ */  /'
