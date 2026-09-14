@@ -216,5 +216,254 @@ else
     bad "the skip path returned non-zero"
 fi
 
+# --- the drainer registry --------------------------------------------------
+#
+# THE PROBLEM THESE PIN. `flock` on the box claim serializes the WORK; nothing
+# serialized the LOOPS. Two sessions each left a drain loop running on
+# 2026-09-13; the mutex behaved perfectly and the queue was still incoherent,
+# because the loops had different POLICIES. These tests hold the rules that
+# make a policy visible and exclusive.
+
+echo "== registry: the policy rules"
+
+# The kind set this file mirrors must match the one the queue actually accepts.
+# A drift here means a policy can name a kind the queue rejects (a loop that
+# drains nothing and looks healthy) or omit one the queue has (a kind no
+# drainer can ever claim, silently un-drainable).
+_queue_kinds="$(grep -o 'merge|stage|census' "$root/scripts/sluice-queue.sh" | head -1)"
+if [ "$_queue_kinds" = "merge|stage|census" ] && [ "$DRAIN_KNOWN_KINDS" = "merge stage census" ]; then
+    ok "the kind set matches the queue's (merge, stage, census)"
+else
+    bad "kind sets drifted: drain has '$DRAIN_KNOWN_KINDS', queue has '$_queue_kinds'"
+fi
+
+for _k in merge stage census; do
+    if policy_admits "merge,stage,census" "$_k"; then
+        ok "the all-kinds policy admits $_k"
+    else
+        bad "the all-kinds policy does not admit $_k"
+    fi
+done
+# The control: without this, a policy_admits that always returned 0 would pass
+# every assertion above and make every drainer collide with every other.
+if policy_admits "stage,census" merge; then
+    bad "a stage,census policy admits merge -- overlap detection is vacuous"
+else
+    ok "a stage,census policy does NOT admit merge"
+fi
+if policy_admits "" merge; then
+    bad "an empty policy admits merge"
+else
+    ok "an empty policy admits nothing"
+fi
+# Substring safety: 'merge' must not be admitted by a policy naming 'merges'.
+if policy_admits "merges" merge; then
+    bad "policy matching is a substring test -- 'merges' admits 'merge'"
+else
+    ok "policy matching is exact, not substring"
+fi
+
+if policy_is_valid "merge,stage,census" && policy_is_valid "stage"; then
+    ok "real policies validate"
+else
+    bad "a real policy failed validation"
+fi
+for _bad in "merges" "merge,typo" "" "all"; do
+    if policy_is_valid "$_bad"; then
+        bad "policy_is_valid accepted '$_bad' -- a loop with this policy drains nothing forever"
+    else
+        ok "policy_is_valid refuses '$_bad'"
+    fi
+done
+
+# Every kind needs its OWN fd, or two kinds would share a lock and a disjoint
+# pair would refuse each other.
+_fds="$(for _k in $DRAIN_KNOWN_KINDS; do lock_fd_for "$_k"; done | sort -u | wc -l)"
+if [ "$_fds" -eq 3 ]; then
+    ok "each kind has a distinct lock fd"
+else
+    bad "the kinds share lock fds ($_fds distinct for 3 kinds) -- disjoint policies would collide"
+fi
+if [ -z "$(lock_fd_for not-a-kind)" ]; then
+    ok "an unknown kind has no fd (acquire refuses rather than draining unprotected)"
+else
+    bad "an unknown kind was given an fd"
+fi
+
+echo "== registry: exclusion is real, and disjoint policies still coexist"
+_reg="$(mktemp -d)"
+(
+    # shellcheck disable=SC2030  # subshell-local ON PURPOSE: this whole block
+    # runs against an isolated state dir, and the export must NOT escape into the
+    # rest of the suite (or the real queue).
+    export HV_SLUICE_DIR="$_reg"
+    HV_DRAIN_LIB=1 . "$root/scripts/sluice-drain.sh"
+    acquire_policy_locks "stage,census" watch >/dev/null 2>&1
+
+    ( HV_DRAIN_LIB=1 . "$root/scripts/sluice-drain.sh"
+      acquire_policy_locks "merge" watch >/dev/null 2>&1 ) && echo disjoint-ok > "$_reg/disjoint"
+
+    ( HV_DRAIN_LIB=1 . "$root/scripts/sluice-drain.sh"
+      acquire_policy_locks "merge,stage" watch 2>"$_reg/refusal" >/dev/null ) || echo refused > "$_reg/overlap"
+
+    ( flock -n 24 && echo free > "$_reg/merge-free" ) 24>"$_reg/drainer-merge.lock"
+    ls "$_reg/drainers" > "$_reg/after-partial"
+)
+if [ -f "$_reg/disjoint" ]; then
+    ok "a disjoint policy (merge) starts beside a stage,census drainer"
+else
+    bad "a disjoint policy was refused -- 'one drainer per box' is the wrong invariant"
+fi
+if [ -f "$_reg/overlap" ]; then
+    ok "an overlapping policy (merge,stage) is refused"
+else
+    bad "an overlapping policy STARTED -- two loops can claim the same kind"
+fi
+if grep -q "already claims kind 'stage'" "$_reg/refusal" 2>/dev/null; then
+    ok "the refusal names the contested kind"
+else
+    bad "the refusal does not name which kind collided"
+fi
+if grep -q "holder:.*pid=" "$_reg/refusal" 2>/dev/null; then
+    ok "the refusal names the holder (pid, host, kinds) rather than just saying no"
+else
+    bad "the refusal identifies no holder, so the operator cannot act on it"
+fi
+if [ -f "$_reg/merge-free" ] && ! grep -qx merge "$_reg/after-partial" 2>/dev/null; then
+    ok "a partial acquisition leaves NO lock and NO registration behind"
+else
+    bad "a refused drainer kept the merge lock or its label -- sluice-status would report a drainer that is not there"
+fi
+
+echo "== registry: the staleness property a pidfile cannot have"
+# THIS IS THE WHOLE REASON THE MECHANISM IS A LOCK. Kill a drainer with -9, so
+# no trap, no cleanup, nothing voluntary runs. Its registration FILE survives --
+# that is exactly what a pidfile would rely on, and a reader trusting the file
+# would conclude a drainer is running. The LOCK does not survive, because the
+# kernel releases it, so the corpse is detectable.
+_st="$(mktemp -d)"
+(
+    # shellcheck disable=SC2030,SC2031  # as above: isolated per subshell by design
+    export HV_SLUICE_DIR="$_st"
+    HV_DRAIN_LIB=1 . "$root/scripts/sluice-drain.sh"
+    acquire_policy_locks "merge" watch >/dev/null 2>&1
+    sleep 30
+) &
+_victim=$!
+_waited=0
+while [ ! -f "$_st/drainers/merge" ] && [ "$_waited" -lt 50 ]; do sleep 0.1; _waited=$((_waited+1)); done
+if [ -f "$_st/drainers/merge" ]; then
+    ok "the drainer registered before being killed (so the test below is not vacuous)"
+else
+    bad "the drainer never registered -- the staleness test cannot run"
+fi
+kill -9 "$_victim" 2>/dev/null
+wait "$_victim" 2>/dev/null
+if [ -f "$_st/drainers/merge" ]; then
+    ok "SIGKILL leaves the registration FILE behind (what a pidfile would rely on)"
+else
+    ok "SIGKILL left no file (even better; the lock check below is still the authority)"
+fi
+if ( flock -n 24 ) 24>"$_st/drainer-merge.lock"; then
+    ok "SIGKILL releases the LOCK -- a corpse is detectable, which is why this is not a pidfile"
+else
+    bad "the lock survived SIGKILL -- the box would be permanently un-drainable"
+fi
+rm -rf "$_reg" "$_st"
+
+echo "== registry: an orphaned drainer stops instead of draining on unseen"
+# THE ORIGINAL COMPLAINT. The drainer that prompted this work outlived the
+# session that launched it -- init adopted the loop and it kept draining for
+# hours. The locks make such a loop visible; this makes it stop.
+#
+# VERIFIED BY PID, NEVER BY `pgrep -f`. The first cut of this test used
+# `pgrep -f "sluice-drain.sh watch ..."` and reported the guard had failed --
+# because the pattern matched the TEST HARNESS's own command line, which
+# contains that string. `pgrep -f` cannot distinguish a process from a process
+# that merely mentions one.
+_orph="$(mktemp -d)"
+bash -c "HV_SLUICE_DIR='$_orph' nohup bash '$root/scripts/sluice-drain.sh' watch --kinds=stage --idle=1 > '$_orph/log' 2>&1 & echo \$! > '$_orph/pid'"
+_dp="$(cat "$_orph/pid" 2>/dev/null)"
+_w=0
+while [ "$_w" -lt 80 ] && ps -p "$_dp" -o pid= >/dev/null 2>&1; do sleep 0.1; _w=$((_w+1)); done
+if [ -n "$_dp" ] && ! ps -p "$_dp" -o pid= >/dev/null 2>&1; then
+    ok "an orphaned drainer exits on its own (pid $_dp)"
+else
+    bad "an orphaned drainer kept running (pid $_dp) -- it would drain unseen, which is the bug"
+fi
+if grep -aq "reparented to init" "$_orph/log" 2>/dev/null; then
+    ok "it says WHY it exited, so the operator is not left guessing"
+else
+    bad "the orphan exit was silent"
+fi
+if HV_SLUICE_DIR="$_orph" bash "$root/scripts/sluice-drainers.sh" | grep -q "none registered"; then
+    ok "an orphan exit releases its locks and its labels"
+else
+    bad "an orphan exit left a registration behind"
+fi
+
+# THE CONTROL. Without it, a guard that exited unconditionally would satisfy
+# every assertion above while making the watch mode useless.
+# LAUNCHED FROM THIS SHELL, NOT FROM A SUBSHELL. The first cut wrote
+# `( ... & echo $! > file )`, and that subshell exits the instant it has
+# echoed -- orphaning the very drainer this control exists to keep parented.
+# The control then "failed", correctly, against a guard that was working. A
+# control has to be built as carefully as the thing it controls.
+HV_SLUICE_DIR="$_orph" bash "$root/scripts/sluice-drain.sh" watch --kinds=census --idle=1 > "$_orph/live" 2>&1 &
+_lp=$!
+sleep 2
+if [ -n "$_lp" ] && ps -p "$_lp" -o pid= >/dev/null 2>&1; then
+    ok "CONTROL: a drainer with a live parent keeps running"
+else
+    bad "CONTROL FAILED: the guard also kills drainers whose parent is alive"
+fi
+if [ "$(grep -ac 'reparented' "$_orph/live" 2>/dev/null)" = "0" ]; then
+    ok "CONTROL: it never claims to be orphaned while its parent lives"
+else
+    bad "CONTROL: a live-parent drainer reported itself orphaned"
+fi
+kill -9 "$_lp" 2>/dev/null
+wait 2>/dev/null
+rm -rf "$_orph"
+
+echo "== box_is_busy: answers the LOCK, so a holder with no claim file still counts"
+# THE CASE THAT MOTIVATED THIS. A census delivery holds the box lock through
+# its gnomon-arms phase and writes NO claim file, so a claim-file check reports
+# free while the box is busy. These drive the real function against a
+# redirected lock, with no claim file anywhere, which is exactly that shape.
+_lk="$(mktemp -d)/box.lock"
+
+if HV_CENSUS_LOCK="$_lk" box_is_busy; then
+    bad "an unheld lock reads as BUSY — every drainer would idle forever"
+else
+    ok "an unheld lock reads as free"
+fi
+
+# Hold it from another process, with no claim file in existence.
+( flock 9; sleep 30 ) 9>"$_lk" &
+_holder=$!
+_w=0
+while [ "$_w" -lt 50 ]; do
+    if ! ( flock -n 9 ) 9>"$_lk" 2>/dev/null; then break; fi
+    sleep 0.1; _w=$((_w+1))
+done
+if HV_CENSUS_LOCK="$_lk" box_is_busy; then
+    ok "a HELD lock reads as BUSY even though no claim file exists anywhere"
+else
+    bad "a held lock read as free — this is the defect: a drainer claims a row, marks it running, and then blocks in flock"
+fi
+kill -9 "$_holder" 2>/dev/null; wait "$_holder" 2>/dev/null
+
+# THE CONTROL, and it is the one that matters: a lock freed by a KILLED holder
+# must read free again. If it did not, one dead job would wedge every drainer.
+_w=0
+while [ "$_w" -lt 50 ] && HV_CENSUS_LOCK="$_lk" box_is_busy; do sleep 0.1; _w=$((_w+1)); done
+if HV_CENSUS_LOCK="$_lk" box_is_busy; then
+    bad "the lock still reads BUSY after the holder was killed — drainers would never resume"
+else
+    ok "CONTROL: the lock reads free again once the holder dies (kernel released it)"
+fi
+rm -rf "$(dirname "$_lk")"
+
 printf '\ntest-sluice-drain: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
