@@ -1,0 +1,1 @@
+{"kind":"notice","by":"main","note":"sluice: queued req-2ccb519b7dfe for campaign/the-coherence at 2ccb519b7dfe; latest fix scopes reduced effects to CPU rendered proof","paths":["clients/visual/bevy/src/renderer.rs,clients/visual/planetarium/src/review.rs"]}
