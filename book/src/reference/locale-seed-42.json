@@ -22,10 +22,10 @@
   "longitude": -132.48962,
   "biome": "taiga",
   "fields": {
-    "temperature_c": 1.0587547,
-    "moisture": 0.48597221,
-    "elevation_m": 870.54868,
-    "height_asl_m": 2690.8402,
+    "temperature_c": 1.10624,
+    "moisture": 0.4859986,
+    "elevation_m": 863.24325,
+    "height_asl_m": 2683.5347,
     "water": "dry-land"
   },
   "corners": [
@@ -56,7 +56,7 @@
     "micro": {
       "relief": -0.60646982,
       "aspect": -0.26190357,
-      "wetness": 0.020577007,
+      "wetness": 0.020632428,
       "openness": -0.67068375
     },
     "descriptor": "a boreal stand, in a hollow",
@@ -155,12 +155,12 @@
     }
   ],
   "cave": null,
-  "channel_distance": 0.0012331983,
+  "channel_distance": 0.0012329836,
   "channel_bands": [
     0.00001922994,
     0.00003845988,
-    0.00013908548,
-    0.00020862822
+    0.0001304916,
+    0.0001957374
   ],
   "resolution": {
     "grid_level": 6,

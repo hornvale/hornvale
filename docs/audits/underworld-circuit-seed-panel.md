@@ -32,55 +32,10 @@ The eight sections above it are byte-identical to the pre-Plat panel:
 the reading changes no plan byte and the Made population is new.
 
 ```text
-seed 42: 874 descents
+seed 42: 1079 descents
 
-loop share: median 0.1077 (frozen floor 0.50) -> FALSIFIED
-cycle membership: median 0.8442 (report only; added after Task 2 showed the entrance doorway is a bridge on ~40% of seeds)
-
-density ordering (median anchored realms per level):
-  LavaTube  WildCave 1.0000  DrowTier 2.0000
-  Fracture  WildCave 2.0000  DrowTier 3.0000
-  Karst     WildCave 3.0000  DrowTier 4.0000
-  LavaTube < Fracture < Karst -> PASSED
-  DrowTier > WildCave within kind -> PASSED
-    LavaTube: DrowTier 2 > WildCave 1 -> PASSED
-    Fracture: DrowTier 3 > WildCave 2 -> PASSED
-    Karst: DrowTier 4 > WildCave 3 -> PASSED
-
-cross-floor: 839/874 descents = 0.9600 (frozen floor 0.25) -> PASSED
-
-semilattice overlap: median 0.3030 (report only)
-
-gate yield: median 1.0000 (frozen floor 0.70; FROM realms with an admissible drawn row TO rows applied in full) -> PASSED
-  skips: inadmissible 0 claimed 198 no-room 0 unsolvable 2 (report only)
-detour cost: median 1.2143 over 866 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
-solvable for a body holding nothing: 874 of 874 descents (a guard; a miss is a red test, not a number)
-gates on the panel's wild descents: doors 0 sumps 3169 chutes 3223; re-derived as worked (DrowTier): 872 of 874 descents carry a door (the production walk reaches a door only where the ledger says a people cut the rung — see the Made population below; The Plat, decision 0647)
-return differs from outbound: 159 of 866 gated descents (report only; follows from a chute by construction)
-patterns by class and span (report only):
-  LongLong CrossFloor the-chute: 96
-  LongLong CrossFloor two-alternative-paths: 121
-  LongLong SameFloor blocked-retreat: 224
-  LongLong SameFloor two-alternative-paths: 241
-  LongShort CrossFloor the-chute: 37
-  LongShort SameFloor dangerous-route: 68
-  LongShort SameFloor hidden-shortcut: 66
-  ShortLong CrossFloor the-chute: 3090
-  ShortLong SameFloor blocked-retreat: 3302
-  ShortLong SameFloor the-sump: 3169
-  ShortShort SameFloor patrol-path: 805
-
-the Made population: 60 occupied columns, seated {"Shallows": 43, "Undercroft": 17}; tenancy: inhabited 58 abandoned 2
-heart decile <= 5: 53 of 60 = 0.8833 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
-doors on Made rungs: 42 of 60 = 0.7000 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
-nested realms smaller than their parent: 3655 of 6263 = 0.5836 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
-landings on Made levels 31 of 60; sanctums holding a thing at genesis 6 of 60 (report only)
-within-level components per level, every plan: {1: 1807, 2: 1787, 3: 712, 4: 64} (report only)
-
-seed 7: 1681 descents
-
-loop share: median 0.0893 (frozen floor 0.50) -> FALSIFIED
-cycle membership: median 0.8421 (report only; added after Task 2 showed the entrance doorway is a bridge on ~40% of seeds)
+loop share: median 0.1081 (frozen floor 0.50) -> FALSIFIED
+cycle membership: median 0.8507 (report only; added after Task 2 showed the entrance doorway is a bridge on ~40% of seeds)
 
 density ordering (median anchored realms per level):
   LavaTube  WildCave 1.0000  DrowTier 2.0000
@@ -92,78 +47,123 @@ density ordering (median anchored realms per level):
     Fracture: DrowTier 3 > WildCave 2 -> PASSED
     Karst: DrowTier 4 > WildCave 3 -> PASSED
 
-cross-floor: 1595/1681 descents = 0.9488 (frozen floor 0.25) -> PASSED
+cross-floor: 1049/1079 descents = 0.9722 (frozen floor 0.25) -> PASSED
 
-semilattice overlap: median 0.2794 (report only)
-
-gate yield: median 1.0000 (frozen floor 0.70; FROM realms with an admissible drawn row TO rows applied in full) -> PASSED
-  skips: inadmissible 0 claimed 390 no-room 0 unsolvable 0 (report only)
-detour cost: median 1.2069 over 1673 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
-solvable for a body holding nothing: 1681 of 1681 descents (a guard; a miss is a red test, not a number)
-gates on the panel's wild descents: doors 0 sumps 5753 chutes 5439; re-derived as worked (DrowTier): 1676 of 1681 descents carry a door (the production walk reaches a door only where the ledger says a people cut the rung — see the Made population below; The Plat, decision 0647)
-return differs from outbound: 289 of 1673 gated descents (report only; follows from a chute by construction)
-patterns by class and span (report only):
-  LongLong CrossFloor the-chute: 191
-  LongLong CrossFloor two-alternative-paths: 155
-  LongLong SameFloor blocked-retreat: 462
-  LongLong SameFloor two-alternative-paths: 424
-  LongShort CrossFloor the-chute: 70
-  LongShort SameFloor dangerous-route: 122
-  LongShort SameFloor hidden-shortcut: 134
-  ShortLong CrossFloor the-chute: 5178
-  ShortLong SameFloor blocked-retreat: 6102
-  ShortLong SameFloor the-sump: 5753
-  ShortShort SameFloor patrol-path: 1538
-
-the Made population: 34 occupied columns, seated {"Shallows": 10, "Undercroft": 24}; tenancy: inhabited 33 abandoned 1
-heart decile <= 5: 23 of 34 = 0.6765 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
-doors on Made rungs: 27 of 34 = 0.7941 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
-nested realms smaller than their parent: 6106 of 10534 = 0.5796 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
-landings on Made levels 9 of 34; sanctums holding a thing at genesis 4 of 34 (report only)
-within-level components per level, every plan: {1: 3941, 2: 3381, 3: 1008, 4: 75} (report only)
-
-seed 1234: 1266 descents
-
-loop share: median 0.0794 (frozen floor 0.50) -> FALSIFIED
-cycle membership: median 0.8413 (report only; added after Task 2 showed the entrance doorway is a bridge on ~40% of seeds)
-
-density ordering (median anchored realms per level):
-  LavaTube  WildCave 1.0000  DrowTier 2.0000
-  Fracture  WildCave 2.0000  DrowTier 3.0000
-  Karst     WildCave 3.0000  DrowTier 4.0000
-  LavaTube < Fracture < Karst -> PASSED
-  DrowTier > WildCave within kind -> PASSED
-    LavaTube: DrowTier 2 > WildCave 1 -> PASSED
-    Fracture: DrowTier 3 > WildCave 2 -> PASSED
-    Karst: DrowTier 4 > WildCave 3 -> PASSED
-
-cross-floor: 1200/1266 descents = 0.9479 (frozen floor 0.25) -> PASSED
-
-semilattice overlap: median 0.2766 (report only)
+semilattice overlap: median 0.3099 (report only)
 
 gate yield: median 1.0000 (frozen floor 0.70; FROM realms with an admissible drawn row TO rows applied in full) -> PASSED
-  skips: inadmissible 0 claimed 269 no-room 0 unsolvable 0 (report only)
-detour cost: median 1.2000 over 1249 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
-solvable for a body holding nothing: 1266 of 1266 descents (a guard; a miss is a red test, not a number)
-gates on the panel's wild descents: doors 0 sumps 4223 chutes 4123; re-derived as worked (DrowTier): 1263 of 1266 descents carry a door (the production walk reaches a door only where the ledger says a people cut the rung — see the Made population below; The Plat, decision 0647)
-return differs from outbound: 199 of 1249 gated descents (report only; follows from a chute by construction)
+  skips: inadmissible 0 claimed 257 no-room 0 unsolvable 2 (report only)
+detour cost: median 1.2143 over 1073 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
+solvable for a body holding nothing: 1079 of 1079 descents (a guard; a miss is a red test, not a number)
+gates on the panel's wild descents: doors 0 sumps 3979 chutes 4262; re-derived as worked (DrowTier): 1077 of 1079 descents carry a door (the production walk reaches a door only where the ledger says a people cut the rung — see the Made population below; The Plat, decision 0647)
+return differs from outbound: 198 of 1073 gated descents (report only; follows from a chute by construction)
 patterns by class and span (report only):
-  LongLong CrossFloor the-chute: 119
-  LongLong CrossFloor two-alternative-paths: 146
-  LongLong SameFloor blocked-retreat: 353
-  LongLong SameFloor two-alternative-paths: 349
+  LongLong CrossFloor the-chute: 128
+  LongLong CrossFloor two-alternative-paths: 145
+  LongLong SameFloor blocked-retreat: 288
+  LongLong SameFloor two-alternative-paths: 323
   LongShort CrossFloor the-chute: 57
-  LongShort SameFloor dangerous-route: 87
-  LongShort SameFloor hidden-shortcut: 92
-  ShortLong CrossFloor the-chute: 3947
-  ShortLong SameFloor blocked-retreat: 4740
-  ShortLong SameFloor the-sump: 4223
-  ShortShort SameFloor patrol-path: 1078
+  LongShort SameFloor dangerous-route: 91
+  LongShort SameFloor hidden-shortcut: 85
+  ShortLong CrossFloor the-chute: 4077
+  ShortLong SameFloor blocked-retreat: 4225
+  ShortLong SameFloor the-sump: 3979
+  ShortShort SameFloor patrol-path: 1034
 
-the Made population: 40 occupied columns, seated {"Shallows": 6, "Undercroft": 34}; tenancy: inhabited 37 abandoned 3
-heart decile <= 5: 26 of 40 = 0.6500 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> FALSIFIED
-doors on Made rungs: 26 of 40 = 0.6500 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
-nested realms smaller than their parent: 4499 of 7878 = 0.5711 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
-landings on Made levels 5 of 40; sanctums holding a thing at genesis 7 of 40 (report only)
-within-level components per level, every plan: {1: 2952, 2: 2523, 3: 792, 4: 63} (report only)
+the Made population: 131 occupied columns, seated {"Shallows": 48, "Undercroft": 83}; tenancy: inhabited 124 abandoned 7
+heart decile <= 5: 101 of 131 = 0.7710 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
+doors on Made rungs: 100 of 131 = 0.7634 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
+nested realms smaller than their parent: 4908 of 8338 = 0.5886 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
+landings on Made levels 30 of 131; sanctums holding a thing at genesis 14 of 131 (report only)
+within-level components per level, every plan: {1: 2055, 2: 2234, 3: 999, 4: 106, 5: 1} (report only)
+
+seed 7: 1932 descents
+
+loop share: median 0.0909 (frozen floor 0.50) -> FALSIFIED
+cycle membership: median 0.8491 (report only; added after Task 2 showed the entrance doorway is a bridge on ~40% of seeds)
+
+density ordering (median anchored realms per level):
+  LavaTube  WildCave 1.0000  DrowTier 2.0000
+  Fracture  WildCave 2.0000  DrowTier 3.0000
+  Karst     WildCave 3.0000  DrowTier 4.0000
+  LavaTube < Fracture < Karst -> PASSED
+  DrowTier > WildCave within kind -> PASSED
+    LavaTube: DrowTier 2 > WildCave 1 -> PASSED
+    Fracture: DrowTier 3 > WildCave 2 -> PASSED
+    Karst: DrowTier 4 > WildCave 3 -> PASSED
+
+cross-floor: 1855/1932 descents = 0.9601 (frozen floor 0.25) -> PASSED
+
+semilattice overlap: median 0.2927 (report only)
+
+gate yield: median 1.0000 (frozen floor 0.70; FROM realms with an admissible drawn row TO rows applied in full) -> PASSED
+  skips: inadmissible 0 claimed 451 no-room 0 unsolvable 1 (report only)
+detour cost: median 1.2105 over 1924 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
+solvable for a body holding nothing: 1932 of 1932 descents (a guard; a miss is a red test, not a number)
+gates on the panel's wild descents: doors 0 sumps 6847 chutes 6821; re-derived as worked (DrowTier): 1928 of 1932 descents carry a door (the production walk reaches a door only where the ledger says a people cut the rung — see the Made population below; The Plat, decision 0647)
+return differs from outbound: 356 of 1924 gated descents (report only; follows from a chute by construction)
+patterns by class and span (report only):
+  LongLong CrossFloor the-chute: 211
+  LongLong CrossFloor two-alternative-paths: 211
+  LongLong SameFloor blocked-retreat: 545
+  LongLong SameFloor two-alternative-paths: 511
+  LongShort CrossFloor the-chute: 93
+  LongShort SameFloor dangerous-route: 148
+  LongShort SameFloor hidden-shortcut: 161
+  ShortLong CrossFloor the-chute: 6517
+  ShortLong SameFloor blocked-retreat: 7303
+  ShortLong SameFloor the-sump: 6847
+  ShortShort SameFloor patrol-path: 1821
+
+the Made population: 36 occupied columns, seated {"Shallows": 20, "Undercroft": 16}; tenancy: inhabited 32 abandoned 4
+heart decile <= 5: 30 of 36 = 0.8333 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
+doors on Made rungs: 31 of 36 = 0.8611 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
+nested realms smaller than their parent: 7718 of 13198 = 0.5848 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
+landings on Made levels 14 of 36; sanctums holding a thing at genesis 5 of 36 (report only)
+within-level components per level, every plan: {1: 4217, 2: 3944, 3: 1392, 4: 107} (report only)
+
+seed 1234: 1632 descents
+
+loop share: median 0.0923 (frozen floor 0.50) -> FALSIFIED
+cycle membership: median 0.8431 (report only; added after Task 2 showed the entrance doorway is a bridge on ~40% of seeds)
+
+density ordering (median anchored realms per level):
+  LavaTube  WildCave 1.0000  DrowTier 2.0000
+  Fracture  WildCave 2.0000  DrowTier 3.0000
+  Karst     WildCave 3.0000  DrowTier 4.0000
+  LavaTube < Fracture < Karst -> PASSED
+  DrowTier > WildCave within kind -> PASSED
+    LavaTube: DrowTier 2 > WildCave 1 -> PASSED
+    Fracture: DrowTier 3 > WildCave 2 -> PASSED
+    Karst: DrowTier 4 > WildCave 3 -> PASSED
+
+cross-floor: 1572/1632 descents = 0.9632 (frozen floor 0.25) -> PASSED
+
+semilattice overlap: median 0.3000 (report only)
+
+gate yield: median 1.0000 (frozen floor 0.70; FROM realms with an admissible drawn row TO rows applied in full) -> PASSED
+  skips: inadmissible 0 claimed 368 no-room 0 unsolvable 0 (report only)
+detour cost: median 1.2069 over 1615 gated descents (frozen floor 1.10; default body's round trip gated / ungated) -> PASSED
+solvable for a body holding nothing: 1632 of 1632 descents (a guard; a miss is a red test, not a number)
+gates on the panel's wild descents: doors 0 sumps 5848 chutes 6011; re-derived as worked (DrowTier): 1629 of 1632 descents carry a door (the production walk reaches a door only where the ledger says a people cut the rung — see the Made population below; The Plat, decision 0647)
+return differs from outbound: 260 of 1615 gated descents (report only; follows from a chute by construction)
+patterns by class and span (report only):
+  LongLong CrossFloor the-chute: 219
+  LongLong CrossFloor two-alternative-paths: 213
+  LongLong SameFloor blocked-retreat: 431
+  LongLong SameFloor two-alternative-paths: 461
+  LongShort CrossFloor the-chute: 86
+  LongShort SameFloor dangerous-route: 145
+  LongShort SameFloor hidden-shortcut: 133
+  ShortLong CrossFloor the-chute: 5706
+  ShortLong SameFloor blocked-retreat: 6265
+  ShortLong SameFloor the-sump: 5848
+  ShortShort SameFloor patrol-path: 1481
+
+the Made population: 116 occupied columns, seated {"Shallows": 28, "Undercroft": 86, "Underdeep": 2}; tenancy: inhabited 106 abandoned 10
+heart decile <= 5: 92 of 116 = 0.7931 (frozen floor 0.6667; FROM Made levels TO the Heart's depth decile) -> PASSED
+doors on Made rungs: 86 of 116 = 0.7414 (frozen floor 0.50; FROM Made rungs TO rungs with a Needs(Key) gate; all-Found the same rungs carry 0) -> PASSED
+nested realms smaller than their parent: 6699 of 11561 = 0.5794 (frozen band (0.50, 0.6667); FROM nested realms on every plan TO area < parent's) -> PASSED
+landings on Made levels 17 of 116; sanctums holding a thing at genesis 13 of 116 (report only)
+within-level components per level, every plan: {1: 3412, 2: 3301, 3: 1315, 4: 132} (report only)
 ```

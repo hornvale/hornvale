@@ -326,12 +326,13 @@ pub fn generate(
     // `assemble_material` (below) calls the same `induration_at` function
     // over the fully-assembled globe; the two must always agree (see
     // `induration_field_matches_the_assembled_buffer`).
+    // Hoisted: `orogen_reach_chord` is a whole-mesh scan, not a per-vertex one.
+    let orogen_reach = crate::lithology::orogen_reach_chord(geosphere);
     let induration_map = VertexMap::from_fn(geosphere, |c| {
         crate::lithology::induration_at(
             *crust_age_map.get(c),
             *continental.get(c),
-            boundary_map.get(c).map(|b| b.kind),
-            distances.get(c).map(|(hops, _)| hops),
+            crate::lithology::orogen_proximity(geosphere, orogen_reach, c, *distances.get(c)),
         )
     });
     // Hotspot trails (Sculpting Task 6): smear each drawn hotspot into an

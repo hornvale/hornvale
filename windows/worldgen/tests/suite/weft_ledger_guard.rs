@@ -72,7 +72,33 @@ use hornvale_worldgen::seed_42_world;
 // delivery, each of which re-decides the deep-history bake's competition.
 // The count falls against both pre-merge pins, which is not a quality
 // signal in either direction.
-const SEED_42_FACT_COUNT: usize = 20_519;
+// THE TRENCHER, TASK 13 RE-PIN: 20_519 -> 23_810, and the composition of the
+// move is the part that matters, not the total. Widening `carbonate` and
+// `metamorphic_grade` (`domains/terrain/src/lithology.rs`) moved elevation
+// through `erodibility`, and it moved the porosity axis that
+// `hydrogeology`/`hydro_at` classify, so seed 42's world came out more
+// habitable. Counted from the regenerated fixture against the committed one:
+//
+//   is-settlement / is-place / population    334 -> 413   (+23.7%)
+//   is-occupation                          1_030 -> 1_211
+//   is-ruin                                  698 ->   800
+//   is-person                                229 ->   244
+//
+// The +3_291 total is those four families and their dependents; nothing new
+// is emitted and no predicate appeared or vanished.
+//
+// **AN OPEN FINDING RIDES WITH THIS NUMBER, AND IT IS NOT SETTLED BY PINNING
+// IT.** 413 settlements puts seed 42 outside the `[75, 400]` "sane band"
+// three other tests assert (`confluence`, `history_placement`,
+// `history_tumult`), by 3%. The likely driver is the `Hydro::Spring` share,
+// which doubled (3.69% -> 7.36% of land) because `promote_to_spring` scores
+// the aquifer set's PERIMETER and a continuous porosity field fragments that
+// set — see `CLASTIC_AQUIFER_MIN_POROSITY`'s doc for the measurement. That
+// was deliberately NOT chased by nudging a porosity constant (decision 0016:
+// report the measurement, do not tune to a downstream count), so this pin
+// records the world as it is and the band breach is the campaign's to decide.
+// If that decision moves the settlement count, this number moves with it.
+const SEED_42_FACT_COUNT: usize = 23_810;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

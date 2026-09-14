@@ -7675,3 +7675,15 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-14T13:41:17Z | census-tail-anomalies | 0.362 | 0.291 | 0.033 | 0.90 | 0 | 588224681 | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-14T13:41:32Z | rebaseline | 182.912 | 564.044 | 21.515 | 3.20 | 0 | 588224681 | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-14T13:42:34Z | gate-commit | 44.064 | 82.642 | 20.245 | 2.33 | 0 | 588224681 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T14:35:27Z | census-tail-chorus | 51.749 | 246.704 | 9.638 | 4.95 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T14:35:28Z | census-tail-domesday | 0.352 | 0.310 | 0.027 | 0.96 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T14:35:28Z | census-tail-anomalies | 0.296 | 0.254 | 0.029 | 0.96 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T14:35:46Z | rebaseline | 236.902 | 646.868 | 22.042 | 2.82 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T15:09:57Z | gate-commit | 6.586 | 7.322 | 5.169 | 1.90 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T15:10:25Z | gate-commit | 6.139 | 6.515 | 4.642 | 1.82 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T15:12:14Z | gate-commit | 95.071 | 411.477 | 60.394 | 4.96 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T15:18:38Z | census-tail-chorus | 51.458 | 245.313 | 10.059 | 4.96 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T15:18:39Z | census-tail-domesday | 0.355 | 0.312 | 0.027 | 0.95 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T15:18:39Z | census-tail-anomalies | 0.300 | 0.259 | 0.027 | 0.95 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T15:18:57Z | rebaseline | 230.078 | 640.252 | 22.524 | 2.88 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-14T15:20:11Z | gate-commit | 70.043 | 218.011 | 55.741 | 3.91 | 0 | 9743e2262 | campaign/the-trencher | MacBookPro | 10 |

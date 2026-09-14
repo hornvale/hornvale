@@ -1,25 +1,25 @@
 # The Peoples of Seed 42
 
-The land holds 332 settlement(s).
-The chief bugbear settlement, Doaba, holds 68 souls amid tropical-rainforest.
-The chief desert-dwarf settlement, Shaxasxanapdavag, holds 51 souls amid shrubland.
-The chief desert-elf settlement, Zaaṅṅooṅpeoṅpaoṅ, holds 22 souls amid shrubland.
-The chief drow settlement, Poo, holds 32 souls amid temperate-forest.
-The chief duergar settlement, Nada, holds 30 souls amid temperate-forest.
-The chief gnoll settlement, Qsooxpshaopzhaaznoashnoopzngaopqzhaax, holds 32 souls amid shrubland.
-The chief goblin settlement, Nenotata, holds 37 souls amid temperate-forest.
-The chief gully-dwarf settlement, Shakat, holds 37 souls amid tropical-seasonal-forest.
-The chief high-elf settlement, Šromdee, holds 34 souls amid temperate-forest.
-The chief hill-dwarf settlement, Mabash'sajat, holds 35 souls amid temperate-forest.
-The chief hobgoblin settlement, Bote, holds 47 souls amid temperate-forest.
-The chief human settlement, Vakveepera, holds 31 souls amid temperate-forest.
-The chief kobold settlement, Rororararo, holds 48 souls amid shrubland.
-The chief kuo-toa settlement, Sosbsazha, holds 29 souls amid temperate-forest.
-The chief mountain-dwarf settlement, Dadash'nadash, holds 33 souls amid temperate-forest.
-The chief sea-elf settlement, Šreannaensraunduundun, holds 33 souls amid kelp-forest.
-The chief snow-elf settlement, Zroṅṅoṅ, holds 28 souls amid taiga.
-The chief svirfneblin settlement, Fokxzhazhofobo, holds 34 souls amid shrubland.
-The chief wood-elf settlement, Ṅuṅsda, holds 35 souls amid temperate-forest.
+The land holds 411 settlement(s).
+The chief bugbear settlement, Bodoqa, holds 65 souls amid temperate-forest.
+The chief desert-dwarf settlement, Dapav, holds 51 souls amid shrubland.
+The chief desert-elf settlement, Ṅoṅšzaṅpeṅpaṅ, holds 22 souls amid shrubland.
+The chief drow settlement, Rogdoo, holds 34 souls amid temperate-forest.
+The chief duergar settlement, Saka, holds 31 souls amid temperate-forest.
+The chief gnoll settlement, Dzoxgzhopshngax, holds 26 souls amid shrubland.
+The chief goblin settlement, Bobababo, holds 37 souls amid temperate-forest.
+The chief gully-dwarf settlement, Najaj, holds 34 souls amid taiga.
+The chief high-elf settlement, Moo, holds 33 souls amid temperate-forest.
+The chief hill-dwarf settlement, Bamang'shakas, holds 35 souls amid temperate-forest.
+The chief hobgoblin settlement, Naabee, holds 80 souls amid temperate-forest.
+The chief human settlement, Vaepero, holds 33 souls amid temperate-forest.
+The chief kobold settlement, Xaraxo, holds 49 souls amid temperate-forest.
+The chief kuo-toa settlement, Dzhoobsoosaamzoo, holds 29 souls amid temperate-forest.
+The chief mountain-dwarf settlement, Xaxawzavadxanapnadaz, holds 33 souls amid temperate-forest.
+The chief sea-elf settlement, Duundunnennuen, holds 33 souls amid kelp-forest.
+The chief snow-elf settlement, Srooṅzroṅ, holds 22 souls amid taiga.
+The chief svirfneblin settlement, Faoza, holds 30 souls amid tundra.
+The chief wood-elf settlement, Teuṅtauṅuṅsda, holds 34 souls amid temperate-forest.
 
 ```text
                                                                         
@@ -27,21 +27,21 @@ The chief wood-elf settlement, Ṅuṅsda, holds 35 souls amid temperate-forest.
                                                                         
                                                                         
                                                                         
-o                                   o                                   
+o                                  o                                    
                                 o                                       
-oo                             oo                                       
- oo     o oo                    o  ooooo                 o  o  oooo     
-   o   oo                         ooooo                     oooooo      
- o o      o                                                 oooo        
-   o ooo                                                     o          
-     o@o                                                                
-                      o o                                               
-                          oo               oo                           
+                               ooo                             o       o
+ oo       @o                   oooo o o                          oo     
+          o                      oo o                         oo o      
+   o  oo                                                    o o         
+ ooo oo o                                                               
+                                            o                           
+                        ooo            oooo                             
+                    o  o ooo          oooooo                            
+                   o        oo        ooo                               
                             oo                                          
-    o                        o            oo                            
-                                                o                       
-                                     oo                                 
                                                                         
+                                                                        
+                                              o                         
                                                                         
                                                                         
                                                                         

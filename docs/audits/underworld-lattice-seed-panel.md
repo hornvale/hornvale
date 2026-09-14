@@ -46,27 +46,49 @@ walk.
 seed 42
   derivation      chamber/v3 over chamber/run-floors/v2
   lattice         4 branches per system, 5 bands, 20 levels admitted per run
-  entrances       1626 drawn across 874 systems, 499 multi-entrance (chamber/entrance-count/v2)
-  cave systems    874  (ocean-vertex caves skipped: 0)
-  floors drawn    113799
-  chambers        30537
-  reachable       30537 from 1626 open entrances
-  junctions       4165 links across 1575 system pairs; largest network 119 systems at one band (MAP-underworld-shortcut)
-  by band         undercroft:4148  shallows:7915  deeps:14072  underdeep:3376  nadir:1026  
-  by rock         regolith:1942  cover:715  basement:27880  roots:0  underneath:0  off-ladder:0
-  by origin       found:30443  made:94
+  entrances       2022 drawn across 1079 systems, 620 multi-entrance (chamber/entrance-count/v2)
+  cave systems    1079  (ocean-vertex caves skipped: 0)
+  floors drawn    140782
+  chambers        27545
+  reachable       27545 from 2022 open entrances
+  junctions       4753 links across 2243 system pairs; largest network 150 systems at one band (MAP-underworld-shortcut)
+  by band         undercroft:5234  shallows:10295  deeps:9195  underdeep:2821  nadir:0  
+  by rock         regolith:2292  cover:581  basement:24672  roots:0  underneath:0  off-ladder:0
+  by origin       found:27279  made:266
   past run length 0   (chambers beyond their run's drawn floors)
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
   the first three cave systems, run by run
   (key = the floor-0 address's spelling, not a derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
 
-  vertex 30 — fracture cave, reach 2145.7358 m, gradient 26.007865 K/km
+  vertex 14 — karst cave, reach 237.70004 m, gradient 23.444 K/km
+    14/0/undercroft/0            regolith     1 floors  #___________________
+    14/0/shallows/0              basement    10 floors  ##########__________
+    14/0/deeps/0                 -           18 floors  ..................__
+    14/0/underdeep/0             -            5 floors  ....._______________
+    14/0/nadir/0                 -            2 floors  ..__________________
+    14/1/undercroft/0            regolith     3 floors  ###_________________
+    14/1/shallows/0              basement     9 floors  #########___________
+    14/1/deeps/0                 -            7 floors  ......._____________
+    14/1/underdeep/0             -            9 floors  ~~~~~~~~~___________
+    14/1/nadir/0                 -            5 floors  ~~~~~_______________
+    14/2/undercroft/0            -            3 floors  ~~~_________________
+    14/2/shallows/0              -            7 floors  ~~~~~~~_____________
+    14/2/deeps/0                 -            5 floors  ....._______________
+    14/2/underdeep/0             -            7 floors  ~~~~~~~_____________
+    14/2/nadir/0                 -            2 floors  ~~__________________
+    14/3/undercroft/0            -            1 floors  ~___________________
+    14/3/shallows/0              -            8 floors  ~~~~~~~~____________
+    14/3/deeps/0                 -           14 floors  ~~~~~~~~~~~~~~______
+    14/3/underdeep/0             -            5 floors  ~~~~~_______________
+    14/3/nadir/0                 -            1 floors  ~___________________
+
+  vertex 30 — fracture cave, reach 1484.4865 m, gradient 26.007865 K/km
     30/0/undercroft/0            regolith     3 floors  ###_________________
     30/0/shallows/0              cover        5 floors  #####_______________
     30/0/deeps/0                 basement    14 floors  ##############______
     30/0/underdeep/0             basement     6 floors  ######______________
-    30/0/nadir/0                 basement     5 floors  #####_______________
+    30/0/nadir/0                 -            5 floors  ....._______________
     30/1/undercroft/0            regolith     4 floors  ####________________
     30/1/shallows/0              -            7 floors  ~~~~~~~_____________
     30/1/deeps/0                 basement    11 floors  ###########_________
@@ -83,69 +105,47 @@ seed 42
     30/3/underdeep/0             -           10 floors  ~~~~~~~~~~__________
     30/3/nadir/0                 -            5 floors  ~~~~~_______________
 
-  vertex 111 — karst cave, reach 252.0545 m, gradient 24.69077 K/km
-    111/0/undercroft/0           basement     4 floors  ####________________
-    111/0/shallows/0             basement     3 floors  ###_________________
-    111/0/deeps/0                -           13 floors  ............._______
-    111/0/underdeep/0            -            7 floors  ......._____________
-    111/0/nadir/0                -            4 floors  ....________________
-    111/1/undercroft/0           basement     1 floors  #___________________
-    111/1/shallows/0             -            6 floors  ~~~~~~______________
-    111/1/deeps/0                -           14 floors  ~~~~~~~~~~~~~~______
-    111/1/underdeep/0            -            5 floors  ~~~~~_______________
-    111/1/nadir/0                -            3 floors  ~~~_________________
-    111/2/undercroft/0           basement     5 floors  #####_______________
-    111/2/shallows/0             -            4 floors  ~~~~________________
-    111/2/deeps/0                -           16 floors  ~~~~~~~~~~~~~~~~____
-    111/2/underdeep/0            -            8 floors  ~~~~~~~~____________
-    111/2/nadir/0                -            3 floors  ~~~_________________
-    111/3/undercroft/0           -            1 floors  ~___________________
-    111/3/shallows/0             -            4 floors  ~~~~________________
-    111/3/deeps/0                -           15 floors  ~~~~~~~~~~~~~~~_____
-    111/3/underdeep/0            -            7 floors  ~~~~~~~_____________
-    111/3/nadir/0                -            1 floors  ~___________________
-
-  vertex 282 — karst cave, reach 483.46851 m, gradient 22.399271 K/km
-    282/0/undercroft/0           basement     3 floors  ###_________________
-    282/0/shallows/0             basement     6 floors  ######______________
-    282/0/deeps/0                basement    13 floors  #############_______
-    282/0/underdeep/0            -            8 floors  ........____________
-    282/0/nadir/0                -            3 floors  ..._________________
-    282/1/undercroft/0           -            2 floors  ~~__________________
-    282/1/shallows/0             basement     9 floors  #########___________
-    282/1/deeps/0                -           17 floors  ~~~~~~~~~~~~~~~~~___
-    282/1/underdeep/0            -           10 floors  ..........__________
-    282/1/nadir/0                -            5 floors  ~~~~~_______________
-    282/2/undercroft/0           -            4 floors  ~~~~________________
-    282/2/shallows/0             -            3 floors  ~~~_________________
-    282/2/deeps/0                -           20 floors  ~~~~~~~~~~~~~~~~~~~~
-    282/2/underdeep/0            -            5 floors  ....._______________
-    282/2/nadir/0                -            3 floors  ~~~_________________
-    282/3/undercroft/0           -            1 floors  ~___________________
-    282/3/shallows/0             -            8 floors  ~~~~~~~~____________
-    282/3/deeps/0                -           11 floors  ~~~~~~~~~~~_________
-    282/3/underdeep/0            -            7 floors  ~~~~~~~_____________
-    282/3/nadir/0                -            2 floors  ~~__________________
+  vertex 46 — karst cave, reach 315.07616 m, gradient 24.297621 K/km
+    46/0/undercroft/0            regolith     3 floors  ###_________________
+    46/0/shallows/0              basement     8 floors  ########____________
+    46/0/deeps/0                 -           17 floors  .................___
+    46/0/underdeep/0             -            7 floors  ......._____________
+    46/0/nadir/0                 -            3 floors  ..._________________
+    46/1/undercroft/0            -            3 floors  ~~~_________________
+    46/1/shallows/0              -            7 floors  ~~~~~~~_____________
+    46/1/deeps/0                 -            5 floors  ~~~~~_______________
+    46/1/underdeep/0             -            9 floors  .........___________
+    46/1/nadir/0                 -            1 floors  ~___________________
+    46/2/undercroft/0            -            4 floors  ~~~~________________
+    46/2/shallows/0              -            3 floors  ~~~_________________
+    46/2/deeps/0                 -           10 floors  ~~~~~~~~~~__________
+    46/2/underdeep/0             -            6 floors  ~~~~~~______________
+    46/2/nadir/0                 -            4 floors  ~~~~________________
+    46/3/undercroft/0            -            5 floors  ~~~~~_______________
+    46/3/shallows/0              -            4 floors  ~~~~________________
+    46/3/deeps/0                 -           20 floors  ~~~~~~~~~~~~~~~~~~~~
+    46/3/underdeep/0             -            8 floors  ~~~~~~~~____________
+    46/3/nadir/0                 -            4 floors  ~~~~________________
 
 seed 7
   derivation      chamber/v3 over chamber/run-floors/v2
   lattice         4 branches per system, 5 bands, 20 levels admitted per run
-  entrances       3177 drawn across 1681 systems, 962 multi-entrance (chamber/entrance-count/v2)
-  cave systems    1681  (ocean-vertex caves skipped: 0)
-  floors drawn    219277
-  chambers        59227
-  reachable       59227 from 3177 open entrances
-  junctions       8253 links across 3007 system pairs; largest network 118 systems at one band (MAP-underworld-shortcut)
-  by band         undercroft:7923  shallows:16455  deeps:20917  underdeep:10490  nadir:3442  
-  by rock         regolith:4306  cover:3540  basement:51381  roots:0  underneath:0  off-ladder:0
-  by origin       found:59182  made:45
+  entrances       3624 drawn across 1932 systems, 1101 multi-entrance (chamber/entrance-count/v2)
+  cave systems    1932  (ocean-vertex caves skipped: 0)
+  floors drawn    251815
+  chambers        54681
+  reachable       54681 from 3624 open entrances
+  junctions       9110 links across 3967 system pairs; largest network 171 systems at one band (MAP-underworld-shortcut)
+  by band         undercroft:9063  shallows:19372  deeps:17774  underdeep:8472  nadir:0  
+  by rock         regolith:4582  cover:3227  basement:46872  roots:0  underneath:0  off-ladder:0
+  by origin       found:54623  made:58
   past run length 0   (chambers beyond their run's drawn floors)
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
   the first three cave systems, run by run
   (key = the floor-0 address's spelling, not a derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
 
-  vertex 52 — karst cave, reach 249.24025 m, gradient 24.917192 K/km
+  vertex 52 — karst cave, reach 189.13732 m, gradient 24.917192 K/km
     52/0/undercroft/0            regolith     5 floors  #####_______________
     52/0/shallows/0              cover        3 floors  ###_________________
     52/0/deeps/0                 -           19 floors  ..................._
@@ -167,12 +167,12 @@ seed 7
     52/3/underdeep/0             -            5 floors  ~~~~~_______________
     52/3/nadir/0                 -            2 floors  ..__________________
 
-  vertex 70 — fracture cave, reach 2230.3734 m, gradient 24.795713 K/km
+  vertex 70 — fracture cave, reach 1543.0414 m, gradient 24.795713 K/km
     70/0/undercroft/0            regolith     2 floors  ##__________________
     70/0/shallows/0              basement     5 floors  #####_______________
     70/0/deeps/0                 basement     8 floors  ########____________
     70/0/underdeep/0             basement     7 floors  #######_____________
-    70/0/nadir/0                 basement     3 floors  ###_________________
+    70/0/nadir/0                 -            3 floors  ..._________________
     70/1/undercroft/0            -            3 floors  ~~~_________________
     70/1/shallows/0              -            9 floors  ~~~~~~~~~___________
     70/1/deeps/0                 basement    18 floors  ##################__
@@ -189,11 +189,11 @@ seed 7
     70/3/underdeep/0             -            9 floors  ~~~~~~~~~___________
     70/3/nadir/0                 -            3 floors  ~~~_________________
 
-  vertex 92 — karst cave, reach 1409.9429 m, gradient 26.976856 K/km
+  vertex 92 — karst cave, reach 750.39796 m, gradient 26.976856 K/km
     92/0/undercroft/0            regolith     5 floors  #####_______________
     92/0/shallows/0              cover        7 floors  #######_____________
     92/0/deeps/0                 basement     5 floors  #####_______________
-    92/0/underdeep/0             basement    10 floors  ##########__________
+    92/0/underdeep/0             -           10 floors  ..........__________
     92/0/nadir/0                 -            4 floors  ....________________
     92/1/undercroft/0            regolith     2 floors  ##__________________
     92/1/shallows/0              -            5 floors  ~~~~~_______________
@@ -214,32 +214,32 @@ seed 7
 seed 1234
   derivation      chamber/v3 over chamber/run-floors/v2
   lattice         4 branches per system, 5 bands, 20 levels admitted per run
-  entrances       2331 drawn across 1266 systems, 733 multi-entrance (chamber/entrance-count/v2)
-  cave systems    1266  (ocean-vertex caves skipped: 0)
-  floors drawn    164033
-  chambers        48294
-  reachable       48294 from 2331 open entrances
-  junctions       6937 links across 2348 system pairs; largest network 128 systems at one band (MAP-underworld-shortcut)
-  by band         undercroft:5910  shallows:12104  deeps:19940  underdeep:7759  nadir:2581  
-  by rock         regolith:2902  cover:2650  basement:42742  roots:0  underneath:0  off-ladder:0
-  by origin       found:48230  made:64
+  entrances       3088 drawn across 1632 systems, 962 multi-entrance (chamber/entrance-count/v2)
+  cave systems    1632  (ocean-vertex caves skipped: 0)
+  floors drawn    211274
+  chambers        46932
+  reachable       46932 from 3088 open entrances
+  junctions       8061 links across 3490 system pairs; largest network 170 systems at one band (MAP-underworld-shortcut)
+  by band         undercroft:7779  shallows:16748  deeps:16440  underdeep:5965  nadir:0  
+  by rock         regolith:3513  cover:2557  basement:40862  roots:0  underneath:0  off-ladder:0
+  by origin       found:46732  made:200
   past run length 0   (chambers beyond their run's drawn floors)
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
   the first three cave systems, run by run
   (key = the floor-0 address's spelling, not a derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
 
-  vertex 18 — fracture cave, reach 2694.0137 m, gradient 21.180804 K/km
+  vertex 18 — fracture cave, reach 1863.8021 m, gradient 21.180804 K/km
     18/0/undercroft/0            regolith     1 floors  #___________________
     18/0/shallows/0              basement    10 floors  ##########__________
     18/0/deeps/0                 basement     8 floors  ########____________
     18/0/underdeep/0             basement     8 floors  ########____________
-    18/0/nadir/0                 basement     4 floors  ####________________
+    18/0/nadir/0                 -            4 floors  ....________________
     18/1/undercroft/0            regolith     4 floors  ####________________
     18/1/shallows/0              -            9 floors  ~~~~~~~~~___________
     18/1/deeps/0                 -            9 floors  ~~~~~~~~~___________
     18/1/underdeep/0             -            9 floors  ~~~~~~~~~___________
-    18/1/nadir/0                 basement     1 floors  #___________________
+    18/1/nadir/0                 -            1 floors  .___________________
     18/2/undercroft/0            -            3 floors  ~~~_________________
     18/2/shallows/0              -            3 floors  ~~~_________________
     18/2/deeps/0                 -            7 floors  ~~~~~~~_____________
@@ -251,16 +251,16 @@ seed 1234
     18/3/underdeep/0             -            7 floors  ~~~~~~~_____________
     18/3/nadir/0                 -            5 floors  ~~~~~_______________
 
-  vertex 19 — fracture cave, reach 1699.8077 m, gradient 22.357908 K/km
+  vertex 19 — karst cave, reach 487.47221 m, gradient 22.357908 K/km
     19/0/undercroft/0            regolith     2 floors  ##__________________
     19/0/shallows/0              cover       10 floors  ##########__________
     19/0/deeps/0                 cover       16 floors  ################____
-    19/0/underdeep/0             basement     6 floors  ######______________
+    19/0/underdeep/0             -            6 floors  ......______________
     19/0/nadir/0                 -            3 floors  ..._________________
     19/1/undercroft/0            -            3 floors  ~~~_________________
     19/1/shallows/0              -           10 floors  ~~~~~~~~~~__________
     19/1/deeps/0                 -            6 floors  ~~~~~~______________
-    19/1/underdeep/0             basement     7 floors  #######_____________
+    19/1/underdeep/0             -            7 floors  ......._____________
     19/1/nadir/0                 -            3 floors  ~~~_________________
     19/2/undercroft/0            -            5 floors  ~~~~~_______________
     19/2/shallows/0              -            4 floors  ~~~~________________
@@ -273,25 +273,25 @@ seed 1234
     19/3/underdeep/0             -            9 floors  ~~~~~~~~~___________
     19/3/nadir/0                 -            5 floors  ~~~~~_______________
 
-  vertex 49 — fracture cave, reach 2039.1218 m, gradient 26.05835 K/km
-    49/0/undercroft/0            basement     2 floors  ##__________________
-    49/0/shallows/0              basement     4 floors  ####________________
-    49/0/deeps/0                 basement    12 floors  ############________
-    49/0/underdeep/0             basement     6 floors  ######______________
-    49/0/nadir/0                 basement     2 floors  ##__________________
-    49/1/undercroft/0            basement     3 floors  ###_________________
-    49/1/shallows/0              -            8 floors  ~~~~~~~~____________
-    49/1/deeps/0                 -           11 floors  ~~~~~~~~~~~_________
-    49/1/underdeep/0             basement     9 floors  #########___________
-    49/1/nadir/0                 -            5 floors  ~~~~~_______________
-    49/2/undercroft/0            basement     1 floors  #___________________
-    49/2/shallows/0              -            7 floors  ~~~~~~~_____________
-    49/2/deeps/0                 -            7 floors  ~~~~~~~_____________
-    49/2/underdeep/0             -            9 floors  ~~~~~~~~~___________
-    49/2/nadir/0                 -            4 floors  ~~~~________________
-    49/3/undercroft/0            -            4 floors  ~~~~________________
-    49/3/shallows/0              -            5 floors  ~~~~~_______________
-    49/3/deeps/0                 -           13 floors  ~~~~~~~~~~~~~_______
-    49/3/underdeep/0             -           10 floors  ~~~~~~~~~~__________
-    49/3/nadir/0                 -            5 floors  ~~~~~_______________
+  vertex 22 — karst cave, reach 136.63376 m, gradient 27.201293 K/km
+    22/0/undercroft/0            basement     1 floors  #___________________
+    22/0/shallows/0              basement     6 floors  ######______________
+    22/0/deeps/0                 -           14 floors  ..............______
+    22/0/underdeep/0             -            7 floors  ......._____________
+    22/0/nadir/0                 -            2 floors  ..__________________
+    22/1/undercroft/0            -            3 floors  ~~~_________________
+    22/1/shallows/0              basement     6 floors  ######______________
+    22/1/deeps/0                 -           16 floors  ~~~~~~~~~~~~~~~~____
+    22/1/underdeep/0             -           10 floors  ..........__________
+    22/1/nadir/0                 -            4 floors  ~~~~________________
+    22/2/undercroft/0            -            5 floors  ~~~~~_______________
+    22/2/shallows/0              -            5 floors  ~~~~~_______________
+    22/2/deeps/0                 -           20 floors  ~~~~~~~~~~~~~~~~~~~~
+    22/2/underdeep/0             -            9 floors  ~~~~~~~~~___________
+    22/2/nadir/0                 -            5 floors  ~~~~~_______________
+    22/3/undercroft/0            -            5 floors  ~~~~~_______________
+    22/3/shallows/0              -            9 floors  ~~~~~~~~~___________
+    22/3/deeps/0                 -           13 floors  ~~~~~~~~~~~~~_______
+    22/3/underdeep/0             -            5 floors  ~~~~~_______________
+    22/3/nadir/0                 -            3 floors  ~~~_________________
 ```

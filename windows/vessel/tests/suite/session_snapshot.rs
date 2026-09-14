@@ -35,7 +35,17 @@ use crate::common;
 /// it — the alarm fired again, exactly as designed, and
 /// `common::world_that_draws_a_creature` reports 1 as the new lowest
 /// qualifying seed. Renamed to match for the same reason as before.
-const OCCUPIED_SEED: u64 = 0;
+///
+/// **THE TRENCHER, Task 13: re-pointed 0 → 1 again.** Widening the
+/// `carbonate` and `metamorphic_grade` lithology axes moved elevation
+/// through `erodibility`, and seed 0's opening chamber is once again unlit
+/// where the fixture's mark has to sit. This constant has now oscillated 0 ↔ 1
+/// across three world-moving campaigns (The Glasshouse both ways, and this
+/// one), which is the alarm working: a fixture that must carry a mark is
+/// re-pointed, not quietly emptied. Measured over seeds 0..40 at this
+/// commit, 1 is again the lowest qualifying seed (3 marks); only 0 and 7
+/// qualify at none.
+const OCCUPIED_SEED: u64 = 1;
 
 fn world() -> World {
     hornvale_worldgen::seed_42_world()
@@ -574,7 +584,7 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
 /// within-room `Occupancy` is still its empty default, and its `marks` array is
 /// therefore `[]` — legitimately, not because nothing writes the field. That
 /// makes it the wrong fixture to decode a mark from, so
-/// `snapshot-seed-0-chamber-occupied.json` is taken one `wait` earlier and
+/// `snapshot-seed-<OCCUPIED_SEED>-chamber-occupied.json` is taken one `wait` earlier and
 /// carries a real creature. It is ADDITIVE: the two older fixtures' scripts are
 /// untouched, because changing one to gain a mark would have moved `turn`,
 /// `day` and `narration` in a file whose whole job is to hold those still.

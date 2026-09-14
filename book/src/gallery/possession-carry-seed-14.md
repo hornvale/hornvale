@@ -47,13 +47,13 @@ for the same reason, so the test that guards this shape and the page that
 publishes it now name the same world.)*
 
 ```text
-[room — old-growth timber]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+[room — a burnt-over thicket]
+Shrubland — a burnt-over thicket, sun-warmed, in a hollow — in the lands of Zazhazh. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Zazhazh. Underfoot, soft river silt; the ground pitches steeply.
+Here: Tzhepmedswet, Slopmet, Dzhekzh'wop and Zlakkzogsh'lat, and 54 others.
 > enter
 [chamber — threshold]
-A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+A small room in Zazhazh, holding a doorway, a bench, a water jar and a stone ledge.
+Here: Tzhepmedswet, Slopmet, Dzhekzh'wop and Zlakkzogsh'lat, and 54 others.
 Ways on: out, the hearth, the loomroom, the store.
 > carrying
 You are carrying nothing.
@@ -61,8 +61,8 @@ You are carrying nothing.
 You see no a key here.
 > enter the loomroom
 [chamber — loomroom]
-A small room in Vapatkapak, holding a doorway, a water jar, a loom, a key, a brazier and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+A small room in Zazhazh, holding a doorway, a water jar, a loom, a key, a brazier and a stone ledge.
+Here: Tzhepmedswet, Slopmet, Dzhekzh'wop and Zlakkzogsh'lat, and 54 others.
 Ways on: out.
 > take a key
 You take the key.
@@ -70,13 +70,13 @@ You take the key.
 You are carrying a key.
 > enter the threshold
 [chamber — threshold]
-A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+A small room in Zazhazh, holding a doorway, a bench, a water jar and a stone ledge.
+Here: Tzhepmedswet, Slopmet, Dzhekzh'wop and Zlakkzogsh'lat, and 54 others.
 Ways on: out, the hearth, the loomroom, the store.
 > enter the store
 [chamber — storeroom]
-A small room in Vapatkapak, holding a doorway, a water jar, a strongbox, a key and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+A small room in Zazhazh, holding a doorway, a water jar, a strongbox, a key and a stone ledge.
+Here: Tzhepmedswet, Slopmet, Dzhekzh'wop and Zlakkzogsh'lat, and 54 others.
 Ways on: out.
 > examine a strongbox
 A banded chest, low and heavier than it looks, its lid seated flush.
@@ -97,13 +97,13 @@ You close the strongbox.
 > open a strongbox
 You open the strongbox. Within it: a key.
 > out
-[room — old-growth timber]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+[room — a burnt-over thicket]
+Shrubland — a burnt-over thicket, sun-warmed, in a hollow — in the lands of Zazhazh. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Zazhazh. Underfoot, soft river silt; the ground pitches steeply.
+Here: Tzhepmedswet, Slopmet, Dzhekzh'wop and Zlakkzogsh'lat, and 54 others.
 > enter
 [chamber — threshold]
-A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+A small room in Zazhazh, holding a doorway, a bench, a water jar and a stone ledge.
+Here: Tzhepmedswet, Slopmet, Dzhekzh'wop and Zlakkzogsh'lat, and 54 others.
 Ways on: out, the hearth, the loomroom, the store.
 > carrying
 You are carrying a key.

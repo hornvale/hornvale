@@ -9,7 +9,7 @@ alpine: gap (experiential): no settlement in or beside alpine
 altar: gap (experiential): goblin has no exposure to 'altar'
 anvil: gap (experiential): goblin has no exposure to 'anvil'
 bait-ball: gap (experiential): goblin has no exposure to 'bait-ball'
-barley: root Nadae /nadae/
+barley: gap (experiential): goblin has no exposure to 'barley'
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): goblin has no exposure to 'bed'
 bench: gap (experiential): goblin has no exposure to 'bench'
@@ -36,7 +36,7 @@ content: gap (experiential): goblin has no exposure to 'content'
 coral-head: gap (experiential): goblin has no exposure to 'coral-head'
 coral-reef: gap (experiential): no settlement in or beside coral-reef
 crevasse-field: gap (experiential): goblin has no exposure to 'crevasse-field'
-damp-hollow: gap (experiential): goblin has no exposure to 'damp-hollow'
+damp-hollow: root Boba /boba/
 dark: root Naonaa /naonaa/
 day: root Kaa /kaa/
 desert: gap (experiential): no settlement in or beside desert
@@ -54,7 +54,7 @@ east: root Baenao /baenao/
 eat: root Noanoe /noanoe/
 eclipse: gap (experiential): goblin has no exposure to 'eclipse'
 encloses: gap (experiential): goblin has no exposure to 'encloses'
-epipelagic: gap (experiential): no settlement in or beside epipelagic
+epipelagic: gap (experiential): no compound recipe for 'epipelagic'
 erg: gap (experiential): goblin has no exposure to 'erg'
 eye: root Tetae /tetae/
 felsenmeer: gap (experiential): goblin has no exposure to 'felsenmeer'
@@ -129,7 +129,7 @@ lost: gap (experiential): goblin has no exposure to 'lost'
 low: root Keono /keono/
 many: root Naona /naona/
 marine-snow: gap (experiential): goblin has no exposure to 'marine-snow'
-marsh: root Kotoa /kotoa/
+marsh: gap (experiential): goblin has no exposure to 'marsh'
 melt-pond: gap (experiential): goblin has no exposure to 'melt-pond'
 mesopelagic: gap (experiential): no settlement in or beside mesopelagic
 millet: gap (experiential): goblin has no exposure to 'millet'
@@ -208,7 +208,7 @@ south: root Deobea /deobea/
 south-east: compound south+east -> Deobeabaenao /deobeabaenao/
 south-west: compound south+west -> Deobeadeokeo /deobeadeokeo/
 spirit: root Naotae /naotae/
-spring: gap (experiential): goblin has no exposure to 'spring'
+spring: root Tebae /tebae/
 spur-and-groove: gap (experiential): goblin has no exposure to 'spur-and-groove'
 staghorn-stand: gap (experiential): goblin has no exposure to 'staghorn-stand'
 star: root Beanoo /beanoo/
@@ -220,7 +220,7 @@ sun-like-star: gap (unnameable): no culture here has encountered the main sequen
 supports-rest: gap (experiential): goblin has no exposure to 'supports-rest'
 survey: gap (extradiegetic): survey is an operator instrument; it has no referent in the world
 svirfneblin-kind: root Neana /neana/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Na /na/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
@@ -237,7 +237,7 @@ treant-kind: gap (experiential): goblin has no exposure to 'treant-kind'
 tree: root Nena /nena/
 trench-floor: gap (experiential): goblin has no exposure to 'trench-floor'
 trench-wall: gap (experiential): goblin has no exposure to 'trench-wall'
-tropical-rainforest: gap (experiential): no compound recipe for 'tropical-rainforest'
+tropical-rainforest: gap (experiential): no settlement in or beside tropical-rainforest
 tropical-seasonal-forest: gap (experiential): no settlement in or beside tropical-seasonal-forest
 tuber: gap (experiential): goblin has no exposure to 'tuber'
 tubeworm-thicket: gap (experiential): goblin has no exposure to 'tubeworm-thicket'
@@ -280,8 +280,8 @@ alpine: gap (experiential): no settlement in or beside alpine
 altar: gap (experiential): hobgoblin has no exposure to 'altar'
 anvil: gap (experiential): hobgoblin has no exposure to 'anvil'
 bait-ball: gap (experiential): hobgoblin has no exposure to 'bait-ball'
-barley: gap (experiential): hobgoblin has no exposure to 'barley'
-bathypelagic: gap (experiential): no settlement in or beside bathypelagic
+barley: root Nabae /nabae/
+bathypelagic: gap (experiential): no compound recipe for 'bathypelagic'
 bed: gap (experiential): hobgoblin has no exposure to 'bed'
 bench: gap (experiential): hobgoblin has no exposure to 'bench'
 black-dragon-kind: gap (experiential): hobgoblin has no exposure to 'black-dragon-kind'
@@ -289,7 +289,7 @@ blood: root Tae /tae/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Babea /babea/
-boreal-stand: gap (experiential): hobgoblin has no exposure to 'boreal-stand'
+boreal-stand: root Boane /boane/
 bracken: gap (experiential): hobgoblin has no exposure to 'bracken'
 brazier: gap (experiential): hobgoblin has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6
@@ -304,7 +304,7 @@ coast: compound earth+water -> Bobeqa /bobeqa/
 cold: gap (experiential): hobgoblin has no exposure to 'cold'
 cold-upwelling: gap (experiential): hobgoblin has no exposure to 'cold-upwelling'
 content: root Nooqo /nooqo/
-coral-head: root Naono /naono/
+coral-head: gap (experiential): hobgoblin has no exposure to 'coral-head'
 coral-reef: root Nae /nae/
 crevasse-field: gap (experiential): hobgoblin has no exposure to 'crevasse-field'
 damp-hollow: root Boba /boba/
@@ -372,7 +372,7 @@ holdfast-tangle: gap (experiential): hobgoblin has no exposure to 'holdfast-tang
 holds-liquid: gap (experiential): hobgoblin has no exposure to 'holds-liquid'
 home: root Qoqe /qoqe/
 human-kind: root Noaka /noaka/
-hydrothermal-vent: gap (experiential): no settlement in or beside hydrothermal-vent
+hydrothermal-vent: gap (experiential): no compound recipe for 'hydrothermal-vent'
 ice: gap (experiential): no settlement in or beside ice
 ice-lead: gap (experiential): hobgoblin has no exposure to 'ice-lead'
 identify: gap (extradiegetic): identify is an operator instrument; it has no referent in the world
@@ -385,7 +385,7 @@ killer-whale-kind: gap (experiential): hobgoblin has no exposure to 'killer-whal
 know: gap (experiential): hobgoblin has no exposure to 'know'
 kobold-kind: root Naeno /naeno/
 kuo-toa-kind: root Boqe /boqe/
-lake: gap (experiential): hobgoblin has no exposure to 'lake'
+lake: compound little+water -> Neoboeqa /neoboeqa/
 ledge: gap (experiential): hobgoblin has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: root Neene /neene/
@@ -410,7 +410,7 @@ mountain: gap (experiential): hobgoblin has no exposure to 'mountain'
 mountain-dwarf-kind: root Bebee /bebee/
 mouth: root Noanaa /noanaa/
 move: root Goatee /goatee/
-muskeg: gap (experiential): hobgoblin has no exposure to 'muskeg'
+muskeg: root Beoqa /beoqa/
 name: root Boone /boone/
 new: root Neonae /neonae/
 night: root Beqaa /beqaa/
@@ -445,7 +445,7 @@ red: root Qage /qage/
 red-dragon-kind: gap (experiential): hobgoblin has no exposure to 'red-dragon-kind'
 red-dwarf: gap (unnameable): no culture here has encountered the main sequence
 red-giant: gap (unnameable): no culture here has encountered the main sequence
-reef-rubble: gap (experiential): hobgoblin has no exposure to 'reef-rubble'
+reef-rubble: root Qo /qo/
 reef-shark-kind: gap (experiential): hobgoblin has no exposure to 'reef-shark-kind'
 reg: gap (experiential): hobgoblin has no exposure to 'reg'
 rest: root Neane /neane/
@@ -455,9 +455,9 @@ river: root Qata /qata/
 rushes: gap (experiential): hobgoblin has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): hobgoblin has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): hobgoblin has no exposure to 'sargassum-drift'
-savanna: gap (experiential): no settlement in or beside savanna
+savanna: root Ga /ga/
 scattering-layer: gap (experiential): hobgoblin has no exposure to 'scattering-layer'
-sclerophyll-scrub: gap (experiential): hobgoblin has no exposure to 'sclerophyll-scrub'
+sclerophyll-scrub: root Netao /netao/
 scoured-ice: gap (experiential): hobgoblin has no exposure to 'scoured-ice'
 screen: gap (experiential): hobgoblin has no exposure to 'screen'
 sea: compound many+water -> Naonaqa /naonaqa/
@@ -467,7 +467,7 @@ searching: gap (experiential): hobgoblin has no exposure to 'searching'
 sense: gap (experiential): hobgoblin has no exposure to 'sense'
 shadow: gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6
 shrieker-kind: gap (experiential): hobgoblin has no exposure to 'shrieker-kind'
-shrubland: gap (experiential): no settlement in or beside shrubland
+shrubland: root Be /be/
 sibling: root Qebeo /qebeo/
 sleep: root Tanae /tanae/
 smoker-field: gap (experiential): hobgoblin has no exposure to 'smoker-field'
@@ -479,7 +479,7 @@ south: root Beogea /beogea/
 south-east: compound south+east -> Beogeabaenao /beogeabaenao/
 south-west: compound south+west -> Beogeabeokeo /beogeabeokeo/
 spirit: root Naoqae /naoqae/
-spring: gap (experiential): hobgoblin has no exposure to 'spring'
+spring: root Qebae /qebae/
 spur-and-groove: gap (experiential): hobgoblin has no exposure to 'spur-and-groove'
 staghorn-stand: gap (experiential): hobgoblin has no exposure to 'staghorn-stand'
 star: root Beanoo /beanoo/
@@ -491,10 +491,10 @@ sun-like-star: gap (unnameable): no culture here has encountered the main sequen
 supports-rest: gap (experiential): hobgoblin has no exposure to 'supports-rest'
 survey: gap (extradiegetic): survey is an operator instrument; it has no referent in the world
 svirfneblin-kind: root Neana /neana/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: root Qe /qe/
 temperate-forest: root Na /na/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: gap (experiential): no compound recipe for 'temperate-rainforest'
+temperate-rainforest: root Baenao /baenao/
 the-consumption: gap (experiential): hobgoblin has no exposure to 'the-consumption'
 the-flux: gap (experiential): hobgoblin has no exposure to 'the-flux'
 the-marsh-fever: gap (experiential): hobgoblin has no exposure to 'the-marsh-fever'
@@ -510,7 +510,7 @@ trench-floor: gap (experiential): hobgoblin has no exposure to 'trench-floor'
 trench-wall: gap (experiential): hobgoblin has no exposure to 'trench-wall'
 tropical-rainforest: root Qanee /qanee/
 tropical-seasonal-forest: root Noe /noe/
-tuber: gap (experiential): hobgoblin has no exposure to 'tuber'
+tuber: root Naoqoo /naoqoo/
 tubeworm-thicket: gap (experiential): hobgoblin has no exposure to 'tubeworm-thicket'
 tundra: gap (experiential): no settlement in or beside tundra
 twig-blight-kind: gap (experiential): hobgoblin has no exposure to 'twig-blight-kind'
@@ -532,7 +532,7 @@ white-dwarf: gap (unnameable): no culture here has encountered the main sequence
 wind: root Nekoo /nekoo/
 wind-scour: gap (experiential): hobgoblin has no exposure to 'wind-scour'
 wood-elf-kind: root Gebeo /gebeo/
-wooded-grassland: gap (experiential): hobgoblin has no exposure to 'wooded-grassland'
+wooded-grassland: root Bebea /bebea/
 woolly-mammoth-kind: gap (experiential): hobgoblin has no exposure to 'woolly-mammoth-kind'
 write: gap (experiential): hobgoblin has no exposure to 'write'
 xorn-kind: gap (experiential): hobgoblin has no exposure to 'xorn-kind'
@@ -570,7 +570,7 @@ carrion-crawler-kind: gap (experiential): bugbear has no exposure to 'carrion-cr
 cave-mouth: gap (experiential): bugbear has no exposure to 'cave-mouth'
 chart: gap (experiential): bugbear has no exposure to 'chart'
 child: root Dooda /dooda/
-closed-canopy: root Doaba /doaba/
+closed-canopy: gap (experiential): bugbear has no exposure to 'closed-canopy'
 coast: compound earth+water -> Bodoqa /bodoqa/
 cold: gap (experiential): bugbear has no exposure to 'cold'
 cold-upwelling: gap (experiential): bugbear has no exposure to 'cold-upwelling'
@@ -605,10 +605,10 @@ fire-scrub: gap (experiential): bugbear has no exposure to 'fire-scrub'
 fish-shoal: gap (experiential): bugbear has no exposure to 'fish-shoal'
 foot: root Go /go/
 ford: root Daadoo /daadoo/
-forest-gap: root Goa /goa/
+forest-gap: gap (experiential): bugbear has no exposure to 'forest-gap'
 frost-heave: gap (experiential): bugbear has no exposure to 'frost-heave'
 frustrated: root Qodoo /qodoo/
-gallery-forest: root Dagoo /dagoo/
+gallery-forest: gap (experiential): bugbear has no exposure to 'gallery-forest'
 giant-constrictor-snake-kind: gap (experiential): bugbear has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): bugbear has no exposure to 'giant-crocodile-kind'
 giant-elk-kind: gap (experiential): bugbear has no exposure to 'giant-elk-kind'
@@ -636,7 +636,7 @@ helpless: gap (experiential): bugbear has no exposure to 'helpless'
 high: root Doaboa /doaboa/
 high-elf-kind: root Doo /doo/
 high-seat: gap (experiential): bugbear has no exposure to 'high-seat'
-hill: root Doodo /doodo/
+hill: gap (experiential): bugbear has no exposure to 'hill'
 hill-dwarf-kind: root Goodoa /goodoa/
 hobgoblin-kind: root Dao /dao/
 holdfast-tangle: gap (experiential): bugbear has no exposure to 'holdfast-tangle'
@@ -656,7 +656,7 @@ killer-whale-kind: gap (experiential): bugbear has no exposure to 'killer-whale-
 know: gap (experiential): bugbear has no exposure to 'know'
 kobold-kind: root Daodo /daodo/
 kuo-toa-kind: root Boqo /boqo/
-lake: compound little+water -> Doodooqa /doodooqa/
+lake: gap (experiential): bugbear has no exposure to 'lake'
 ledge: gap (experiential): bugbear has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: root Doodo /doodo/
@@ -728,7 +728,7 @@ rust-monster-kind: gap (experiential): bugbear has no exposure to 'rust-monster-
 sargassum-drift: gap (experiential): bugbear has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
 scattering-layer: gap (experiential): bugbear has no exposure to 'scattering-layer'
-sclerophyll-scrub: root Dodao /dodao/
+sclerophyll-scrub: gap (experiential): bugbear has no exposure to 'sclerophyll-scrub'
 scoured-ice: gap (experiential): bugbear has no exposure to 'scoured-ice'
 screen: gap (experiential): bugbear has no exposure to 'screen'
 sea: compound many+water -> Daodaqa /daodaqa/
@@ -738,7 +738,7 @@ searching: root Godoa /godoa/
 sense: gap (experiential): bugbear has no exposure to 'sense'
 shadow: root Dado /dado/
 shrieker-kind: gap (experiential): bugbear has no exposure to 'shrieker-kind'
-shrubland: root Do /do/
+shrubland: gap (experiential): no settlement in or beside shrubland
 sibling: root Qodoo /qodoo/
 sleep: root Dadao /dadao/
 smoker-field: gap (experiential): bugbear has no exposure to 'smoker-field'
@@ -762,10 +762,10 @@ sun-like-star: gap (unnameable): no culture here has encountered the main sequen
 supports-rest: gap (experiential): bugbear has no exposure to 'supports-rest'
 survey: gap (extradiegetic): survey is an operator instrument; it has no referent in the world
 svirfneblin-kind: root Doada /doada/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Da /da/
-temperate-grassland: gap (experiential): no compound recipe for 'temperate-grassland'
-temperate-rainforest: root Daodao /daodao/
+temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
+temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
 the-consumption: gap (experiential): bugbear has no exposure to 'the-consumption'
 the-flux: gap (experiential): bugbear has no exposure to 'the-flux'
 the-marsh-fever: gap (experiential): bugbear has no exposure to 'the-marsh-fever'
@@ -780,7 +780,7 @@ tree: root Doda /doda/
 trench-floor: gap (experiential): bugbear has no exposure to 'trench-floor'
 trench-wall: gap (experiential): bugbear has no exposure to 'trench-wall'
 tropical-rainforest: root Qadoo /qadoo/
-tropical-seasonal-forest: root Doo /doo/
+tropical-seasonal-forest: gap (experiential): no compound recipe for 'tropical-seasonal-forest'
 tuber: gap (experiential): bugbear has no exposure to 'tuber'
 tubeworm-thicket: gap (experiential): bugbear has no exposure to 'tubeworm-thicket'
 tundra: gap (experiential): no settlement in or beside tundra
@@ -818,7 +818,7 @@ abyssal: gap (experiential): no settlement in or beside abyssal
 abyssal-plain: gap (experiential): kobold has no exposure to 'abyssal-plain'
 affords-passage: gap (experiential): kobold has no exposure to 'affords-passage'
 alcove: gap (experiential): kobold has no exposure to 'alcove'
-alpine: root Xorao /xorao/
+alpine: gap (experiential): no settlement in or beside alpine
 altar: gap (experiential): kobold has no exposure to 'altar'
 anvil: gap (experiential): kobold has no exposure to 'anvil'
 bait-ball: gap (experiential): kobold has no exposure to 'bait-ball'
@@ -836,7 +836,7 @@ bracken: gap (experiential): kobold has no exposure to 'bracken'
 brazier: gap (experiential): kobold has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9
 bugbear-kind: root Roxo /roxo/
-burn: root Raraa /raraa/
+burn: gap (experiential): kobold has no exposure to 'burn'
 carrion-crawler-kind: gap (experiential): kobold has no exposure to 'carrion-crawler-kind'
 cave-mouth: gap (experiential): kobold has no exposure to 'cave-mouth'
 chart: gap (experiential): kobold has no exposure to 'chart'
@@ -849,7 +849,7 @@ content: root Raroaxaa /raroaxaa/
 coral-head: gap (experiential): kobold has no exposure to 'coral-head'
 coral-reef: gap (experiential): no settlement in or beside coral-reef
 crevasse-field: gap (experiential): kobold has no exposure to 'crevasse-field'
-damp-hollow: root Roora /roora/
+damp-hollow: gap (experiential): kobold has no exposure to 'damp-hollow'
 dark: root Rao /rao/
 day: root Xaxaa /xaxaa/
 desert: gap (experiential): no settlement in or beside desert
@@ -876,8 +876,8 @@ fire-scrub: gap (experiential): kobold has no exposure to 'fire-scrub'
 fish-shoal: gap (experiential): kobold has no exposure to 'fish-shoal'
 foot: root Xoxo /xoxo/
 ford: root Roroaraa /roroaraa/
-forest-gap: root Roaroaro /roaroaro/
-frost-heave: root Raxa /raxa/
+forest-gap: gap (experiential): kobold has no exposure to 'forest-gap'
+frost-heave: gap (experiential): kobold has no exposure to 'frost-heave'
 frustrated: root Roxoxao /roxoxao/
 gallery-forest: gap (experiential): kobold has no exposure to 'gallery-forest'
 giant-constrictor-snake-kind: gap (experiential): kobold has no exposure to 'giant-constrictor-snake-kind'
@@ -927,7 +927,7 @@ killer-whale-kind: gap (experiential): kobold has no exposure to 'killer-whale-k
 know: gap (experiential): kobold has no exposure to 'know'
 kobold-kind: root Rara /rara/
 kuo-toa-kind: root Raaxaoxao /raaxaoxao/
-lake: compound little+water -> Xoroaroaroaroa /xoroaroaroaroa/
+lake: gap (experiential): kobold has no exposure to 'lake'
 ledge: gap (experiential): kobold has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): kobold has no exposure to 'liana-forest'
@@ -952,7 +952,7 @@ mountain: gap (experiential): kobold has no exposure to 'mountain'
 mountain-dwarf-kind: root Roxaxa /roxaxa/
 mouth: root Rorao /rorao/
 move: root Xaoroa /xaoroa/
-muskeg: root Rooroaxoo /rooroaxoo/
+muskeg: gap (experiential): kobold has no exposure to 'muskeg'
 name: root Rooro /rooro/
 new: root Raaroaroo /raaroaroo/
 night: root Xaoro /xaoro/
@@ -961,7 +961,7 @@ north: root Raxaorao /raxaorao/
 north-east: compound north+east -> Raaroraraxaorao /raaroraraxaorao/
 north-west: compound north+west -> Xoaxorooraxaorao /xoaxorooraxaorao/
 old: root Xaroroo /xaroroo/
-old-growth: gap (experiential): kobold has no exposure to 'old-growth'
+old-growth: root Xaoraa /xaoraa/
 one: root Raaxoa /raaxoa/
 open-blue: gap (experiential): kobold has no exposure to 'open-blue'
 openable: gap (experiential): kobold has no exposure to 'openable'
@@ -999,7 +999,7 @@ rust-monster-kind: gap (experiential): kobold has no exposure to 'rust-monster-k
 sargassum-drift: gap (experiential): kobold has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
 scattering-layer: gap (experiential): kobold has no exposure to 'scattering-layer'
-sclerophyll-scrub: root Rorooxo /rorooxo/
+sclerophyll-scrub: gap (experiential): kobold has no exposure to 'sclerophyll-scrub'
 scoured-ice: gap (experiential): kobold has no exposure to 'scoured-ice'
 screen: gap (experiential): kobold has no exposure to 'screen'
 sea: gap (experiential): no settlement in or beside sea
@@ -1009,7 +1009,7 @@ searching: gap (experiential): kobold has no exposure to 'searching'
 sense: gap (experiential): kobold has no exposure to 'sense'
 shadow: root Xooraa /xooraa/
 shrieker-kind: gap (experiential): kobold has no exposure to 'shrieker-kind'
-shrubland: root Raaro /raaro/
+shrubland: gap (experiential): no settlement in or beside shrubland
 sibling: root Rooraa /rooraa/
 sleep: root Xoarao /xoarao/
 smoker-field: gap (experiential): kobold has no exposure to 'smoker-field'
@@ -1021,7 +1021,7 @@ south: root Xoorooxa /xoorooxa/
 south-east: compound south+east -> Raaroraxoorooxa /raaroraxoorooxa/
 south-west: compound south+west -> Xoaxorooxoorooxa /xoaxorooxoorooxa/
 spirit: root Roaxo /roaxo/
-spring: root Rooraro /rooraro/
+spring: gap (experiential): kobold has no exposure to 'spring'
 spur-and-groove: gap (experiential): kobold has no exposure to 'spur-and-groove'
 staghorn-stand: gap (experiential): kobold has no exposure to 'staghorn-stand'
 star: root Roxoa /roxoa/
@@ -1054,7 +1054,7 @@ tropical-rainforest: gap (experiential): no settlement in or beside tropical-rai
 tropical-seasonal-forest: gap (experiential): no settlement in or beside tropical-seasonal-forest
 tuber: gap (experiential): kobold has no exposure to 'tuber'
 tubeworm-thicket: gap (experiential): kobold has no exposure to 'tubeworm-thicket'
-tundra: gap (experiential): no settlement in or beside tundra
+tundra: root Roaro /roaro/
 twig-blight-kind: gap (experiential): kobold has no exposure to 'twig-blight-kind'
 twilight-water: gap (experiential): kobold has no exposure to 'twilight-water'
 two: root Xaaraaroa /xaaraaroa/
@@ -1068,7 +1068,7 @@ vine: root Raaxoora /raaxoora/
 wait: gap (experiential): kobold has no exposure to 'wait'
 water: root Xoroa /xoroa/
 west: root Xoaxoroo /xoaxoroo/
-wheat: root Xoxoraa /xoxoraa/
+wheat: gap (experiential): kobold has no exposure to 'wheat'
 white-dragon-kind: gap (experiential): kobold has no exposure to 'white-dragon-kind'
 white-dwarf: gap (unnameable): no culture here has encountered the main sequence
 wind: root Raxoo /raxoo/
@@ -1093,7 +1093,7 @@ alpine: gap (experiential): no settlement in or beside alpine
 altar: gap (experiential): gnoll has no exposure to 'altar'
 anvil: gap (experiential): gnoll has no exposure to 'anvil'
 bait-ball: gap (experiential): gnoll has no exposure to 'bait-ball'
-barley: root Zngoav /zŋoav/
+barley: gap (experiential): gnoll has no exposure to 'barley'
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): gnoll has no exposure to 'bed'
 bench: gap (experiential): gnoll has no exposure to 'bench'
@@ -1120,7 +1120,7 @@ content: gap (experiential): gnoll has no exposure to 'content'
 coral-head: gap (experiential): gnoll has no exposure to 'coral-head'
 coral-reef: gap (experiential): no compound recipe for 'coral-reef'
 crevasse-field: gap (experiential): gnoll has no exposure to 'crevasse-field'
-damp-hollow: root Zhnaap /ʒnaap/
+damp-hollow: gap (experiential): gnoll has no exposure to 'damp-hollow'
 dark: root Dsa /dsa/
 day: root Qshoadzav /qʃoadzav/
 desert: gap (experiential): no settlement in or beside desert
@@ -1138,17 +1138,17 @@ east: root Shmaaxgzaav /ʃmaaxgzaav/
 eat: root Shngaosmoa /ʃŋaosmoa/
 eclipse: gap (experiential): gnoll has no exposure to 'eclipse'
 encloses: gap (experiential): gnoll has no exposure to 'encloses'
-epipelagic: gap (experiential): no compound recipe for 'epipelagic'
+epipelagic: gap (experiential): no settlement in or beside epipelagic
 erg: gap (experiential): gnoll has no exposure to 'erg'
 eye: root Qzao /qzao/
-felsenmeer: root Qshap /qʃap/
+felsenmeer: gap (experiential): gnoll has no exposure to 'felsenmeer'
 fire: root Gzhov /gʒov/
-fire-scrub: root Psax /psax/
+fire-scrub: gap (experiential): gnoll has no exposure to 'fire-scrub'
 fish-shoal: gap (experiential): gnoll has no exposure to 'fish-shoal'
 foot: root Snao /snao/
 ford: root Dzoxgzhop /dzoxgʒop/
 forest-gap: gap (experiential): gnoll has no exposure to 'forest-gap'
-frost-heave: root Gzhoav /gʒoav/
+frost-heave: gap (experiential): gnoll has no exposure to 'frost-heave'
 frustrated: root Gzaxdzov /gzaxdzov/
 gallery-forest: gap (experiential): gnoll has no exposure to 'gallery-forest'
 giant-constrictor-snake-kind: gap (experiential): gnoll has no exposure to 'giant-constrictor-snake-kind'
@@ -1198,7 +1198,7 @@ killer-whale-kind: gap (experiential): gnoll has no exposure to 'killer-whale-ki
 know: gap (experiential): gnoll has no exposure to 'know'
 kobold-kind: root Shmoox /ʃmoox/
 kuo-toa-kind: root Gsaovzhmop /gsaovʒmop/
-lake: gap (experiential): gnoll has no exposure to 'lake'
+lake: compound little+water -> Qsooxpshaodsax /qsooxpʃaodsax/
 ledge: gap (experiential): gnoll has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): gnoll has no exposure to 'liana-forest'
@@ -1232,7 +1232,7 @@ north: root Zmoav /zmoav/
 north-east: compound north+east -> Shmaaxgzaavzmoav /ʃmaaxgzaavzmoav/
 north-west: compound north+west -> Smaxgsavzmoav /smaxgsavzmoav/
 old: root Sngoav /sŋoav/
-old-growth: root Dsop /dsop/
+old-growth: gap (experiential): gnoll has no exposure to 'old-growth'
 one: root Dzhoapzhaap /dʒoapʒaap/
 open-blue: gap (experiential): gnoll has no exposure to 'open-blue'
 openable: gap (experiential): gnoll has no exposure to 'openable'
@@ -1305,8 +1305,8 @@ supports-rest: gap (experiential): gnoll has no exposure to 'supports-rest'
 survey: gap (extradiegetic): survey is an operator instrument; it has no referent in the world
 svirfneblin-kind: root Shnaox /ʃnaox/
 taiga: gap (experiential): no settlement in or beside taiga
-temperate-forest: root Qsagzoo /qsagzoo/
-temperate-grassland: root Qshavshma /qʃavʃma/
+temperate-forest: gap (experiential): no compound recipe for 'temperate-forest'
+temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
 the-consumption: gap (experiential): gnoll has no exposure to 'the-consumption'
 the-flux: gap (experiential): gnoll has no exposure to 'the-flux'
@@ -1325,17 +1325,17 @@ tropical-rainforest: gap (experiential): no settlement in or beside tropical-rai
 tropical-seasonal-forest: gap (experiential): no compound recipe for 'tropical-seasonal-forest'
 tuber: gap (experiential): gnoll has no exposure to 'tuber'
 tubeworm-thicket: gap (experiential): gnoll has no exposure to 'tubeworm-thicket'
-tundra: root Dzhoosnox /dʒoosnox/
+tundra: gap (experiential): no settlement in or beside tundra
 twig-blight-kind: gap (experiential): gnoll has no exposure to 'twig-blight-kind'
 twilight-water: gap (experiential): gnoll has no exposure to 'twilight-water'
 two: root Dsho /dʃo/
 under: root Dzoop /dzoop/
-upwelling: gap (experiential): no compound recipe for 'upwelling'
+upwelling: gap (experiential): no settlement in or beside upwelling
 urchin-barren: gap (experiential): gnoll has no exposure to 'urchin-barren'
-valley: gap (experiential): gnoll has no exposure to 'valley'
+valley: root Znop /znop/
 vent-plume: gap (experiential): gnoll has no exposure to 'vent-plume'
 vessel: gap (experiential): gnoll has no exposure to 'vessel'
-vine: root Shnoopzngaop /ʃnoopzŋaop/
+vine: gap (experiential): gnoll lives by herding here and raises no staple
 wait: gap (experiential): gnoll has no exposure to 'wait'
 water: root Qsooxpshao /qsooxpʃao/
 west: root Smaxgsav /smaxgsav/
@@ -1343,9 +1343,9 @@ wheat: gap (experiential): gnoll has no exposure to 'wheat'
 white-dragon-kind: gap (experiential): gnoll has no exposure to 'white-dragon-kind'
 white-dwarf: gap (unnameable): no culture here has encountered the main sequence
 wind: root Snoaxzhmox /snoaxʒmox/
-wind-scour: root Dshaox /dʃaox/
+wind-scour: gap (experiential): gnoll has no exposure to 'wind-scour'
 wood-elf-kind: root Shmoavdzoov /ʃmoavdzoov/
-wooded-grassland: root Dsopgsoov /dsopgsoov/
+wooded-grassland: gap (experiential): gnoll has no exposure to 'wooded-grassland'
 woolly-mammoth-kind: gap (experiential): gnoll has no exposure to 'woolly-mammoth-kind'
 write: gap (experiential): gnoll has no exposure to 'write'
 xorn-kind: gap (experiential): gnoll has no exposure to 'xorn-kind'
@@ -1364,7 +1364,7 @@ alpine: gap (experiential): no settlement in or beside alpine
 altar: gap (experiential): human has no exposure to 'altar'
 anvil: gap (experiential): human has no exposure to 'anvil'
 bait-ball: gap (experiential): human has no exposure to 'bait-ball'
-barley: root Vakvee /vakvee/
+barley: gap (experiential): human has no exposure to 'barley'
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): human has no exposure to 'bed'
 bench: gap (experiential): human has no exposure to 'bench'
@@ -1383,13 +1383,13 @@ carrion-crawler-kind: gap (experiential): human has no exposure to 'carrion-craw
 cave-mouth: gap (experiential): human has no exposure to 'cave-mouth'
 chart: gap (experiential): human has no exposure to 'chart'
 child: root Ve /ve/
-closed-canopy: gap (experiential): human has no exposure to 'closed-canopy'
-coast: gap (experiential): human has no exposure to 'coast'
+closed-canopy: root Vao /vao/
+coast: compound earth+water -> Teatxaoxatvao /teatxaoxatvao/
 cold: gap (experiential): human has no exposure to 'cold'
 cold-upwelling: gap (experiential): human has no exposure to 'cold-upwelling'
 content: root Retao /retao/
 coral-head: gap (experiential): human has no exposure to 'coral-head'
-coral-reef: gap (experiential): no settlement in or beside coral-reef
+coral-reef: gap (experiential): no compound recipe for 'coral-reef'
 crevasse-field: gap (experiential): human has no exposure to 'crevasse-field'
 damp-hollow: root Pere /pere/
 dark: root Kogoo /kogoo/
@@ -1484,7 +1484,7 @@ lost: gap (experiential): human has no exposure to 'lost'
 low: root Rookoe /rookoe/
 many: root Roo /roo/
 marine-snow: gap (experiential): human has no exposure to 'marine-snow'
-marsh: root Raoreo /raoreo/
+marsh: gap (experiential): human has no exposure to 'marsh'
 melt-pond: gap (experiential): human has no exposure to 'melt-pond'
 mesopelagic: gap (experiential): no settlement in or beside mesopelagic
 millet: gap (experiential): human has no exposure to 'millet'
@@ -1534,7 +1534,7 @@ reef-shark-kind: gap (experiential): human has no exposure to 'reef-shark-kind'
 reg: gap (experiential): human has no exposure to 'reg'
 rest: root Rooga /rooga/
 rhinoceros-kind: gap (experiential): human has no exposure to 'rhinoceros-kind'
-rice: gap (experiential): human has no exposure to 'rice'
+rice: root Rata /rata/
 river: root Roere /roere/
 rushes: gap (experiential): human has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): human has no exposure to 'rust-monster-kind'
@@ -1544,7 +1544,7 @@ scattering-layer: gap (experiential): human has no exposure to 'scattering-layer
 sclerophyll-scrub: gap (experiential): human has no exposure to 'sclerophyll-scrub'
 scoured-ice: gap (experiential): human has no exposure to 'scoured-ice'
 screen: gap (experiential): human has no exposure to 'screen'
-sea: gap (experiential): no settlement in or beside sea
+sea: compound many+water -> Teatxaoroo /teatxaoroo/
 sea-elf-kind: root Tore /tore/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 searching: gap (experiential): human has no exposure to 'searching'
@@ -1563,7 +1563,7 @@ south: root Xagoe /xagoe/
 south-east: compound south+east -> Keraxagoe /keraxagoe/
 south-west: compound south+west -> Reeroxagoe /reeroxagoe/
 spirit: root Peorea /peorea/
-spring: gap (experiential): human has no exposure to 'spring'
+spring: root Fa /fa/
 spur-and-groove: gap (experiential): human has no exposure to 'spur-and-groove'
 staghorn-stand: gap (experiential): human has no exposure to 'staghorn-stand'
 star: root Ropao /ropao/
@@ -1575,7 +1575,7 @@ sun-like-star: gap (unnameable): no culture here has encountered the main sequen
 supports-rest: gap (experiential): human has no exposure to 'supports-rest'
 survey: gap (extradiegetic): survey is an operator instrument; it has no referent in the world
 svirfneblin-kind: root Ferao /ferao/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Pera /pera/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
@@ -1592,8 +1592,8 @@ treant-kind: gap (experiential): human has no exposure to 'treant-kind'
 tree: root Farao /farao/
 trench-floor: gap (experiential): human has no exposure to 'trench-floor'
 trench-wall: gap (experiential): human has no exposure to 'trench-wall'
-tropical-rainforest: gap (experiential): no settlement in or beside tropical-rainforest
-tropical-seasonal-forest: gap (experiential): no settlement in or beside tropical-seasonal-forest
+tropical-rainforest: gap (experiential): no compound recipe for 'tropical-rainforest'
+tropical-seasonal-forest: root Vaatfa /vaatfa/
 tuber: gap (experiential): human has no exposure to 'tuber'
 tubeworm-thicket: gap (experiential): human has no exposure to 'tubeworm-thicket'
 tundra: gap (experiential): no settlement in or beside tundra
@@ -1603,14 +1603,14 @@ two: root Tago /tago/
 under: root Veero /veero/
 upwelling: gap (experiential): no settlement in or beside upwelling
 urchin-barren: gap (experiential): human has no exposure to 'urchin-barren'
-valley: root Xeke /xeke/
+valley: gap (experiential): human has no exposure to 'valley'
 vent-plume: gap (experiential): human has no exposure to 'vent-plume'
 vessel: gap (experiential): human has no exposure to 'vessel'
 vine: root Reko /reko/
 wait: gap (experiential): human has no exposure to 'wait'
 water: root Teatxao /teatxao/
 west: root Reero /reero/
-wheat: root Koka /koka/
+wheat: gap (experiential): human has no exposure to 'wheat'
 white-dragon-kind: gap (experiential): human has no exposure to 'white-dragon-kind'
 white-dwarf: gap (unnameable): no culture here has encountered the main sequence
 wind: root Xeakvaa /xeakvaa/
@@ -1662,7 +1662,7 @@ content: root Dapad /dapad/
 coral-head: gap (experiential): desert-dwarf has no exposure to 'coral-head'
 coral-reef: gap (experiential): no settlement in or beside coral-reef
 crevasse-field: gap (experiential): desert-dwarf has no exposure to 'crevasse-field'
-damp-hollow: root Dadag /dadag/
+damp-hollow: gap (experiential): desert-dwarf has no exposure to 'damp-hollow'
 dark: root Dadang /dadaŋ/
 day: root Shanaj /ʃanaj/
 desert: gap (experiential): no settlement in or beside desert
@@ -1680,7 +1680,7 @@ east: root Gashagav /gaʃagav/
 eat: root Shadang /ʃadaŋ/
 eclipse: gap (experiential): desert-dwarf has no exposure to 'eclipse'
 encloses: gap (experiential): desert-dwarf has no exposure to 'encloses'
-epipelagic: gap (experiential): no compound recipe for 'epipelagic'
+epipelagic: gap (experiential): no settlement in or beside epipelagic
 erg: gap (experiential): desert-dwarf has no exposure to 'erg'
 eye: root Sadan /sadan/
 felsenmeer: gap (experiential): desert-dwarf has no exposure to 'felsenmeer'
@@ -1740,7 +1740,7 @@ killer-whale-kind: gap (experiential): desert-dwarf has no exposure to 'killer-w
 know: gap (experiential): desert-dwarf has no exposure to 'know'
 kobold-kind: root Sadag /sadag/
 kuo-toa-kind: root Dajag /dajag/
-lake: compound little+water -> Xanapdanag /xanapdanag/
+lake: gap (experiential): desert-dwarf has no exposure to 'lake'
 ledge: gap (experiential): desert-dwarf has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): desert-dwarf has no exposure to 'liana-forest'
@@ -1774,7 +1774,7 @@ north: root Pashap /paʃap/
 north-east: compound north+east -> Gashagavpashap /gaʃagavpaʃap/
 north-west: compound north+west -> Vashajpashap /vaʃajpaʃap/
 old: root Nasap /nasap/
-old-growth: gap (experiential): desert-dwarf has no exposure to 'old-growth'
+old-growth: root Dajad /dajad/
 one: root Dashad /daʃad/
 open-blue: gap (experiential): desert-dwarf has no exposure to 'open-blue'
 openable: gap (experiential): desert-dwarf has no exposure to 'openable'
@@ -1848,7 +1848,7 @@ survey: gap (extradiegetic): survey is an operator instrument; it has no referen
 svirfneblin-kind: root Vangas /vaŋas/
 taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Nadash /nadaʃ/
-temperate-grassland: gap (experiential): no compound recipe for 'temperate-grassland'
+temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
 the-consumption: gap (experiential): desert-dwarf has no exposure to 'the-consumption'
 the-flux: gap (experiential): desert-dwarf has no exposure to 'the-flux'
@@ -1856,7 +1856,7 @@ the-marsh-fever: gap (experiential): desert-dwarf has no exposure to 'the-marsh-
 the-pest: gap (experiential): desert-dwarf has no exposure to 'the-pest'
 the-pox: gap (experiential): desert-dwarf has no exposure to 'the-pox'
 think: root Gangav /gaŋav/
-thorn-scrub: root Qadad /qadad/
+thorn-scrub: gap (experiential): desert-dwarf has no exposure to 'thorn-scrub'
 threshold: gap (experiential): desert-dwarf has no exposure to 'threshold'
 tide: gap (experiential): desert-dwarf has no exposure to 'tide'
 treant-kind: gap (experiential): desert-dwarf has no exposure to 'treant-kind'
@@ -1872,7 +1872,7 @@ twig-blight-kind: gap (experiential): desert-dwarf has no exposure to 'twig-blig
 twilight-water: gap (experiential): desert-dwarf has no exposure to 'twilight-water'
 two: root Davad /davad/
 under: root Qavad /qavad/
-upwelling: gap (experiential): no settlement in or beside upwelling
+upwelling: gap (experiential): no compound recipe for 'upwelling'
 urchin-barren: gap (experiential): desert-dwarf has no exposure to 'urchin-barren'
 valley: gap (experiential): desert-dwarf has no exposure to 'valley'
 vent-plume: gap (experiential): desert-dwarf has no exposure to 'vent-plume'
@@ -1906,7 +1906,7 @@ alpine: gap (experiential): no settlement in or beside alpine
 altar: gap (experiential): gully-dwarf has no exposure to 'altar'
 anvil: gap (experiential): gully-dwarf has no exposure to 'anvil'
 bait-ball: gap (experiential): gully-dwarf has no exposure to 'bait-ball'
-barley: gap (experiential): gully-dwarf has no exposure to 'barley'
+barley: root Najaj /najaj/
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): gully-dwarf has no exposure to 'bed'
 bench: gap (experiential): gully-dwarf has no exposure to 'bench'
@@ -1951,19 +1951,19 @@ east: root Gashagab /gaʃagab/
 eat: root Shabang /ʃabaŋ/
 eclipse: gap (experiential): gully-dwarf has no exposure to 'eclipse'
 encloses: gap (experiential): gully-dwarf has no exposure to 'encloses'
-epipelagic: gap (experiential): no compound recipe for 'epipelagic'
+epipelagic: gap (experiential): no settlement in or beside epipelagic
 erg: gap (experiential): gully-dwarf has no exposure to 'erg'
 eye: root Tatan /tatan/
 felsenmeer: gap (experiential): gully-dwarf has no exposure to 'felsenmeer'
 fire: root Babab /babab/
-fire-scrub: root Tanan /tanan/
+fire-scrub: gap (experiential): gully-dwarf has no exposure to 'fire-scrub'
 fish-shoal: gap (experiential): gully-dwarf has no exposure to 'fish-shoal'
 foot: root Nanax /nanax/
 ford: root Shaxat /ʃaxat/
 forest-gap: gap (experiential): gully-dwarf has no exposure to 'forest-gap'
 frost-heave: gap (experiential): gully-dwarf has no exposure to 'frost-heave'
 frustrated: gap (experiential): gully-dwarf has no exposure to 'frustrated'
-gallery-forest: root Bataq /bataq/
+gallery-forest: gap (experiential): gully-dwarf has no exposure to 'gallery-forest'
 giant-constrictor-snake-kind: gap (experiential): gully-dwarf has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): gully-dwarf has no exposure to 'giant-crocodile-kind'
 giant-elk-kind: gap (experiential): gully-dwarf has no exposure to 'giant-elk-kind'
@@ -2004,17 +2004,17 @@ ice-lead: gap (experiential): gully-dwarf has no exposure to 'ice-lead'
 identify: gap (extradiegetic): identify is an operator instrument; it has no referent in the world
 island: gap (experiential): gully-dwarf has no exposure to 'island'
 kelp-canopy: gap (experiential): gully-dwarf has no exposure to 'kelp-canopy'
-kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kelp-forest: gap (experiential): no compound recipe for 'kelp-forest'
 key: gap (experiential): gully-dwarf has no exposure to 'key'
 kill: root Qabag /qabag/
 killer-whale-kind: gap (experiential): gully-dwarf has no exposure to 'killer-whale-kind'
 know: gap (experiential): gully-dwarf has no exposure to 'know'
 kobold-kind: root Tatag /tatag/
 kuo-toa-kind: root Bajag /bajag/
-lake: compound little+water -> Xanabbanag /xanabbanag/
+lake: gap (experiential): gully-dwarf has no exposure to 'lake'
 ledge: gap (experiential): gully-dwarf has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
-liana-forest: gap (experiential): gully-dwarf has no exposure to 'liana-forest'
+liana-forest: root Taxan /taxan/
 light: root Bangat /baŋat/
 lightless-water: gap (experiential): gully-dwarf has no exposure to 'lightless-water'
 little: root Banag /banag/
@@ -2029,14 +2029,14 @@ marine-snow: gap (experiential): gully-dwarf has no exposure to 'marine-snow'
 marsh: gap (experiential): gully-dwarf has no exposure to 'marsh'
 melt-pond: gap (experiential): gully-dwarf has no exposure to 'melt-pond'
 mesopelagic: gap (experiential): no settlement in or beside mesopelagic
-millet: gap (experiential): gully-dwarf has no exposure to 'millet'
+millet: root Xatan /xatan/
 moon: root Babat /babat/
 mossy-deadfall: gap (experiential): gully-dwarf has no exposure to 'mossy-deadfall'
 mountain: gap (experiential): gully-dwarf has no exposure to 'mountain'
 mountain-dwarf-kind: root Nanab /nanab/
 mouth: root Naqang /naqaŋ/
 move: root Tanash /tanaʃ/
-muskeg: gap (experiential): gully-dwarf has no exposure to 'muskeg'
+muskeg: root Gaqab /gaqab/
 name: root Gabash /gabaʃ/
 new: root Gatab /gatab/
 night: root Ngaxash /ŋaxaʃ/
@@ -2093,7 +2093,7 @@ searching: gap (experiential): gully-dwarf has no exposure to 'searching'
 sense: gap (experiential): gully-dwarf has no exposure to 'sense'
 shadow: root Naxab /naxab/
 shrieker-kind: gap (experiential): gully-dwarf has no exposure to 'shrieker-kind'
-shrubland: root Tabab /tabab/
+shrubland: gap (experiential): no settlement in or beside shrubland
 sibling: root Xanag /xanag/
 sleep: root Qaqaj /qaqaj/
 smoker-field: gap (experiential): gully-dwarf has no exposure to 'smoker-field'
@@ -2105,7 +2105,7 @@ south: root Tajaj /tajaj/
 south-east: compound south+east -> Gashagabtajaj /gaʃagabtajaj/
 south-west: compound south+west -> Bashajtajaj /baʃajtajaj/
 spirit: root Jabab /jabab/
-spring: gap (experiential): gully-dwarf has no exposure to 'spring'
+spring: root Qangab /qaŋab/
 spur-and-groove: gap (experiential): gully-dwarf has no exposure to 'spur-and-groove'
 staghorn-stand: gap (experiential): gully-dwarf has no exposure to 'staghorn-stand'
 star: root Nashat /naʃat/
@@ -2117,7 +2117,7 @@ sun-like-star: gap (unnameable): no culture here has encountered the main sequen
 supports-rest: gap (experiential): gully-dwarf has no exposure to 'supports-rest'
 survey: gap (extradiegetic): survey is an operator instrument; it has no referent in the world
 svirfneblin-kind: root Bangat /baŋat/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: root Nangab /naŋab/
 temperate-forest: gap (experiential): no compound recipe for 'temperate-forest'
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
@@ -2138,17 +2138,17 @@ tropical-rainforest: gap (experiential): no settlement in or beside tropical-rai
 tropical-seasonal-forest: root Babab /babab/
 tuber: gap (experiential): gully-dwarf has no exposure to 'tuber'
 tubeworm-thicket: gap (experiential): gully-dwarf has no exposure to 'tubeworm-thicket'
-tundra: gap (experiential): no settlement in or beside tundra
+tundra: gap (experiential): no compound recipe for 'tundra'
 twig-blight-kind: gap (experiential): gully-dwarf has no exposure to 'twig-blight-kind'
 twilight-water: gap (experiential): gully-dwarf has no exposure to 'twilight-water'
 two: root Tabab /tabab/
 under: root Qaban /qaban/
-upwelling: gap (experiential): no settlement in or beside upwelling
+upwelling: gap (experiential): no compound recipe for 'upwelling'
 urchin-barren: gap (experiential): gully-dwarf has no exposure to 'urchin-barren'
 valley: gap (experiential): gully-dwarf has no exposure to 'valley'
 vent-plume: gap (experiential): gully-dwarf has no exposure to 'vent-plume'
 vessel: gap (experiential): gully-dwarf has no exposure to 'vessel'
-vine: gap (experiential): gully-dwarf lives by fishing here and raises no staple
+vine: gap (experiential): gully-dwarf has no exposure to 'vine'
 wait: gap (experiential): gully-dwarf has no exposure to 'wait'
 water: root Xanab /xanab/
 west: root Bashaj /baʃaj/
@@ -2177,7 +2177,7 @@ alpine: gap (experiential): no settlement in or beside alpine
 altar: gap (experiential): hill-dwarf has no exposure to 'altar'
 anvil: gap (experiential): hill-dwarf has no exposure to 'anvil'
 bait-ball: gap (experiential): hill-dwarf has no exposure to 'bait-ball'
-barley: root Sajaj /sajaj/
+barley: gap (experiential): hill-dwarf has no exposure to 'barley'
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): hill-dwarf has no exposure to 'bed'
 bench: gap (experiential): hill-dwarf has no exposure to 'bench'
@@ -2186,7 +2186,7 @@ blood: root Mabab /mabab/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Jagab /jagab/
-boreal-stand: gap (experiential): hill-dwarf has no exposure to 'boreal-stand'
+boreal-stand: root Vabat /vabat/
 bracken: gap (experiential): hill-dwarf has no exposure to 'bracken'
 brazier: gap (experiential): hill-dwarf has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6
@@ -2196,7 +2196,7 @@ carrion-crawler-kind: gap (experiential): hill-dwarf has no exposure to 'carrion
 cave-mouth: gap (experiential): hill-dwarf has no exposure to 'cave-mouth'
 chart: gap (experiential): hill-dwarf has no exposure to 'chart'
 child: root Sabaj /sabaj/
-closed-canopy: gap (experiential): hill-dwarf has no exposure to 'closed-canopy'
+closed-canopy: root Basag /basag/
 coast: compound earth+water -> Xamabsavag /xamabsavag/
 cold: gap (experiential): hill-dwarf has no exposure to 'cold'
 cold-upwelling: gap (experiential): hill-dwarf has no exposure to 'cold-upwelling'
@@ -2222,7 +2222,7 @@ east: root Gashagav /gaʃagav/
 eat: root Shabang /ʃabaŋ/
 eclipse: gap (experiential): hill-dwarf has no exposure to 'eclipse'
 encloses: gap (experiential): hill-dwarf has no exposure to 'encloses'
-epipelagic: gap (experiential): no settlement in or beside epipelagic
+epipelagic: gap (experiential): no compound recipe for 'epipelagic'
 erg: gap (experiential): hill-dwarf has no exposure to 'erg'
 eye: root Satam /satam/
 felsenmeer: gap (experiential): hill-dwarf has no exposure to 'felsenmeer'
@@ -2282,7 +2282,7 @@ killer-whale-kind: gap (experiential): hill-dwarf has no exposure to 'killer-wha
 know: gap (experiential): hill-dwarf has no exposure to 'know'
 kobold-kind: root Satag /satag/
 kuo-toa-kind: root Bajag /bajag/
-lake: compound little+water -> Xamabbamag /xamabbamag/
+lake: gap (experiential): hill-dwarf has no exposure to 'lake'
 ledge: gap (experiential): hill-dwarf has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): hill-dwarf has no exposure to 'liana-forest'
@@ -2299,7 +2299,7 @@ many: root Bangang /baŋaŋ/
 marine-snow: gap (experiential): hill-dwarf has no exposure to 'marine-snow'
 marsh: root Mabas /mabas/
 melt-pond: gap (experiential): hill-dwarf has no exposure to 'melt-pond'
-mesopelagic: gap (experiential): no settlement in or beside mesopelagic
+mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
 millet: gap (experiential): hill-dwarf has no exposure to 'millet'
 moon: root Vabat /vabat/
 mossy-deadfall: root Gabash /gabaʃ/
@@ -2307,7 +2307,7 @@ mountain: gap (experiential): hill-dwarf has no exposure to 'mountain'
 mountain-dwarf-kind: root Sasav /sasav/
 mouth: root Maqang /maqaŋ/
 move: root Samash /samaʃ/
-muskeg: gap (experiential): hill-dwarf has no exposure to 'muskeg'
+muskeg: root Gaqav /gaqav/
 name: root Gavash /gavaʃ/
 new: root Gatab /gatab/
 night: root Ngaxash /ŋaxaʃ/
@@ -2347,14 +2347,14 @@ reef-shark-kind: gap (experiential): hill-dwarf has no exposure to 'reef-shark-k
 reg: gap (experiential): hill-dwarf has no exposure to 'reg'
 rest: root Jashash /jaʃaʃ/
 rhinoceros-kind: gap (experiential): hill-dwarf has no exposure to 'rhinoceros-kind'
-rice: gap (experiential): hill-dwarf has no exposure to 'rice'
+rice: root Qangaj /qaŋaj/
 river: root Tabash /tabaʃ/
 rushes: gap (experiential): hill-dwarf has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): hill-dwarf has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): hill-dwarf has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
 scattering-layer: gap (experiential): hill-dwarf has no exposure to 'scattering-layer'
-sclerophyll-scrub: gap (experiential): hill-dwarf has no exposure to 'sclerophyll-scrub'
+sclerophyll-scrub: root Tabav /tabav/
 scoured-ice: gap (experiential): hill-dwarf has no exposure to 'scoured-ice'
 screen: gap (experiential): hill-dwarf has no exposure to 'screen'
 sea: compound many+water -> Xamabbangang /xamabbaŋaŋ/
@@ -2364,7 +2364,7 @@ searching: gap (experiential): hill-dwarf has no exposure to 'searching'
 sense: gap (experiential): hill-dwarf has no exposure to 'sense'
 shadow: gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6
 shrieker-kind: gap (experiential): hill-dwarf has no exposure to 'shrieker-kind'
-shrubland: gap (experiential): no settlement in or beside shrubland
+shrubland: root Sabab /sabab/
 sibling: root Xasag /xasag/
 sleep: root Qaqaj /qaqaj/
 smoker-field: gap (experiential): hill-dwarf has no exposure to 'smoker-field'
@@ -2388,10 +2388,10 @@ sun-like-star: gap (unnameable): no culture here has encountered the main sequen
 supports-rest: gap (experiential): hill-dwarf has no exposure to 'supports-rest'
 survey: gap (extradiegetic): survey is an operator instrument; it has no referent in the world
 svirfneblin-kind: root Vangas /vaŋas/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: root Mangab /maŋab/
 temperate-forest: root Mabash /mabaʃ/
-temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+temperate-grassland: root Qabaq /qabaq/
+temperate-rainforest: root Qajang /qajaŋ/
 the-consumption: gap (experiential): hill-dwarf has no exposure to 'the-consumption'
 the-flux: gap (experiential): hill-dwarf has no exposure to 'the-flux'
 the-marsh-fever: gap (experiential): hill-dwarf has no exposure to 'the-marsh-fever'
@@ -2405,18 +2405,18 @@ treant-kind: gap (experiential): hill-dwarf has no exposure to 'treant-kind'
 tree: root Majam /majam/
 trench-floor: gap (experiential): hill-dwarf has no exposure to 'trench-floor'
 trench-wall: gap (experiential): hill-dwarf has no exposure to 'trench-wall'
-tropical-rainforest: gap (experiential): no compound recipe for 'tropical-rainforest'
+tropical-rainforest: root Jagaj /jagaj/
 tropical-seasonal-forest: gap (experiential): no compound recipe for 'tropical-seasonal-forest'
-tuber: gap (experiential): hill-dwarf has no exposure to 'tuber'
+tuber: root Bashag /baʃag/
 tubeworm-thicket: gap (experiential): hill-dwarf has no exposure to 'tubeworm-thicket'
-tundra: gap (experiential): no settlement in or beside tundra
+tundra: gap (experiential): no compound recipe for 'tundra'
 twig-blight-kind: gap (experiential): hill-dwarf has no exposure to 'twig-blight-kind'
 twilight-water: gap (experiential): hill-dwarf has no exposure to 'twilight-water'
 two: root Tavab /tavab/
 under: root Qavas /qavas/
-upwelling: gap (experiential): no settlement in or beside upwelling
+upwelling: gap (experiential): no compound recipe for 'upwelling'
 urchin-barren: gap (experiential): hill-dwarf has no exposure to 'urchin-barren'
-valley: root Shavax /ʃavax/
+valley: gap (experiential): hill-dwarf has no exposure to 'valley'
 vent-plume: gap (experiential): hill-dwarf has no exposure to 'vent-plume'
 vessel: gap (experiential): hill-dwarf has no exposure to 'vessel'
 vine: root Bamang /bamaŋ/
@@ -2429,7 +2429,7 @@ white-dwarf: gap (unnameable): no culture here has encountered the main sequence
 wind: root Mataq /mataq/
 wind-scour: gap (experiential): hill-dwarf has no exposure to 'wind-scour'
 wood-elf-kind: root Vaxab /vaxab/
-wooded-grassland: gap (experiential): hill-dwarf has no exposure to 'wooded-grassland'
+wooded-grassland: root Basag /basag/
 woolly-mammoth-kind: gap (experiential): hill-dwarf has no exposure to 'woolly-mammoth-kind'
 write: gap (experiential): hill-dwarf has no exposure to 'write'
 xorn-kind: gap (experiential): hill-dwarf has no exposure to 'xorn-kind'

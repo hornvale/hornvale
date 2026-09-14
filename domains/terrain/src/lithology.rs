@@ -108,8 +108,103 @@ pub struct MaterialBuffer {
 }
 
 /// Metamorphic grade rises within this many graph hops of a boundary.
+///
+/// **This is a LENGTH now, not a hop count** (The Trencher, Task 13). It was
+/// read as an integer hop ladder — `1 - hops/OROGEN_REACH` — which made
+/// `metamorphic_grade` take exactly five values (`{0, .25, .5, .75, 1}`),
+/// 45.8% of them zero on the population the underworld's metabolites read.
+/// A hop count is a *quantizer*, not a physical fact: the aureole around a
+/// collision has a width, and the grid's rounding of that width to whole
+/// graph steps was the only reason the axis was discrete. It is now converted
+/// to a distance — `OROGEN_REACH * mean_edge_chord(geo)`, see
+/// [`orogen_reach_chord`] — so the aureole keeps exactly the reach it has
+/// always had (the value is unchanged, and its reach still scales with mesh
+/// resolution the way a hop-defined one did) while the grade *inside* it
+/// varies continuously with true distance to the boundary.
 /// plumb: pending(wave-1)
 const OROGEN_REACH: u32 = 4;
+
+/// Peak metamorphic grade contributed by the orogenic aureole itself, at a
+/// boundary vertex (proximity 1), before the burial background is added.
+///
+/// Below 1.0 so that the two additive terms of [`metamorphic_grade_at`] sum
+/// to the axis ceiling rather than either one saturating it alone:
+/// `0.80 + 0.20 * crust_age` reaches `0.998` on the oldest measured crust
+/// (`crust_age` max 0.992 over land, 6 seeds at level 6), so a gneiss-grade
+/// reading is the *conjunction* of an orogen and an old craton — which is
+/// what the highest metamorphic grades geologically are.
+/// plumb: pending(wave-1)
+const OROGENIC_AUREOLE_PEAK: f64 = 0.80;
+
+/// Metamorphic grade contributed by burial alone, per unit `crust_age` —
+/// the broad, weak overprint every continental basin accumulates as it
+/// subsides, independent of any orogen.
+///
+/// **This term exists because the axis had a 45.8% point mass at exactly
+/// zero**, and zero is not a true statement about buried continental rock:
+/// burial diagenesis grades continuously into anchimetamorphism with no
+/// sharp onset. Modelling only contact/regional metamorphism asserted that
+/// every vertex more than four hops from a boundary is petrologically
+/// pristine.
+///
+/// **Its size is not free — it is bounded by the thresholds this axis is
+/// read at.** The lowest is [`classify_rock`]'s `>= 0.25` (Slate); with
+/// `crust_age` capped at 1.0, any gain `>= 0.25` would let age *alone* cross
+/// that band and silently delete the orogenic clause from every consumer
+/// downstream of it — measured directly: at gain `0.30` the `>= 0.25` share
+/// of land jumps from 0.320 to 0.447 while the `> 0.3` share barely moves,
+/// because the background has swallowed the Slate band whole. `0.20` is the
+/// largest round value strictly under that bound (0.20 × 0.992 = 0.198, a
+/// fifth below the band floor), so it buys the most spread available without
+/// making any consumer's metamorphic test redundant with its age test.
+/// `features.rs`'s exhumed-BIF gate (which ANDs `crust_age > 0.75` with
+/// `metamorphic_grade > 0.3`) is the sharpest case: at `0.20` it still
+/// requires real orogenic proximity, and stays the three-clause conjunction
+/// it was written as.
+/// plumb: pending(wave-1)
+const BURIAL_OVERPRINT_GAIN: f64 = 0.20;
+
+/// Carbonate content of rock outside the shelf factory — oceanic floor, and
+/// the continental limit as the platform dies out. Not zero: pelagic and
+/// detrital carbonate is everywhere in trace amounts. Unchanged in value
+/// from the pre-Trencher two-valued `carbonate_at`, which returned exactly
+/// this on 87.4% of land.
+/// plumb: pending(wave-1)
+const CARBONATE_FLOOR: f64 = 0.05;
+
+/// Carbonate content of an ideal platform rock: equatorial, sitting on crust
+/// exactly at the continental threshold. Unchanged in value from the
+/// pre-Trencher `carbonate_at`'s high branch, deliberately — the axis is read
+/// at `> 0.4` and `> 0.5` gates ([`KARST_MIN_POROSITY`]'s neighbours in
+/// [`classify_rock`], [`hydrogeology`], and `features.rs`'s carbonate-hosted
+/// lead-zinc), so holding the ceiling fixed is what lets the axis be widened
+/// underneath it without moving the populations those gates select.
+/// plumb: pending(wave-1)
+const CARBONATE_SHELF_PEAK: f64 = 0.7;
+
+/// Crustal thickening, in km above [`crate::crust::CONTINENTAL_THRESHOLD_KM`],
+/// over which the carbonate platform fades to [`CARBONATE_FLOOR`].
+///
+/// The physical story the old `thickness < threshold + 6.0` test told badly:
+/// a carbonate factory needs accommodation space and clear water. Crust at
+/// the continental threshold is stretched shelf crust standing at or just
+/// below sea level — an epeiric sea, the platform's home. Thick crust stands
+/// high, sheds siliciclastic mud, and smothers the factory. `20.0` puts the
+/// platform dead at **40 km — where the crust has doubled**, which is the
+/// real transition from stretched shelf (~20-25 km on Earth) to full
+/// cratonic/orogenic thickness (~35-45 km); measured land thickness here runs
+/// p50 29.8, p90 37.4, max 44.6 km over 6 seeds at level 6, so the factory
+/// dies on the thickest few percent of land and nowhere else.
+///
+/// **Measured against the criterion that governs a widening**: the existing
+/// `carbonate > 0.5` gate selected 12.59% of land before and selects 13.69%
+/// after, while the point mass at [`CARBONATE_FLOOR`] falls from 87.4% of
+/// land to 4.4% and the realized-value count goes from 2 to ~87,000. The
+/// neighbouring reaches were measured too (16 km → 10.61% over the gate,
+/// 18 → 12.13%, 22 → 15.32%); 20 km is the one whose gate population is
+/// closest to unchanged while leaving the smallest residue at the floor.
+/// plumb: pending(wave-1)
+const CARBONATE_SHELF_REACH_KM: f64 = 20.0;
 
 /// Drainage (flow-accumulation, upstream land-vertex count) above which a land
 /// vertex reads as `Alluvium` rather than its ordinary clastic/igneous class.
@@ -379,10 +474,19 @@ pub fn hydrogeology(buf: &MaterialBuffer, ocean: bool) -> Hydro {
 /// Porosity above which carbonate rock (`carbonate > 0.5`) reads as `Karst`
 /// rather than falling through to the branches below — the CARBONATE scale.
 /// Measured against 8 seeds of continental land vertices (The Witness, F5): the
-/// carbonate class runs `n=1095 min=0.350 p50=0.425 p75=0.575 max=0.650`, so
-/// `0.4` sits just above the class floor and inside its normal range — most
-/// carbonate vertices clear it. Unchanged by F5; this constant only gained a
-/// name and its calibration record.
+/// carbonate class ran `n=1095 min=0.350 p50=0.425 p75=0.575 max=0.650`, so
+/// `0.4` sat just above the class floor and inside its normal range — most
+/// carbonate vertices clear it. Unchanged by F5; that change only gave this
+/// constant a name and its calibration record.
+///
+/// **Re-measured after The Trencher widened `carbonate` (Task 13), value
+/// unchanged and the claim still holds.** The carbonate class now runs
+/// `n=10348 min=0.278 p25=0.587 p50=0.658 p75=0.682 p95=0.711 max=0.744`
+/// (level 6, 6 seeds) — higher and wider, because the axis feeding
+/// `0.5 * carbonate` is continuous — and `0.4` selects **90.9%** of it.
+/// "Most carbonate vertices clear it" was true at F5 and is more true now,
+/// so this constant is left alone rather than re-placed: it is a floor, and
+/// it is still doing the job its record claims.
 /// plumb: pending(wave-1)
 const KARST_MIN_POROSITY: f64 = 0.4;
 
@@ -390,9 +494,25 @@ const KARST_MIN_POROSITY: f64 = 0.4;
 /// impermeable `Aquitard`. Measured against the same 8-seed sweep: the
 /// clastic (non-carbonate) class runs `n=4666 min=0.025 p50=0.100
 /// p75=0.250 p95=0.325 max=0.325`, quantised in ~0.075 steps (0.025, 0.100,
-/// 0.175, 0.250, 0.325) — `0.15` falls between the two lowest bands, so it
-/// selects roughly the bottom fifth to two-fifths of clastic vertices
+/// 0.175, 0.250, 0.325) — `0.15` fell between the two lowest bands, so it
+/// selected roughly the bottom fifth to two-fifths of clastic vertices
 /// (`0.025`, and about half of `0.100`) as `Aquitard`. Unchanged by F5.
+///
+/// **That share is now 2.17%, and this constant is deliberately NOT
+/// re-placed** (The Trencher, Task 13). Clastic land porosity now runs
+/// `min=0.074 p05=0.197 p25=0.374 p50=0.473 p95=0.614 max=0.645` (level 6,
+/// 6 seeds), so the whole distribution has moved up and away from `0.15`;
+/// `Aquitard` reads on 2.37% of land at seed 0 where the record above
+/// describes a fifth to two-fifths of the clastic class. Two reasons to
+/// record rather than retune. First, nothing authorized it: The Trencher's
+/// Task 13 was authorized to re-place [`CLASTIC_AQUIFER_MIN_POROSITY`],
+/// which a committed guard was about to fail on, and this one no guard
+/// covers — moving it would be an unmeasured retune riding along with a
+/// measured one. Second, an impermeable-rock class that is *rare* is not
+/// obviously wrong; whether 2% or 20% of land should be aquitard is a
+/// question about what the class is for, which wants its own measurement
+/// against a consumer, not a number picked to restore a fraction from a
+/// world that no longer exists.
 /// plumb: pending(wave-1)
 const AQUITARD_MAX_POROSITY: f64 = 0.15;
 
@@ -408,32 +528,79 @@ const AQUITARD_MAX_POROSITY: f64 = 0.15;
 /// no threshold could partition it, and `0.25` shipped **69.64% of land as
 /// Aquifer**.
 ///
-/// With [`GRAIN_POROSITY_GAIN`] added, clastic land porosity becomes a
+/// With [`GRAIN_POROSITY_GAIN`] added, clastic land porosity became a
 /// continuous function of crust age spanning the band `[0.416, 0.494]`
-/// (measured, `k_g = 0.40`, level 6, 4 seeds). A joint sweep of `k_g` and
-/// this threshold found `k_g = 0.40` gives the *widest* such band
-/// (`0.078`, vs. `0.059` at `k_g = 0.30` and a ceiling-hugging `0.039` at
-/// `k_g = 0.20`), so a threshold placed inside it is farthest from
-/// flipping to select everything or nothing on the next terrain change —
-/// the failure mode this whole campaign is about. `0.46` sits at **56% of
-/// that band** (mid-band, not the tidier `k_g=0.30 / thr=0.44`, which gives
-/// a cleaner-looking 8.7%/1.98% aquifer/spring split but sits at 80% of a
-/// narrower `0.059`-wide band — two hundredths of porosity from reading
-/// zero, the same edge-hugging mistake Task 4 made with `0.42` over
-/// `0.45`). Measured aquifer share at `0.46`: **16.4% of land**, a notable
-/// but non-dominant feature, with the promoted `Spring` contact (see
-/// [`Hydro::Spring`]) at 3.69%, forming lines along aquifer margins — what
-/// a spring line geologically is.
+/// (measured, `k_g = 0.40`, level 6, 4 seeds), and The Witness placed `0.46`
+/// at 56% of it — mid-band, explicitly rejecting a tidier-looking
+/// `k_g=0.30 / thr=0.44` that sat at 80% of a narrower band, "two hundredths
+/// of porosity from reading zero". Measured aquifer share there: **16.4% of
+/// land**, with the promoted `Spring` contact (see [`Hydro::Spring`]) at
+/// **3.69%**.
+///
+/// # Re-placed by The Trencher (Task 13), with The Witness's own method
+///
+/// Widening `carbonate` and `metamorphic_grade` moved porosity, because
+/// `assemble_material` sums `0.5 * carbonate + … + 0.3 * (1 - grade)`. At
+/// `0.46` unchanged the aquifer share went to **36.6% of land** and `Spring`
+/// to **10.1%** (seed 0, level 6) — straight through the ceiling
+/// `a_real_world_produces_a_porous_non_carbonate_vertex_in_bounded_shares`
+/// exists to hold. Nathan authorized the re-placement; the method below is
+/// The Witness's, not a new one.
+///
+/// **Their criterion, generalised — and the literal reading is what fails.**
+/// "Mid-band, farthest from flipping to select everything or nothing" worked
+/// on their distribution because a 0.078-wide ramp with no tails made
+/// *inside the realized range* and *selects a non-degenerate share* the same
+/// statement. The widened axis has long thin tails — clastic land porosity
+/// now runs `n=80566 min=0.074 p05=0.197 p25=0.374 p50=0.473 p75=0.539
+/// p95=0.614 max=0.645` (level 6, 6 seeds) — so the range is 7.3x the
+/// interval of thresholds that select anything sane, and the two statements
+/// come apart: the literal mid-range, `0.360`, would make **over half of all
+/// land** an aquifer. The *purpose* attaches to the second statement, so the
+/// band measured here is the interval of thresholds keeping the aquifer
+/// share inside the committed guard's `[0.05, 0.35]`, swept at 0.002:
+///
+/// ```text
+/// seed  0 -> [0.466, 0.574]
+/// seed  7 -> [0.458, 0.578]
+/// seed 42 -> [0.486, 0.586]
+/// intersection -> [0.486, 0.574]
+/// ```
+///
+/// `0.53` is that intersection's midpoint to within a thousandth — **50.0%
+/// of the band**, the same place in it `0.46` held in the old one. The
+/// aquifer population it selects is also nearly the one it selected before:
+/// **15.77% of land at seed 0**, against The Witness's 16.4%.
+///
+/// **The `Spring` share is the finding, and it is not a placement problem.**
+/// At `0.53` it reads **7.36% at seed 0** (inside the guard's `[0.005, 0.08]`,
+/// but twice its old 3.69%), 8.71% at seed 7 and 10.54% at seed 42 — the
+/// latter two above that ceiling. This is not fixable by moving this
+/// constant: `Spring` is a *contact* (`promote_to_spring` — an `Aquifer`
+/// vertex with a lower non-`Aquifer` neighbour), so its share tracks the
+/// aquifer set's **perimeter**, and a continuous porosity field fragments
+/// that set where a near-constant one left large contiguous blobs. Measured:
+/// **no threshold anywhere in `[0.40, 0.60]` puts seed 42 inside both bands
+/// while keeping seed 0 inside both** — the two seeds' joint-admissible
+/// intervals, `[0.576, 0.586]` and `[0.512, 0.574]`, are disjoint. The
+/// spring ceiling was calibrated against a porosity axis that no longer
+/// exists; re-placing it needs its own measurement and is deliberately not
+/// done here.
 /// plumb: pending(wave-1)
-const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.46;
+const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.53;
 
 /// How much loose, uncemented coarse grain contributes to `porosity` (in
 /// `assemble_material`), via `GRAIN_POROSITY_GAIN * grain * (1 -
 /// induration)`. Exists for **dynamic range, not to cross a gate**: without
 /// it, clastic land porosity is a single value (0.325) on ~90% of land, so
 /// no threshold on [`CLASTIC_AQUIFER_MIN_POROSITY`] could ever partition
-/// it. With it, porosity spans `[0.416, 0.494]` as a continuous function of
-/// crust age. Calibrated by sweep (The Witness, Task 5b) against the
+/// it. With it, porosity spanned `[0.416, 0.494]` as a continuous function
+/// of crust age. (That span is the F5 measurement and is now historical:
+/// since The Trencher widened the other two terms, clastic land porosity
+/// runs `[0.074, 0.645]` and this term is one of three continuous
+/// contributions rather than the only one. Its value is unchanged and its
+/// calibration argument below is unaffected — the sweep was over *this*
+/// term's own contribution.) Calibrated by sweep (The Witness, Task 5b) against the
 /// *width* of that band across `k_g ∈ {0.20, 0.30, 0.40}`: `0.40` gives the
 /// widest band (`0.078`), so [`CLASTIC_AQUIFER_MIN_POROSITY`] has the most
 /// room before a terrain change flips it to select everything or nothing —
@@ -607,61 +774,205 @@ pub fn cave_proneness(buf: &MaterialBuffer, drainage: f64) -> f64 {
     (buf.carbonate * buf.porosity * (0.85 + 0.15 * wetting)).clamp(0.0, 1.0)
 }
 
+/// Mean graph-edge length of `geo`, as a **chord** on the unit sphere.
+///
+/// Chord rather than arc throughout the orogen derivation: it is monotone in
+/// arc, so it reparameterises the aureole without reordering any vertex, and
+/// over a reach of ~0.075 rad the two agree to better than one part in 10^4.
+/// It also costs no transcendental, which keeps a per-vertex derivation off
+/// `math.rs` entirely.
+fn mean_edge_chord(geo: &Geosphere) -> f64 {
+    let mut total = 0.0;
+    let mut count = 0usize;
+    for vertex in geo.vertices() {
+        let p = geo.position(vertex);
+        for &neighbor in geo.neighbors(vertex) {
+            let q = geo.position(neighbor);
+            let d = [p[0] - q[0], p[1] - q[1], p[2] - q[2]];
+            total += (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
+            count += 1;
+        }
+    }
+    total / count as f64
+}
+
+/// The orogenic aureole's reach on `geo`, as a chord length: [`OROGEN_REACH`]
+/// graph steps measured properly instead of counted.
+///
+/// Derived from the mesh rather than authored as an angle, deliberately: the
+/// reach has always been resolution-relative (four hops is four hops at every
+/// level), and pinning an absolute angle here would silently change the
+/// aureole's footprint at every level but the production one. Hoist this
+/// above any per-vertex loop — it is a whole-mesh scan.
+pub(crate) fn orogen_reach_chord(geo: &Geosphere) -> f64 {
+    OROGEN_REACH as f64 * mean_edge_chord(geo)
+}
+
+/// Continuous orogenic proximity at a vertex, `[0,1]`: 1 on a boundary, 0 at
+/// [`orogen_reach_chord`] and beyond, falling linearly with true distance to
+/// the nearest same-plate boundary vertex.
+///
+/// `nearest` is `TectonicGlobe::boundary_distance`'s entry — `(hops, source)`.
+/// **Only the source is read**; the hop count is exactly the quantizer this
+/// replaces. `None` (no reachable same-plate boundary) is 0, matching the old
+/// `hops.unwrap_or(OROGEN_REACH)`.
+///
+/// The old membership test also had a kind clause — `matches!(kind,
+/// ContinentalCollision | CoastalRange) || hops <= OROGEN_REACH` — and it is
+/// gone because it was **strictly subsumed**, not because the kind stopped
+/// mattering: `boundaries::boundary_distance` seeds its BFS with `(0, self)`
+/// for every vertex that *has* a boundary, so a collision vertex always had
+/// `hops == 0` and satisfied the right-hand clause anyway. The aureole was
+/// kind-agnostic in effect before this change and still is.
+/// type-audit: bare-ok(ratio: reach_chord), bare-ok(count: nearest), bare-ok(ratio: return)
+pub(crate) fn orogen_proximity(
+    geo: &Geosphere,
+    reach_chord: f64,
+    vertex: Vertex,
+    nearest: Option<(u32, Vertex)>,
+) -> f64 {
+    let Some((_, source)) = nearest else {
+        return 0.0;
+    };
+    let p = geo.position(vertex);
+    let q = geo.position(source);
+    let d = [p[0] - q[0], p[1] - q[1], p[2] - q[2]];
+    let chord = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
+    (1.0 - chord / reach_chord).clamp(0.0, 1.0)
+}
+
+/// Metamorphic grade at a vertex, `[0,1]`: 0 unaltered → 1 gneiss.
+///
+/// **Two additive processes, because there are two** (The Trencher, Task 13).
+/// Regional/contact metamorphism is a narrow, intense aureole around a
+/// collision — [`OROGENIC_AUREOLE_PEAK`] times [`orogen_proximity`], linear in
+/// distance across the belt, which is roughly how a collisional zonation
+/// (chlorite → biotite → garnet → staurolite → kyanite → sillimanite) maps
+/// across its width. Burial diagenesis is a broad, weak overprint that every
+/// continental basin accumulates as it subsides —
+/// [`BURIAL_OVERPRINT_GAIN`] times `crust_age`. The pre-Trencher derivation
+/// modelled only the first and asserted the second was *identically zero*,
+/// which is what put a 45.8% point mass at 0 on the axis
+/// `EnergySource::SulphideOxidation` multiplies by.
+///
+/// Linear in proximity, not squared or smoothed: the derivation this replaces
+/// was linear in hops, so making the distance continuous is the whole change
+/// and no second one is smuggled in with it. Oceanic crust stays flat 0 — it
+/// is young, thin, and unburied, and the buffer's oceanic regime is
+/// deliberately flat across every axis in this file.
+///
+/// Extracted as a shared function rather than written twice: it feeds
+/// [`induration_at`] (which the globe computes *before* elevation) and the
+/// buffer's own axis, and those two must never diverge.
+/// type-audit: bare-ok(ratio: crust_age), bare-ok(flag: continental), bare-ok(ratio: orogen_proximity), bare-ok(ratio: return)
+pub(crate) fn metamorphic_grade_at(
+    crust_age: f64,
+    continental: bool,
+    orogen_proximity: f64,
+) -> f64 {
+    if !continental {
+        return 0.0;
+    }
+    (orogenic_overprint(orogen_proximity) + BURIAL_OVERPRINT_GAIN * crust_age).clamp(0.0, 1.0)
+}
+
+/// The orogenic half of [`metamorphic_grade_at`] on its own: recrystallisation
+/// driven by a collision, with no burial term.
+///
+/// Named and shared because [`induration_at`] must read **this** rather than
+/// the whole grade, and the reason is physical rather than a workaround.
+/// Induration already prices burial — its `grain` term is `0.4 + 0.5 *
+/// crust_age`, whose stated content is that old crust is more evolved and
+/// coarser. Feeding it the full grade would add
+/// `0.4 * BURIAL_OVERPRINT_GAIN * crust_age` on top of that: **the same age,
+/// priced twice, in the same sum**. Not a small effect, and it was caught
+/// rather than reasoned about —
+/// away from any orogen `induration` would have gone from `0.35 + 0.2 *
+/// grain` to `0.286 + 0.36 * grain`, crossing [`classify_rock`]'s
+/// `induration > 0.5` igneous gate at `grain = 0.594` rather than at
+/// `grain = 0.75`. That closes the entire `grain ∈ (0.6, 0.75]` window
+/// `RockClass::Conglomerate` occupies, and
+/// `alluvium_and_coal_are_reachable_across_seeds` went red on exactly that:
+/// a rock class deleted from every world by a change that was about
+/// metamorphic grade and had no business touching hardness.
+///
+/// Recrystallisation, by contrast, genuinely *is* a hardness story — a gneiss
+/// is hard because its minerals interlocked — so induration reads the aureole
+/// and not the background, and at zero proximity its formula is **unchanged**
+/// from before The Trencher.
+fn orogenic_overprint(orogen_proximity: f64) -> f64 {
+    OROGENIC_AUREOLE_PEAK * orogen_proximity.clamp(0.0, 1.0)
+}
+
 /// Induration/hardness at a vertex, `[0,1]`: 0 soft (shale/soil) → 1 hard
 /// (quartzite/gneiss). The Sculpting/Ground seam (spec §4): pulled out of
 /// `assemble_material` as a standalone pre-elevation function so the globe
 /// can compute it before `generate_elevation` runs, ahead of any elevation
-/// carve that later wants to read hardness. Exact expressions mirror
-/// `assemble_material`'s `grain`/`metamorphic_grade`/`induration` locals —
-/// this function and that buffer axis must never diverge.
+/// carve that later wants to read hardness. Its `grain` expression mirrors
+/// `assemble_material`'s local, and its metamorphic term is
+/// [`orogenic_overprint`] — the aureole half of [`metamorphic_grade_at`],
+/// shared as one derivation rather than written twice. **Not the whole
+/// grade**, and [`orogenic_overprint`]'s own doc argues why: the burial
+/// background is age, and induration already prices age through `grain`.
 ///
 /// Total at the extremes (spec §4): defined for the full `[0,1]` input
 /// range; the gated metaphysics overlay may inject sentinel values later
 /// without a formula change.
-/// type-audit: bare-ok(ratio: return), bare-ok(ratio: crust_age), bare-ok(flag: continental), bare-ok(count: boundary_hops)
-pub fn induration_at(
-    crust_age: f64,
-    continental: bool,
-    boundary_kind: Option<BoundaryKind>,
-    boundary_hops: Option<u32>,
-) -> f64 {
+/// type-audit: bare-ok(ratio: return), bare-ok(ratio: crust_age), bare-ok(flag: continental), bare-ok(ratio: orogen_proximity)
+pub fn induration_at(crust_age: f64, continental: bool, orogen_proximity: f64) -> f64 {
     // Old cratons are more evolved/coarse; young crust finer.
     let grain = if continental {
         0.4 + 0.5 * crust_age
     } else {
         0.2
     };
-    // Boundary influence.
-    let near_orogen = matches!(
-        boundary_kind,
-        Some(BoundaryKind::ContinentalCollision) | Some(BoundaryKind::CoastalRange)
-    ) || boundary_hops.is_some_and(|h| h <= OROGEN_REACH);
-    let metamorphic_grade = if continental && near_orogen {
-        (1.0 - boundary_hops.unwrap_or(OROGEN_REACH) as f64 / OROGEN_REACH as f64).clamp(0.0, 1.0)
+    // The AUREOLE half of the grade only — see `orogenic_overprint`.
+    let overprint = if continental {
+        orogenic_overprint(orogen_proximity)
     } else {
         0.0
     };
     // Induration: metamorphics/old plutons hard; young/soft sediments low.
-    (0.35 + 0.4 * metamorphic_grade + 0.2 * grain).clamp(0.0, 1.0)
+    (0.35 + 0.4 * overprint + 0.2 * grain).clamp(0.0, 1.0)
 }
 
 /// Carbonate content at a vertex, `[0,1]` (spec §2/§4 pre-elevation seam,
-/// mirroring [`induration_at`]): favors warm shallow shelves —
-/// approximated by shallow continental crust (within 6 km of the
-/// continental threshold) at low absolute latitude. Pointwise inputs only
-/// (continental flag, crust thickness, latitude), all available before
-/// elevation runs, so the globe can build a `carbonate_pre` field the carve
-/// reads ahead of the carve's own elevation output. `assemble_material`
-/// calls the same function so the buffer's `carbonate` axis and the pre-carve
-/// field can never diverge.
+/// mirroring [`induration_at`]): the warm shallow shelf factory, as a product
+/// of two smooth falloffs. Pointwise inputs only (continental flag, crust
+/// thickness, latitude), all available before elevation runs, so the globe can
+/// build a `carbonate_pre` field the carve reads ahead of the carve's own
+/// elevation output. `assemble_material` calls the same function so the
+/// buffer's `carbonate` axis and the pre-carve field can never diverge.
+///
+/// **It used to be a boolean conjunction flattened to two numbers** — `0.7` on
+/// `continental && thickness < threshold + 6 && lat < 0.6`, else `0.05` — and
+/// it took exactly those two values across 82,135 underworld readings (The
+/// Trencher, Task 12). Both gates it ANDed together are continuous quantities,
+/// and both are kept, now as factors:
+///
+/// - **`cos(lat)`** — the carbonate factory is temperature-limited, and mean
+///   annual insolation at latitude φ falls as `cos φ`. This is the whole
+///   warmth argument: no fitted width, no free parameter, the same cosine the
+///   climate domain's own insolation is proportional to. The old hard cut at
+///   `lat < 0.6` rad asserted a platform at 34°N is in full production and one
+///   at 35° produces nothing; a cool-water (heterozoan) factory in fact runs
+///   weakly to high latitude, which is what the tail of a cosine says.
+/// - **the shelf falloff** — see [`CARBONATE_SHELF_REACH_KM`].
+///
+/// The step at the continental threshold is kept and is not an artefact: a
+/// carbonate platform really does end abruptly at the shelf break, and
+/// oceanic crust is the far side of that break.
 /// type-audit: bare-ok(flag: continental), bare-ok(ratio: thickness_km), bare-ok(ratio: lat), bare-ok(ratio: return)
 pub(crate) fn carbonate_at(continental: bool, thickness_km: f64, lat: f64) -> f64 {
-    let shallow_shelf = continental && thickness_km < crate::crust::CONTINENTAL_THRESHOLD_KM + 6.0;
-    if shallow_shelf && lat < 0.6 {
-        0.7
-    } else {
-        0.05
+    if !continental {
+        return CARBONATE_FLOOR;
     }
+    let warmth = math::cos(lat).clamp(0.0, 1.0);
+    let shelf = (1.0
+        - (thickness_km - crate::crust::CONTINENTAL_THRESHOLD_KM).max(0.0)
+            / CARBONATE_SHELF_REACH_KM)
+        .clamp(0.0, 1.0);
+    (CARBONATE_FLOOR + (CARBONATE_SHELF_PEAK - CARBONATE_FLOOR) * warmth * shelf).clamp(0.0, 1.0)
 }
 
 /// Assemble the material buffer over the canonical grid (spec §2). Pointwise
@@ -679,6 +990,9 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> VertexMap<Ma
     // output. Same "build the sampler once above the loop" discipline
     // `domains/terrain/CLAUDE.md` documents for `SphereFbm`.
     let lithology_noise = Fbm::new(globe.lithology_noise_seed(), 3);
+    // Hoisted for the same reason the sampler above is: `orogen_reach_chord`
+    // is a whole-mesh scan and does not vary by vertex.
+    let reach_chord = orogen_reach_chord(geo);
     VertexMap::from_fn(geo, |vertex| {
         let thickness = *globe.crust.get(vertex);
         let continental = thickness >= crate::crust::CONTINENTAL_THRESHOLD_KM;
@@ -701,18 +1015,16 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> VertexMap<Ma
         };
         // Old cratons are more evolved/coarse; young crust finer.
         let grain = if continental { 0.4 + 0.5 * age } else { 0.2 };
-        // Boundary influence.
-        let boundary = *globe.boundary.get(vertex);
+        // Boundary influence, as a continuous distance rather than a hop count
+        // (see `orogen_proximity` / `metamorphic_grade_at`).
         let hops = globe.boundary_distance.get(vertex).map(|(h, _)| h);
-        let near_orogen = matches!(
-            boundary.map(|b| b.kind),
-            Some(BoundaryKind::ContinentalCollision) | Some(BoundaryKind::CoastalRange)
-        ) || hops.is_some_and(|h| h <= OROGEN_REACH);
-        let metamorphic_grade = if continental && near_orogen {
-            (1.0 - hops.unwrap_or(OROGEN_REACH) as f64 / OROGEN_REACH as f64).clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
+        let proximity = orogen_proximity(
+            geo,
+            reach_chord,
+            vertex,
+            *globe.boundary_distance.get(vertex),
+        );
+        let metamorphic_grade = metamorphic_grade_at(age, continental, proximity);
 
         // Sub-vertex patchiness from existing noise (no draws): perturb silica.
         let patch = lithology_noise.sample(p[0] * 6.0, p[1] * 6.0) - 0.5;
@@ -735,20 +1047,27 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> VertexMap<Ma
         // Induration: same pre-elevation function the globe computes ahead
         // of elevation (the Sculpting/Ground seam) — kept identical here so
         // the buffer's axis and the globe's standalone field never diverge.
-        let induration = induration_at(age, continental, boundary.map(|b| b.kind), hops);
+        let induration = induration_at(age, continental, proximity);
         // Porosity: dissolution in carbonate (karst), packing in loose coarse
         // grain, and recrystallisation closing pores in metamorphics. The
         // grain term (The Witness, Task 5b) exists to give the axis DYNAMIC
-        // RANGE, not to cross any particular gate: without it, `carbonate`
-        // is binary (0.05 or 0.7-0.9) and `metamorphic_grade` is 0 outside
-        // an orogen, so clastic land porosity is *exactly* 0.325 on ~90% of
-        // land (measured at production L6: p25 through p95 all 0.325) — the
-        // axis carries almost no information and no threshold can partition
-        // it. With `GRAIN_POROSITY_GAIN * grain * (1 - induration)` added,
-        // porosity becomes a continuous function of crust age, spanning
-        // `[0.416, 0.494]` on clastic land (measured, k_g=0.40) — a
-        // threshold placed inside that band then selects old, coarse,
-        // weakly-cemented crust, which is what an aquifer geologically is.
+        // RANGE, not to cross any particular gate: at the time it was added,
+        // `carbonate` was binary (0.05 or 0.7-0.9) and `metamorphic_grade`
+        // was 0 outside an orogen, so clastic land porosity was *exactly*
+        // 0.325 on ~90% of land (measured at production L6: p25 through p95
+        // all 0.325) — the axis carried almost no information and no
+        // threshold could partition it.
+        //
+        // **The other two terms carry their own weight now** (The Trencher,
+        // Task 13): `carbonate_at` and `metamorphic_grade_at` are both
+        // continuous, so this sum is a three-term continuum rather than one
+        // continuous term plus two step functions. The grain term stays —
+        // its physics (loose, uncemented coarse sediment holds pore space)
+        // is independent of the other two, and its calibration is still the
+        // widest-band choice The Witness measured — but the *reason it was
+        // urgent* has been removed at its source, and
+        // `CLASTIC_AQUIFER_MIN_POROSITY` was re-placed against the band this
+        // widening produces.
         let porosity = (0.5 * carbonate
             + GRAIN_POROSITY_GAIN * grain * (1.0 - induration)
             + 0.3 * (1.0 - metamorphic_grade))
@@ -1397,6 +1716,16 @@ mod tests {
         // world" or "regressed to unreachable." Measured at k_g=0.40,
         // thr=0.46 (The Witness, Task 5b): aquifer ~16.4% of land, spring
         // ~3.69% of land, forming lines along aquifer margins.
+        //
+        // AND THE BAND EARNED ITS KEEP (The Trencher, Task 13). Widening
+        // `carbonate` and `metamorphic_grade` moved porosity; at thr=0.46
+        // unchanged this read aquifer 36.6% / spring 10.1% and went RED on
+        // both clauses, which is exactly the "ate the world" case the
+        // ceiling was added for. Re-placed to thr=0.53 by The Witness's own
+        // mid-band method (see `CLASTIC_AQUIFER_MIN_POROSITY`): aquifer
+        // 15.77%, spring 7.36%. The spring figure has doubled and the
+        // constant's doc records why — `Spring` tracks the aquifer set's
+        // PERIMETER, and a continuous porosity field fragments that set.
         let geo = Geosphere::new(6);
         let outcome = generate(Seed(0), &geo, &TerrainPins::default()).unwrap();
         let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);

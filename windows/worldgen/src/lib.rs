@@ -13429,8 +13429,21 @@ mod tests {
         // Do not read a movement here as a defect, and do not read a return to
         // a previous value as a fix — 66 has now been visited twice by
         // unrelated causes. Post-unblinding re-measure, declared per 0016.
+        //
+        // THE TRENCHER (Task 13) re-pin: 68 -> 65, and it is the fifth move,
+        // by the mechanism the paragraph above predicts. Widening `carbonate`
+        // and `metamorphic_grade` moved elevation through `erodibility` and
+        // re-classified the porosity axis, so seed 42 gained settlements
+        // (334 -> 413 — see `weft_ledger_guard`'s own note, which carries the
+        // full composition and the open band-breach finding). More
+        // settlements competing for the same land is a SMALLER flagship, not
+        // a larger one: the bake's carrying capacity is divided further, so
+        // the peak the flagship grows to falls even though the world got more
+        // habitable. That direction is the reason this re-pin is recorded
+        // rather than merely applied — the naive reading ("more habitable, so
+        // bigger flagship") is the wrong one here.
         assert_eq!(
-            village.population, 68,
+            village.population, 65,
             "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.

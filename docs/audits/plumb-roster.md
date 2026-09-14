@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 841 |
-| … file-level | 796 |
+| Quantity consts judged (the denominator) | 846 |
+| … file-level | 801 |
 | … associated (impl/trait) | 11 |
 | … inside a fn body | 34 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
 | Excluded: declared non-quantity type | 560 |
-| **Every `const` the walk touched** | **1574** |
+| **Every `const` the walk touched** | **1579** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **761**: file-level
+nor the whole `file-level` row — it is **766**: file-level
 constants of those five types. The `file-level` row itself is
-**796**, and the denominator is **841**; the difference is
+**801**, and the denominator is **846**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -68,7 +68,7 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 621 |
+| `f64` | 626 |
 | `i32` | 7 |
 | `i64` | 8 |
 | `u16` | 2 |
@@ -156,7 +156,7 @@ bare count would hide a quantity someone had wrongly denied.
 
 | Verdict | Count |
 |---------|------:|
-| pending(wave-1) | 640 |
+| pending(wave-1) | 645 |
 | per-individual | 2 |
 | per-people | 1 |
 | per-species | 32 |
@@ -164,9 +164,9 @@ bare count would hide a quantity someone had wrongly denied.
 | universal | 154 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 841 |
+| _total_ | 846 |
 
-Declared: **841 of 841**. Undeclared is backlog; a malformed
+Declared: **846 of 846**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -202,12 +202,12 @@ counts are already the Coverage table above. 47 finding(s).
 | `domains/species/src/lib.rs:6745` | `DROW_WATER` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6750` | `DROW_SUBSTRATE` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6754` | `DROW_LIGHT` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/terrain/src/lithology.rs:463` | `LEY_REACH` | per-world | the width of a world's ley-lines is a property of that world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:470` | `LEY_GAIN` | per-world | ley intensity is a property of a world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:477` | `WELL_RADIUS_RAD` | per-world | the reach of a mana-well is a property of a world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:483` | `WELL_GAIN` | per-world | mana-well intensity is a property of a world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:491` | `HALLOW_AGE_MIN` | per-world | how much deep time it takes to charge ground is a property of a world's magic, not of this code |
-| `domains/terrain/src/lithology.rs:498` | `HALLOW_GAIN` | per-world | the residue deep time leaves is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:630` | `LEY_REACH` | per-world | the width of a world's ley-lines is a property of that world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:637` | `LEY_GAIN` | per-world | ley intensity is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:644` | `WELL_RADIUS_RAD` | per-world | the reach of a mana-well is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:650` | `WELL_GAIN` | per-world | mana-well intensity is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:658` | `HALLOW_AGE_MIN` | per-world | how much deep time it takes to charge ground is a property of a world's magic, not of this code |
+| `domains/terrain/src/lithology.rs:665` | `HALLOW_GAIN` | per-world | the residue deep time leaves is a property of a world's magic, not of this code |
 | `windows/vessel/src/liveness.rs:307` | `SUSTENANCE` | per-species | a creature's own metabolism sets how fast thirst/foraging need accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
 | `windows/vessel/src/liveness.rs:385` | `FURNISHING_COLD_C` | per-people | whether a room's people build around a fire tracks that people's own cold tolerance and culture, not a fixed climate cutoff for every people -- doc: a room's people build around a fire |
 | `windows/vessel/src/liveness.rs:469` | `THERMAL_FEAR_SPAN_C` | per-species | how WIDE a creature's comfort band is before fear ramps to full weight is a trait separate from where the band is centered -- a stenotherm and a eurytherm can share an optimum and differ entirely in span |
@@ -230,7 +230,7 @@ counts are already the Coverage table above. 47 finding(s).
 
 ## The contested middle
 
-390 of the 841 constants sit in a file mentioning one of
+390 of the 846 constants sit in a file mentioning one of
 the kind-adjacency markers above, across 148 of the 363 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
 where `FATIGUE_RISE` lived. 390 of them are declared.
@@ -261,6 +261,6 @@ in the inclusive direction on purpose.
 | sentiment | 8 | 0 | 0 | 8 |
 | settlement | 4 | 0 | 0 | 4 |
 | species | 39 | 0 | 0 | 39 |
-| terrain | 158 | 0 | 0 | 158 |
+| terrain | 163 | 0 | 0 | 163 |
 | vessel | 110 | 0 | 0 | 110 |
 | worldgen | 207 | 0 | 0 | 207 |

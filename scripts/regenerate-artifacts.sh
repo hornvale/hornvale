@@ -679,7 +679,18 @@ gen_chart_reference() {
 # column. Repointed at vertex 10359 and the framing rewritten from the live
 # `history` render, not patched: 17 layers, bugbear throughout with one brief
 # hill-dwarf stratum, still occupied.
-history_site=10359
+# RE-READ 2026-09-14 (The Trencher, Task 13): the lithology widening moved
+# elevation, and 10359 fell to a single abandoned hill-dwarf layer -- the
+# fourth camera this page has lost, and the same guard caught it again. Two
+# things decided the repoint rather than one. Depth is the obvious criterion,
+# but the deepest columns in this world (1680 and 26251, 23 layers each) are
+# duergar/svirfneblin, and NONE of the underworld peoples is on
+# `docs_consistency`'s roster -- so framing prose naming them would satisfy
+# that guard VACUOUSLY, which is precisely the defect that file's own comment
+# records ("the page's prose named kobolds throughout, so no elf name was ever
+# there to check"). Vertex 39949 is the deepest column whose people the guard
+# can actually check: 14 layers, hobgoblin throughout, standing yet.
+history_site=39949
 gen_history() {
     printf '# A Living Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -690,13 +701,15 @@ gen_history() {
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — vertex %s — where\n' "$history_site"
-    printf 'seventeen lives have passed over the ground, one settling atop the\n'
-    printf 'ruins of the last. The deepest layer is a neolithic bugbear steading\n'
-    printf 'founded in the year 0, which held fifty years and then left of its own\n'
-    printf 'accord; the standing one is a classical bugbear steading founded in the\n'
-    printf 'year 1750, some thirty souls, which has stood 250 years and counting.\n'
-    printf 'One hill-dwarf stratum sits among the bugbear layers. The ground is\n'
-    printf 'occupied still -- there is no ruin to read on top, only smoke on the air.\n\n'
+    printf 'fourteen lives have passed over the ground, one settling atop the\n'
+    printf 'ruins of the last. The deepest layer is a bronze-working hobgoblin\n'
+    printf 'steading founded in the year 450, which did not last out its founding\n'
+    printf 'year; the standing one is a classical hobgoblin steading founded in the\n'
+    printf 'year 1750, some seventy-eight souls, which has stood 250 years and\n'
+    printf 'counting. Every layer is hobgoblin: this ground has only ever been\n'
+    printf 'taken from hobgoblins by hobgoblins, a single people displacing itself\n'
+    printf 'across fourteen settlements. The ground is occupied still -- there is\n'
+    printf 'no ruin to read on top, only smoke on the air.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

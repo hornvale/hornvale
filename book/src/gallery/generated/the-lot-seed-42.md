@@ -16,700 +16,67 @@ Where the lives are, before any one of them is drawn: the world's whole
 birth curve, binned by century. Every lot below was drawn against this
 distribution, so the same command prints both halves of this page.
 
-About 222,000 lives have been lived in seed 42 between year 0 and year 2000.
+About 226,000 lives have been lived in seed 42 between year 0 and year 2000.
 
 | years | births | share |
 |---|---:|---:|
-| 0–100 | 1,554 | 0.7% |
-| 100–200 | 2,486 | 1.1% |
-| 200–300 | 3,237 | 1.5% |
-| 300–400 | 3,982 | 1.8% |
-| 400–500 | 4,603 | 2.1% |
-| 500–600 | 5,311 | 2.4% |
-| 600–700 | 5,842 | 2.6% |
-| 700–800 | 6,426 | 2.9% |
-| 800–900 | 7,785 | 3.5% |
-| 900–1000 | 9,112 | 4.1% |
-| 1000–1100 | 10,045 | 4.5% |
-| 1100–1200 | 11,386 | 5.1% |
-| 1200–1300 | 12,951 | 5.8% |
-| 1300–1400 | 14,673 | 6.6% |
-| 1400–1500 | 16,609 | 7.5% |
-| 1500–1600 | 18,304 | 8.3% |
-| 1600–1700 | 19,840 | 9.0% |
-| 1700–1800 | 20,572 | 9.3% |
-| 1800–1900 | 22,278 | 10.1% |
-| 1900–2000 | 24,516 | 11.1% |
+| 0–100 | 1,513 | 0.7% |
+| 100–200 | 2,301 | 1.0% |
+| 200–300 | 3,054 | 1.4% |
+| 300–400 | 3,837 | 1.7% |
+| 400–500 | 4,680 | 2.1% |
+| 500–600 | 5,408 | 2.4% |
+| 600–700 | 6,245 | 2.8% |
+| 700–800 | 6,666 | 3.0% |
+| 800–900 | 7,564 | 3.3% |
+| 900–1000 | 8,749 | 3.9% |
+| 1000–1100 | 9,876 | 4.4% |
+| 1100–1200 | 10,744 | 4.8% |
+| 1200–1300 | 12,751 | 5.6% |
+| 1300–1400 | 14,639 | 6.5% |
+| 1400–1500 | 16,431 | 7.3% |
+| 1500–1600 | 18,563 | 8.2% |
+| 1600–1700 | 20,862 | 9.2% |
+| 1700–1800 | 22,106 | 9.8% |
+| 1800–1900 | 23,401 | 10.4% |
+| 1900–2000 | 26,486 | 11.7% |
 
-Most of these lives were born recently: the last five hundred years hold 47.6% of them.
+Most of these lives were born recently: the last five hundred years hold 49.3% of them.
 
 # Lot 0 — seed 42
 
 ## When
 
-They were born in year 1742, dead in year 1774, aged 32. [1] [2] [3] [4]
+They were born in year 1754, dead in year 1786, aged 32. [1] [2] [3]
 
 ## Where
 
-They lived at Bago, a temperate-forest site, at 26.6°, 106.6° — and, from year 1750, Bago (26.4°, 107.9°). [5] [6] [7] [8] [9] [10] [11] [12] [13] [14]
-
-## Life
-
-Their people was the hobgoblin. [15]
-They were called Bengba. [16]
-The community held about 72 people at the birth year, in a community that reached 72 at its height. [17] [18] [19]
-It had been founded at year 925 by settlers from Bago, itself 125 years older. [1] [20] [21] [22]
-Its founder descended 4 generations from the mother community's founder. [20] [23]
-The community ended in year 1750, after the life had already ended; the survivors refounded at site 757 in year 1750, and the life went with them. [24] [3] [25]
-They died of violence. [26]
-
-## Story
-
-Bengba is a non-causal composite case, not a real person; it is drawn from the statistical reality of Bago, a temperate-forest site, at 26.6°, 106.6° — and, from year 1750, Bago (26.4°, 107.9°) in year 1742 of seed 42, and cannot write consequences back to that world.
-They had classical statecraft and engineering. [27]
-The community was for farming and herding. [28]
-They spoke the hobgoblin tongue, of the goblinoid family. [29]
-They held Bago Nglonbago — the pantheon this people held, kept at Bote, in organized cult. [30] [31] [32] [33]
-The community held that Bago came to its end in year 1750 — first-hand. [3] [34] [9]
-Nothing in the record says how they fed themselves: culture facts attach to living settlements.
-Nothing in the record says what standing they were reckoned in: culture facts attach to living settlements.
-Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
-They lived in 3 huts. [35]
-Nothing in the record speaks of a working here: not a mining community.
-They lived in temperate latitudes, and temperate-forest country. [6] [36] [10]
-The sun was never wholly taken in this life. [37]
-The ground under them gave nothing — the ground held for the whole of this life. [38]
-They ate other living things — prey, detritus, or their remains. [39]
-Nothing in the record says what sex traits they had: no realized person is committed for this life.
-Nothing in the record says what reproductive role they held: no realized person is committed for this life.
-Nothing in the record says how they identified: no realized person is committed for this life.
-Nothing in the record says how others recognized them: no realized person is committed for this life.
-Nothing in the record says what descent relations they had: no realized person is committed for this life.
-Nothing in the record says what associations they formed: no realized person is committed for this life.
-Nothing in the record says whether they had children: no realized person is committed for this life.
-Nothing in the record says whether they had siblings: no realized person is committed for this life.
-Nothing in the record says what their descent was: no realized person is committed for this life.
-Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
-Nothing in the record says who cared for whom: no realized person is committed for this life.
-Nothing in the record says which groups they joined: no realized person is committed for this life.
-Nothing in the record says whether they migrated: no realized person is committed for this life.
-Nothing in the record says whether a parent died: no realized person is committed for this life.
-Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
-The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
-
-### Sources
-
-- [1] the standard day the occupation began (entity 10760661430244475266, occ-founded)
-- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
-- [3] the standard day the occupation ended, absent while alive (entity 10760661430244475266, occ-ended)
-- [4] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [5] the Geosphere cell the occupation sits on (entity 10760661430244475266, occ-site)
-- [6] settlement latitude, degrees (entity 10760661430244475752, latitude)
-- [7] settlement longitude, degrees (entity 10760661430244475752, longitude)
-- [8] Geosphere cell id a settlement sits on (entity 10760661430244475752, cell-id)
-- [9] canonical name of an entity (entity 10760661430244475752, name)
-- [10] biome of a place (entity 10760661430244475752, biome)
-- [11] the Geosphere cell the occupation sits on (entity 10760661430244475751, occ-site)
-- [12] settlement latitude, degrees (entity 10760661430244475751, latitude)
-- [13] settlement longitude, degrees (entity 10760661430244475751, longitude)
-- [14] canonical name of an entity (entity 10760661430244475751, name)
-- [15] the people occupying the site (entity 10760661430244475266, occ-people)
-- [16] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [17] the occupation's peak population (entity 10760661430244475266, occ-peak)
-- [18] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475266, occ-person-years)
-- [19] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [20] how the occupation began: genesis, or founded from another community (entity 10760661430244475266, occ-founded-from)
-- [21] the standard day the occupation began (entity 10760661430244475227, occ-founded)
-- [22] canonical name of an entity (entity 10760661430244475265, name)
-- [23] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
-- [24] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
-- [25] how the occupation began: genesis, or founded from another community (entity 10760661430244475751, occ-founded-from)
-- [26] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
-- [27] the occupation's technological horizon (entity 10760661430244475266, occ-tech)
-- [28] what the occupation was for (entity 10760661430244475266, occ-function)
-- [29] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [30] a belief's deity name (roman) (entity 17889750398804361216, deity-name)
-- [31] a belief's epithet (roman) (entity 17889750398804361216, deity-epithet)
-- [32] a community holding a belief (entity 17889750398804361216, held-by)
-- [33] the cult form of a belief (organized or folk) (entity 17889750398804361216, cult-form)
-- [34] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
-- [35] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
-- [36] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
-- [37] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
-- [38] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [39] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
-
-# Lot 1 — seed 42
-
-## When
-
-They were born in year 1802, dead in year 1893, aged 91. [1] [2] [3]
-
-## Where
-
-They lived at Noaba, a tropical-seasonal-forest site, at -0.6°, -142.4°. [4] [5] [6] [7] [8] [9]
+They lived at Noaba, a tropical-seasonal-forest site, at -12.7°, 21.4°. [4] [5] [6] [7] [8] [9]
 
 ## Life
 
 Their people was the hobgoblin. [10]
-They were called Fenweng. [11]
-The community held about 15 people at the birth year, in a community that reached 34 at its height. [12] [13] [14]
-It had been founded at year 1700 by settlers from Bago, itself 25 years older. [1] [15] [16] [17]
+They were called Bengba. [11]
+The community held about 71 people at the birth year, in a community that reached 77 at its height. [12] [13] [14]
+It had been founded at year 1025 by settlers from Goabobeqa, itself 25 years older. [1] [15] [16] [17]
 Its founder descended 1 generation from the mother community's founder. [15] [18]
-The community was still standing when the life ended. [19]
-They died of age. [20]
-
-## Story
-
-Fenweng is a non-causal composite case, not a real person; it is drawn from the statistical reality of Noaba, a tropical-seasonal-forest site, at -0.6°, -142.4° in year 1802 of seed 42, and cannot write consequences back to that world.
-They had classical statecraft and engineering. [21]
-The community was for farming and herding. [22]
-They spoke the hobgoblin tongue, of the goblinoid family. [23]
-They held Bago Nglonbago — the pantheon this people held, kept at Bote, in organized cult. [24] [25] [26] [27]
-The community held that Bago came to its end in year 1700 — first-hand. [28] [29] [17]
-Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
-Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
-They lived in 2 huts. [30]
-Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [31] [9]
-The sun was wholly taken 1 time over this life, the first at age 26. [32]
-The ground under them gave nothing — the ground held for the whole of this life. [33]
-They ate other living things — prey, detritus, or their remains. [34]
-Nothing in the record says what sex traits they had: no realized person is committed for this life.
-Nothing in the record says what reproductive role they held: no realized person is committed for this life.
-Nothing in the record says how they identified: no realized person is committed for this life.
-Nothing in the record says how others recognized them: no realized person is committed for this life.
-Nothing in the record says what descent relations they had: no realized person is committed for this life.
-Nothing in the record says what associations they formed: no realized person is committed for this life.
-Nothing in the record says whether they had children: no realized person is committed for this life.
-Nothing in the record says whether they had siblings: no realized person is committed for this life.
-Nothing in the record says what their descent was: no realized person is committed for this life.
-Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
-Nothing in the record says who cared for whom: no realized person is committed for this life.
-Nothing in the record says which groups they joined: no realized person is committed for this life.
-Nothing in the record says whether they migrated: no realized person is committed for this life.
-Nothing in the record says whether a parent died: no realized person is committed for this life.
-Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
-The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
-
-### Sources
-
-- [1] the standard day the occupation began (entity 10760661430244475691, occ-founded)
-- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
-- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [4] the Geosphere cell the occupation sits on (entity 10760661430244475691, occ-site)
-- [5] settlement latitude, degrees (entity 10760661430244475691, latitude)
-- [6] settlement longitude, degrees (entity 10760661430244475691, longitude)
-- [7] Geosphere cell id a settlement sits on (entity 10760661430244475691, cell-id)
-- [8] canonical name of an entity (entity 10760661430244475691, name)
-- [9] biome of a place (entity 10760661430244475691, biome)
-- [10] the people occupying the site (entity 10760661430244475691, occ-people)
-- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [12] the occupation's peak population (entity 10760661430244475691, occ-peak)
-- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475691, occ-person-years)
-- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244475691, occ-founded-from)
-- [16] the standard day the occupation began (entity 10760661430244475651, occ-founded)
-- [17] canonical name of an entity (entity 10760661430244475855, name)
-- [18] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
-- [19] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
-- [20] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
-- [21] the occupation's technological horizon (entity 10760661430244475691, occ-tech)
-- [22] what the occupation was for (entity 10760661430244475691, occ-function)
-- [23] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [24] a belief's deity name (roman) (entity 17889750398804361216, deity-name)
-- [25] a belief's epithet (roman) (entity 17889750398804361216, deity-epithet)
-- [26] a community holding a belief (entity 17889750398804361216, held-by)
-- [27] the cult form of a belief (organized or folk) (entity 17889750398804361216, cult-form)
-- [28] the standard day the occupation ended, absent while alive (entity 10760661430244475651, occ-ended)
-- [29] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
-- [30] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
-- [31] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
-- [32] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
-- [33] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [34] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
-
-# Lot 2 — seed 42
-
-## When
-
-They were born in year 1649, dead in year 1652, aged 3. [1] [2] [3] [4]
-
-## Where
-
-They lived at Bago, a temperate-forest site, at 26.6°, 106.6°. [5] [6] [7] [8] [9] [10]
-
-## Life
-
-Their people was the hobgoblin. [11]
-They were called Vomgongfa. [12]
-The community held about 72 people at the birth year, in a community that reached 72 at its height. [13] [14] [15]
-It had been founded at year 925 by settlers from Bago, itself 125 years older. [1] [16] [17] [18]
-Its founder descended 4 generations from the mother community's founder. [16] [19]
-The community outlived the life, ending only in year 1750. [20] [3]
-They died of an unnamed cause. [21]
-
-## Story
-
-Vomgongfa is a non-causal composite case, not a real person; it is drawn from the statistical reality of Bago, a temperate-forest site, at 26.6°, 106.6° in year 1649 of seed 42, and cannot write consequences back to that world.
-They had classical statecraft and engineering. [22]
-The community was for farming and herding. [23]
-They spoke the hobgoblin tongue, of the goblinoid family. [24]
-They held Bago Nglonbago — the pantheon this people held, kept at Bote, in organized cult. [25] [26] [27] [28]
-The community held that Bago came to its end in year 1750 — first-hand. [3] [29] [9]
-Nothing in the record says how they fed themselves: culture facts attach to living settlements.
-Nothing in the record says what standing they were reckoned in: culture facts attach to living settlements.
-Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
-They lived in 3 huts. [30]
-Nothing in the record speaks of a working here: not a mining community.
-They lived in temperate latitudes, and temperate-forest country. [6] [31] [10]
-The sun was never wholly taken in this life. [32]
-The ground under them gave nothing — the ground held for the whole of this life. [33]
-They ate other living things — prey, detritus, or their remains. [34]
-Nothing in the record says what sex traits they had: no realized person is committed for this life.
-Nothing in the record says what reproductive role they held: no realized person is committed for this life.
-Nothing in the record says how they identified: no realized person is committed for this life.
-Nothing in the record says how others recognized them: no realized person is committed for this life.
-Nothing in the record says what descent relations they had: no realized person is committed for this life.
-Nothing in the record says what associations they formed: no realized person is committed for this life.
-Nothing in the record says whether they had children: no realized person is committed for this life.
-Nothing in the record says whether they had siblings: no realized person is committed for this life.
-Nothing in the record says what their descent was: no realized person is committed for this life.
-Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
-Nothing in the record says who cared for whom: no realized person is committed for this life.
-Nothing in the record says which groups they joined: no realized person is committed for this life.
-Nothing in the record says whether they migrated: no realized person is committed for this life.
-Nothing in the record says whether a parent died: no realized person is committed for this life.
-Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
-The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
-
-### Sources
-
-- [1] the standard day the occupation began (entity 10760661430244475266, occ-founded)
-- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
-- [3] the standard day the occupation ended, absent while alive (entity 10760661430244475266, occ-ended)
-- [4] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [5] the Geosphere cell the occupation sits on (entity 10760661430244475266, occ-site)
-- [6] settlement latitude, degrees (entity 10760661430244475752, latitude)
-- [7] settlement longitude, degrees (entity 10760661430244475752, longitude)
-- [8] Geosphere cell id a settlement sits on (entity 10760661430244475752, cell-id)
-- [9] canonical name of an entity (entity 10760661430244475752, name)
-- [10] biome of a place (entity 10760661430244475752, biome)
-- [11] the people occupying the site (entity 10760661430244475266, occ-people)
-- [12] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [13] the occupation's peak population (entity 10760661430244475266, occ-peak)
-- [14] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475266, occ-person-years)
-- [15] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [16] how the occupation began: genesis, or founded from another community (entity 10760661430244475266, occ-founded-from)
-- [17] the standard day the occupation began (entity 10760661430244475227, occ-founded)
-- [18] canonical name of an entity (entity 10760661430244475265, name)
-- [19] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
-- [20] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
-- [21] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
-- [22] the occupation's technological horizon (entity 10760661430244475266, occ-tech)
-- [23] what the occupation was for (entity 10760661430244475266, occ-function)
-- [24] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [25] a belief's deity name (roman) (entity 17889750398804361216, deity-name)
-- [26] a belief's epithet (roman) (entity 17889750398804361216, deity-epithet)
-- [27] a community holding a belief (entity 17889750398804361216, held-by)
-- [28] the cult form of a belief (organized or folk) (entity 17889750398804361216, cult-form)
-- [29] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
-- [30] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
-- [31] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
-- [32] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
-- [33] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [34] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
-
-# Lot 3 — seed 42
-
-## When
-
-They were born in year 536, dead in year 580, aged 44. [1] [2] [3]
-
-## Where
-
-They lived at Reko, a temperate-forest site, at -20.6°, -44.1°. [4] [5] [6] [7] [8] [9]
-
-## Life
-
-Their people was the human. [10]
-They were called Raetvotfe. [11]
-The community held about 19 people at the birth year, in a community that reached 31 at its height. [12] [13] [14]
-It had been founded at year 0, raised from nothing at its own site. [1] [15]
-Nothing in the record says how its founder stood to the mother community's founder: no forebear is derivable — either this community was raised at its own site, or its people has no generation length to reckon a remove by.
-The community was still standing when the life ended. [16]
-They died of violence. [17]
-
-## Story
-
-Raetvotfe is a non-causal composite case, not a real person; it is drawn from the statistical reality of Reko, a temperate-forest site, at -20.6°, -44.1° in year 536 of seed 42, and cannot write consequences back to that world.
-They had classical statecraft and engineering. [18]
-The community was for farming and herding. [19]
-They spoke the human tongue. [20]
-They held Pero Pero — the pantheon this people held, kept at Vakveepera, in organized cult. [21] [22] [23] [24]
-Nothing in the record says what the community held true about its own kin: this community remembers no ending — none of its forebears ended within reach of a telling.
-Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
-Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
-They lived in 2 huts. [25]
-Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and temperate-forest country. [5] [26] [9]
-The sun was wholly taken 2 times over this life, the first at age 6. [27]
-The ground under them gave nothing — the ground held for the whole of this life. [28]
-They ate other living things — prey, detritus, or their remains. [29]
-Nothing in the record says what sex traits they had: no realized person is committed for this life.
-Nothing in the record says what reproductive role they held: no realized person is committed for this life.
-Nothing in the record says how they identified: no realized person is committed for this life.
-Nothing in the record says how others recognized them: no realized person is committed for this life.
-Nothing in the record says what descent relations they had: no realized person is committed for this life.
-Nothing in the record says what associations they formed: no realized person is committed for this life.
-Nothing in the record says whether they had children: no realized person is committed for this life.
-Nothing in the record says whether they had siblings: no realized person is committed for this life.
-Nothing in the record says what their descent was: no realized person is committed for this life.
-Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
-Nothing in the record says who cared for whom: no realized person is committed for this life.
-Nothing in the record says which groups they joined: no realized person is committed for this life.
-Nothing in the record says whether they migrated: no realized person is committed for this life.
-Nothing in the record says whether a parent died: no realized person is committed for this life.
-Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
-The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
-
-### Sources
-
-- [1] the standard day the occupation began (entity 10760661430244474913, occ-founded)
-- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
-- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [4] the Geosphere cell the occupation sits on (entity 10760661430244474913, occ-site)
-- [5] settlement latitude, degrees (entity 10760661430244474913, latitude)
-- [6] settlement longitude, degrees (entity 10760661430244474913, longitude)
-- [7] Geosphere cell id a settlement sits on (entity 10760661430244474913, cell-id)
-- [8] canonical name of an entity (entity 10760661430244474913, name)
-- [9] biome of a place (entity 10760661430244474913, biome)
-- [10] the people occupying the site (entity 10760661430244474913, occ-people)
-- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [12] the occupation's peak population (entity 10760661430244474913, occ-peak)
-- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244474913, occ-person-years)
-- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244474913, occ-founded-from)
-- [16] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
-- [17] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
-- [18] the occupation's technological horizon (entity 10760661430244474913, occ-tech)
-- [19] what the occupation was for (entity 10760661430244474913, occ-function)
-- [20] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [21] a belief's deity name (roman) (entity 3012389404644999168, deity-name)
-- [22] a belief's epithet (roman) (entity 3012389404644999168, deity-epithet)
-- [23] a community holding a belief (entity 3012389404644999168, held-by)
-- [24] the cult form of a belief (organized or folk) (entity 3012389404644999168, cult-form)
-- [25] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
-- [26] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
-- [27] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
-- [28] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [29] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
-
-# Lot 4 — seed 42
-
-## When
-
-They were born in year 1315, dead in year 1377, aged 62. [1] [2] [3]
-
-## Where
-
-They lived at Ṅooṅsraoṅ, a tundra site, at 46.4°, 1.7°. [4] [5] [6] [7] [8] [9]
-
-## Life
-
-Their people was the snow-elf. [10]
-They were called Froṅfrofro. [11]
-The community held about 19 people at the birth year, in a community that reached 24 at its height. [12] [13] [14]
-It had been founded at year 0, raised from nothing at its own site. [1] [15]
-Nothing in the record says how its founder stood to the mother community's founder: no forebear is derivable — either this community was raised at its own site, or its people has no generation length to reckon a remove by.
-The community was still standing when the life ended. [16]
-They died of violence. [17]
-
-## Story
-
-Froṅfrofro is a non-causal composite case, not a real person; it is drawn from the statistical reality of Ṅooṅsraoṅ, a tundra site, at 46.4°, 1.7° in year 1315 of seed 42, and cannot write consequences back to that world.
-They had classical statecraft and engineering. [18]
-The community was for farming and herding. [19]
-They spoke the snow-elf tongue, of the elf family. [20]
-They held Boṅtoṅ Boṅtoṅ — the pantheon this people held, kept at Zroṅṅoṅ, in folk cult. [21] [22] [23] [24]
-Nothing in the record says what the community held true about its own kin: this community remembers no ending — none of its forebears ended within reach of a telling.
-Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
-Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
-They lived in one hut. [25]
-Nothing in the record speaks of a working here: not a mining community.
-They lived in temperate latitudes, and tundra country. [5] [26] [9]
-The sun was wholly taken 1 time over this life, the first at age 55. [27]
-The ground under them gave nothing — the ground held for the whole of this life. [28]
-They ate other living things — prey, detritus, or their remains. [29]
-Nothing in the record says what sex traits they had: no realized person is committed for this life.
-Nothing in the record says what reproductive role they held: no realized person is committed for this life.
-Nothing in the record says how they identified: no realized person is committed for this life.
-Nothing in the record says how others recognized them: no realized person is committed for this life.
-Nothing in the record says what descent relations they had: no realized person is committed for this life.
-Nothing in the record says what associations they formed: no realized person is committed for this life.
-Nothing in the record says whether they had children: no realized person is committed for this life.
-Nothing in the record says whether they had siblings: no realized person is committed for this life.
-Nothing in the record says what their descent was: no realized person is committed for this life.
-Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
-Nothing in the record says who cared for whom: no realized person is committed for this life.
-Nothing in the record says which groups they joined: no realized person is committed for this life.
-Nothing in the record says whether they migrated: no realized person is committed for this life.
-Nothing in the record says whether a parent died: no realized person is committed for this life.
-Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
-The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
-
-### Sources
-
-- [1] the standard day the occupation began (entity 10760661430244474932, occ-founded)
-- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
-- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [4] the Geosphere cell the occupation sits on (entity 10760661430244474932, occ-site)
-- [5] settlement latitude, degrees (entity 10760661430244474932, latitude)
-- [6] settlement longitude, degrees (entity 10760661430244474932, longitude)
-- [7] Geosphere cell id a settlement sits on (entity 10760661430244474932, cell-id)
-- [8] canonical name of an entity (entity 10760661430244474932, name)
-- [9] biome of a place (entity 10760661430244474932, biome)
-- [10] the people occupying the site (entity 10760661430244474932, occ-people)
-- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [12] the occupation's peak population (entity 10760661430244474932, occ-peak)
-- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244474932, occ-person-years)
-- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244474932, occ-founded-from)
-- [16] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
-- [17] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
-- [18] the occupation's technological horizon (entity 10760661430244474932, occ-tech)
-- [19] what the occupation was for (entity 10760661430244474932, occ-function)
-- [20] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [21] a belief's deity name (roman) (entity 1672329432255365120, deity-name)
-- [22] a belief's epithet (roman) (entity 1672329432255365120, deity-epithet)
-- [23] a community holding a belief (entity 1672329432255365120, held-by)
-- [24] the cult form of a belief (organized or folk) (entity 1672329432255365120, cult-form)
-- [25] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
-- [26] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
-- [27] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
-- [28] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [29] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
-
-# Lot 5 — seed 42
-
-## When
-
-They were born in year 1826, dead in year 1850, aged 24. [1] [2] [3] [4]
-
-## Where
-
-They lived at Na, a temperate-forest site, at 1.7°, -147.4°. [5] [6] [7] [8] [9] [10]
-
-## Life
-
-Their people was the hobgoblin. [11]
-They were called Gangvomle. [12]
-The community held about 13 people at the birth year, in a community that reached 18 at its height. [13] [14] [15]
-It had been founded at year 1725 by settlers from To, itself 100 years older. [1] [16] [17] [18]
-Its founder descended 3 generations from the mother community's founder. [16] [19]
-The community migrated onward in year 1850, and the life ended with it. [20] [3] [21]
-They died of migration. [21]
-
-## Story
-
-Gangvomle is a non-causal composite case, not a real person; it is drawn from the statistical reality of Na, a temperate-forest site, at 1.7°, -147.4° in year 1826 of seed 42, and cannot write consequences back to that world.
-They had classical statecraft and engineering. [22]
-The community was for farming and herding. [23]
-They spoke the hobgoblin tongue, of the goblinoid family. [24]
-They held Bago Nglonbago — the pantheon this people held, kept at Bote, in organized cult. [25] [26] [27] [28]
-The community held that Na came to its end in year 1850 — first-hand. [3] [29] [9]
-Nothing in the record says how they fed themselves: culture facts attach to living settlements.
-Nothing in the record says what standing they were reckoned in: culture facts attach to living settlements.
-Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
-They lived in one hut. [30]
-Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and temperate-forest country. [6] [31] [10]
-The sun was never wholly taken in this life. [32]
-The ground under them gave nothing — the ground held for the whole of this life. [33]
-They ate other living things — prey, detritus, or their remains. [34]
-Nothing in the record says what sex traits they had: no realized person is committed for this life.
-Nothing in the record says what reproductive role they held: no realized person is committed for this life.
-Nothing in the record says how they identified: no realized person is committed for this life.
-Nothing in the record says how others recognized them: no realized person is committed for this life.
-Nothing in the record says what descent relations they had: no realized person is committed for this life.
-Nothing in the record says what associations they formed: no realized person is committed for this life.
-Nothing in the record says whether they had children: no realized person is committed for this life.
-Nothing in the record says whether they had siblings: no realized person is committed for this life.
-Nothing in the record says what their descent was: no realized person is committed for this life.
-Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
-Nothing in the record says who cared for whom: no realized person is committed for this life.
-Nothing in the record says which groups they joined: no realized person is committed for this life.
-Nothing in the record says whether they migrated: no realized person is committed for this life.
-Nothing in the record says whether a parent died: no realized person is committed for this life.
-Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
-The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
-
-### Sources
-
-- [1] the standard day the occupation began (entity 10760661430244475709, occ-founded)
-- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
-- [3] the standard day the occupation ended, absent while alive (entity 10760661430244475709, occ-ended)
-- [4] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [5] the Geosphere cell the occupation sits on (entity 10760661430244475709, occ-site)
-- [6] settlement latitude, degrees (entity 10760661430244475832, latitude)
-- [7] settlement longitude, degrees (entity 10760661430244475832, longitude)
-- [8] Geosphere cell id a settlement sits on (entity 10760661430244475832, cell-id)
-- [9] canonical name of an entity (entity 10760661430244475832, name)
-- [10] biome of a place (entity 10760661430244475832, biome)
-- [11] the people occupying the site (entity 10760661430244475709, occ-people)
-- [12] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [13] the occupation's peak population (entity 10760661430244475709, occ-peak)
-- [14] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475709, occ-person-years)
-- [15] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [16] how the occupation began: genesis, or founded from another community (entity 10760661430244475709, occ-founded-from)
-- [17] the standard day the occupation began (entity 10760661430244475605, occ-founded)
-- [18] canonical name of an entity (entity 10760661430244475605, name)
-- [19] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
-- [20] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
-- [21] why the occupation ended, absent while alive (entity 10760661430244475709, occ-cause)
-- [22] the occupation's technological horizon (entity 10760661430244475709, occ-tech)
-- [23] what the occupation was for (entity 10760661430244475709, occ-function)
-- [24] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [25] a belief's deity name (roman) (entity 17889750398804361216, deity-name)
-- [26] a belief's epithet (roman) (entity 17889750398804361216, deity-epithet)
-- [27] a community holding a belief (entity 17889750398804361216, held-by)
-- [28] the cult form of a belief (organized or folk) (entity 17889750398804361216, cult-form)
-- [29] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
-- [30] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
-- [31] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
-- [32] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
-- [33] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [34] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
-
-# Lot 6 — seed 42
-
-## When
-
-They were born in year 1938, dead in year 1950, aged 12. [1] [2] [3]
-
-## Where
-
-They lived at Bago, a temperate-forest site, at 26.6°, 106.6°. [4] [5] [6] [7] [8] [9]
-
-## Life
-
-Their people was the hobgoblin. [10]
-They were called Xanwoxa. [11]
-The community held about 34 people at the birth year, in a community that reached 34 at its height. [12] [13] [14]
-It had been founded at year 1750 by settlers from Bago, itself 0 years older. [1] [15] [16] [17]
-Its founder stood in the same generation as the mother community's founder. [15] [18]
 The community was still standing when the life ended. [19]
 They died of violence. [20]
 
 ## Story
 
-Xanwoxa is a non-causal composite case, not a real person; it is drawn from the statistical reality of Bago, a temperate-forest site, at 26.6°, 106.6° in year 1938 of seed 42, and cannot write consequences back to that world.
+Bengba is a non-causal composite case, not a real person; it is drawn from the statistical reality of Noaba, a tropical-seasonal-forest site, at -12.7°, 21.4° in year 1754 of seed 42, and cannot write consequences back to that world.
 They had classical statecraft and engineering. [21]
 The community was for farming and herding. [22]
 They spoke the hobgoblin tongue, of the goblinoid family. [23]
-They held Bago Nglonbago — the pantheon this people held, kept at Bote, in organized cult. [24] [25] [26] [27]
-The community held that Bago came to its end in year 1750 — first-hand. [28] [29] [17]
-Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
-Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-They paid tribute to Bago, a hobgoblin community. [30] [17]
-They lived in one hut. [31]
-Nothing in the record speaks of a working here: not a mining community.
-They lived in temperate latitudes, and temperate-forest country. [5] [32] [9]
-The sun was never wholly taken in this life. [33]
-The ground under them gave nothing — the ground held for the whole of this life. [34]
-They ate other living things — prey, detritus, or their remains. [35]
-Nothing in the record says what sex traits they had: no realized person is committed for this life.
-Nothing in the record says what reproductive role they held: no realized person is committed for this life.
-Nothing in the record says how they identified: no realized person is committed for this life.
-Nothing in the record says how others recognized them: no realized person is committed for this life.
-Nothing in the record says what descent relations they had: no realized person is committed for this life.
-Nothing in the record says what associations they formed: no realized person is committed for this life.
-Nothing in the record says whether they had children: no realized person is committed for this life.
-Nothing in the record says whether they had siblings: no realized person is committed for this life.
-Nothing in the record says what their descent was: no realized person is committed for this life.
-Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
-Nothing in the record says who cared for whom: no realized person is committed for this life.
-Nothing in the record says which groups they joined: no realized person is committed for this life.
-Nothing in the record says whether they migrated: no realized person is committed for this life.
-Nothing in the record says whether a parent died: no realized person is committed for this life.
-Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
-The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
-
-### Sources
-
-- [1] the standard day the occupation began (entity 10760661430244475752, occ-founded)
-- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
-- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [4] the Geosphere cell the occupation sits on (entity 10760661430244475752, occ-site)
-- [5] settlement latitude, degrees (entity 10760661430244475752, latitude)
-- [6] settlement longitude, degrees (entity 10760661430244475752, longitude)
-- [7] Geosphere cell id a settlement sits on (entity 10760661430244475752, cell-id)
-- [8] canonical name of an entity (entity 10760661430244475752, name)
-- [9] biome of a place (entity 10760661430244475752, biome)
-- [10] the people occupying the site (entity 10760661430244475752, occ-people)
-- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [12] the occupation's peak population (entity 10760661430244475752, occ-peak)
-- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475752, occ-person-years)
-- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244475752, occ-founded-from)
-- [16] the standard day the occupation began (entity 10760661430244475729, occ-founded)
-- [17] canonical name of an entity (entity 10760661430244475751, name)
-- [18] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
-- [19] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
-- [20] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
-- [21] the occupation's technological horizon (entity 10760661430244475752, occ-tech)
-- [22] what the occupation was for (entity 10760661430244475752, occ-function)
-- [23] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [24] a belief's deity name (roman) (entity 17889750398804361216, deity-name)
-- [25] a belief's epithet (roman) (entity 17889750398804361216, deity-epithet)
-- [26] a community holding a belief (entity 17889750398804361216, held-by)
-- [27] the cult form of a belief (organized or folk) (entity 17889750398804361216, cult-form)
-- [28] the standard day the occupation ended, absent while alive (entity 10760661430244475729, occ-ended)
-- [29] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
-- [30] the community this community pays standing tribute to (entity 10760661430244475752, pays-tribute-to)
-- [31] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
-- [32] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
-- [33] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
-- [34] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [35] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
-
-# Lot 7 — seed 42
-
-## When
-
-They were born in year 1898, dead in year 1997, aged 99. [1] [2] [3]
-
-## Where
-
-They lived at Daadoo, a temperate-forest site, at 17.9°, -142.4°. [4] [5] [6] [7] [8] [9]
-
-## Life
-
-Their people was the bugbear. [10]
-They were called Bvaavnga. [11]
-The community held about 47 people at the birth year, in a community that reached 47 at its height. [12] [13] [14]
-It had been founded at year 1225 by settlers from Dodo, itself 125 years older. [1] [15] [16] [17]
-Its founder descended 4 generations from the mother community's founder. [15] [18]
-The community was still standing when the life ended. [19]
-They died of age. [20]
-
-## Story
-
-Bvaavnga is a non-causal composite case, not a real person; it is drawn from the statistical reality of Daadoo, a temperate-forest site, at 17.9°, -142.4° in year 1898 of seed 42, and cannot write consequences back to that world.
-They had classical statecraft and engineering. [21]
-The community was for farming and herding. [22]
-They spoke the bugbear tongue, of the goblinoid family. [23]
-They held Dado Vngoodado — the pantheon this people held, kept at Doaba, in organized cult. [24] [25] [26] [27]
-The community held that Dodo came to its end in year 1375 — 1 telling removed. [28] [29] [17]
+They held Bago Nglonbago — the pantheon this people held, kept at Naabee, in organized cult. [24] [25] [26] [27]
+The community held that Goabobeqa came to its end in year 1025 — first-hand. [28] [29] [17]
 Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
 Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
-They lived in 2 huts. [30]
+They lived in 3 huts. [30]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and temperate-forest country. [5] [31] [9]
+They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [31] [9]
 The sun was never wholly taken in this life. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
@@ -732,34 +99,34 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 
 ### Sources
 
-- [1] the standard day the occupation began (entity 10760661430244475404, occ-founded)
+- [1] the standard day the occupation began (entity 10760661430244475337, occ-founded)
 - [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
 - [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [4] the Geosphere cell the occupation sits on (entity 10760661430244475404, occ-site)
-- [5] settlement latitude, degrees (entity 10760661430244475404, latitude)
-- [6] settlement longitude, degrees (entity 10760661430244475404, longitude)
-- [7] Geosphere cell id a settlement sits on (entity 10760661430244475404, cell-id)
-- [8] canonical name of an entity (entity 10760661430244475404, name)
-- [9] biome of a place (entity 10760661430244475404, biome)
-- [10] the people occupying the site (entity 10760661430244475404, occ-people)
+- [4] the Geosphere cell the occupation sits on (entity 10760661430244475337, occ-site)
+- [5] settlement latitude, degrees (entity 10760661430244475337, latitude)
+- [6] settlement longitude, degrees (entity 10760661430244475337, longitude)
+- [7] Geosphere cell id a settlement sits on (entity 10760661430244475337, cell-id)
+- [8] canonical name of an entity (entity 10760661430244475337, name)
+- [9] biome of a place (entity 10760661430244475337, biome)
+- [10] the people occupying the site (entity 10760661430244475337, occ-people)
 - [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [12] the occupation's peak population (entity 10760661430244475404, occ-peak)
-- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475404, occ-person-years)
+- [12] the occupation's peak population (entity 10760661430244475337, occ-peak)
+- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475337, occ-person-years)
 - [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244475404, occ-founded-from)
-- [16] the standard day the occupation began (entity 10760661430244475352, occ-founded)
-- [17] canonical name of an entity (entity 10760661430244475467, name)
+- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244475337, occ-founded-from)
+- [16] the standard day the occupation began (entity 10760661430244475319, occ-founded)
+- [17] canonical name of an entity (entity 10760661430244475345, name)
 - [18] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
 - [19] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
 - [20] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
-- [21] the occupation's technological horizon (entity 10760661430244475404, occ-tech)
-- [22] what the occupation was for (entity 10760661430244475404, occ-function)
+- [21] the occupation's technological horizon (entity 10760661430244475337, occ-tech)
+- [22] what the occupation was for (entity 10760661430244475337, occ-function)
 - [23] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [24] a belief's deity name (roman) (entity 5191592296962457600, deity-name)
-- [25] a belief's epithet (roman) (entity 5191592296962457600, deity-epithet)
-- [26] a community holding a belief (entity 5191592296962457600, held-by)
-- [27] the cult form of a belief (organized or folk) (entity 5191592296962457600, cult-form)
-- [28] the standard day the occupation ended, absent while alive (entity 10760661430244475352, occ-ended)
+- [24] a belief's deity name (roman) (entity 18251725873712005120, deity-name)
+- [25] a belief's epithet (roman) (entity 18251725873712005120, deity-epithet)
+- [26] a community holding a belief (entity 18251725873712005120, held-by)
+- [27] the cult form of a belief (organized or folk) (entity 18251725873712005120, cult-form)
+- [28] the standard day the occupation ended, absent while alive (entity 10760661430244475319, occ-ended)
 - [29] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
 - [30] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
 - [31] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
@@ -767,133 +134,138 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [33] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
 - [34] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
-# Lot 8 — seed 42
+# Lot 1 — seed 42
 
 ## When
 
-They were born in year 1554, dead in year 1556, aged 2. [1] [2] [3] [4]
+They were born in year 1812, dead in year 1825, aged 13. [1] [2] [3] [4]
 
 ## Where
 
-They lived at Kotoanenoo, a temperate-forest site, at -2.2°, -148.3°. [5] [6] [7] [8] [9] [10]
+They lived at Sakabana, a temperate-forest site, at 29.8°, -17.0° — and, from year 1825, Zhokxshozhofobo (33.0°, -19.5°). [5] [6] [7] [8] [9] [10] [11] [12] [13] [14]
 
 ## Life
 
-Their people was the hobgoblin. [11]
-They were called Kennla. [12]
-The community held about 79 people at the birth year, in a community that reached 79 at its height. [13] [14] [15]
-It had been founded at year 675 by settlers from Bagona, itself 75 years older. [1] [16] [17] [18]
-Its founder descended 2 generations from the mother community's founder. [16] [19]
-The community outlived the life, ending only in year 1650. [20] [3]
-They died of the flux. [13] [14] [10] [21] [22]
+Their people was the duergar. [15]
+They were called Notkx'zhob. [16]
+The community held about 23 people at the birth year, in a community that reached 23 at its height. [17] [18] [19]
+It had been founded at year 1750 by settlers from Dazhanadabana, itself 1700 years older. [1] [20] [21] [22]
+Its founder descended 12 generations from the mother community's founder. [20] [23]
+The community fled its site in year 1825, and the life ended with it; the survivors refounded at site 1701 in year 1825, and the life went with them. [24] [3] [25] [26]
+They died of flight. [27]
 
 ## Story
 
-Kennla is a non-causal composite case, not a real person; it is drawn from the statistical reality of Kotoanenoo, a temperate-forest site, at -2.2°, -148.3° in year 1554 of seed 42, and cannot write consequences back to that world.
-They had classical statecraft and engineering. [23]
-The community was for farming and herding. [24]
-They spoke the hobgoblin tongue, of the goblinoid family. [25]
-They held Bago Nglonbago — the pantheon this people held, kept at Bote, in organized cult. [26] [27] [28] [29]
-The community held that Kotoanenoo came to its end in year 1650 — first-hand. [3] [30] [9]
+Notkx'zhob is a non-causal composite case, not a real person; it is drawn from the statistical reality of Sakabana, a temperate-forest site, at 29.8°, -17.0° — and, from year 1825, Zhokxshozhofobo (33.0°, -19.5°) in year 1812 of seed 42, and cannot write consequences back to that world.
+They had classical statecraft and engineering. [28]
+The community was for farming and herding. [29]
+They spoke the duergar tongue, of the dwarf family. [30]
+They held Sasa Kx'zhagsasa — the pantheon this people held, kept at Saka, in folk cult. [31] [32] [33] [34]
+The community held that Sakabana came to its end in year 1825 — first-hand. [3] [35] [9]
 Nothing in the record says how they fed themselves: culture facts attach to living settlements.
 Nothing in the record says what standing they were reckoned in: culture facts attach to living settlements.
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
-They lived in 3 huts. [31]
+They lived in one hut. [36]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and temperate-forest country. [6] [32] [10]
-The sun was never wholly taken in this life. [33]
-The ground under them gave nothing — the ground held for the whole of this life. [34]
-They ate other living things — prey, detritus, or their remains. [35]
-Nothing in the record says what sex traits they had: no realized person is committed for this life.
-Nothing in the record says what reproductive role they held: no realized person is committed for this life.
-Nothing in the record says how they identified: no realized person is committed for this life.
-Nothing in the record says how others recognized them: no realized person is committed for this life.
-Nothing in the record says what descent relations they had: no realized person is committed for this life.
-Nothing in the record says what associations they formed: no realized person is committed for this life.
-Nothing in the record says whether they had children: no realized person is committed for this life.
-Nothing in the record says whether they had siblings: no realized person is committed for this life.
-Nothing in the record says what their descent was: no realized person is committed for this life.
-Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
-Nothing in the record says who cared for whom: no realized person is committed for this life.
-Nothing in the record says which groups they joined: no realized person is committed for this life.
-Nothing in the record says whether they migrated: no realized person is committed for this life.
-Nothing in the record says whether a parent died: no realized person is committed for this life.
-Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+They lived in temperate latitudes, and temperate-forest country. [6] [37] [10]
+The sun was never wholly taken in this life. [38]
+The ground under them gave nothing — the ground held for the whole of this life. [39]
+They ate other living things — prey, detritus, or their remains. [40]
+Nothing in the record says what sex traits they had: no committed source answers this social question.
+Nothing in the record says what reproductive role they held: no committed source answers this social question.
+Nothing in the record says how they identified: no committed source answers this social question.
+Nothing in the record says how others recognized them: no committed source answers this social question.
+Nothing in the record says what descent relations they had: no committed parent relation answers family relation.
+Nothing in the record says what associations they formed: no explicit recognized association source answers this question.
+Nothing in the record says whether they had children: no committed child relation answers this question.
+Nothing in the record says whether they had siblings: no committed shared-descent source answers siblinghood.
+Nothing in the record says what their descent was: no committed descent source answers this question.
+Nothing in the record says whether adoption or custody occurred: no committed care-and-custody source answers adoption.
+Nothing in the record says who cared for whom: no committed directed care source answers this question.
+Nothing in the record says which groups they joined: no committed group-membership source answers this question.
+Nothing in the record says whether they migrated: no committed residence transition answers migration.
+Nothing in the record says whether a parent died: no committed parental-death source answers this question.
+Nothing in the record says whether inheritance occurred: no deceased-source transfer answers inheritance.
 The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
-- [1] the standard day the occupation began (entity 10760661430244475146, occ-founded)
+- [1] the standard day the occupation began (entity 10760661430244475784, occ-founded)
 - [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
-- [3] the standard day the occupation ended, absent while alive (entity 10760661430244475146, occ-ended)
+- [3] the standard day the occupation ended, absent while alive (entity 10760661430244475784, occ-ended)
 - [4] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [5] the Geosphere cell the occupation sits on (entity 10760661430244475146, occ-site)
-- [6] settlement latitude, degrees (entity 10760661430244475792, latitude)
-- [7] settlement longitude, degrees (entity 10760661430244475792, longitude)
-- [8] Geosphere cell id a settlement sits on (entity 10760661430244475792, cell-id)
-- [9] canonical name of an entity (entity 10760661430244475792, name)
-- [10] biome of a place (entity 10760661430244475792, biome)
-- [11] the people occupying the site (entity 10760661430244475146, occ-people)
-- [12] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [13] the occupation's peak population (entity 10760661430244475146, occ-peak)
-- [14] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475146, occ-person-years)
-- [15] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [16] how the occupation began: genesis, or founded from another community (entity 10760661430244475146, occ-founded-from)
-- [17] the standard day the occupation began (entity 10760661430244475107, occ-founded)
-- [18] canonical name of an entity (entity 10760661430244475267, name)
-- [19] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
-- [20] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
-- [21] derived: lot::endemic::endemic_burden_at (the worldgen population substrate, era graph, pathogen catalogue, and era-adjusted site substrate)
-- [22] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
-- [23] the occupation's technological horizon (entity 10760661430244475146, occ-tech)
-- [24] what the occupation was for (entity 10760661430244475146, occ-function)
-- [25] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [26] a belief's deity name (roman) (entity 17889750398804361216, deity-name)
-- [27] a belief's epithet (roman) (entity 17889750398804361216, deity-epithet)
-- [28] a community holding a belief (entity 17889750398804361216, held-by)
-- [29] the cult form of a belief (organized or folk) (entity 17889750398804361216, cult-form)
-- [30] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
-- [31] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
-- [32] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
-- [33] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
-- [34] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [35] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
+- [5] the Geosphere cell the occupation sits on (entity 10760661430244475784, occ-site)
+- [6] settlement latitude, degrees (entity 10760661430244475933, latitude)
+- [7] settlement longitude, degrees (entity 10760661430244475933, longitude)
+- [8] Geosphere cell id a settlement sits on (entity 10760661430244475933, cell-id)
+- [9] canonical name of an entity (entity 10760661430244475933, name)
+- [10] biome of a place (entity 10760661430244475933, biome)
+- [11] the Geosphere cell the occupation sits on (entity 10760661430244475966, occ-site)
+- [12] settlement latitude, degrees (entity 10760661430244475464, latitude)
+- [13] settlement longitude, degrees (entity 10760661430244475464, longitude)
+- [14] canonical name of an entity (entity 10760661430244475464, name)
+- [15] the people occupying the site (entity 10760661430244475784, occ-people)
+- [16] derived: language::Namer::name (the people's phonology; a lot-index salt)
+- [17] the occupation's peak population (entity 10760661430244475784, occ-peak)
+- [18] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475784, occ-person-years)
+- [19] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
+- [20] how the occupation began: genesis, or founded from another community (entity 10760661430244475784, occ-founded-from)
+- [21] the standard day the occupation began (entity 10760661430244474967, occ-founded)
+- [22] canonical name of an entity (entity 10760661430244475931, name)
+- [23] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
+- [24] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
+- [25] why the occupation ended, absent while alive (entity 10760661430244475784, occ-cause)
+- [26] how the occupation began: genesis, or founded from another community (entity 10760661430244475966, occ-founded-from)
+- [27] why the occupation ended, absent while alive (entity 10760661430244475966, occ-cause)
+- [28] the occupation's technological horizon (entity 10760661430244475784, occ-tech)
+- [29] what the occupation was for (entity 10760661430244475784, occ-function)
+- [30] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
+- [31] a belief's deity name (roman) (entity 8404835258624376832, deity-name)
+- [32] a belief's epithet (roman) (entity 8404835258624376832, deity-epithet)
+- [33] a community holding a belief (entity 8404835258624376832, held-by)
+- [34] the cult form of a belief (organized or folk) (entity 8404835258624376832, cult-form)
+- [35] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
+- [36] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
+- [37] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
+- [38] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
+- [39] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
+- [40] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
 
-# Lot 9 — seed 42
+# Lot 2 — seed 42
 
 ## When
 
-They were born in year 451, dead in year 749, aged 298. [1] [2] [3]
+They were born in year 1668, dead in year 1671, aged 3. [1] [2] [3] [4]
 
 ## Where
 
-They lived at Mabash'sajat, a temperate-forest site, at 16.0°, 130.9°. [4] [5] [6] [7] [8] [9]
+They lived at a site of a kind the record does not say nobody names now, at -15.9°, 23.7°. [5] [6] [7]
 
 ## Life
 
-Their people was the hill-dwarf. [10]
-They were called Maokjaqngob. [11]
-The community held about 26 people at the birth year, in a community that reached 35 at its height. [12] [13] [14]
-It had been founded at year 0, raised from nothing at its own site. [1] [15]
-Nothing in the record says how its founder stood to the mother community's founder: no forebear is derivable — either this community was raised at its own site, or its people has no generation length to reckon a remove by.
-The community was still standing when the life ended. [16]
-They died of age. [17]
+Their people was the hobgoblin. [8]
+They were called Vomgongfa. [9]
+The community held about 14 people at the birth year, in a community that reached 18 at its height. [10] [11] [12]
+It had been founded at year 1100 by settlers from Boba, itself 100 years older. [1] [13] [14] [15]
+Its founder descended 3 generations from the mother community's founder. [13] [16]
+The community outlived the life, ending only in year 1750. [17] [3]
+They died of an unnamed cause. [18]
 
 ## Story
 
-Maokjaqngob is a non-causal composite case, not a real person; it is drawn from the statistical reality of Mabash'sajat, a temperate-forest site, at 16.0°, 130.9° in year 451 of seed 42, and cannot write consequences back to that world.
-They had classical statecraft and engineering. [18]
-The community was for farming and herding. [19]
-They spoke the hill-dwarf tongue, of the dwarf family. [20]
-They held Qashak Qashak — the pantheon this people held, kept at Mabash'sajat, in organized cult. [21] [22] [23] [24]
-Nothing in the record says what the community held true about its own kin: this community remembers no ending — none of its forebears ended within reach of a telling.
-Their subsistence was farming. [25]
-They reckoned standing in crofter, stonespeaker, thane. [26]
+Vomgongfa is a non-causal composite case, not a real person; it is drawn from the statistical reality of a site of a kind the record does not say nobody names now, at -15.9°, 23.7° in year 1668 of seed 42, and cannot write consequences back to that world.
+They had classical statecraft and engineering. [19]
+The community was for farming and herding. [20]
+They spoke the hobgoblin tongue, of the goblinoid family. [21]
+They held Bago Nglonbago — the pantheon this people held, kept at Naabee, in organized cult. [22] [23] [24] [25]
+The community held that the community at site 9998 came to its end in year 1750 — first-hand. [3] [26]
+Nothing in the record says how they fed themselves: culture facts attach to living settlements.
+Nothing in the record says what standing they were reckoned in: culture facts attach to living settlements.
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in one hut. [27]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and temperate-forest country. [5] [28] [9]
-The sun was wholly taken 3 times over this life, the first at age 99. [29]
+They lived in tropical latitudes; nothing in the record names the country. [6] [28]
+The sun was never wholly taken in this life. [29]
 The ground under them gave nothing — the ground held for the whole of this life. [30]
 They ate other living things — prey, detritus, or their remains. [31]
 Nothing in the record says what sex traits they had: no realized person is committed for this life.
@@ -915,32 +287,663 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 
 ### Sources
 
-- [1] the standard day the occupation began (entity 10760661430244474904, occ-founded)
+- [1] the standard day the occupation began (entity 10760661430244475374, occ-founded)
+- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
+- [3] the standard day the occupation ended, absent while alive (entity 10760661430244475374, occ-ended)
+- [4] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
+- [5] the Geosphere cell the occupation sits on (entity 10760661430244475374, occ-site)
+- [6] derived: lot::context::LotContext::lat_lon (the rebuilt Geosphere's position for the committed site)
+- [7] derived: lot::slots::site_slot (no `biome` fact stands on this vertex — nothing in the record says what kind of country it was)
+- [8] the people occupying the site (entity 10760661430244475374, occ-people)
+- [9] derived: language::Namer::name (the people's phonology; a lot-index salt)
+- [10] the occupation's peak population (entity 10760661430244475374, occ-peak)
+- [11] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475374, occ-person-years)
+- [12] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
+- [13] how the occupation began: genesis, or founded from another community (entity 10760661430244475374, occ-founded-from)
+- [14] the standard day the occupation began (entity 10760661430244475316, occ-founded)
+- [15] canonical name of an entity (entity 10760661430244475779, name)
+- [16] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
+- [17] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
+- [18] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
+- [19] the occupation's technological horizon (entity 10760661430244475374, occ-tech)
+- [20] what the occupation was for (entity 10760661430244475374, occ-function)
+- [21] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
+- [22] a belief's deity name (roman) (entity 18251725873712005120, deity-name)
+- [23] a belief's epithet (roman) (entity 18251725873712005120, deity-epithet)
+- [24] a community holding a belief (entity 18251725873712005120, held-by)
+- [25] the cult form of a belief (organized or folk) (entity 18251725873712005120, cult-form)
+- [26] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
+- [27] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
+- [28] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
+- [29] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
+- [30] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
+- [31] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
+
+# Lot 3 — seed 42
+
+## When
+
+They were born in year 552, dead in year 596, aged 44. [1] [2] [3]
+
+## Where
+
+They lived at Teatxaxatva, a tropical-seasonal-forest site, at -1.2°, 43.6°. [4] [5] [6] [7] [8] [9]
+
+## Life
+
+Their people was the human. [10]
+They were called Raetvotfe. [11]
+The community held about 32 people at the birth year, in a community that reached 35 at its height. [12] [13] [14]
+It had been founded at year 0, raised from nothing at its own site. [1] [15]
+Nothing in the record says how its founder stood to the mother community's founder: no forebear is derivable — either this community was raised at its own site, or its people has no generation length to reckon a remove by.
+The community was still standing when the life ended. [16]
+They died of violence. [17]
+
+## Story
+
+Raetvotfe is a non-causal composite case, not a real person; it is drawn from the statistical reality of Teatxaxatva, a tropical-seasonal-forest site, at -1.2°, 43.6° in year 552 of seed 42, and cannot write consequences back to that world.
+They had classical statecraft and engineering. [18]
+The community was for farming and herding. [19]
+They spoke the human tongue. [20]
+They held Pero Pero — the pantheon this people held, kept at Vaepero, in organized cult. [21] [22] [23] [24]
+Nothing in the record says what the community held true about its own kin: this community remembers no ending — none of its forebears ended within reach of a telling.
+Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
+Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
+They lived in one hut. [25]
+Nothing in the record speaks of a working here: not a mining community.
+They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [26] [9]
+The sun was wholly taken 1 time over this life, the first at age 32. [27]
+The ground under them gave nothing — the ground held for the whole of this life. [28]
+They ate other living things — prey, detritus, or their remains. [29]
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
+
+### Sources
+
+- [1] the standard day the occupation began (entity 10760661430244474912, occ-founded)
 - [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
 - [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
-- [4] the Geosphere cell the occupation sits on (entity 10760661430244474904, occ-site)
-- [5] settlement latitude, degrees (entity 10760661430244474904, latitude)
-- [6] settlement longitude, degrees (entity 10760661430244474904, longitude)
-- [7] Geosphere cell id a settlement sits on (entity 10760661430244474904, cell-id)
-- [8] canonical name of an entity (entity 10760661430244474904, name)
-- [9] biome of a place (entity 10760661430244474904, biome)
-- [10] the people occupying the site (entity 10760661430244474904, occ-people)
+- [4] the Geosphere cell the occupation sits on (entity 10760661430244474912, occ-site)
+- [5] settlement latitude, degrees (entity 10760661430244474912, latitude)
+- [6] settlement longitude, degrees (entity 10760661430244474912, longitude)
+- [7] Geosphere cell id a settlement sits on (entity 10760661430244474912, cell-id)
+- [8] canonical name of an entity (entity 10760661430244474912, name)
+- [9] biome of a place (entity 10760661430244474912, biome)
+- [10] the people occupying the site (entity 10760661430244474912, occ-people)
 - [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
-- [12] the occupation's peak population (entity 10760661430244474904, occ-peak)
-- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244474904, occ-person-years)
+- [12] the occupation's peak population (entity 10760661430244474912, occ-peak)
+- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244474912, occ-person-years)
 - [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
-- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244474904, occ-founded-from)
+- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244474912, occ-founded-from)
 - [16] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
 - [17] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
-- [18] the occupation's technological horizon (entity 10760661430244474904, occ-tech)
-- [19] what the occupation was for (entity 10760661430244474904, occ-function)
+- [18] the occupation's technological horizon (entity 10760661430244474912, occ-tech)
+- [19] what the occupation was for (entity 10760661430244474912, occ-function)
 - [20] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [21] a belief's deity name (roman) (entity 17724549369945784320, deity-name)
-- [22] a belief's epithet (roman) (entity 17724549369945784320, deity-epithet)
-- [23] a community holding a belief (entity 17724549369945784320, held-by)
-- [24] the cult form of a belief (organized or folk) (entity 17724549369945784320, cult-form)
-- [25] a settlement's subsistence mode (entity 10760661430244474904, subsistence)
-- [26] a caste present in a settlement (entity 10760661430244474904, has-caste)
+- [21] a belief's deity name (roman) (entity 7249855867382857728, deity-name)
+- [22] a belief's epithet (roman) (entity 7249855867382857728, deity-epithet)
+- [23] a community holding a belief (entity 7249855867382857728, held-by)
+- [24] the cult form of a belief (organized or folk) (entity 7249855867382857728, cult-form)
+- [25] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
+- [26] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
+- [27] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
+- [28] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
+- [29] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
+
+# Lot 4 — seed 42
+
+## When
+
+They were born in year 1336, dead in year 1348, aged 12. [1] [2] [3]
+
+## Where
+
+They lived at Naabee, a temperate-forest site, at 24.7°, -16.7°. [4] [5] [6] [7] [8] [9]
+
+## Life
+
+Their people was the hobgoblin. [10]
+They were called Tommlaken. [11]
+The community held about 80 people at the birth year, in a community that reached 80 at its height. [12] [13] [14]
+It had been founded at year 0, raised from nothing at its own site. [1] [15]
+Nothing in the record says how its founder stood to the mother community's founder: no forebear is derivable — either this community was raised at its own site, or its people has no generation length to reckon a remove by.
+The community was still standing when the life ended. [16]
+They died of violence. [17]
+
+## Story
+
+Tommlaken is a non-causal composite case, not a real person; it is drawn from the statistical reality of Naabee, a temperate-forest site, at 24.7°, -16.7° in year 1336 of seed 42, and cannot write consequences back to that world.
+They had classical statecraft and engineering. [18]
+The community was for farming and herding. [19]
+They spoke the hobgoblin tongue, of the goblinoid family. [20]
+They held Bago Nglonbago — the pantheon this people held, kept at Naabee, in organized cult. [21] [22] [23] [24]
+Nothing in the record says what the community held true about its own kin: this community remembers no ending — none of its forebears ended within reach of a telling.
+Their subsistence was farming. [25]
+They reckoned standing in laborer, augur, warlord. [26]
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
+They lived in 2 huts. [27]
+Nothing in the record speaks of a working here: not a mining community.
+They lived in temperate latitudes, and temperate-forest country. [5] [28] [9]
+The sun was never wholly taken in this life. [29]
+The ground under them gave nothing — the ground held for the whole of this life. [30]
+They ate other living things — prey, detritus, or their remains. [31]
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
+
+### Sources
+
+- [1] the standard day the occupation began (entity 10760661430244474909, occ-founded)
+- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
+- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
+- [4] the Geosphere cell the occupation sits on (entity 10760661430244474909, occ-site)
+- [5] settlement latitude, degrees (entity 10760661430244474909, latitude)
+- [6] settlement longitude, degrees (entity 10760661430244474909, longitude)
+- [7] Geosphere cell id a settlement sits on (entity 10760661430244474909, cell-id)
+- [8] canonical name of an entity (entity 10760661430244474909, name)
+- [9] biome of a place (entity 10760661430244474909, biome)
+- [10] the people occupying the site (entity 10760661430244474909, occ-people)
+- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
+- [12] the occupation's peak population (entity 10760661430244474909, occ-peak)
+- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244474909, occ-person-years)
+- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
+- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244474909, occ-founded-from)
+- [16] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
+- [17] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
+- [18] the occupation's technological horizon (entity 10760661430244474909, occ-tech)
+- [19] what the occupation was for (entity 10760661430244474909, occ-function)
+- [20] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
+- [21] a belief's deity name (roman) (entity 18251725873712005120, deity-name)
+- [22] a belief's epithet (roman) (entity 18251725873712005120, deity-epithet)
+- [23] a community holding a belief (entity 18251725873712005120, held-by)
+- [24] the cult form of a belief (organized or folk) (entity 18251725873712005120, cult-form)
+- [25] a settlement's subsistence mode (entity 10760661430244474909, subsistence)
+- [26] a caste present in a settlement (entity 10760661430244474909, has-caste)
+- [27] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
+- [28] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
+- [29] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
+- [30] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
+- [31] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
+
+# Lot 5 — seed 42
+
+## When
+
+They were born in year 1836, dead in year 1902, aged 66. [1] [2] [3]
+
+## Where
+
+They lived at Nenoona, a temperate-forest site, at -15.4°, 26.5°. [4] [5] [6] [7] [8] [9]
+
+## Life
+
+Their people was the hobgoblin. [10]
+They were called Gangvomle. [11]
+The community held about 10 people at the birth year, in a community that reached 18 at its height. [12] [13] [14]
+It had been founded at year 1775 by settlers from Nenoobago, itself 0 years older. [1] [15] [16] [17]
+Its founder stood in the same generation as the mother community's founder. [15] [18]
+The community was still standing when the life ended. [19]
+They died of an unnamed cause. [20]
+
+## Story
+
+Gangvomle is a non-causal composite case, not a real person; it is drawn from the statistical reality of Nenoona, a temperate-forest site, at -15.4°, 26.5° in year 1836 of seed 42, and cannot write consequences back to that world.
+They had classical statecraft and engineering. [21]
+The community was for farming and herding. [22]
+They spoke the hobgoblin tongue, of the goblinoid family. [23]
+They held Bago Nglonbago — the pantheon this people held, kept at Naabee, in organized cult. [24] [25] [26] [27]
+The community held that Nenoobago came to its end in year 1775 — first-hand. [28] [29] [17]
+Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
+Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
+They paid tribute to Nenoo, a hobgoblin community. [30] [31]
+They lived in one hut. [32]
+Nothing in the record speaks of a working here: not a mining community.
+They lived in tropical latitudes, and temperate-forest country. [5] [33] [9]
+The sun was wholly taken 1 time over this life, the first at age 1. [34]
+The ground under them gave nothing — the ground held for the whole of this life. [35]
+They ate other living things — prey, detritus, or their remains. [36]
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
+
+### Sources
+
+- [1] the standard day the occupation began (entity 10760661430244475817, occ-founded)
+- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
+- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
+- [4] the Geosphere cell the occupation sits on (entity 10760661430244475817, occ-site)
+- [5] settlement latitude, degrees (entity 10760661430244475817, latitude)
+- [6] settlement longitude, degrees (entity 10760661430244475817, longitude)
+- [7] Geosphere cell id a settlement sits on (entity 10760661430244475817, cell-id)
+- [8] canonical name of an entity (entity 10760661430244475817, name)
+- [9] biome of a place (entity 10760661430244475817, biome)
+- [10] the people occupying the site (entity 10760661430244475817, occ-people)
+- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
+- [12] the occupation's peak population (entity 10760661430244475817, occ-peak)
+- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475817, occ-person-years)
+- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
+- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244475817, occ-founded-from)
+- [16] the standard day the occupation began (entity 10760661430244475803, occ-founded)
+- [17] canonical name of an entity (entity 10760661430244475816, name)
+- [18] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
+- [19] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
+- [20] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
+- [21] the occupation's technological horizon (entity 10760661430244475817, occ-tech)
+- [22] what the occupation was for (entity 10760661430244475817, occ-function)
+- [23] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
+- [24] a belief's deity name (roman) (entity 18251725873712005120, deity-name)
+- [25] a belief's epithet (roman) (entity 18251725873712005120, deity-epithet)
+- [26] a community holding a belief (entity 18251725873712005120, held-by)
+- [27] the cult form of a belief (organized or folk) (entity 18251725873712005120, cult-form)
+- [28] the standard day the occupation ended, absent while alive (entity 10760661430244475803, occ-ended)
+- [29] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
+- [30] the community this community pays standing tribute to (entity 10760661430244475817, pays-tribute-to)
+- [31] canonical name of an entity (entity 10760661430244475794, name)
+- [32] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
+- [33] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
+- [34] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
+- [35] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
+- [36] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
+
+# Lot 6 — seed 42
+
+## When
+
+They were born in year 1942, dead in year 1954, aged 12. [1] [2] [3]
+
+## Where
+
+They lived at Neene, a tropical-seasonal-forest site, at 3.5°, -162.5°. [4] [5] [6] [7] [8] [9]
+
+## Life
+
+Their people was the hobgoblin. [10]
+They were called Xanwoxa. [11]
+The community held about 53 people at the birth year, in a community that reached 53 at its height. [12] [13] [14]
+It had been founded at year 1800 by settlers from Geeqae, itself 50 years older. [1] [15] [16] [17]
+Its founder descended 2 generations from the mother community's founder. [15] [18]
+The community was still standing when the life ended. [19]
+They died of violence. [20]
+
+## Story
+
+Xanwoxa is a non-causal composite case, not a real person; it is drawn from the statistical reality of Neene, a tropical-seasonal-forest site, at 3.5°, -162.5° in year 1942 of seed 42, and cannot write consequences back to that world.
+They had classical statecraft and engineering. [21]
+The community was for farming and herding. [22]
+They spoke the hobgoblin tongue, of the goblinoid family. [23]
+They held Bago Nglonbago — the pantheon this people held, kept at Naabee, in organized cult. [24] [25] [26] [27]
+The community held that Geeqae came to its end in year 1800 — first-hand. [28] [29] [17]
+Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
+Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
+They lived in 2 huts. [30]
+Nothing in the record speaks of a working here: not a mining community.
+They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [31] [9]
+The sun was never wholly taken in this life. [32]
+The ground under them gave nothing — the ground held for the whole of this life. [33]
+They ate other living things — prey, detritus, or their remains. [34]
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
+
+### Sources
+
+- [1] the standard day the occupation began (entity 10760661430244475882, occ-founded)
+- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
+- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
+- [4] the Geosphere cell the occupation sits on (entity 10760661430244475882, occ-site)
+- [5] settlement latitude, degrees (entity 10760661430244475882, latitude)
+- [6] settlement longitude, degrees (entity 10760661430244475882, longitude)
+- [7] Geosphere cell id a settlement sits on (entity 10760661430244475882, cell-id)
+- [8] canonical name of an entity (entity 10760661430244475882, name)
+- [9] biome of a place (entity 10760661430244475882, biome)
+- [10] the people occupying the site (entity 10760661430244475882, occ-people)
+- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
+- [12] the occupation's peak population (entity 10760661430244475882, occ-peak)
+- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475882, occ-person-years)
+- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
+- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244475882, occ-founded-from)
+- [16] the standard day the occupation began (entity 10760661430244475768, occ-founded)
+- [17] canonical name of an entity (entity 10760661430244475926, name)
+- [18] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
+- [19] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
+- [20] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
+- [21] the occupation's technological horizon (entity 10760661430244475882, occ-tech)
+- [22] what the occupation was for (entity 10760661430244475882, occ-function)
+- [23] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
+- [24] a belief's deity name (roman) (entity 18251725873712005120, deity-name)
+- [25] a belief's epithet (roman) (entity 18251725873712005120, deity-epithet)
+- [26] a community holding a belief (entity 18251725873712005120, held-by)
+- [27] the cult form of a belief (organized or folk) (entity 18251725873712005120, cult-form)
+- [28] the standard day the occupation ended, absent while alive (entity 10760661430244475768, occ-ended)
+- [29] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
+- [30] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
+- [31] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
+- [32] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
+- [33] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
+- [34] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
+
+# Lot 7 — seed 42
+
+## When
+
+They were born in year 1904, dead in year 1989, aged 85. [1] [2] [3]
+
+## Where
+
+They lived at Bobeqabote, a temperate-rainforest site, at -21.8°, 11.2°. [4] [5] [6] [7] [8] [9]
+
+## Life
+
+Their people was the hobgoblin. [10]
+They were called Mlefengfong. [11]
+The community held about 16 people at the birth year, in a community that reached 21 at its height. [12] [13] [14]
+It had been founded at year 1350 by settlers from Qanee, itself 525 years older. [1] [15] [16] [17]
+Its founder descended 17 generations from the mother community's founder. [15] [18]
+The community was still standing when the life ended. [19]
+They died of age. [20]
+
+## Story
+
+Mlefengfong is a non-causal composite case, not a real person; it is drawn from the statistical reality of Bobeqabote, a temperate-rainforest site, at -21.8°, 11.2° in year 1904 of seed 42, and cannot write consequences back to that world.
+They had classical statecraft and engineering. [21]
+The community was for farming and herding. [22]
+They spoke the hobgoblin tongue, of the goblinoid family. [23]
+They held Bago Nglonbago — the pantheon this people held, kept at Naabee, in organized cult. [24] [25] [26] [27]
+The community held that Qanee came to its end in year 1650 — 1 telling removed. [28] [29] [17]
+Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
+Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
+They paid tribute to Bobeqabago, a hobgoblin community. [30] [31]
+They lived in one hut. [32]
+Nothing in the record speaks of a working here: not a mining community.
+They lived in tropical latitudes, and temperate-rainforest country. [5] [33] [9]
+The sun was never wholly taken in this life. [34]
+The ground under them gave nothing — the ground held for the whole of this life. [35]
+They ate other living things — prey, detritus, or their remains. [36]
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
+
+### Sources
+
+- [1] the standard day the occupation began (entity 10760661430244475506, occ-founded)
+- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
+- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
+- [4] the Geosphere cell the occupation sits on (entity 10760661430244475506, occ-site)
+- [5] settlement latitude, degrees (entity 10760661430244475506, latitude)
+- [6] settlement longitude, degrees (entity 10760661430244475506, longitude)
+- [7] Geosphere cell id a settlement sits on (entity 10760661430244475506, cell-id)
+- [8] canonical name of an entity (entity 10760661430244475506, name)
+- [9] biome of a place (entity 10760661430244475506, biome)
+- [10] the people occupying the site (entity 10760661430244475506, occ-people)
+- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
+- [12] the occupation's peak population (entity 10760661430244475506, occ-peak)
+- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475506, occ-person-years)
+- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
+- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244475506, occ-founded-from)
+- [16] the standard day the occupation began (entity 10760661430244475238, occ-founded)
+- [17] canonical name of an entity (entity 10760661430244475968, name)
+- [18] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
+- [19] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
+- [20] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
+- [21] the occupation's technological horizon (entity 10760661430244475506, occ-tech)
+- [22] what the occupation was for (entity 10760661430244475506, occ-function)
+- [23] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
+- [24] a belief's deity name (roman) (entity 18251725873712005120, deity-name)
+- [25] a belief's epithet (roman) (entity 18251725873712005120, deity-epithet)
+- [26] a community holding a belief (entity 18251725873712005120, held-by)
+- [27] the cult form of a belief (organized or folk) (entity 18251725873712005120, cult-form)
+- [28] the standard day the occupation ended, absent while alive (entity 10760661430244475238, occ-ended)
+- [29] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
+- [30] the community this community pays standing tribute to (entity 10760661430244475506, pays-tribute-to)
+- [31] canonical name of an entity (entity 10760661430244475832, name)
+- [32] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
+- [33] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
+- [34] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
+- [35] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
+- [36] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
+
+# Lot 8 — seed 42
+
+## When
+
+They were born in year 1574, dead in year 1576, aged 2. [1] [2] [3]
+
+## Where
+
+They lived at Noebago, a tropical-seasonal-forest site, at -16.4°, 24.7°. [4] [5] [6] [7] [8] [9]
+
+## Life
+
+Their people was the hobgoblin. [10]
+They were called Kennla. [11]
+The community held about 80 people at the birth year, in a community that reached 80 at its height. [12] [13] [14]
+It had been founded at year 700 by settlers from Noe, itself 25 years older. [1] [15] [16] [17]
+Its founder descended 1 generation from the mother community's founder. [15] [18]
+The community was still standing when the life ended. [19]
+They died of the flux. [12] [13] [9] [20] [21]
+
+## Story
+
+Kennla is a non-causal composite case, not a real person; it is drawn from the statistical reality of Noebago, a tropical-seasonal-forest site, at -16.4°, 24.7° in year 1574 of seed 42, and cannot write consequences back to that world.
+They had classical statecraft and engineering. [22]
+The community was for farming and herding. [23]
+They spoke the hobgoblin tongue, of the goblinoid family. [24]
+They held Bago Nglonbago — the pantheon this people held, kept at Naabee, in organized cult. [25] [26] [27] [28]
+The community held that Noe came to its end in year 700 — first-hand. [29] [30] [17]
+Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
+Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
+They lived in 2 huts. [31]
+Nothing in the record speaks of a working here: not a mining community.
+They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [32] [9]
+The sun was never wholly taken in this life. [33]
+The ground under them gave nothing — the ground held for the whole of this life. [34]
+They ate other living things — prey, detritus, or their remains. [35]
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
+
+### Sources
+
+- [1] the standard day the occupation began (entity 10760661430244475178, occ-founded)
+- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
+- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
+- [4] the Geosphere cell the occupation sits on (entity 10760661430244475178, occ-site)
+- [5] settlement latitude, degrees (entity 10760661430244475178, latitude)
+- [6] settlement longitude, degrees (entity 10760661430244475178, longitude)
+- [7] Geosphere cell id a settlement sits on (entity 10760661430244475178, cell-id)
+- [8] canonical name of an entity (entity 10760661430244475178, name)
+- [9] biome of a place (entity 10760661430244475178, biome)
+- [10] the people occupying the site (entity 10760661430244475178, occ-people)
+- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
+- [12] the occupation's peak population (entity 10760661430244475178, occ-peak)
+- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244475178, occ-person-years)
+- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
+- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244475178, occ-founded-from)
+- [16] the standard day the occupation began (entity 10760661430244475158, occ-founded)
+- [17] canonical name of an entity (entity 10760661430244476014, name)
+- [18] derived: worldgen::descent::forebear_of (the two foundings and the people's allometric generation length)
+- [19] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
+- [20] derived: lot::endemic::endemic_burden_at (the worldgen population substrate, era graph, pathogen catalogue, and era-adjusted site substrate)
+- [21] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
+- [22] the occupation's technological horizon (entity 10760661430244475178, occ-tech)
+- [23] what the occupation was for (entity 10760661430244475178, occ-function)
+- [24] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
+- [25] a belief's deity name (roman) (entity 18251725873712005120, deity-name)
+- [26] a belief's epithet (roman) (entity 18251725873712005120, deity-epithet)
+- [27] a community holding a belief (entity 18251725873712005120, held-by)
+- [28] the cult form of a belief (organized or folk) (entity 18251725873712005120, cult-form)
+- [29] the standard day the occupation ended, absent while alive (entity 10760661430244475158, occ-ended)
+- [30] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
+- [31] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
+- [32] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
+- [33] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
+- [34] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
+- [35] derived: species::BiosphereTraits::{energy_source,electron_donor,carbon_source} (the people's authored metabolic triple)
+
+# Lot 9 — seed 42
+
+## When
+
+They were born in year 469, dead in year 543, aged 74. [1] [2] [3]
+
+## Where
+
+They lived at Vaepero, a temperate-forest site, at -19.1°, -42.8°. [4] [5] [6] [7] [8] [9]
+
+## Life
+
+Their people was the human. [10]
+They were called Porara. [11]
+The community held about 19 people at the birth year, in a community that reached 33 at its height. [12] [13] [14]
+It had been founded at year 0, raised from nothing at its own site. [1] [15]
+Nothing in the record says how its founder stood to the mother community's founder: no forebear is derivable — either this community was raised at its own site, or its people has no generation length to reckon a remove by.
+The community was still standing when the life ended. [16]
+They died of age. [17]
+
+## Story
+
+Porara is a non-causal composite case, not a real person; it is drawn from the statistical reality of Vaepero, a temperate-forest site, at -19.1°, -42.8° in year 469 of seed 42, and cannot write consequences back to that world.
+They had classical statecraft and engineering. [18]
+The community was for farming and herding. [19]
+They spoke the human tongue. [20]
+They held Pero Pero — the pantheon this people held, kept at Vaepero, in organized cult. [21] [22] [23] [24]
+Nothing in the record says what the community held true about its own kin: this community remembers no ending — none of its forebears ended within reach of a telling.
+Their subsistence was farming. [25]
+They reckoned standing in farmer, priest, steward. [26]
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
+They lived in 2 huts. [27]
+Nothing in the record speaks of a working here: not a mining community.
+They lived in tropical latitudes, and temperate-forest country. [5] [28] [9]
+The sun was wholly taken 1 time over this life, the first at age 73. [29]
+The ground under them gave nothing — the ground held for the whole of this life. [30]
+They ate other living things — prey, detritus, or their remains. [31]
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
+
+### Sources
+
+- [1] the standard day the occupation began (entity 10760661430244474911, occ-founded)
+- [2] derived: lot::draw::draw (the world's births-per-year curve (§4.2) at the lot's index)
+- [3] the standard day the world's present sits at (the bake's end year) (entity 10116603944055472128, history-now)
+- [4] the Geosphere cell the occupation sits on (entity 10760661430244474911, occ-site)
+- [5] settlement latitude, degrees (entity 10760661430244474911, latitude)
+- [6] settlement longitude, degrees (entity 10760661430244474911, longitude)
+- [7] Geosphere cell id a settlement sits on (entity 10760661430244474911, cell-id)
+- [8] canonical name of an entity (entity 10760661430244474911, name)
+- [9] biome of a place (entity 10760661430244474911, biome)
+- [10] the people occupying the site (entity 10760661430244474911, occ-people)
+- [11] derived: language::Namer::name (the people's phonology; a lot-index salt)
+- [12] the occupation's peak population (entity 10760661430244474911, occ-peak)
+- [13] the integral of the occupation's population over its tenure, in person-years (entity 10760661430244474911, occ-person-years)
+- [14] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
+- [15] how the occupation began: genesis, or founded from another community (entity 10760661430244474911, occ-founded-from)
+- [16] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
+- [17] derived: lot::draw::hazard_cause (the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform)
+- [18] the occupation's technological horizon (entity 10760661430244474911, occ-tech)
+- [19] what the occupation was for (entity 10760661430244474911, occ-function)
+- [20] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
+- [21] a belief's deity name (roman) (entity 7249855867382857728, deity-name)
+- [22] a belief's epithet (roman) (entity 7249855867382857728, deity-epithet)
+- [23] a community holding a belief (entity 7249855867382857728, held-by)
+- [24] the cult form of a belief (organized or folk) (entity 7249855867382857728, cult-form)
+- [25] a settlement's subsistence mode (entity 10760661430244474911, subsistence)
+- [26] a caste present in a settlement (entity 10760661430244474911, has-caste)
 - [27] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
 - [28] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
 - [29] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)

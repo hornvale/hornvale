@@ -14,447 +14,480 @@ inside a possess session; a freshly built world commits none of this.)*
 
 ```text
 [room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+Tropical rainforest — buttressed canopy, sun-warmed, damp, in a hollow — in the lands of Bodoqa. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Bodoqa. Underfoot, pale limestone; the ground slopes.
+Here: Kvashngobvo, Shngaoshnga, Qvaavngashngo and Tvashnga, and 60 others; black-dragon; carrion-crawler; dire-wolf; giant-constrictor-snake; giant-crocodile; giant-elk; giant-hyena; giant-scorpion; 2 otyugh; owlbear; red-dragon; rhinoceros; white-dragon; woolly-mammoth.
 > look
 [room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+Tropical rainforest — buttressed canopy, sun-warmed, damp, in a hollow — in the lands of Bodoqa. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Bodoqa. Underfoot, pale limestone; the ground slopes.
+Here: Kvashngobvo, Shngaoshnga, Qvaavngashngo and Tvashnga, and 60 others; black-dragon; carrion-crawler; dire-wolf; giant-constrictor-snake; giant-crocodile; giant-elk; giant-hyena; giant-scorpion; 2 otyugh; owlbear; red-dragon; rhinoceros; white-dragon; woolly-mammoth.
 > !npcs
-67 NPC(s) derived this session:
-  [1] Dvoashngashngo
-  [2] Qvoshngavngo
-  [3] Shngovngo
-  [4] Shngoqvo
-  [5] Vngaobvo
-  [6] Vngaavnga
-  [7] Kvoavnga 8
-  [8] Vngootvo
-  [9] Vngaoshngoshngo
-  [10] Vngovngoqvo
-  [11] Vngoaqvashngo
-  [12] Kvashnga
-  [13] Gvoshngoshnga
-  [14] Vngokvavngo
-  [15] Shngaavngo
-  [16] Bvotvoshngo
-  [17] Vngodva
-  [18] Gvoavngashnga
-  [19] Kvovngashnga
-  [20] Shngashngovngo
-  [21] Shngoovngo
-  [22] Tvoadvovnga
-  [23] Shngoshngobva
-  [24] Vngoshnga
-  [25] Bvaavngovngo
-  [26] Gvaqvoshnga
-  [27] Vngotvashnga
-  [28] Shngoashngabva
-  [29] Vngoshngoshngo
-  [30] Shngaqvovnga
-  [31] Shngoovngo 32
-  [32] Vngaoshngoshngo 33
-  [33] Dvooshngovnga
-  [34] Dvoadvavnga
-  [35] Gvavngadvo
-  [36] Vngavngo
-  [37] Vngoatvovngo
-  [38] Vngashngovnga
-  [39] Shngaashnga
-  [40] Vngashngogva
-  [41] Kvoashngadvo
-  [42] Vngaovngovngo
-  [43] Vngovngoshnga
-  [44] Shngaashnga 45
-  [45] Gvokvavnga
-  [46] Qvavngovnga
-  [47] Vngavngavnga
-  [48] Vngobva
-  [49] Shngaovngoshngo
-  [50] Gvoavngoqva
-  [51] Shngoatvo
-  [52] Vngashnga
-  [53] Vngoovngashngo
-  [54] Qvoogvo
-  [55] Vngaavngo
-  [56] Vngavngadvo
-  [57] Dvoashnga
-  [58] Vngakva
-  [59] Qvavngodvo
-  [60] Shngoshngoqvo
-  [61] Dvashngo
-  [62] Shngoobvovngo
-  [63] Shngoavnga
-  [64] Dvoaqvokva
-  [65] Vngoashngovngo
-  [66] Kvoshngovnga
-  [67] Vngavngoshnga
+79 NPC(s) derived this session:
+  [1] Kvashngobvo
+  [2] Shngaoshnga
+  [3] Qvaavngashngo
+  [4] Tvashnga
+  [5] Shngaashngoshnga
+  [6] Vngooqvoshngo
+  [7] Kvaoshngo
+  [8] Shngabvo
+  [9] Gvavngabvo
+  [10] Vngotvodvo
+  [11] Tvoshngovngo
+  [12] Vngovngotvo
+  [13] Vngashnga
+  [14] Vngoqva
+  [15] Shngagvo
+  [16] Shngoakvovnga
+  [17] Shngaodvavngo
+  [18] Shngooshnga
+  [19] Shngoovngashnga
+  [20] Vngoakvo
+  [21] Shngaagvovnga
+  [22] Bvaashngashnga
+  [23] Shngaavnga
+  [24] Bvovnga
+  [25] Vngoshngogva
+  [26] Gvaadva
+  [27] Shngoogvo
+  [28] Kvoavngodvo
+  [29] Shngoshngogva
+  [30] Tvadvo
+  [31] Tvookvadvo
+  [32] Vngashnga 33
+  [33] Kvootvaqvo
+  [34] Vngovngakvo
+  [35] Shngoavngoshngo
+  [36] Shngaqva
+  [37] Vngaashnga
+  [38] Kvoashngagvo
+  [39] Gvovngoshngo
+  [40] Vngovnga
+  [41] Vngoshngadvo
+  [42] Dvaovnga
+  [43] Shngaovngakva
+  [44] Vngovngovnga
+  [45] Shngashngovngo
+  [46] Tvashngavnga
+  [47] Tvaabva
+  [48] Shngavngoqva
+  [49] Shngoovngavnga
+  [50] Shngagvo 51
+  [51] Dvoashngovngo
+  [52] Kvaovngovngo
+  [53] Qvavngoqvo
+  [54] Kvovnga
+  [55] Vngoobva
+  [56] Dvaashnga
+  [57] Bvavnga
+  [58] Kvaobvashngo
+  [59] Shngaokvodvo
+  [60] Vngoovngavnga
+  [61] Vngaaqvo
+  [62] Vngaovngo
+  [63] Bvaobva
+  [64] Vngaabvaqva
+  [65] black-dragon
+  [66] carrion-crawler
+  [67] dire-wolf
+  [68] giant-constrictor-snake
+  [69] giant-crocodile
+  [70] giant-elk
+  [71] giant-hyena
+  [72] giant-scorpion
+  [73] otyugh
+  [74] otyugh
+  [75] owlbear
+  [76] red-dragon
+  [77] rhinoceros
+  [78] white-dragon
+  [79] woolly-mammoth
 > needs
-The Dvoashngashngo seems content.
-The Qvoshngavngo seems content.
-The Shngovngo seems content.
-The Shngoqvo seems content.
-The Vngaobvo seems content.
-The Vngaavnga seems content.
-The Kvoavnga 8 seems content.
-The Vngootvo seems content.
-The Vngaoshngoshngo seems content.
-The Vngovngoqvo seems content.
-The Vngoaqvashngo seems content.
-The Kvashnga seems content.
-The Gvoshngoshnga seems content.
-The Vngokvavngo seems content.
-The Shngaavngo seems content.
-The Bvotvoshngo seems content.
-The Vngodva seems content.
-The Gvoavngashnga seems content.
-The Kvovngashnga seems content.
-The Shngashngovngo seems content.
-The Shngoovngo seems content.
-The Tvoadvovnga seems content.
-The Shngoshngobva seems content.
-The Vngoshnga seems content.
-The Bvaavngovngo seems content.
-The Gvaqvoshnga seems content.
-The Vngotvashnga seems content.
-The Shngoashngabva seems content.
-The Vngoshngoshngo seems content.
-The Shngaqvovnga seems content.
-The Shngoovngo 32 seems content.
-The Vngaoshngoshngo 33 seems content.
-The Dvooshngovnga seems content.
-The Dvoadvavnga seems content.
-The Gvavngadvo seems content.
-The Vngavngo seems content.
-The Vngoatvovngo seems content.
-The Vngashngovnga seems content.
-The Shngaashnga seems content.
-The Vngashngogva seems content.
-The Kvoashngadvo seems content.
-The Vngaovngovngo seems content.
-The Vngovngoshnga seems content.
-The Shngaashnga 45 seems content.
-The Gvokvavnga seems content.
-The Qvavngovnga seems content.
-The Vngavngavnga seems content.
-The Vngobva seems content.
-The Shngaovngoshngo seems content.
-The Gvoavngoqva seems content.
-The Shngoatvo seems content.
+The Kvashngobvo seems content.
+The Shngaoshnga seems content.
+The Qvaavngashngo seems content.
+The Tvashnga seems content.
+The Shngaashngoshnga seems content.
+The Vngooqvoshngo seems content.
+The Kvaoshngo seems content.
+The Shngabvo seems content.
+The Gvavngabvo seems content.
+The Vngotvodvo seems content.
+The Tvoshngovngo seems content.
+The Vngovngotvo seems content.
 The Vngashnga seems content.
-The Vngoovngashngo seems content.
-The Qvoogvo seems content.
-The Vngaavngo seems content.
-The Vngavngadvo seems content.
-The Dvoashnga seems content.
-The Vngakva seems content.
-The Qvavngodvo seems content.
-The Shngoshngoqvo seems content.
-The Dvashngo seems content.
-The Shngoobvovngo seems content.
-The Shngoavnga seems content.
-The Dvoaqvokva seems content.
-The Vngoashngovngo seems content.
-The Kvoshngovnga seems content.
-The Vngavngoshnga seems content.
+The Vngoqva seems content.
+The Shngagvo seems content.
+The Shngoakvovnga seems content.
+The Shngaodvavngo seems content.
+The Shngooshnga seems content.
+The Shngoovngashnga seems content.
+The Vngoakvo seems content.
+The Shngaagvovnga seems content.
+The Bvaashngashnga seems content.
+The Shngaavnga seems content.
+The Bvovnga seems content.
+The Vngoshngogva seems content.
+The Gvaadva seems content.
+The Shngoogvo seems content.
+The Kvoavngodvo seems content.
+The Shngoshngogva seems content.
+The Tvadvo seems content.
+The Tvookvadvo seems content.
+The Vngashnga 33 seems content.
+The Kvootvaqvo seems content.
+The Vngovngakvo seems content.
+The Shngoavngoshngo seems content.
+The Shngaqva seems content.
+The Vngaashnga seems content.
+The Kvoashngagvo seems content.
+The Gvovngoshngo seems content.
+The Vngovnga seems content.
+The Vngoshngadvo seems content.
+The Dvaovnga seems content.
+The Shngaovngakva seems content.
+The Vngovngovnga seems content.
+The Shngashngovngo seems content.
+The Tvashngavnga seems content.
+The Tvaabva seems content.
+The Shngavngoqva seems content.
+The Shngoovngavnga seems content.
+The Shngagvo 51 seems content.
+The Dvoashngovngo seems content.
+The Kvaovngovngo seems content.
+The Qvavngoqvo seems content.
+The Kvovnga seems content.
+The Vngoobva seems content.
+The Dvaashnga seems content.
+The Bvavnga seems content.
+The Kvaobvashngo seems content.
+The Shngaokvodvo seems content.
+The Vngoovngavnga seems content.
+The Vngaaqvo seems content.
+The Vngaovngo seems content.
+The Bvaobva seems content.
+The Vngaabvaqva seems content.
+The black-dragon seems content.
+The carrion-crawler grows restless.
+The dire-wolf grows restless.
+The giant-constrictor-snake seems content.
+The giant-crocodile seems content.
+The giant-elk seems content.
+The giant-hyena seems content.
+The giant-scorpion seems content.
+The otyugh seems content.
+The otyugh seems content.
+The owlbear seems content.
+The red-dragon seems content.
+The rhinoceros seems content.
+The white-dragon grows restless.
+The woolly-mammoth grows restless.
 > wait 5
 Time passes; the world keeps its shape.
 > look
 [room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+Tropical rainforest — buttressed canopy, sun-warmed, damp, in a hollow — in the lands of Bodoqa. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Bodoqa. Underfoot, pale limestone; the ground slopes.
+Here: Kvashngobvo, Shngaoshnga, Qvaavngashngo and Tvashnga, and 60 others; black-dragon; carrion-crawler; dire-wolf; giant-constrictor-snake; giant-crocodile; giant-elk; giant-hyena; giant-scorpion; 2 otyugh; owlbear; red-dragon; rhinoceros; white-dragon; woolly-mammoth.
 > needs
-The Dvoashngashngo seems content.
-The Qvoshngavngo seems content.
-The Shngovngo seems content.
-The Shngoqvo seems content.
-The Vngaobvo seems content.
-The Vngaavnga seems content.
-The Kvoavnga 8 seems content.
-The Vngootvo seems content.
-The Vngaoshngoshngo seems content.
-The Vngovngoqvo seems content.
-The Vngoaqvashngo seems content.
-The Kvashnga seems content.
-The Gvoshngoshnga seems content.
-The Vngokvavngo seems content.
-The Shngaavngo seems content.
-The Bvotvoshngo seems content.
-The Vngodva seems content.
-The Gvoavngashnga seems content.
-The Kvovngashnga seems content.
-The Shngashngovngo seems content.
-The Shngoovngo seems content.
-The Tvoadvovnga seems content.
-The Shngoshngobva seems content.
-The Vngoshnga seems content.
-The Bvaavngovngo seems content.
-The Gvaqvoshnga seems content.
-The Vngotvashnga seems content.
-The Shngoashngabva seems content.
-The Vngoshngoshngo seems content.
-The Shngaqvovnga seems content.
-The Shngoovngo 32 seems content.
-The Vngaoshngoshngo 33 seems content.
-The Dvooshngovnga seems content.
-The Dvoadvavnga seems content.
-The Gvavngadvo seems content.
-The Vngavngo seems content.
-The Vngoatvovngo seems content.
-The Vngashngovnga seems content.
-The Shngaashnga seems content.
-The Vngashngogva seems content.
-The Kvoashngadvo seems content.
-The Vngaovngovngo seems content.
-The Vngovngoshnga seems content.
-The Shngaashnga 45 seems content.
-The Gvokvavnga seems content.
-The Qvavngovnga seems content.
-The Vngavngavnga seems content.
-The Vngobva seems content.
-The Shngaovngoshngo seems content.
-The Gvoavngoqva seems content.
-The Shngoatvo seems content.
+The Kvashngobvo seems content.
+The Shngaoshnga seems content.
+The Qvaavngashngo seems content.
+The Tvashnga seems content.
+The Shngaashngoshnga seems content.
+The Vngooqvoshngo seems content.
+The Kvaoshngo seems content.
+The Shngabvo seems content.
+The Gvavngabvo seems content.
+The Vngotvodvo seems content.
+The Tvoshngovngo seems content.
+The Vngovngotvo seems content.
 The Vngashnga seems content.
-The Vngoovngashngo seems content.
-The Qvoogvo seems content.
-The Vngaavngo seems content.
-The Vngavngadvo seems content.
-The Dvoashnga seems content.
-The Vngakva seems content.
-The Qvavngodvo seems content.
-The Shngoshngoqvo seems content.
-The Dvashngo seems content.
-The Shngoobvovngo seems content.
-The Shngoavnga seems content.
-The Dvoaqvokva seems content.
-The Vngoashngovngo seems content.
-The Kvoshngovnga seems content.
-The Vngavngoshnga seems content.
+The Vngoqva seems content.
+The Shngagvo seems content.
+The Shngoakvovnga seems content.
+The Shngaodvavngo seems content.
+The Shngooshnga seems content.
+The Shngoovngashnga seems content.
+The Vngoakvo seems content.
+The Shngaagvovnga seems content.
+The Bvaashngashnga seems content.
+The Shngaavnga seems content.
+The Bvovnga seems content.
+The Vngoshngogva seems content.
+The Gvaadva seems content.
+The Shngoogvo seems content.
+The Kvoavngodvo seems content.
+The Shngoshngogva seems content.
+The Tvadvo seems content.
+The Tvookvadvo seems content.
+The Vngashnga 33 seems content.
+The Kvootvaqvo seems content.
+The Vngovngakvo seems content.
+The Shngoavngoshngo seems content.
+The Shngaqva seems content.
+The Vngaashnga seems content.
+The Kvoashngagvo seems content.
+The Gvovngoshngo seems content.
+The Vngovnga seems content.
+The Vngoshngadvo seems content.
+The Dvaovnga seems content.
+The Shngaovngakva seems content.
+The Vngovngovnga seems content.
+The Shngashngovngo seems content.
+The Tvashngavnga seems content.
+The Tvaabva seems content.
+The Shngavngoqva seems content.
+The Shngoovngavnga seems content.
+The Shngagvo 51 seems content.
+The Dvoashngovngo seems content.
+The Kvaovngovngo seems content.
+The Qvavngoqvo seems content.
+The Kvovnga seems content.
+The Vngoobva seems content.
+The Dvaashnga seems content.
+The Bvavnga seems content.
+The Kvaobvashngo seems content.
+The Shngaokvodvo seems content.
+The Vngoovngavnga seems content.
+The Vngaaqvo seems content.
+The Vngaovngo seems content.
+The Bvaobva seems content.
+The Vngaabvaqva seems content.
+The black-dragon seems content.
+The carrion-crawler grows restless.
+The dire-wolf grows restless.
+The giant-constrictor-snake seems content.
+The giant-crocodile seems content.
+The giant-elk seems content.
+The giant-hyena seems content.
+The giant-scorpion seems content.
+The otyugh seems content.
+The otyugh seems content.
+The owlbear seems content.
+The red-dragon seems content.
+The rhinoceros seems content.
+The white-dragon grows restless.
+The woolly-mammoth grows restless.
 > wait 1
-Time passes. You sense movement nearby (214 stirred).
+Time passes. You watch carrion-crawler, giant-elk, giant-scorpion, otyugh, otyugh, rhinoceros go.
 > look
 [room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+Tropical rainforest — buttressed canopy, sun-warmed, damp, in a hollow — in the lands of Bodoqa. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Bodoqa. Underfoot, pale limestone; the ground slopes.
+Here: Kvashngobvo, Shngaoshnga, Qvaavngashngo and Tvashnga, and 60 others; black-dragon; dire-wolf; giant-constrictor-snake; giant-crocodile; giant-hyena; owlbear; red-dragon; white-dragon; woolly-mammoth.
 > needs
-The Dvoashngashngo grows restless.
-The Qvoshngavngo grows restless.
-The Shngovngo grows restless.
-The Shngoqvo grows restless.
-The Vngaobvo grows restless.
-The Vngaavnga grows restless.
-The Kvoavnga 8 grows restless.
-The Vngootvo grows restless.
-The Vngaoshngoshngo grows restless.
-The Vngovngoqvo grows restless.
-The Vngoaqvashngo grows restless.
-The Kvashnga grows restless.
-The Gvoshngoshnga grows restless.
-The Vngokvavngo grows restless.
-The Shngaavngo grows restless.
-The Bvotvoshngo grows restless.
-The Vngodva grows restless.
-The Gvoavngashnga grows restless.
-The Kvovngashnga grows restless.
-The Shngashngovngo grows restless.
-The Shngoovngo grows restless.
-The Tvoadvovnga grows restless.
-The Shngoshngobva grows restless.
-The Vngoshnga grows restless.
-The Bvaavngovngo grows restless.
-The Gvaqvoshnga grows restless.
-The Vngotvashnga grows restless.
-The Shngoashngabva grows restless.
-The Vngoshngoshngo grows restless.
-The Shngaqvovnga grows restless.
-The Shngoovngo 32 grows restless.
-The Vngaoshngoshngo 33 grows restless.
-The Dvooshngovnga grows restless.
-The Dvoadvavnga grows restless.
-The Gvavngadvo grows restless.
-The Vngavngo grows restless.
-The Vngoatvovngo grows restless.
-The Vngashngovnga grows restless.
-The Shngaashnga grows restless.
-The Vngashngogva grows restless.
-The Kvoashngadvo grows restless.
-The Vngaovngovngo grows restless.
-The Vngovngoshnga grows restless.
-The Shngaashnga 45 grows restless.
-The Gvokvavnga grows restless.
-The Qvavngovnga grows restless.
-The Vngavngavnga grows restless.
-The Vngobva grows restless.
-The Shngaovngoshngo grows restless.
-The Gvoavngoqva grows restless.
-The Shngoatvo grows restless.
+The Kvashngobvo grows restless.
+The Shngaoshnga grows restless.
+The Qvaavngashngo grows restless.
+The Tvashnga grows restless.
+The Shngaashngoshnga grows restless.
+The Vngooqvoshngo settles down to rest.
+The Kvaoshngo grows restless.
+The Shngabvo settles down to rest.
+The Gvavngabvo grows restless.
+The Vngotvodvo settles down to rest.
+The Tvoshngovngo grows restless.
+The Vngovngotvo grows restless.
 The Vngashnga grows restless.
-The Vngoovngashngo grows restless.
-The Qvoogvo grows restless.
-The Vngaavngo grows restless.
-The Vngavngadvo grows restless.
-The Dvoashnga grows restless.
-The Vngakva grows restless.
-The Qvavngodvo grows restless.
-The Shngoshngoqvo grows restless.
-The Dvashngo grows restless.
-The Shngoobvovngo grows restless.
-The Shngoavnga grows restless.
-The Dvoaqvokva grows restless.
-The Vngoashngovngo grows restless.
-The Kvoshngovnga grows restless.
-The Vngavngoshnga grows restless.
+The Vngoqva settles down to rest.
+The Shngagvo grows restless.
+The Shngoakvovnga settles down to rest.
+The Shngaodvavngo grows restless.
+The Shngooshnga grows restless.
+The Shngoovngashnga grows restless.
+The Vngoakvo grows restless.
+The Shngaagvovnga grows restless.
+The Bvaashngashnga grows restless.
+The Shngaavnga grows restless.
+The Bvovnga grows restless.
+The Vngoshngogva grows restless.
+The Gvaadva settles down to rest.
+The Shngoogvo grows restless.
+The Kvoavngodvo grows restless.
+The Shngoshngogva settles down to rest.
+The Tvadvo grows restless.
+The Tvookvadvo grows restless.
+The Vngashnga 33 grows restless.
+The Kvootvaqvo grows restless.
+The Vngovngakvo grows restless.
+The Shngoavngoshngo grows restless.
+The Shngaqva grows restless.
+The Vngaashnga grows restless.
+The Kvoashngagvo grows restless.
+The Gvovngoshngo grows restless.
+The Vngovnga settles down to rest.
+The Vngoshngadvo settles down to rest.
+The Dvaovnga settles down to rest.
+The Shngaovngakva settles down to rest.
+The Vngovngovnga grows restless.
+The Shngashngovngo settles down to rest.
+The Tvashngavnga grows restless.
+The Tvaabva grows restless.
+The Shngavngoqva grows restless.
+The Shngoovngavnga grows restless.
+The Shngagvo 51 settles down to rest.
+The Dvoashngovngo settles down to rest.
+The Kvaovngovngo settles down to rest.
+The Qvavngoqvo grows restless.
+The Kvovnga settles down to rest.
+The Vngoobva settles down to rest.
+The Dvaashnga settles down to rest.
+The Bvavnga grows restless.
+The Kvaobvashngo grows restless.
+The Shngaokvodvo grows restless.
+The Vngoovngavnga settles down to rest.
+The Vngaaqvo grows restless.
+The Vngaovngo grows restless.
+The Bvaobva grows restless.
+The Vngaabvaqva grows restless.
+The black-dragon grows restless.
+The dire-wolf shivers, with no warmth within reach.
+The giant-constrictor-snake grows restless.
+The giant-crocodile grows restless.
+The giant-hyena grows restless.
+The owlbear grows restless.
+The red-dragon grows restless.
+The white-dragon grows restless.
+The woolly-mammoth reaches safer ground.
 > wait 1
-Time passes. You sense movement nearby (353 stirred).
+Time passes. You watch Qvaavngashngo, Vngooqvoshngo, Shngabvo, Vngotvodvo, Tvoshngovngo, Shngagvo, Shngoakvovnga, Shngaavnga, Shngoshngogva, Vngashnga 33, Vngovngakvo, Kvoashngagvo, Vngovnga, Shngaovngakva, Shngashngovngo, Shngagvo 51, Kvaovngovngo, Vngoobva, Dvaashnga, Vngaaqvo, giant-crocodile, woolly-mammoth go. You notice giant-scorpion here now.
 > look
 [room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+Tropical rainforest — buttressed canopy, sun-warmed, damp, in a hollow — in the lands of Bodoqa. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Bodoqa. Underfoot, pale limestone; the ground slopes.
+Here: Kvashngobvo, Shngaoshnga, Tvashnga and Shngaashngoshnga, and 40 others; black-dragon; dire-wolf; giant-constrictor-snake; giant-hyena; giant-scorpion; owlbear; red-dragon; white-dragon.
 > needs
-The Dvoashngashngo grows restless.
-The Qvoshngavngo grows restless.
-The Shngovngo grows restless.
-The Shngoqvo grows restless.
-The Vngaobvo grows restless.
-The Vngaavnga grows restless.
-The Kvoavnga 8 grows restless.
-The Vngootvo seems content.
-The Vngaoshngoshngo grows restless.
-The Vngovngoqvo grows restless.
-The Vngoaqvashngo grows restless.
-The Kvashnga grows restless.
-The Gvoshngoshnga grows restless.
-The Vngokvavngo grows restless.
-The Shngaavngo grows restless.
-The Bvotvoshngo grows restless.
-The Vngodva grows restless.
-The Gvoavngashnga grows restless.
-The Kvovngashnga grows restless.
-The Shngashngovngo grows restless.
-The Shngoovngo grows restless.
-The Tvoadvovnga grows restless.
-The Shngoshngobva grows restless.
-The Vngoshnga grows restless.
-The Bvaavngovngo grows restless.
-The Gvaqvoshnga grows restless.
-The Vngotvashnga grows restless.
-The Shngoashngabva grows restless.
-The Vngoshngoshngo grows restless.
-The Shngaqvovnga grows restless.
-The Shngoovngo 32 grows restless.
-The Vngaoshngoshngo 33 grows restless.
-The Dvooshngovnga grows restless.
-The Dvoadvavnga grows restless.
-The Gvavngadvo grows restless.
-The Vngavngo grows restless.
-The Vngoatvovngo grows restless.
-The Vngashngovnga grows restless.
-The Shngaashnga grows restless.
-The Vngashngogva grows restless.
-The Kvoashngadvo grows restless.
-The Vngaovngovngo grows restless.
-The Vngovngoshnga grows restless.
-The Shngaashnga 45 grows restless.
-The Gvokvavnga seems content.
-The Qvavngovnga grows restless.
-The Vngavngavnga grows restless.
-The Vngobva grows restless.
-The Shngaovngoshngo grows restless.
-The Gvoavngoqva grows restless.
-The Shngoatvo grows restless.
+The Kvashngobvo reaches safer ground.
+The Shngaoshnga grows restless.
+The Tvashnga reaches safer ground.
+The Shngaashngoshnga grows restless.
+The Kvaoshngo grows restless.
+The Gvavngabvo grows restless.
+The Vngovngotvo grows restless.
 The Vngashnga grows restless.
-The Vngoovngashngo grows restless.
-The Qvoogvo grows restless.
-The Vngaavngo grows restless.
-The Vngavngadvo grows restless.
-The Dvoashnga grows restless.
-The Vngakva grows restless.
-The Qvavngodvo grows restless.
-The Shngoshngoqvo grows restless.
-The Dvashngo grows restless.
-The Shngoobvovngo seems content.
-The Shngoavnga grows restless.
-The Dvoaqvokva grows restless.
-The Vngoashngovngo grows restless.
-The Kvoshngovnga grows restless.
-The Vngavngoshnga grows restless.
+The Vngoqva grows restless.
+The Shngaodvavngo reaches safer ground.
+The Shngooshnga reaches safer ground.
+The Shngoovngashnga grows restless.
+The Vngoakvo grows restless.
+The Shngaagvovnga reaches safer ground.
+The Bvaashngashnga grows restless.
+The Bvovnga reaches safer ground.
+The Vngoshngogva reaches safer ground.
+The Gvaadva grows restless.
+The Shngoogvo reaches safer ground.
+The Kvoavngodvo reaches safer ground.
+The Tvadvo grows restless.
+The Tvookvadvo reaches safer ground.
+The Kvootvaqvo grows restless.
+The Shngoavngoshngo reaches safer ground.
+The Shngaqva grows restless.
+The Vngaashnga grows restless.
+The Gvovngoshngo grows restless.
+The Vngoshngadvo grows restless.
+The Dvaovnga grows restless.
+The Vngovngovnga grows restless.
+The Tvashngavnga reaches safer ground.
+The Tvaabva reaches safer ground.
+The Shngavngoqva reaches safer ground.
+The Shngoovngavnga grows restless.
+The Dvoashngovngo grows restless.
+The Qvavngoqvo grows restless.
+The Kvovnga grows restless.
+The Bvavnga reaches safer ground.
+The Kvaobvashngo reaches safer ground.
+The Shngaokvodvo grows restless.
+The Vngoovngavnga grows restless.
+The Vngaovngo reaches safer ground.
+The Bvaobva reaches safer ground.
+The Vngaabvaqva reaches safer ground.
+The black-dragon eats its fill.
+The dire-wolf recoils, hemmed in by dread on every side.
+The giant-constrictor-snake recoils, hemmed in by dread on every side.
+The giant-hyena recoils, hemmed in by dread on every side.
+The giant-scorpion drinks its fill.
+The owlbear recoils, hemmed in by dread on every side.
+The red-dragon grows restless.
+The white-dragon grows restless.
 > !why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (4628 stirred).
+Time passes. You notice Qvaavngashngo, Vngooqvoshngo, Shngabvo, Vngotvodvo, Tvoshngovngo, Shngagvo, Shngoakvovnga, Shngaavnga, Shngoshngogva, Vngashnga 33, Vngovngakvo, Kvoashngagvo, Vngovnga, Shngaovngakva, Shngashngovngo, Shngagvo 51, Kvaovngovngo, Vngoobva, Dvaashnga, Vngaaqvo, giant-crocodile here now.
 > look
 [room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
-Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
+Tropical rainforest — buttressed canopy, sun-warmed, damp, in a hollow — in the lands of Bodoqa. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Bodoqa. Underfoot, pale limestone; the ground slopes.
+Here: Kvashngobvo, Shngaoshnga, Qvaavngashngo and Tvashnga, and 60 others; black-dragon; dire-wolf; giant-constrictor-snake; giant-crocodile; giant-hyena; giant-scorpion; owlbear; red-dragon; white-dragon.
 > needs
-The Dvoashngashngo grows restless.
-The Qvoshngavngo grows restless.
-The Shngovngo grows restless.
-The Shngoqvo grows restless.
-The Vngaobvo grows restless.
-The Vngaavnga seems content.
-The Kvoavnga 8 grows restless.
-The Vngootvo grows restless.
-The Vngaoshngoshngo grows restless.
-The Vngovngoqvo grows restless.
-The Vngoaqvashngo grows restless.
-The Kvashnga grows restless.
-The Gvoshngoshnga grows restless.
-The Vngokvavngo grows restless.
-The Shngaavngo grows restless.
-The Bvotvoshngo grows restless.
-The Vngodva seems content.
-The Gvoavngashnga grows restless.
-The Kvovngashnga grows restless.
-The Shngashngovngo grows restless.
-The Shngoovngo grows restless.
-The Tvoadvovnga grows restless.
-The Shngoshngobva grows restless.
-The Vngoshnga grows restless.
-The Bvaavngovngo grows restless.
-The Gvaqvoshnga seems content.
-The Vngotvashnga grows restless.
-The Shngoashngabva grows restless.
-The Vngoshngoshngo grows restless.
-The Shngaqvovnga grows restless.
-The Shngoovngo 32 grows restless.
-The Vngaoshngoshngo 33 grows restless.
-The Dvooshngovnga grows restless.
-The Dvoadvavnga grows restless.
-The Gvavngadvo grows restless.
-The Vngavngo grows restless.
-The Vngoatvovngo grows restless.
-The Vngashngovnga grows restless.
-The Shngaashnga grows restless.
-The Vngashngogva grows restless.
-The Kvoashngadvo grows restless.
-The Vngaovngovngo grows restless.
-The Vngovngoshnga grows restless.
-The Shngaashnga 45 grows restless.
-The Gvokvavnga grows restless.
-The Qvavngovnga grows restless.
-The Vngavngavnga grows restless.
-The Vngobva grows restless.
-The Shngaovngoshngo grows restless.
-The Gvoavngoqva grows restless.
-The Shngoatvo grows restless.
-The Vngashnga grows restless.
-The Vngoovngashngo grows restless.
-The Qvoogvo grows restless.
-The Vngaavngo grows restless.
-The Vngavngadvo grows restless.
-The Dvoashnga grows restless.
-The Vngakva grows restless.
-The Qvavngodvo grows restless.
-The Shngoshngoqvo grows restless.
-The Dvashngo grows restless.
-The Shngoobvovngo grows restless.
-The Shngoavnga grows restless.
-The Dvoaqvokva grows restless.
-The Vngoashngovngo grows restless.
-The Kvoshngovnga grows restless.
-The Vngavngoshnga grows restless.
+The Kvashngobvo seems content.
+The Shngaoshnga seems content.
+The Qvaavngashngo grows restless.
+The Tvashnga seems content.
+The Shngaashngoshnga seems content.
+The Vngooqvoshngo seems content.
+The Kvaoshngo seems content.
+The Shngabvo seems content.
+The Gvavngabvo seems content.
+The Vngotvodvo seems content.
+The Tvoshngovngo grows restless.
+The Vngovngotvo seems content.
+The Vngashnga seems content.
+The Vngoqva grows restless.
+The Shngagvo grows restless.
+The Shngoakvovnga seems content.
+The Shngaodvavngo seems content.
+The Shngooshnga seems content.
+The Shngoovngashnga seems content.
+The Vngoakvo seems content.
+The Shngaagvovnga seems content.
+The Bvaashngashnga seems content.
+The Shngaavnga grows restless.
+The Bvovnga seems content.
+The Vngoshngogva seems content.
+The Gvaadva grows restless.
+The Shngoogvo seems content.
+The Kvoavngodvo seems content.
+The Shngoshngogva seems content.
+The Tvadvo seems content.
+The Tvookvadvo seems content.
+The Vngashnga 33 grows restless.
+The Kvootvaqvo seems content.
+The Vngovngakvo grows restless.
+The Shngoavngoshngo seems content.
+The Shngaqva seems content.
+The Vngaashnga seems content.
+The Kvoashngagvo grows restless.
+The Gvovngoshngo seems content.
+The Vngovnga seems content.
+The Vngoshngadvo grows restless.
+The Dvaovnga grows restless.
+The Shngaovngakva seems content.
+The Vngovngovnga seems content.
+The Shngashngovngo seems content.
+The Tvashngavnga seems content.
+The Tvaabva seems content.
+The Shngavngoqva seems content.
+The Shngoovngavnga seems content.
+The Shngagvo 51 seems content.
+The Dvoashngovngo grows restless.
+The Kvaovngovngo seems content.
+The Qvavngoqvo seems content.
+The Kvovnga grows restless.
+The Vngoobva seems content.
+The Dvaashnga seems content.
+The Bvavnga seems content.
+The Kvaobvashngo seems content.
+The Shngaokvodvo seems content.
+The Vngoovngavnga grows restless.
+The Vngaaqvo grows restless.
+The Vngaovngo seems content.
+The Bvaobva seems content.
+The Vngaabvaqva seems content.
+The black-dragon grows restless.
+The dire-wolf settles down to rest.
+The giant-constrictor-snake has given up on water.
+The giant-crocodile has given up on water.
+The giant-hyena settles down to rest.
+The giant-scorpion has given up on water.
+The owlbear settles down to rest.
+The red-dragon grows restless.
+The white-dragon grows restless.
 > release
 You let go.
 ```

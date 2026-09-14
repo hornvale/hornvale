@@ -467,7 +467,7 @@ fn a_rest_in_progress_credits_only_the_sleep_already_had() {
 /// that seam separately: mutating `LocaleTerrain::day_ticks` to always
 /// return `None` reddens
 /// `session_snapshot::the_client_fixtures_are_current`, so the committed
-/// `snapshot-seed-0-chamber-occupied.json` golden — which reads as ordinary
+/// `snapshot-seed-<OCCUPIED_SEED>-chamber-occupied.json` golden — which reads as ordinary
 /// artifact drift — is this task's real witness that the calendar reaches
 /// the fold in production, not this test.
 /// MUTATION THIS MUST FAIL AGAINST: the revert the paragraph above names,

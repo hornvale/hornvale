@@ -147,8 +147,8 @@ The day returns, as all things return.
 #### As the Bazap tell it
 
 Booko is the earth with two moons.
-The moons cross because they answer Qaga.
-The day returns because Qazaqaga strides the sky, briskly.
+The moons cross because they are Qaga's kin.
+The day returns because Qazaqaga drives the sky, briskly.
 The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — ourselves.
 The Ruašre are desert elfs — neighbors.
@@ -255,34 +255,6 @@ The moons cross because Roor walks the sky, slowly.
 *In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 #### As the Fovfav tell it
-
-The Bao are bugbears — rivals.
-The Bazap are desert dwarfs — rivals.
-The Ruašre are desert elfs — rivals.
-The Roašror are drows — rivals.
-The Fovfav are duergars — ourselves.
-The Wakdao are gnolls — rivals.
-The Qwootoqo are goblins — rivals.
-The Dazha are gully dwarfs — rivals.
-The Šdoašded are high elfs — rivals.
-The Dashav are hill dwarfs — rivals.
-The Dweowbaw are hobgoblins — rivals.
-The Naavea are humans — rivals.
-The Ngongo are kobolds — rivals.
-The Wodbog are kuo toas — rivals.
-The Dazhaf are mountain dwarfs — rivals.
-The Šzuašzez are sea elfs — rivals.
-The Šroašror are snow elfs — rivals.
-The Kxsonkxzo are svirfneblins — rivals.
-The Sruasrer are wood elfs — rivals.
-Booko is the earth with two moons.
-The moons cross because they answer Qaka.
-
-*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
-
-##### As the priesthood of the Fovfav teach it
-
-Booko Sazhatoo. ("Booko is the earth — as it is taught.")
 
 The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
@@ -751,37 +723,7 @@ The Šroašror are snow elfs — rivals.
 The Kxsonkxzo are svirfneblins — rivals.
 The Sruasrer are wood elfs — rivals.
 Booko is the earth with two moons.
-The moons cross because Fodbo strides the sky, slowly.
-
-*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
-
-##### As the priesthood of the Wodbog teach it
-
-Booko Wobwag Vob. ("Booko is the earth — as it is taught.")
-
-The Bao are bugbears — rivals.
-The Bazap are desert dwarfs — rivals.
-The Ruašre are desert elfs — rivals.
-The Roašror are drows — rivals.
-The Fovfav are duergars — rivals.
-The Wakdao are gnolls — rivals.
-The Qwootoqo are goblins — rivals.
-The Dazha are gully dwarfs — rivals.
-The Šdoašded are high elfs — rivals.
-The Dashav are hill dwarfs — rivals.
-The Dweowbaw are hobgoblins — rivals.
-The Naavea are humans — rivals.
-The Ngongo are kobolds — rivals.
-The Wodbog are kuo toas — ourselves.
-The Dazhaf are mountain dwarfs — rivals.
-The Šzuašzez are sea elfs — rivals.
-The Šroašror are snow elfs — rivals.
-The Kxsonkxzo are svirfneblins — rivals.
-The Sruasrer are wood elfs — rivals.
-Booko is the earth with two moons.
-The moons cross because they are Fodbo's kin.
-
-— though the folk say The moons cross because Fodbo strides the sky, slowly.
+The moons cross because Fodbo stalks the sky, slowly.
 
 *In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -807,7 +749,35 @@ The Šroašror are snow elfs — rivals.
 The Kxsonkxzo are svirfneblins — rivals.
 The Sruasrer are wood elfs — rivals.
 Booko is the earth with two moons.
-The moons cross because Qagag stalks the sky, slowly.
+The moons cross because Qagag strides the sky, slowly.
+
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+
+##### As the priesthood of the Dazhaf teach it
+
+Booko Shazhagqaof. ("Booko is the earth — as it is taught.")
+
+The Bao are bugbears — rivals.
+The Bazap are desert dwarfs — rivals.
+The Ruašre are desert elfs — rivals.
+The Roašror are drows — rivals.
+The Fovfav are duergars — rivals.
+The Wakdao are gnolls — rivals.
+The Qwootoqo are goblins — rivals.
+The Dazha are gully dwarfs — rivals.
+The Šdoašded are high elfs — rivals.
+The Dashav are hill dwarfs — rivals.
+The Dweowbaw are hobgoblins — rivals.
+The Naavea are humans — rivals.
+The Ngongo are kobolds — rivals.
+The Wodbog are kuo toas — rivals.
+The Dazhaf are mountain dwarfs — ourselves.
+The Šzuašzez are sea elfs — rivals.
+The Šroašror are snow elfs — rivals.
+The Kxsonkxzo are svirfneblins — rivals.
+The Sruasrer are wood elfs — rivals.
+Booko is the earth with two moons.
+The moons cross because Qagag walks the sky, slowly.
 
 *In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -891,36 +861,6 @@ The moons cross because they are Sonkxsankxza's kin.
 
 *In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Kxsonkxzo teach it
-
-Kxankxzha Booko. ("Booko is the earth — as it is taught.")
-
-The Bao are bugbears — rivals.
-The Bazap are desert dwarfs — rivals.
-The Ruašre are desert elfs — rivals.
-The Roašror are drows — rivals.
-The Fovfav are duergars — rivals.
-The Wakdao are gnolls — rivals.
-The Qwootoqo are goblins — rivals.
-The Dazha are gully dwarfs — rivals.
-The Šdoašded are high elfs — rivals.
-The Dashav are hill dwarfs — rivals.
-The Dweowbaw are hobgoblins — rivals.
-The Naavea are humans — rivals.
-The Ngongo are kobolds — rivals.
-The Wodbog are kuo toas — rivals.
-The Dazhaf are mountain dwarfs — rivals.
-The Šzuašzez are sea elfs — rivals.
-The Šroašror are snow elfs — rivals.
-The Kxsonkxzo are svirfneblins — ourselves.
-The Sruasrer are wood elfs — rivals.
-Booko is the earth with two moons.
-The moons cross because Sonkxsankxza strides the sky, slowly.
-
-— though the folk say The moons cross because they are Sonkxsankxza's kin.
-
-*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
-
 #### As the Sruasrer tell it
 
 The Bao are bugbears — neighbors.
@@ -996,9 +936,6 @@ The priesthood of the Roašror numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
 The Roašror's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Fovfav, the sky has darkened, now and again.
-The priesthood of the Fovfav numbers the darkenings: 6472.
-The next darkening, it teaches, comes on day 36531.
-The Fovfav's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Wakdao, the sky has darkened, now and again.
 Among the Qwootoqo, the sky has darkened, now and again.
 The priesthood of the Qwootoqo numbers the darkenings: 4010.
@@ -1029,16 +966,13 @@ The priesthood of the Ngongo numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
 The Ngongo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Wodbog, the sky has darkened, now and again.
-The priesthood of the Wodbog numbers the darkenings: 6472.
-The next darkening, it teaches, comes on day 36531.
-The Wodbog's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Dazhaf, the sky has darkened, now and again.
+The priesthood of the Dazhaf numbers the darkenings: 6472.
+The next darkening, it teaches, comes on day 36531.
+The Dazhaf's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Šzuašzez, the sky has darkened, now and again.
 Among the Šroašror, the sky has darkened, now and again.
 Among the Kxsonkxzo, the sky has darkened, now and again.
-The priesthood of the Kxsonkxzo numbers the darkenings: 6472.
-The next darkening, it teaches, comes on day 36531.
-The Kxsonkxzo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Sruasrer, the sky has darkened, now and again.
 The priesthood of the Sruasrer numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
@@ -1046,7 +980,6 @@ The Sruasrer's own priesthood taught wrongly, and could be shown wrong by any wh
 
 *In truth, the Bao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Roašror's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Fovfav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Qwootoqo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Dazha's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Šdoašded's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
@@ -1054,8 +987,7 @@ The Sruasrer's own priesthood taught wrongly, and could be shown wrong by any wh
 *In truth, the Dweowbaw's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Naavea's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Ngongo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Wodbog's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Kxsonkxzo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Dazhaf's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Sruasrer's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the darkenings of the first hundred years number 6472.*
 
@@ -1808,7 +1740,7 @@ The Nona are snow elfs — rivals.
 The Kxaapxoa are svirfneblins — rivals.
 The Ṅuṅa are wood elfs — rivals.
 Boodoa is the earth with one moon.
-The moon crosses because it is Kxongkxfon's kin.
+The moon crosses because it answers Kxongkxfon.
 
 *In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -1915,39 +1847,8 @@ The Nona are snow elfs — ourselves.
 The Kxaapxoa are svirfneblins — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 Boodoa is the earth with one moon.
-The moon crosses because it answers Ron.
-The day returns because the sky must be crossed.
-
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
-
-##### As the priesthood of the Nona teach it
-
-Boodoa No Daa. ("Boodoa is the earth — as it is taught.")
-
-The Koodzhoo are bugbears — neighbors.
-The Takaz are desert dwarfs — neighbors.
-The Boba are desert elfs — neighbors.
-The Saoza are drows — neighbors.
-The Pagam are duergars — neighbors.
-The Ratra are gnolls — neighbors.
-The Peerzhoe are goblins — neighbors.
-The Bapa are gully dwarfs — neighbors.
-The Moma are high elfs — neighbors.
-The Papan are hill dwarfs — neighbors.
-The Geerjoe are hobgoblins — neighbors.
-The Leoglo are humans — neighbors.
-The Gnga are kobolds — neighbors.
-The Famfaam are kuo toas — neighbors.
-The Takan are mountain dwarfs — neighbors.
-The Muma are sea elfs — neighbors.
-The Nona are snow elfs — ourselves.
-The Kxaapxoa are svirfneblins — neighbors.
-The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth with one moon.
 The moon crosses because Ron walks the sky, slowly.
-The day returns to keep the balance.
-
-— though the folk say The moon crosses because it answers Ron.
+The day returns because Rosron walks the sky, briskly.
 
 *In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -1973,7 +1874,7 @@ The Nona are snow elfs — rivals.
 The Kxaapxoa are svirfneblins — ourselves.
 The Ṅuṅa are wood elfs — rivals.
 Boodoa is the earth with one moon.
-The moon crosses because Poat strides the sky, slowly.
+The moon crosses because Poat stalks the sky, slowly.
 
 *In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -2091,9 +1992,6 @@ The next darkening, it teaches, comes on day 36337.
 The Takan's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Muma, the sky has darkened, now and again.
 Among the Nona, the sky has darkened, now and again.
-The priesthood of the Nona numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
-The Nona's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Kxaapxoa, the sky has darkened, now and again.
 Among the Ṅuṅa, the sky has darkened, now and again.
 The priesthood of the Ṅuṅa numbers the darkenings: 49.
@@ -2111,7 +2009,6 @@ The Ṅuṅa's own priesthood taught wrongly, and could be shown wrong by any wh
 *In truth, the Leoglo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Gnga's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Takan's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Nona's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Ṅuṅa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the darkenings of the first hundred years number 81.*
 
@@ -2262,8 +2159,8 @@ The day returns to keep the balance.
 #### As the Bafak tell it
 
 Dodoa is the earth with one moon.
-The moon crosses because it answers Faza.
-The day returns because Faza rows the sky, briskly.
+The moon crosses because it is Faza's kin.
+The day returns because Faza rides the sky, briskly.
 The Dokdoo are bugbears — neighbors.
 The Bafak are desert dwarfs — ourselves.
 The Rupre are desert elfs — neighbors.

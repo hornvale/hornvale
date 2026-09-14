@@ -1069,12 +1069,12 @@ mod tests {
             let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
             let distances = boundary_distance(&geo, &plate_of, &boundaries);
             let crust_age = VertexMap::from_fn(&geo, |c| field.age_at(geo.position(c)));
+            let orogen_reach = crate::lithology::orogen_reach_chord(&geo);
             let induration = VertexMap::from_fn(&geo, |c| {
                 crate::lithology::induration_at(
                     *crust_age.get(c),
                     *continental.get(c),
-                    boundaries.get(c).map(|b| b.kind),
-                    distances.get(c).map(|(hops, _)| hops),
+                    crate::lithology::orogen_proximity(&geo, orogen_reach, c, *distances.get(c)),
                 )
             });
             let seamounts = trail_seamounts(terrain_seed, &plates, &plate_of, &geo);
