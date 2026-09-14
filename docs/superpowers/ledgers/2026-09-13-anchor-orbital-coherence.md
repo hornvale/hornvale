@@ -142,5 +142,8 @@ changed eclipse fixture, almanac prose, and matching published scene artifact
 are retained.
 
 **Capture actions:** Astronomy 76/76 and scene 23/23; focused battery and
-scene-order tests pass; generated eclipse outputs are byte-identical between
-the scene fixture and published gallery artifact; no census was run.
+scene-order tests pass; the scene fixture and published gallery artifact have
+identical normalized JSON content (their trailing-newline conventions differ);
+no canonical census was run. The timing ledger retains prior local
+gate/rebaseline measurements, including census-tail-labelled probes, as
+historical measurements rather than claiming they were a census refresh.

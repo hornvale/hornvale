@@ -407,6 +407,17 @@ eclipse identically, as physics requires (`sin i = sin(180 − i)`). This is a
 rare direction of travel for this model card: a quantity that moved from
 **approximated** toward **derived**, not the reverse.
 
+**The anchor state, shared by the present-time consumers.** The calendar,
+instantaneous insolation, eclipse geometry, and scene window now evaluate one
+typed anchor state at the explicit instant asked for, then apply their own
+semantic projections. The state carries the physical radius and true
+longitude; the old mean-phase projection remains only at the compatibility
+boundary where its calendar meaning is intentional. Unsupported or degenerate
+physical evaluation is an error, while a valid interval with no eclipse is
+still an ordinary empty event result. This is an anchor-only coherence slice;
+the future body-family generalization and the separate deep-time forcing model
+remain open.
+
 **The epoch, corrected: PARTIAL becomes TOTAL.** The spec designed this
 campaign's epoch to be partial — masses and distances never move, and a
 world whose moons all draw `GiantImpact` was meant to be byte-identical to

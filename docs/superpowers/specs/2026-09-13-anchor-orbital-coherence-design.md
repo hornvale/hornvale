@@ -1,7 +1,7 @@
 # Anchor Orbital Coherence — Design
 
 **Date:** 2026-09-13  
-**Status:** Brainstorm-approved; awaiting written-spec review  
+**Status:** Approved; anchor slice qualified
 **Scope:** One authoritative, explicitly timed anchor-orbit evaluation shared by calendar, eclipse, insolation, and scene consumers
 
 ## 1. Goal
