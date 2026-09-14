@@ -479,6 +479,8 @@ for p in scripts/lane-sets.tsv scripts/sluice-run.sh scripts/sluice-drain.sh \
          scripts/sluice-queue.sh scripts/sluice-mouth.sh; do
     if printf '%s\n' "$_changed" | grep -qx "$p"; then
         _gate_touched=1
+        _inert_paths="${_inert_paths:-}$p
+"
         printf '  %-34s INERT HERE — the chamber reads this from MAIN\n' "$p"
     fi
 done
@@ -503,13 +505,61 @@ done
 # the drivers in between, so the one class of gate change that is BOTH
 # self-affecting and easy to get wrong was the class this section could not
 # see.
-_drivers="$(printf '%s\n' "$_changed" | grep -E '^scripts/(lane-[a-z0-9-]+|gate-[a-z0-9-]+)\.sh$' || true)"
-for p in $_drivers; do
-    _gate_touched=1
-    printf '  %-34s TAKES EFFECT — a phase runs this script FROM the
-' "$p"
-    printf '  %-34s   merge product, so it judges its own merge
-' ""
+# DERIVED FROM REACHABILITY, NOT FROM A NAME PATTERN. The first version of
+# this matched `lane-*.sh` and `gate-*.sh` by name, which is how the ledger
+# recorded it as a deliberately narrow stand-in --- and it was too narrow on
+# the very next candidate. tooling/the-attribution changes three test SUITES
+# that scripts/lane-outboard.sh runs from the merge product, and the section
+# reported only an INERT line for sluice-mouth.sh. A candidate that WEAKENS one
+# of those suites is the "retreat" this whole section exists to surface, and it
+# was the case the name pattern could not see.
+#
+# Two levels, matching the Makefile handling beside this: the ROSTER is read
+# from main (the chamber reads it there), and every script it names is read
+# from the CANDIDATE, because that is the copy that executes. Anything either
+# of them invokes and this diff changes takes effect on this very run.
+#
+# SCOPED TO THE PHASES A MERGE ACTUALLY RUNS, derived from sluice-run.sh's own
+# `merge_phases=` rather than restated here. The roster also carries rows the
+# chamber never runs --- `census` (which sluice-run.sh refuses as a phase
+# outright), `seam-guard`, and the commit-rung sets --- and scanning those
+# reaches scripts that judge nothing here. census-run.sh mentions
+# scripts/worktree-take.sh, so an unscoped scan reported an ordinary helper as
+# gate machinery: a SUBJECT under test, which is judged rather than judging.
+_phases="$(grep -m1 '^merge_phases=' "$root/scripts/sluice-run.sh" 2>/dev/null \
+    | sed 's/^merge_phases="//; s/"$//')"
+_roster_scripts=""
+for _ph in $_phases; do
+    _roster_scripts="$_roster_scripts
+$(grep -v '^#' "$root/scripts/lane-sets.tsv" 2>/dev/null \
+    | awk -F'\t' -v ph="$_ph" 'NF>=5 && $1==ph {print $5}' | grep -oE 'scripts/[a-z0-9._-]+\.sh')"
+done
+_roster_scripts="$(printf '%s\n' "$_roster_scripts" | grep -v '^$' | sort -u)"
+_reachable="$_roster_scripts"
+for _d in $_roster_scripts; do
+    _reachable="$_reachable
+$(git show "$sha:$_d" 2>/dev/null | grep -oE 'scripts/[a-z0-9._-]+\.sh' | sort -u)"
+done
+_reachable="$(printf '%s\n' "$_reachable" | grep -v '^$' | sort -u)"
+for p in $_reachable; do
+    if printf '%s\n' "$_changed" | grep -qx "$p"; then
+        # NEVER REPORT ONE PATH BOTH WAYS. A file the block above already
+        # called INERT is read from MAIN, and printing a contradicting
+        # TAKES EFFECT line beneath it would be worse than printing neither.
+        #
+        # This is a coherence rule, not an observed fix, and saying so matters:
+        # as written today NO path is both --- the merge phases reach 30
+        # scripts and none of them is the queue plumbing --- so the guard never
+        # fires. It was first written as a hardcoded second copy of the INERT
+        # list, which is the worse shape of the same dead code: two lists that
+        # can drift apart with nothing to notice. It now reads the one list.
+        if printf '%s' "${_inert_paths:-}" | grep -qx "$p"; then
+            continue
+        fi
+        _gate_touched=1
+        printf '  %-34s TAKES EFFECT — a phase reaches this script FROM the\n' "$p"
+        printf '  %-34s   merge product, so it judges its own merge\n' ""
+    fi
 done
 
 if printf '%s\n' "$_changed" | grep -q '^scripts/hooks/'; then

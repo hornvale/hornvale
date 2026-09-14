@@ -136,10 +136,33 @@ else
     ok "it is not misfiled with the roster and the queue plumbing"
 fi
 
-echo "== a non-phase script under scripts/ is NOT a phase driver (no crying wolf)"
-# shapecheck.py's sibling: an ordinary helper nothing in the roster invokes.
-# The driver pattern is deliberately narrow (lane-*.sh, gate-*.sh) so that
-# editing a utility does not read as changing what judges you.
+echo "== a TEST SUITE a phase reaches is reported (the second level)"
+# The case a name pattern could not see. scripts/lane-outboard.sh is named by
+# the roster; the suites IT runs are not, and they execute from the merge
+# product just as it does. A candidate weakening one of them is the "retreat"
+# this section exists to surface, and tooling/the-attribution --- which changes
+# four such suites --- was reported as touching only one INERT file.
+g show "$base:scripts/test-sluice-drain.sh" > "$tmp/suite"
+printf '# probe line\n' >> "$tmp/suite"
+c_suite="$(mint suite scripts/test-sluice-drain.sh "$tmp/suite")"
+out="$(section suite "$c_suite")"
+if printf '%s' "$out" | grep -q "test-sluice-drain.sh"; then
+    ok "a suite reached THROUGH a roster-named driver is found (two-level reachability)"
+else
+    bad "a suite lane-outboard.sh runs was not reported: $out"
+fi
+if printf '%s' "$out" | grep -q "TAKES EFFECT"; then
+    ok "it says the suite takes effect on this very run"
+else
+    bad "the suite was not reported as taking effect"
+fi
+
+echo "== a non-phase script under scripts/ is NOT gate machinery (no crying wolf)"
+# worktree-take.sh is a SUBJECT under test, not a judge: it is judged by
+# test-worktree-take.sh. It is mentioned by census-run.sh, and `census` is not
+# a chamber phase at all (sluice-run.sh refuses it outright), so an unscoped
+# reachability scan reported this ordinary helper as gate machinery. Scoping to
+# sluice-run.sh's own merge_phases is what keeps it out.
 g show "$base:scripts/worktree-take.sh" > "$tmp/util"
 printf '# probe line\n' >> "$tmp/util"
 c_util="$(mint util scripts/worktree-take.sh "$tmp/util")"
