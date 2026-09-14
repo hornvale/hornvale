@@ -395,6 +395,16 @@ use hornvale_lab::census_guard::{CENSUS_ALARM_SECS, CENSUS_REFUSAL_SECS};
 /// normal. If the re-run lands near 1900 again, the pair is due another move
 /// and the *next* campaign will have two readings to set it from.
 ///
+/// **The re-run landed at 1778.736 s (cpu_ratio 31.33), and that is the
+/// evidence this raise was held to.** Two readings at 1778.7 and 1898.9 say
+/// ~1900 was not a one-off: the new normal for this world is ~1840, roughly
+/// 13% above the 1624 top of the old series. So the pair is correctly placed
+/// and ALARM is deliberately left BELOW the new normal — a census sitting
+/// over ALARM is the intended signal, not a fault, and it keeps
+/// `PROC-census-budget-denominated-by-cpu-ratio` owed rather than letting the
+/// optimisation pressure lapse. RED at 2040 still holds 7.4% over the higher
+/// of the two readings, so the tripwire survives.
+///
 /// **The forward-looking argument has expired a second time**, in the same
 /// words as before. The work that moved this was world-scale, not local: six
 /// obligate marine peoples entering the roster, and a `land_settlement`

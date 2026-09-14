@@ -153,7 +153,45 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
     // assuming the equality still held rather than by reading what the loop
     // iterates. Merfolk does not settle, it does improvise a name, and it
     // belongs in this denominator.
-    assert_eq!((god, spirit), (11, 13), "frozen arm counts over 25 peoples");
+    // **THE TIDEMARK, SECOND RE-PIN (2026-09-13): (11, 13) -> (12, 12), AND
+    // IT IS NOT A CENSUS RE-PIN.** This test reads no census fixture — it
+    // builds `generated(42)` live — so the canonical refresh at
+    // `9b3bbfaa5d45` cannot have moved it, and the pin was already stale when
+    // that refresh landed. Saying so matters, because it arrived in the same
+    // failing run as thirteen genuine census re-pins and would otherwise be
+    // recorded as one.
+    //
+    // CHASED, NOT ADJUSTED, as the doc comment above demands. Exactly ONE
+    // people moved, and the committed report is what names it:
+    // `docs/audits/the-reticence-report.md` carries a per-people row, and
+    // diffing its `improvised-name` column against `c78116d0f` (the merge
+    // that last measured (11, 13)) shows a single line changing —
+    // **svirfneblin, Spirit -> God**. Its `cult-form` column moves with it,
+    // `folk -> organized`, which is the mechanism rather than a correlate:
+    // `improvised_name` (windows/vessel/src/doctrine.rs) resolves to `God`
+    // exactly when `cult_form_of` reads `Some("organized")`, and
+    // `cult_form_of` joins species -> `occ-people` -> SITE -> `held-by` ->
+    // belief -> `cult-form`. That join runs through the settlement roster, so
+    // a people whose sites change can change arm without anything in the
+    // language or the doctrine model moving at all.
+    //
+    // The mover is therefore the world, exactly as the doc comment above
+    // predicts a move here would be: `9912bc7ab` (`land_settlement` selects
+    // on habitat realm, not biome) landed after the (11, 13) measurement and
+    // widens every world by 39 settlements, and `41069d54b` absorbed it
+    // together with main's astronomy deepening — that commit is where the
+    // committed report's svirfneblin row actually flips, traced commit by
+    // commit rather than inferred.
+    //
+    // **WHY IT SURVIVED A COMMIT THAT SET OUT TO CATCH IT.** `41069d54b` is
+    // titled "absorb the world movement, and re-state the pins it moved", and
+    // it did regenerate the report whose diff proves the flip — but
+    // regenerating a rendered artifact and re-measuring an assertion are two
+    // different instruments, and only the first was run. The report absorbed
+    // the change silently because that is what a regenerated artifact does.
+    // The denominator half is re-checked and unmoved: 25 peoples, merfolk
+    // still the lone `Wordless`, asserted below.
+    assert_eq!((god, spirit), (12, 12), "frozen arm counts over 25 peoples");
     assert_eq!(
         god + spirit + wordless,
         25,

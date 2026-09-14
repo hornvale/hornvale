@@ -7382,8 +7382,9 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
 /// # The narrowing Task 11c did not go far enough on (The Wearing, 11d)
 ///
 /// Task 11c's sweep of seeds 0-199 saw no goblin world read false, and
-/// concluded the front was safe. The 1000-world census disagreed: two
-/// worlds, seeds **386** and **976**, read `false` for
+/// concluded the front was safe. The 1000-world census disagreed: seeds
+/// **386**, **976**, and, in the current close regeneration, **935**, read
+/// `false` for
 /// `epithet-honorific-goblin`. Both were chased, and both are THIS
 /// function's blind spot rather than a missing affix — the very same
 /// repair-ladder divergence described above, landing at the FRONT of the
@@ -7397,6 +7398,7 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
 /// |---|---|---|
 /// | 386 | `Zfaawmoffof` | `Foafmoffof` |
 /// | 976 | `Vabozhbzas`  | `Boozhbozhbzas` |
+/// | 935 | `Shoeffepa`   | `Paefepa`      |
 ///
 /// In both, the honorific-free form surfaced the `gloom` morpheme and the
 /// honorific-bearing form did not. That identification is not a guess: at
@@ -7415,6 +7417,14 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
 /// wear/repair ladder that runs downstream of reduction is not
 /// reduction-invariant and may surface a different number of morphemes in
 /// the two forms.
+///
+/// Seed 935 is the same shape with the other compound ordering: the
+/// honorific-free surfaces of `day` and `gloom` alone are `Pae` and `Fepa`,
+/// while the committed `Shoeffepa` retains `shoef` + `Fepa` and drops `Pae`.
+/// Against the full reference `Paefepa` no consonant frame aligns; against
+/// `Fepa`, `prepended_material` recovers `shoef`. The current census witness
+/// is therefore independently identified, not inferred from the metric's
+/// false result.
 ///
 /// **The error is one-directional, which is what keeps the metric usable.**
 /// A missing morpheme in the reference can only make an alignment fail, so
@@ -15023,12 +15033,11 @@ mod tests {
     /// committed form did not, so the reference holds material the committed
     /// word does not and no offset aligns.
     ///
-    /// **Neither seed is in that population any more** (F11 discharge,
-    /// 2026-07-30, census `4cd19ff9`): every belief of both worlds now detects
-    /// its affix unaided, because the committed form and the honorific-free
-    /// reference have landed back on the same rung of the wear/repair ladder
-    /// at both seeds. The census's sole `false` is seed 400, diagnosed at
-    /// `calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS`.
+    /// The old witnesses 386 and 976 are no longer false in the current
+    /// census, but remain as literal characterisation cases. Seed 935 is the
+    /// current live witness and is added below; keeping both kinds of witness
+    /// separate prevents a fixture re-pin from erasing the detector's known
+    /// alignment limit.
     ///
     /// This test is nonetheless kept, unchanged and passing, and the
     /// distinction matters: it operates on LITERAL word pairs, so it is a
@@ -15049,7 +15058,7 @@ mod tests {
     /// change puts both forms on the same rung of the wear/repair ladder,
     /// the first assertion of each pair fails and sends the reader here.
     #[test]
-    fn the_two_census_falses_are_a_front_divergence_and_not_a_missing_affix() {
+    fn the_census_falses_are_front_divergence_and_not_a_missing_affix() {
         // Seed 386, goblin, belief 5 (gloss "gloom-day"). The world's own
         // honorific-free surface for `gloom` alone is `Foaf` — beliefs 4
         // and 6 of this same world — and that is precisely the material
@@ -15082,6 +15091,23 @@ mod tests {
             prepended_material("Vabozhbzas", "bozhbzas", &g976).as_deref(),
             Some("va"),
             "with that morpheme gone from the reference, the affix is exactly where it should be"
+        );
+
+        // Seed 935, goblin, belief 9 (gloss "day-gloom"). The independent
+        // single-concept surfaces are `Pae` (day) and `Fepa` (gloom); the
+        // committed compound retains the honorific `shoef` plus `Fepa` but
+        // drops `Pae`.
+        let v935 = AstronomyView::build(Seed(935), &SkyPins::default()).unwrap();
+        let g935 = vowel_graphemes(&hornvale_worldgen::language_of(&v935.world, "goblin"));
+        assert_eq!(
+            prepended_material("Shoeffepa", "Paefepa", &g935),
+            None,
+            "seed 935's reference carries the dropped day morpheme, so nothing aligns"
+        );
+        assert_eq!(
+            prepended_material("Shoeffepa", "Fepa", &g935).as_deref(),
+            Some("shoef"),
+            "with the dropped day morpheme removed, seed 935's honorific is exactly where it should be"
         );
     }
 
