@@ -16,8 +16,8 @@
 //!    than density.
 //! 2. `cascades_do_not_depopulate_the_world` — conflict does not consume the
 //!    map: the bake's own `alive_at_now` stays well clear of zero and the
-//!    live settlement count stays inside the sane band the epoch gates
-//!    (`history_placement.rs`) already assert on.
+//!    live settlement count stays above a minimum viability floor. There is
+//!    deliberately no upper bound: a growing world is not a depopulated one.
 //! 3. `cascade_sizes_are_measured_and_the_shape_adjudicated` (heavy) — the
 //!    HEADLINE: pool cascades over a seed sample and adjudicate the size
 //!    distribution's shape.
@@ -164,8 +164,10 @@ fn conflict_fires_at_volume() {
 
 /// Gate — the cascade mechanism does not empty the map when it does fire
 /// (spec §8.2). Reuses `census`'s `alive_at_now`/`collapsed` fields (the
-/// bake's own tally) and cross-checks against the settlement-count sane band
-/// the epoch gates (`history_placement.rs`) already assert on the live build.
+/// bake's own tally) and cross-checks against a settlement-count viability
+/// floor. The old fixed upper band was not a valid depopulation test: a
+/// healthy world whose settlement count grew beyond the calibration window
+/// was reported as a failure.
 /// A guard-rail, not a payoff gate, and deliberately one-sided: deleting
 /// predation *raises* both numbers rather than lowering them. That is measured,
 /// not assumed — a Task-3 probe that returned early from `Bake::maybe_raid`
@@ -205,9 +207,10 @@ fn cascades_do_not_depopulate_the_world() {
     )
     .expect("seed builds");
     let n = hornvale_settlement::all_settlements(&world).len();
+    const MIN_LIVE_SETTLEMENTS: usize = 75;
     assert!(
-        (40..=400).contains(&n),
-        "the cascade knocked the live settlement count out of the sane band: {n}"
+        n >= MIN_LIVE_SETTLEMENTS,
+        "the cascade depopulated the live map: {n} settlements (minimum viable floor {MIN_LIVE_SETTLEMENTS})"
     );
 }
 

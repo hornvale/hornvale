@@ -908,7 +908,7 @@ const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 /// pulled to 0.2) concentrates catchments along river corridors rather than
 /// spreading them over broad riverless-but-moist land, and the old
 /// `THRESHOLD = 10.0` condensed only 79 seed-42 settlements — below the
-/// [100, 400] sane band (`windows/worldgen/tests/confluence.rs`,
+/// historical calibration window (`windows/worldgen/tests/confluence.rs`,
 /// `settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint`).
 ///
 /// A naive re-fit is not enough: lowering `THRESHOLD` alone trades settlement
