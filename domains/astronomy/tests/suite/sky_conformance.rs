@@ -15,8 +15,8 @@
 //! they can no longer drift with the implementation they check.
 
 use hornvale_astronomy::{
-    GeneratedSky, MoonsPin, RotationPin, SkyPins, SpinPin, StarSystem, StdInstant, StellarTopology,
-    anchor_state_at, calendar_of, generate, insolation_rel_at, luminosity_at,
+    GeneratedSky, MoonsPin, RotationPin, SkyPins, SpinPin, StarSystem, StdDays, StdInstant,
+    StellarTopology, anchor_state_at, calendar_of, generate, insolation_rel_at, luminosity_at,
     stellar_illumination_at, stellar_positions_at,
 };
 use hornvale_kernel::{EntityId, ObserverContext, PhenomenaSource, Seed, Venue, WorldTime};
@@ -211,6 +211,24 @@ fn insolation_anchor_coherence_uses_the_shared_position_for_binary_sources() {
             );
         }
     }
+}
+
+/// The total illumination API retains its established origin fallback when a
+/// malformed system cannot produce a physical anchor state.
+#[test]
+fn invalid_anchor_keeps_illumination_total_at_the_origin_fallback() {
+    let mut system = eccentric_system(&SkyPins {
+        topology: Some(StellarTopology::Single),
+        ..SkyPins::default()
+    });
+    system.anchor.year = StdDays::new(0.0).expect("zero is a valid malformed period");
+
+    let illumination =
+        stellar_illumination_at(&system, StdInstant::new(0.0).expect("finite instant"));
+    let primary = illumination.sources.first().expect("single primary light");
+    assert_eq!(primary.distance.get(), 0.0);
+    assert_eq!(primary.flux_rel, 0.0);
+    assert_eq!(illumination.combined_flux_rel, 0.0);
 }
 
 /// There is a sun and it owns the day sky. Every generated sky keeps

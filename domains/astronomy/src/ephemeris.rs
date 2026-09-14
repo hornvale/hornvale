@@ -1,8 +1,9 @@
 //! Analytic, coplanar stellar and planetary ephemerides.
 //!
-//! Positions share the scene's planetary plane: anchor angle is tau times
-//! `year_phase`. The calendar's solar longitude uses that same phase, so
-//! projecting a planet-plane sightline onto its equator requires a half-turn.
+//! Compatibility positions share the scene's planetary plane: anchor angle is
+//! tau times the calendar's mean-longitude `year_phase`. Physical calendar
+//! solar projections use the shared anchor state's true longitude; projecting
+//! a planet-plane sightline onto its equator requires a half-turn.
 //! Alignments are against the orbital center (primary for single/wide,
 //! barycenter for close), not transits of either resolved binary disc.
 
