@@ -122,6 +122,61 @@ printf '%s\n' "$out" | sed 's/^/    /'
 case "$out" in *"NO reserved block"*) ok "says the allocator never issued it" ;; *) bad "did not say so" ;; esac
 case "$out" in *CLOSED*|*LIVE*|*UNKNOWN*) bad "invented an owner for an unissued number" ;; *) ok "invents no owner" ;; esac
 
+# --- the reconciliation row: a branch name is not a campaign slug -----------
+# campaign/the-coherence's campaign is `the-coherent-ground`, and the vet
+# reported "<NO ROW for the-coherence>" while the row sat there, correct,
+# keyed by the slug. The substring fallback could not save it either --- the
+# two names diverge at the eleventh character. The authority is the chronicle
+# and retrospective a merge candidate ADDS, because a merge is the last act of
+# a campaign.
+# shellcheck disable=SC2016  # deliberately unexpanded; positional args.
+recon() ( cd "$repo" && env -u GIT_DIR -u GIT_INDEX_FILE bash -c '
+    HV_VET_LIB=1 . "$1/scripts/sluice-vet.sh"; reconciliation_disposition "$(git rev-parse HEAD)" "$2"' _ "$root" "$2" )
+
+build_recon() {
+    rm -rf "$repo"; mkdir -p "$repo"
+    g -C "$repo" init -q -b main
+    g -C "$repo" config user.email vet@test
+    g -C "$repo" config user.name vet-test
+    mkdir -p "$repo/book/src/chronicle" "$repo/docs/retrospectives" "$repo/docs/audits"
+    printf 'slug\tdisposition\n' > "$repo/docs/audits/campaign-reconciliation.tsv"
+    g -C "$repo" add -A; g -C "$repo" commit -q -m base
+    g -C "$repo" update-ref refs/remotes/origin/main HEAD
+    g -C "$repo" checkout -q -b work
+}
+
+echo "== the row is found by the SLUG the candidate's chronicle names"
+build_recon
+printf 'chronicle\n' > "$repo/book/src/chronicle/the-coherent-ground.md"
+printf 'the-coherent-ground\tactive\n' >> "$repo/docs/audits/campaign-reconciliation.tsv"
+g -C "$repo" add -A; g -C "$repo" commit -q -m close
+out="$(recon x campaign/the-coherence)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *active*) ok "finds the row under a slug the branch name does not contain" ;; *) bad "did not find it: $out" ;; esac
+case "$out" in *"NO ROW"*) bad "reported a false absence — the exact bug" ;; *) ok "reports no absence" ;; esac
+case "$out" in *the-coherent-ground*) ok "names the key it matched on" ;; *) bad "did not name the key" ;; esac
+
+echo "== the branch name still works when it IS the slug"
+build_recon
+printf 'chronicle\n' > "$repo/book/src/chronicle/the-tidemark.md"
+printf 'the-tidemark\tshipped\n' >> "$repo/docs/audits/campaign-reconciliation.tsv"
+g -C "$repo" add -A; g -C "$repo" commit -q -m close
+out="$(recon x campaign/the-tidemark)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *shipped*) ok "the ordinary case is unaffected" ;; *) bad "broke the ordinary case: $out" ;; esac
+
+echo "== a genuinely missing row is still reported, naming every key tried"
+# ANTI-VACUITY. 440 rows still read `active`, so a real absence is a real
+# signal; a lookup that widened until it always matched would be worse than
+# the bug it replaced.
+build_recon
+printf 'chronicle\n' > "$repo/book/src/chronicle/the-absent.md"
+g -C "$repo" add -A; g -C "$repo" commit -q -m close
+out="$(recon x campaign/the-absent-branch)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"NO ROW"*) ok "a real absence is still reported" ;; *) bad "invented a row: $out" ;; esac
+case "$out" in *the-absent*) ok "names the keys it tried" ;; *) bad "did not name the keys tried" ;; esac
+
 # --- the incident's durable half -------------------------------------------
 index_after="$(g -C "$root" write-tree 2>/dev/null || echo unavailable)"
 if [ "$index_before" != "$index_after" ]; then

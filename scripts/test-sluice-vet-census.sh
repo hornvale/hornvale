@@ -116,6 +116,62 @@ out="$(report)"; printf '%s\n' "$out" | sed 's/^/    /'
 case "$out" in *"ships no census"*) ok "says it ships no census" ;; *) bad "did not say so" ;; esac
 case "$out" in *"census_sentinel"*) bad "warned about a prose-only candidate — cry-wolf" ;; *) ok "stays quiet" ;; esac
 
+# --- census_pins: goldens moved, were the pins even considered? -------------
+# The rule that would have caught campaign/anchor-orbital-coherence's red on
+# 2026-09-14 before the chamber spent 1033 s on it. The third case is the one
+# that keeps it honest: the hook's own census_guard_files pattern includes a
+# GOLDEN path, and counting that pattern here scores the exact failure as
+# clean, so this suite pins that a golden is never mistaken for a pin.
+# shellcheck disable=SC2016  # deliberately unexpanded; $root is positional.
+pins_report() ( cd "$repo" && env -u GIT_DIR -u GIT_INDEX_FILE bash -c '
+    HV_VET_LIB=1 . "$1/scripts/sluice-vet.sh"; census_pins "$(git rev-parse HEAD)"' _ "$root" )
+
+build_pins() {
+    build
+    mkdir -p "$repo/book/src/laboratory/generated/the-census" \
+             "$repo/windows/lab/tests/suite" "$repo/tools/census/queries/calibrate"
+}
+
+echo "== goldens moved, NO pin source touched"
+build_pins
+echo "rows,2" > "$repo/book/src/laboratory/generated/the-census/rows.csv"
+g -C "$repo" add -A; g -C "$repo" commit -q -m "census goldens"
+out="$(pins_report)"; printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"NO calibration pin source"*) ok "flags the unpinned goldens" ;; *) bad "missed unpinned goldens" ;; esac
+case "$out" in *considered*) bad "also called them considered" ;; *) ok "does not also bless it" ;; esac
+
+echo "== goldens moved AND a pin source touched"
+build_pins
+echo "rows,2" > "$repo/book/src/laboratory/generated/the-census/rows.csv"
+echo "pin" > "$repo/windows/lab/tests/suite/calibration.rs"
+g -C "$repo" add -A; g -C "$repo" commit -q -m "census goldens and pins"
+out="$(pins_report)"; printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *considered*) ok "reports the pins as considered" ;; *) bad "did not report them considered" ;; esac
+case "$out" in *"NO calibration pin source"*) bad "flagged a re-pinned candidate — cry-wolf" ;; *) ok "does not flag it" ;; esac
+
+echo "== a golden is not a pin (the hook-pattern trap)"
+# book/.../rows.csv is in the hook's census_guard_files on purpose. If this
+# rule counted that pattern, a candidate that moved ONLY goldens would score as
+# having touched a pin, and anchor's red would have read clean.
+build_pins
+echo "rows,2" > "$repo/book/src/laboratory/generated/the-census/rows.csv"
+echo "rows,2" > "$repo/book/src/laboratory/generated/census-of-the-meeting/rows.csv" 2>/dev/null ||
+    { mkdir -p "$repo/book/src/laboratory/generated/census-of-the-meeting"; echo "rows,2" > "$repo/book/src/laboratory/generated/census-of-the-meeting/rows.csv"; }
+g -C "$repo" add -A; g -C "$repo" commit -q -m "two golden files, no pins"
+out="$(pins_report)"; printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"2 golden rows.csv moved and NO calibration pin"*) ok "two goldens, still zero pins" ;; *) bad "counted a golden as a pin" ;; esac
+
+echo "== no goldens moved: silent even when a pin source changed"
+build_pins
+echo "pin" > "$repo/windows/lab/tests/suite/calibration.rs"
+g -C "$repo" add -A; g -C "$repo" commit -q -m "pins only"
+out="$(pins_report)"; printf '%s\n' "$out" | sed 's/^/    /'
+if [ -z "$(printf '%s' "$out" | tr -d '[:space:]')" ]; then
+    ok "says nothing when no golden moved"
+else
+    bad "spoke about pins on a candidate that moved no golden"
+fi
+
 index_after="$(g -C "$root" write-tree 2>/dev/null || echo unavailable)"
 if [ "$index_before" != "$index_after" ]; then
     bad "THIS SUITE REWROTE THE INDEX of the worktree it ran in ($index_before -> $index_after)"

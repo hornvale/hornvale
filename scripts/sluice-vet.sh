@@ -20,6 +20,12 @@
 
 set -u
 
+# The shared conflict/author classifier, so the vet, the mouth and the chamber
+# cannot disagree about which conflicts are bookkeeping. One implementation,
+# several callers --- the rule decision 0079 applies to the host check.
+# shellcheck source=/dev/null
+HV_PHASES_LIB=1 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sluice-phases.sh"
+
 # The allocator's ledger. HV_BLOCK_DIR is scripts/decision-block.sh's own
 # variable, honoured here so the two agree about where the ledger lives and so
 # a test can point both at a scratch copy.
@@ -140,8 +146,193 @@ world_since() {
         grep -E '\.rs$' | grep -vE '(^|/)(tests|benches)/' | sort -u
 }
 
-# HV_VET_LIB=1 sources the adjudication functions above --- decision blocks and
-# census freshness --- without vetting anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
+# Did a candidate that MOVES census goldens also touch the pins that assert
+# against them? This is the rule that would have saved 1033 s of gate time on
+# campaign/anchor-orbital-coherence, 2026-09-14: 17 golden files moved, zero
+# calibration pin sources touched, nine calibration tests red in the chamber
+# with messages of the form "mean name-collision-rate drifted: 0.5245073".
+#
+# Measured over the three candidates in flight that night --- it discriminates,
+# which is the only reason it is printed:
+#
+#   anchor          2 golden rows.csv moved, 0 pin sources touched   <- the red
+#   the-tidemark    3 moved, all 4 pin sources touched               <- re-pinned
+#   the-coherence   0 moved, 0 touched                               <- quiet
+#
+# THE PIN LIST IS NOT THE HOOK'S LIST, and the difference is the whole check.
+# scripts/hooks/pre-commit's census_guard_files deliberately includes
+# `book/src/laboratory/generated/[^/]+/rows.csv` --- a GOLDEN, not a pin ---
+# because the hook must fire when either side moves. Counting that pattern here
+# scores anchor as "2 pin files touched" and reports the exact red it exists to
+# catch as clean. The SURFACES section's `census pins (hook list)` line uses
+# the hook's pattern and is right to; this one uses the pin SOURCES alone.
+#
+# TOUCHING A PIN SOURCE PROVES IT WAS CONSIDERED, NEVER THAT IT IS CORRECT, and
+# the report says "considered" rather than implying a guarantee it cannot make.
+CENSUS_PIN_SOURCES='windows/lab/tests/suite/(calibration|branches_family_calibration|gathering_calibration)\.rs|tools/census/queries/calibrate/golden-pins\.sql'
+
+census_pins() {
+    local sha="$1" gold pin
+    gold="$(git diff --name-only "origin/main...$sha" -- 'book/src/laboratory/generated/*/rows.csv' 2>/dev/null | grep -c .)"
+    pin="$(git diff --name-only "origin/main...$sha" 2>/dev/null | grep -cE "^(${CENSUS_PIN_SOURCES})\$")"
+    [ "$gold" -gt 0 ] || return 0
+    if [ "$pin" -gt 0 ]; then
+        printf '  %s golden rows.csv moved; %s calibration pin source(s) touched — considered\n' "$gold" "$pin"
+        return 0
+    fi
+    printf '  >> %s golden rows.csv moved and NO calibration pin source was touched\n' "$gold"
+    printf '     The calibration batteries assert against these goldens; moving one\n'
+    printf '     without re-pinning the other is the commonest red this queue produces.\n'
+    printf "     Reproduce in seconds: cargo nextest run -p hornvale-lab -E 'test(calibration::)'\n"
+}
+
+# The reconciliation row for a candidate, or an honest absence.
+#
+# A BRANCH NAME IS NOT A CAMPAIGN SLUG, and assuming it is reported a false
+# absence on a live candidate. campaign/the-coherence's campaign is
+# `the-coherent-ground`: the row was present and correct, the substring
+# fallback below could not reach it ("the-coherence" is not a substring of
+# "the-coherent-ground" --- they diverge at the eleventh character), and the
+# vet told the operator there was NO ROW at the exact moment the operator was
+# deciding whether the close package was complete.
+#
+# The authority is what the candidate ADDS under book/src/chronicle/ and
+# docs/retrospectives/: a merge is the last act of a campaign, so those files
+# name the campaign whose row this is. The branch-derived name stays as a
+# fallback for a candidate that adds neither.
+#
+# The absence is still worth reporting honestly --- 440 rows read `active`, so
+# a genuinely missing row is a real signal --- which is why a miss names every
+# key it tried rather than just the last one.
+reconciliation_disposition() {
+    local sha="$1" branch="$2" tsv keys k row
+    tsv="$(git show "$sha:docs/audits/campaign-reconciliation.tsv" 2>/dev/null)"
+    keys="$(git diff --name-only --diff-filter=A "origin/main...$sha" 2>/dev/null \
+        -- book/src/chronicle/ docs/retrospectives/ | sed 's|.*/||; s|\.md$||' | sort -u)"
+    keys="$keys
+${branch#campaign/}"
+    for k in $keys; do
+        [ -n "$k" ] || continue
+        row="$(printf '%s\n' "$tsv" | awk -F'\t' -v k="$k" '$1==k{print $2; exit}')"
+        if [ -n "$row" ]; then
+            printf '  reconciliation disposition: %s  (key: %s)\n' "$row" "$k"
+            return 0
+        fi
+    done
+    # Older rows use a `plan-<date>-campaign-<name>` key rather than the bare
+    # name, so a substring match is tried for every key before reporting none.
+    for k in $keys; do
+        [ -n "$k" ] || continue
+        row="$(printf '%s\n' "$tsv" | awk -F'\t' -v k="$k" 'index($1,k){print $2" (key: "$1")"; exit}')"
+        if [ -n "$row" ]; then
+            printf '  reconciliation disposition: %s\n' "$row"
+            return 0
+        fi
+    done
+    # shellcheck disable=SC2086  # deliberate word-split of the key list
+    printf '  reconciliation disposition: <NO ROW; tried %s>\n' \
+        "$(printf '%s ' $keys)"
+}
+
+# Will this candidate still merge once the candidates AHEAD of it have landed?
+#
+# THE ONE GAP THE MOUTH HAS, and it is expensive every time it opens. The mouth
+# checks a candidate against TODAY's main, where it merges cleanly and is
+# correctly admitted. The chamber merges main AT DISPATCH TIME, by which point
+# the rows ahead have landed. So a candidate can pass the mouth, take the
+# strictly serial claim, fail at the <merge> step with rc=10, and have tested
+# nothing --- a whole slot for no information. campaign/the-weft did exactly
+# this on 2026-09-04; it is why the overlap advisory exists, and the advisory
+# reports SHARED PATHS, which is a weaker statement than this one.
+#
+# Measured by hand on campaign/anchor-orbital-coherence, 2026-09-14, which is
+# why this exists: 48 conflicts against a simulated main-plus-the-tidemark, of
+# which the chamber regenerates 10 and cannot touch 38. The overlap advisory
+# saw the shared paths and could not say the merge would FAIL.
+#
+# IT IS A PROJECTION, NOT A VERDICT, and it says so. A row ahead may red and
+# never land --- campaign/the-kerf was once held for a collision with a
+# candidate that died on a formatting check twenty minutes later. So this
+# prints and never gates, like every other line here.
+#
+# Rows are folded on in queue order with merge-tree, so the simulated main is
+# built the same way the chamber will build the real one. A row that conflicts
+# with the simulation is dropped from it rather than aborting the projection:
+# it will not land either, so leaving it out is the better guess.
+projected_merge() {
+    local sha="$1" branch="$2" ahead simulated tree rbranch rsha
+    local mine_ts conf real noise a p decl
+    mine_ts="$(awk -F'\t' -v s="$sha" '$4==s{print $1; exit}' \
+        "${HV_SLUICE_DIR:-$HOME/.local/state/hornvale/sluice}/queue.tsv" 2>/dev/null)"
+    [ -n "$mine_ts" ] || return 0   # not queued: nothing is ahead of it
+    ahead="$(awk -F'\t' -v t="$mine_ts" -v b="$branch" \
+        '($5=="queued"||$5=="running") && $6=="merge" && $1<t && $3!=b {print $1"\t"$3"\t"$4}' \
+        "${HV_SLUICE_DIR:-$HOME/.local/state/hornvale/sluice}/queue.tsv" 2>/dev/null | sort)"
+    echo
+    echo "PROJECTED MERGE (after the rows ahead of this one land)"
+    if [ -z "$ahead" ]; then
+        printf '  nothing queued ahead — the mouth verdict against main is the whole story\n'
+        return 0
+    fi
+    simulated="$(git rev-parse origin/main)"
+    while IFS=$'\t' read -r _ rbranch rsha; do
+        [ -n "$rsha" ] || continue
+        # FOLD THE ROW ON EVEN WHEN IT CONFLICTS, and this is the correction
+        # that makes the projection usable at all. `merge-tree --write-tree`
+        # emits a tree on its first line whether or not the merge conflicted,
+        # and the first draft of this dropped any conflicting row instead ---
+        # which silently removed campaign/the-tidemark from the projection,
+        # because its conflict with the row ahead of it was almost entirely
+        # ARTIFACTS-authored bookkeeping the chamber regenerates. Dropping it
+        # reported campaign/anchor-orbital-coherence as merging cleanly when a
+        # hand-run of the same simulation found 38 unresolvable conflicts. A
+        # false CLEAN is the one direction this section must never fail in.
+        tree="$(git merge-tree --write-tree "$simulated" "$rsha" 2>/dev/null | head -1)"
+        if [ -z "$tree" ]; then
+            printf '  UNRESOLVED %-34s merge-tree produced nothing; left out of the projection\n' "$rbranch"
+            continue
+        fi
+        simulated="$(git commit-tree "$tree" -p "$simulated" -p "$rsha" \
+            -m "projected: $rbranch" 2>/dev/null)"
+        printf '  folded on  %-34s %s\n' "$rbranch" "$(git rev-parse --short=9 "$rsha")"
+    done <<AHEAD
+$ahead
+AHEAD
+    if git merge-tree --write-tree "$simulated" "$sha" >/dev/null 2>&1; then
+        printf '  still merges cleanly against that projection\n'
+        return 0
+    fi
+    conf="$(git merge-tree --write-tree --name-only "$simulated" "$sha" 2>&1 \
+        | awk 'length($0)==40 && /^[0-9a-f]+$/ {seen=1;next} seen && /^$/ {exit} seen {print}')"
+    decl="$(mktemp)"; git show "$sha:docs/generated-paths.txt" > "$decl" 2>/dev/null || : > "$decl"
+    real=""; noise=0
+    while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        a="$(sluice_path_author "$p" "$decl")"
+        if [ "$a" = artifacts ]; then noise=$((noise + 1)); else real="$real$p
+"; fi
+    done <<PATHS
+$conf
+PATHS
+    rm -f "$decl"
+    real="${real%
+}"
+    if [ -z "$real" ]; then
+        printf '  conflicts on %s path(s), ALL artifacts-authored — the chamber regenerates those\n' "$noise"
+        return 0
+    fi
+    printf '  >> WILL NOT MERGE: %s path(s) the chamber cannot regenerate\n' \
+        "$(printf '%s\n' "$real" | grep -c .)"
+    printf '%s\n' "$real" | sed 's/^/       /' | head -12
+    [ "$(printf '%s\n' "$real" | grep -c .)" -gt 12 ] && printf '       ... and %s more\n' \
+        "$(( $(printf '%s\n' "$real" | grep -c .) - 12 ))"
+    [ "$noise" -gt 0 ] && printf '  (%s artifacts-authored conflicts not listed; the chamber resolves those)\n' "$noise"
+    printf '     This candidate would pass the mouth against TODAY main, take the claim,\n'
+    printf '     and die at <merge> rc=10 having tested nothing. Absorb and resubmit.\n'
+}
+
+# HV_VET_LIB=1 sources the adjudication functions above --- decision blocks,
+# census freshness and census pins --- without vetting anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
 # verdict is a DECISION RULE, and a decision rule that cannot be driven
 # directly is one that gets tested through whatever end-to-end path happens to
 # exist --- which is how the truncation this whole script exists to prevent
@@ -156,9 +347,29 @@ cd "$root" || exit 1
 git fetch -q origin "+refs/heads/${branch}:refs/remotes/origin/${branch}" 2>/dev/null
 git fetch -q origin 2>/dev/null
 
-sha="$(git rev-parse "$ref" 2>/dev/null)"
+# --verify, AND ^{commit}, AND both are load-bearing.
+#
+# `git rev-parse <40-hex>` does NOT verify: given a well-formed sha for an
+# object this repository has never seen, it ECHOES IT BACK and exits 0. So the
+# emptiness test below never fired, `$sha` was set to a commit that does not
+# exist, and every git command after it returned nothing --- quietly, since
+# each one is `2>/dev/null` or `|| true`. The vet then printed a complete,
+# plausible, entirely empty report: no decisions minted, no census, no
+# surfaces, no gate machinery, a clean Definition of Done.
+#
+# That is the worst failure available to an instrument whose whole job is to
+# say what a candidate contains. A refusal is read; a clean report is acted on.
+# Found 2026-09-14 by pasting a 12-character prefix padded out by hand --- the
+# vet answered as confidently for the invented sha as for a real one.
+#
+# ^{commit} rejects a well-formed object that is not a commit (a tree, a blob,
+# an annotated tag pointing at one), which --verify alone admits. This is the
+# same pair sluice-mouth.sh already uses; the two now agree.
+sha="$(git rev-parse --verify --quiet "${ref}^{commit}" 2>/dev/null)"
 if [ -z "$sha" ]; then
-    echo "sluice-vet: $ref does not resolve" >&2
+    echo "sluice-vet: '$ref' is not a commit in this repository." >&2
+    echo "  Nothing was vetted. If this is a 40-character sha, it may be well-formed" >&2
+    echo "  and absent — fetch the branch, or check the ref was copied and not typed." >&2
     exit 2
 fi
 printf 'ref      %s\n' "$sha"
@@ -278,7 +489,9 @@ done
 # `lab metrics.rs` surface below --- campaign/the-tidemark's metrics.rs change
 # was entirely inside `mod tests` and was a false alarm on both lines. Reading
 # the hunks is the operator's job; this narrows where to look.
+projected_merge "$sha" "$branch"
 census_freshness "$sha"
+census_pins "$sha"
 
 # --- the surfaces that cost a chamber run when missed ----------------------
 echo
@@ -322,16 +535,7 @@ printf '  headline trailer: %s\n' \
 # branch has none by design and asking is noise.
 case "$branch" in
     campaign/*)
-        recon_key="${branch#campaign/}"
-        # Exact key first. Older rows use a `plan-<date>-campaign-<name>` key
-        # rather than the bare campaign name, so fall back to a suffix match
-        # before reporting an absence -- 440 rows still read `active`, so a
-        # genuinely missing row is a real signal and worth not faking.
-        recon_row="$(git show "$sha:docs/audits/campaign-reconciliation.tsv" 2>/dev/null \
-            | awk -F'\t' -v k="$recon_key" '$1==k{print $2; exit}')"
-        [ -n "$recon_row" ] || recon_row="$(git show "$sha:docs/audits/campaign-reconciliation.tsv" 2>/dev/null \
-            | awk -F'\t' -v k="$recon_key" 'index($1,k){print $2" (key: "$1")"; exit}')"
-        printf '  reconciliation disposition: %s\n' "${recon_row:-<NO ROW for $recon_key>}"
+        reconciliation_disposition "$sha" "$branch"
         ;;
     *)
         printf '  reconciliation disposition: <n/a — not a campaign branch>\n'
@@ -379,11 +583,89 @@ for p in scripts/lane-sets.tsv scripts/sluice-run.sh scripts/sluice-drain.sh \
          scripts/sluice-queue.sh scripts/sluice-mouth.sh; do
     if printf '%s\n' "$_changed" | grep -qx "$p"; then
         _gate_touched=1
+        _inert_paths="${_inert_paths:-}$p
+"
         printf '  %-34s INERT HERE — the chamber reads this from MAIN\n' "$p"
     fi
 done
 
 # Read from the CANDIDATE: these take effect on this very run.
+#
+# THE PHASE DRIVERS, and this section was silent about them until 2026-09-14.
+# The roster (scripts/lane-sets.tsv) is read from MAIN, but the SCRIPT a roster
+# row names is executed inside the chamber worktree, which holds the merge
+# product --- so a candidate that edits scripts/lane-outboard.sh changes what
+# outboard runs on its own merge.
+#
+# MEASURED, not reasoned. tooling/the-adjudicator added two suites to
+# lane-outboard.sh, and its own merge ran them:
+#
+#   == outboard: sluice vet blocks
+#   == outboard: sluice vet census
+#
+# The section reported "none — no gate machinery in this diff" for that
+# candidate, which is the worst answer available: a confident absence. The
+# INERT list above covers the roster and the queue plumbing; nothing covered
+# the drivers in between, so the one class of gate change that is BOTH
+# self-affecting and easy to get wrong was the class this section could not
+# see.
+# DERIVED FROM REACHABILITY, NOT FROM A NAME PATTERN. The first version of
+# this matched `lane-*.sh` and `gate-*.sh` by name, which is how the ledger
+# recorded it as a deliberately narrow stand-in --- and it was too narrow on
+# the very next candidate. tooling/the-attribution changes three test SUITES
+# that scripts/lane-outboard.sh runs from the merge product, and the section
+# reported only an INERT line for sluice-mouth.sh. A candidate that WEAKENS one
+# of those suites is the "retreat" this whole section exists to surface, and it
+# was the case the name pattern could not see.
+#
+# Two levels, matching the Makefile handling beside this: the ROSTER is read
+# from main (the chamber reads it there), and every script it names is read
+# from the CANDIDATE, because that is the copy that executes. Anything either
+# of them invokes and this diff changes takes effect on this very run.
+#
+# SCOPED TO THE PHASES A MERGE ACTUALLY RUNS, derived from sluice-run.sh's own
+# `merge_phases=` rather than restated here. The roster also carries rows the
+# chamber never runs --- `census` (which sluice-run.sh refuses as a phase
+# outright), `seam-guard`, and the commit-rung sets --- and scanning those
+# reaches scripts that judge nothing here. census-run.sh mentions
+# scripts/worktree-take.sh, so an unscoped scan reported an ordinary helper as
+# gate machinery: a SUBJECT under test, which is judged rather than judging.
+_phases="$(grep -m1 '^merge_phases=' "$root/scripts/sluice-run.sh" 2>/dev/null \
+    | sed 's/^merge_phases="//; s/"$//')"
+_roster_scripts=""
+for _ph in $_phases; do
+    _roster_scripts="$_roster_scripts
+$(grep -v '^#' "$root/scripts/lane-sets.tsv" 2>/dev/null \
+    | awk -F'\t' -v ph="$_ph" 'NF>=5 && $1==ph {print $5}' | grep -oE 'scripts/[a-z0-9._-]+\.sh')"
+done
+_roster_scripts="$(printf '%s\n' "$_roster_scripts" | grep -v '^$' | sort -u)"
+_reachable="$_roster_scripts"
+for _d in $_roster_scripts; do
+    _reachable="$_reachable
+$(git show "$sha:$_d" 2>/dev/null | grep -oE 'scripts/[a-z0-9._-]+\.sh' | sort -u)"
+done
+_reachable="$(printf '%s\n' "$_reachable" | grep -v '^$' | sort -u)"
+for p in $_reachable; do
+    if printf '%s\n' "$_changed" | grep -qx "$p"; then
+        # NEVER REPORT ONE PATH BOTH WAYS. A file the block above already
+        # called INERT is read from MAIN, and printing a contradicting
+        # TAKES EFFECT line beneath it would be worse than printing neither.
+        #
+        # This is a coherence rule, not an observed fix, and saying so matters:
+        # as written today NO path is both --- the merge phases reach 30
+        # scripts and none of them is the queue plumbing --- so the guard never
+        # fires. It was first written as a hardcoded second copy of the INERT
+        # list, which is the worse shape of the same dead code: two lists that
+        # can drift apart with nothing to notice. It now reads the one list.
+        if printf '%s' "${_inert_paths:-}" | grep -qx "$p"; then
+            continue
+        fi
+        _gate_touched=1
+        printf '  %-34s TAKES EFFECT — a phase reaches this script FROM the\n' "$p"
+        printf '  %-34s   merge product, so it judges its own merge\n' ""
+    fi
+done
+
 if printf '%s\n' "$_changed" | grep -q '^scripts/hooks/'; then
     _gate_touched=1
     printf '  %-34s TAKES EFFECT — core.hooksPath is relative, so the\n' "scripts/hooks/"

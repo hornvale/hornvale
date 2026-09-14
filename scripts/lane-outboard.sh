@@ -133,6 +133,7 @@ run "sluice vet"      bash scripts/test-sluice-vet.sh
 run "sluice vet gate" bash scripts/test-sluice-vet-gate.sh
 run "sluice vet blocks" bash scripts/test-sluice-vet-blocks.sh
 run "sluice vet census" bash scripts/test-sluice-vet-census.sh
+run "sluice vet projection" bash scripts/test-sluice-vet-projection.sh
 # The delivery classification, wired in the same commit that fixed it — a test
 # nothing runs is a test that does not exist, and this file has had to be
 # widened for exactly that reason three times now (test-sluice.sh,

@@ -107,6 +107,72 @@ else
     bad "no TAKES EFFECT line"
 fi
 
+echo "== a phase DRIVER edit is reported as TAKING EFFECT"
+# The class this section was blind to until 2026-09-14. The roster is read from
+# MAIN, but the SCRIPT a roster row names runs inside the chamber worktree,
+# which holds the merge product. tooling/the-adjudicator added two suites to
+# scripts/lane-outboard.sh and its own merge ran them --
+#   == outboard: sluice vet blocks
+#   == outboard: sluice vet census
+# -- while this section reported "none — no gate machinery in this diff". A
+# confident absence is the worst answer available here.
+g show "$base:scripts/lane-outboard.sh" > "$tmp/driver"
+printf '# probe line\n' >> "$tmp/driver"
+c_driver="$(mint driver scripts/lane-outboard.sh "$tmp/driver")"
+out="$(section driver "$c_driver")"
+if printf '%s' "$out" | grep -q "lane-outboard.sh"; then
+    ok "the driver edit is named"
+else
+    bad "a scripts/lane-outboard.sh edit was not reported at all — the silence this case exists for"
+fi
+if printf '%s' "$out" | grep -q "TAKES EFFECT"; then
+    ok "it says the driver takes effect on this very run"
+else
+    bad "a phase driver was not reported as taking effect: $out"
+fi
+if printf '%s' "$out" | grep -q "INERT HERE"; then
+    bad "a phase driver was misreported as INERT — it runs from the merge product"
+else
+    ok "it is not misfiled with the roster and the queue plumbing"
+fi
+
+echo "== a TEST SUITE a phase reaches is reported (the second level)"
+# The case a name pattern could not see. scripts/lane-outboard.sh is named by
+# the roster; the suites IT runs are not, and they execute from the merge
+# product just as it does. A candidate weakening one of them is the "retreat"
+# this section exists to surface, and tooling/the-attribution --- which changes
+# four such suites --- was reported as touching only one INERT file.
+g show "$base:scripts/test-sluice-drain.sh" > "$tmp/suite"
+printf '# probe line\n' >> "$tmp/suite"
+c_suite="$(mint suite scripts/test-sluice-drain.sh "$tmp/suite")"
+out="$(section suite "$c_suite")"
+if printf '%s' "$out" | grep -q "test-sluice-drain.sh"; then
+    ok "a suite reached THROUGH a roster-named driver is found (two-level reachability)"
+else
+    bad "a suite lane-outboard.sh runs was not reported: $out"
+fi
+if printf '%s' "$out" | grep -q "TAKES EFFECT"; then
+    ok "it says the suite takes effect on this very run"
+else
+    bad "the suite was not reported as taking effect"
+fi
+
+echo "== a non-phase script under scripts/ is NOT gate machinery (no crying wolf)"
+# worktree-take.sh is a SUBJECT under test, not a judge: it is judged by
+# test-worktree-take.sh. It is mentioned by census-run.sh, and `census` is not
+# a chamber phase at all (sluice-run.sh refuses it outright), so an unscoped
+# reachability scan reported this ordinary helper as gate machinery. Scoping to
+# sluice-run.sh's own merge_phases is what keeps it out.
+g show "$base:scripts/worktree-take.sh" > "$tmp/util"
+printf '# probe line\n' >> "$tmp/util"
+c_util="$(mint util scripts/worktree-take.sh "$tmp/util")"
+out="$(section util "$c_util")"
+if printf '%s' "$out" | grep -q "TAKES EFFECT"; then
+    bad "an ordinary helper was reported as gate machinery: $out"
+else
+    ok "an ordinary scripts/ helper is not reported"
+fi
+
 echo "== an ordinary Makefile edit is NOT reported (no crying wolf)"
 g show "$base:Makefile" | sed 's/^sweep-dry:.*/&\n\t@echo probe/' > "$tmp/mk2"
 c_mk2="$(mint quiet Makefile "$tmp/mk2")"
@@ -126,6 +192,39 @@ if printf '%s' "$out" | grep -q "none — no gate machinery"; then
     ok "it says 'none' rather than printing an empty header"
 else
     bad "a clean candidate did not get a clear 'none'"
+fi
+
+echo "== an absent but WELL-FORMED sha is refused, not vetted"
+# THE CONFIDENT-SILENCE CASE. `git rev-parse <40-hex>` does not verify: it
+# echoes an unknown sha back and exits 0. The vet's emptiness guard therefore
+# never fired, and it printed a complete, plausible, entirely empty report --
+# no decisions, no census, no surfaces, a clean Definition of Done -- for a
+# commit that does not exist. Found by pasting a 12-character prefix padded out
+# by hand, which is exactly how an operator produces one of these.
+absent=de4f0c3b989a8bbd99b18f5c5e3eafaba5a8fcba
+if g rev-parse --verify --quiet "$absent^{commit}" >/dev/null 2>&1; then
+    bad "the fixture sha exists in this repository — pick another; this case is now vacuous"
+else
+    ok "CONTROL: the fixture sha is genuinely absent (so the case below can mean something)"
+    set +e
+    out="$(bash scripts/sluice-vet.sh campaign/zz-absent "$absent" 2>&1)"
+    rc=$?
+    set -e
+    if [ "$rc" -ne 0 ]; then
+        ok "an absent sha is refused (rc=$rc), not vetted"
+    else
+        bad "the vet exited 0 on a sha that does not exist"
+    fi
+    if printf '%s' "$out" | grep -q "GATE MACHINERY"; then
+        bad "it produced a report for a nonexistent commit — the confident silence itself"
+    else
+        ok "it produces no report at all, so there is nothing to act on"
+    fi
+    if printf '%s' "$out" | grep -qi "not a commit"; then
+        ok "the refusal says what is wrong"
+    else
+        bad "the refusal does not say what is wrong: $out"
+    fi
 fi
 
 echo "== this suite left the surrounding worktree's index alone"
