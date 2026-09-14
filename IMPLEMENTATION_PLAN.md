@@ -12,7 +12,7 @@ Detailed task plan: `docs/superpowers/plans/2026-09-13-anchor-orbital-coherence.
 **Goal**: Route calendar solar geometry and instantaneous insolation through the shared state.
 **Success Criteria**: Calendar and insolation agree with anchor state without redefining deep-time forcing.
 **Tests**: Phase/radius coherence, negative time, locked/retrograde, continuity.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 3: Eclipse and Scene Projections
 **Goal**: Route eclipse and scene geometry through shared anchor state.

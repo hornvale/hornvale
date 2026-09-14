@@ -85,12 +85,12 @@
 - Produces named calendar projections that preserve current public return types where valid, but no longer reconstruct anchor position or radius independently.
 - Leaves `OrbitalForcing` generation and deep-time parameters unchanged.
 
-- [ ] **Step 1: Write failing coherence tests.** For representative systems and instants, compare calendar solar longitude to `AnchorState::true_longitude` after the documented conversion; compare instantaneous insolation to the state radius formula; include negative, locked, retrograde, and phase-wrap cases.
-- [ ] **Step 2: Run the focused tests to verify the migration is absent.** Run `cargo nextest run -p hornvale-astronomy --test suite -E 'test(calendar_anchor_coherence) or test(insolation_anchor_coherence)'`. Expected: FAIL on the new assertions or compile failure for test-only helpers.
-- [ ] **Step 3: Route calendar solar geometry through `anchor_state_at`.** Replace the calendar's private duplicate anchor evaluation with the shared result and translate `OrbitalError` at the existing calendar boundary without turning a valid no-event condition into an error.
-- [ ] **Step 4: Route instantaneous insolation through the shared radius.** Preserve the existing luminosity and operation order unless the state contract requires a documented change; do not substitute the deep-time forcing envelope for instantaneous radius.
-- [ ] **Step 5: Run focused tests and inspect one failure list.** Run `cargo nextest run -p hornvale-astronomy --test suite -E 'test(calendar_anchor_coherence) or test(insolation_anchor_coherence) or test(calendar_negative_time)'`; expected: PASS.
-- [ ] **Step 6: Commit.** Run `git add domains/astronomy/src/calendar.rs domains/astronomy/src/ephemeris.rs windows/scene/src/astronomy_at.rs domains/astronomy/tests/suite windows/scene/tests/suite/astronomy_at.rs` and commit with `refactor(astronomy): share anchor state with calendar and insolation`.
+- [x] **Step 1: Write failing coherence tests.** For representative systems and instants, compare calendar solar longitude to `AnchorState::true_longitude` after the documented conversion; compare instantaneous insolation to the state radius formula; include negative, locked, retrograde, and phase-wrap cases.
+- [x] **Step 2: Run the focused tests to verify the migration is absent.** Run `cargo nextest run -p hornvale-astronomy --test suite -E 'test(calendar_anchor_coherence) or test(insolation_anchor_coherence)'`. Expected: FAIL on the new assertions or compile failure for test-only helpers.
+- [x] **Step 3: Route calendar solar geometry through `anchor_state_at`.** Replace the calendar's private duplicate anchor evaluation with the shared result and translate `OrbitalError` at the existing calendar boundary without turning a valid no-event condition into an error.
+- [x] **Step 4: Route instantaneous insolation through the shared radius.** Preserve the existing luminosity and operation order unless the state contract requires a documented change; do not substitute the deep-time forcing envelope for instantaneous radius.
+- [x] **Step 5: Run focused tests and inspect one failure list.** Run `cargo nextest run -p hornvale-astronomy --test suite -E 'test(calendar_anchor_coherence) or test(insolation_anchor_coherence) or test(calendar_negative_time)'`; expected: PASS.
+- [x] **Step 6: Commit.** Run `git add domains/astronomy/src/calendar.rs domains/astronomy/src/ephemeris.rs windows/scene/src/astronomy_at.rs domains/astronomy/tests/suite windows/scene/tests/suite/astronomy_at.rs` and commit with `refactor(astronomy): share anchor state with calendar and insolation`.
 
 ---
 
