@@ -541,7 +541,7 @@ checks AS (
   -- the moonless-lunar row below).
   -- The Range resync, 0063/0079: 55 -> 56.
   SELECT 'moonless-solar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
-         CAST(moonless_solar AS DOUBLE), 79.0, moonless_solar = 79 FROM agg
+         CAST(moonless_solar AS DOUBLE), 81.0, moonless_solar = 81 FROM agg
   UNION ALL
   -- The Tithe (tribute) re-pin, 0063: 61 -> 59.
   -- The Contour epoch v2 resync, 0063: 60 -> 62.
@@ -550,7 +550,7 @@ checks AS (
   -- The Delvers resync (C2c), 0063/0079: 85 -> 83; solar unmoved at 55.
   -- The Range resync, 0063/0079: unmoved at 83; solar moves 55 -> 56.
   SELECT 'moonless-lunar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
-         CAST(moonless_lunar AS DOUBLE), 66.0, moonless_lunar = 66 FROM agg
+         CAST(moonless_lunar AS DOUBLE), 64.0, moonless_lunar = 64 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 703 -> 700.
   -- The Tumult (predation) re-pin, 0063: 700 -> 702 (the 768-row pool is
@@ -569,7 +569,7 @@ checks AS (
   -- The Underworld resync, 0063/0079: 890 -> 888 (total unmoved at 982).
   -- The Winze resync (2026-08-29, canonical census on lefford at
   -- bba2be3efc83, goldens cherry-picked as 71202ac19): 889 -> 888.
-         CAST(blind_correct AS DOUBLE), 871.0, blind_correct = 871 FROM agg
+         CAST(blind_correct AS DOUBLE), 870.0, blind_correct = 870 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 768.
   -- The Tithe (tribute) re-pin, 0063: 759 -> 758.
@@ -687,7 +687,7 @@ checks AS (
   -- The Winze resync (2026-08-29, canonical census on lefford at
   -- bba2be3efc83, goldens cherry-picked as 71202ac19): 0.5190307067169994 ->
   -- 0.5181628625670006.
-         collision_mean, 0.525123563979999, abs(collision_mean - 0.525123563979999) < 1e-6 FROM agg
+         collision_mean, 0.524507302689999, abs(collision_mean - 0.524507302689999) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -744,7 +744,7 @@ checks AS (
   -- The Winze resync (2026-08-29, canonical census on lefford at
   -- bba2be3efc83, goldens cherry-picked as 71202ac19): 8.522193159259256 ->
   -- 8.545224123300008.
-         goblin_len_mean, 8.492322954254249, abs(goblin_len_mean - 8.492322954254249) < 1e-6 FROM agg
+         goblin_len_mean, 8.493127369169162, abs(goblin_len_mean - 8.493127369169162) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -807,7 +807,7 @@ checks AS (
   -- The Winze resync (2026-08-29, canonical census on lefford at
   -- bba2be3efc83, goldens cherry-picked as 71202ac19): 6.864892034999999 ->
   -- 6.88983727642857.
-         kobold_len_mean, 6.926498556008148, abs(kobold_len_mean - 6.926498556008148) < 1e-6 FROM agg
+         kobold_len_mean, 6.927533218635441, abs(kobold_len_mean - 6.927533218635441) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -954,7 +954,7 @@ checks AS (
   -- The Winze resync (2026-08-29, canonical census on lefford at
   -- bba2be3efc83, goldens cherry-picked as 71202ac19): 2.716477110510509 ->
   -- 2.720362562599999. Still inside 2-3.
-         goblin_syl_mean, 2.7078075332332316, abs(goblin_syl_mean - 2.7078075332332316) < 1e-6 FROM agg
+         goblin_syl_mean, 2.708062708008006, abs(goblin_syl_mean - 2.708062708008006) < 1e-6 FROM agg
   UNION ALL
   -- The Contour epoch v2 resync, 0063: 763 -> 765.
   -- The Generalist resync, 0063/0079: 765 -> 762.
@@ -1000,7 +1000,7 @@ checks AS (
   -- The Winze resync (2026-08-29, canonical census on lefford at
   -- bba2be3efc83, goldens cherry-picked as 71202ac19): 2.2007268159183666 ->
   -- 2.2097614432653043. Still inside 2-3.
-         kobold_syl_mean, 2.21911259460285, abs(kobold_syl_mean - 2.21911259460285) < 1e-6 FROM agg
+         kobold_syl_mean, 2.219787054989816, abs(kobold_syl_mean - 2.219787054989816) < 1e-6 FROM agg
   UNION ALL
   SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
          CAST(transparency_present AS DOUBLE), 1000.0, transparency_present = 1000 FROM agg
@@ -1051,7 +1051,7 @@ checks AS (
   -- 0.7156340701599997. A RISE, and this row's Rust sibling explains why that
   -- direction is stated rather than absorbed; still far from the degenerate
   -- 1.0.
-         transparency_mean, 0.69484313998, abs(transparency_mean - 0.69484313998) < 1e-6 FROM agg
+         transparency_mean, 0.6948068162, abs(transparency_mean - 0.6948068162) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
@@ -1137,7 +1137,7 @@ checks AS (
   SELECT 'indistinguishable solo-pair count (calibration.rs::null_control_blind_attribution_is_at_chance)',
   -- The Winze resync (2026-08-29, canonical census on lefford at
   -- bba2be3efc83, goldens cherry-picked as 71202ac19): 459 -> 457.
-         CAST(indistinguishable AS DOUBLE), 454.0, indistinguishable = 454 FROM meeting_agg
+         CAST(indistinguishable AS DOUBLE), 453.0, indistinguishable = 453 FROM meeting_agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 64 -> 63.
   -- The Tumult (predation) re-pin, 0063: 63 -> 64.
@@ -1147,7 +1147,7 @@ checks AS (
   SELECT 'decided solo-pair count (calibration.rs::null_control_blind_attribution_is_at_chance)',
   -- The Winze resync (2026-08-29, canonical census on lefford at
   -- bba2be3efc83, goldens cherry-picked as 71202ac19): 41 -> 43.
-         CAST(total_pairs - indistinguishable AS DOUBLE), 46.0, total_pairs - indistinguishable = 46 FROM meeting_agg
+         CAST(total_pairs - indistinguishable AS DOUBLE), 47.0, total_pairs - indistinguishable = 47 FROM meeting_agg
   UNION ALL
   SELECT 'head-domain distribution diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, head TVD == 1)',
          CAST(diff AS DOUBLE), 0.0, diff = 0 FROM head_domain_diff
@@ -1192,7 +1192,7 @@ checks AS (
   -- -0.014000000000001123 (a RAW mean difference; the Rust sibling pins the
   -- standardized form, -0.004020397467157860 -> -0.003519541289031220, so the
   -- two literals differ by construction and move together).
-         mean_a - mean_b, -0.006000000000000227, abs(mean_a - mean_b - -0.006_000_000_000_000_227) < 1e-6 FROM pantheon_size_stats
+         mean_a - mean_b, 0.0, abs(mean_a - mean_b - 0.0) < 1e-6 FROM pantheon_size_stats
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): -0.057_530_513_798_514_59 ->
   -- -0.065_161_843_432_313_42.
@@ -1242,8 +1242,8 @@ checks AS (
   -- -0.026539960262133278 (no sign flip; still ~7.5x inside the +/-0.2
   -- sampling-theory bound. DuckDB's summation lands a few ULP from the Rust
   -- row's -0.026539960262133250, which is what the 1e-6 tolerance is for).
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.03366435349027548,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.033_664_353_490_275_48) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.033779857690449354,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.033_779_857_690_449_354) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

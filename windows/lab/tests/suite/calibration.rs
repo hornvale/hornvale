@@ -1072,12 +1072,15 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // nights" phrasing is stale prose from an earlier regen, not an assertion;
     // lunar has led solar in this pool since well before this campaign and
     // still does).
+    // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+    // the moonless split remeasured 79/66 -> 81/64; the head-domain invariants
+    // above remain unchanged.
     assert_eq!(
-        moonless_solar, 79,
+        moonless_solar, 81,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 66,
+        moonless_lunar, 64,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -1306,7 +1309,10 @@ fn blind_attribution_beats_chance_decisively() {
     // three attributable pairs to the correct side, 888 -> 891. The
     // directional claim remains intact: blind attribution still beats chance
     // decisively.
-    assert_eq!(correct, 871, "blind-attribution count drifted");
+    // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+    // the correct side remeasured 871 -> 870 while the attributable pool stays
+    // at 982; the directional claim remains intact.
+    assert_eq!(correct, 870, "blind-attribution count drifted");
     assert_eq!(total, 982, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
@@ -2249,7 +2255,9 @@ fn name_collision_rate_is_measured_and_pinned() {
         // The Orrery delivery gate (2026-09-12, current canonical merge
         // product): the same fixture reads 0.525_123_563_979_999; this is a
         // small re-pin, not a changed directional claim.
-        (mean - 0.525_123_563_979_999).abs() < 1e-6,
+        // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+        // remeasured to 0.524_507_302_689_999.
+        (mean - 0.524_507_302_689_999).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2519,7 +2527,9 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 8.545_224_123_300_008. Still comfortably below the campaign's own
         // <10-character claim (spec 7) — 1.45 characters of margin —
         // re-checked rather than assumed.
-        ("goblin", 999u32, 8.492_322_954_254_249),
+        // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+        // goblin remeasured to 8.493_127_369_169_162.
+        ("goblin", 999u32, 8.493_127_369_169_162),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2677,8 +2687,11 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 6.889_837_276_428_570. Still comfortably below the <10-character
         // claim — 3.11 characters of margin — re-checked rather than
         // assumed.
-        ("goblin", 999u32, 8.492_322_954_254_249),
-        ("kobold", 982u32, 6.926_498_556_008_148),
+        // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+        // goblin/kobold remeasured to 8.493_127_369_169_162 /
+        // 6.927_533_218_635_441.
+        ("goblin", 999u32, 8.493_127_369_169_162),
+        ("kobold", 982u32, 6.927_533_218_635_441),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2913,8 +2926,11 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // goblin 2.716_477_110_510_509 -> 2.720_362_562_599_999,
         // kobold 2.200_726_815_918_366_6 -> 2.209_761_443_265_304_3.
         // Both stay inside spec 8 criterion 2's 2-3 syllable range.
-        ("goblin", 999u32, 2.707_807_533_233_231_6),
-        ("kobold", 982u32, 2.219_112_594_602_85),
+        // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+        // goblin/kobold remeasured to 2.708_062_708_008_006 /
+        // 2.219_787_054_989_816.
+        ("goblin", 999u32, 2.708_062_708_008_006),
+        ("kobold", 982u32, 2.219_787_054_989_816),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -3232,7 +3248,9 @@ fn name_transparency_is_measured_and_pinned() {
         // the pre-campaign 1.00 degenerate value, with the min/max spread
         // below still spanning 0.298 to 0.987. Nothing here licenses reading
         // it as an improvement; it is a roster change, recorded.
-        (mean - 0.694_843_139_979_999_5).abs() < 1e-9,
+        // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+        // remeasured to 0.694_806_816_199_999.
+        (mean - 0.694_806_816_199_999).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3485,8 +3503,11 @@ fn null_control_blind_attribution_is_at_chance() {
     // hit in the same refresh (889 -> 888, accuracy 0.907 -> 0.906): the
     // real effect and its control moved independently and in unrelated
     // magnitudes, which is what the pair exists to show.
-    assert_eq!(indistinguishable, 454, "indistinguishable count drifted");
-    assert_eq!(decided, 46, "decided count drifted");
+    // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+    // the null pool remeasured to 453 indistinguishable, 47 decided, and 24
+    // twin picks.
+    assert_eq!(indistinguishable, 453, "indistinguishable count drifted");
+    assert_eq!(decided, 47, "decided count drifted");
     // The Tumult (predation) re-pin; lefford regen, 0063: 31 -> 32 of the 64
     // decided pairs pick the twin — an exact 0.500 split, i.e. the null
     // control lands even closer to chance than before (0.484).
@@ -3503,7 +3524,7 @@ fn null_control_blind_attribution_is_at_chance() {
     // the larger decided pool of 43 — 22 pick the twin, a 0.512 split, i.e.
     // the null control lands marginally further from an exact 0.500 than the
     // prior regen's 0.488 and on the other side of it.
-    assert_eq!(picks_twin, 25, "twin-pick count drifted");
+    assert_eq!(picks_twin, 24, "twin-pick count drifted");
 }
 
 #[test]
@@ -3637,7 +3658,9 @@ fn null_control_distributions_are_within_the_sampling_bound() {
         // The Winze's close regen (2026-08-29, same census):
         // -0.004_020_397_467_157_86 -> -0.003_519_541_289_031_219_7, still
         // two orders of magnitude inside the +/-0.2 bound asserted above.
-        (size - -0.001_544_491_751_049_839).abs() < 1e-9,
+        // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+        // the pantheon-size SMD remeasured to exactly zero.
+        (size - 0.0).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -3865,7 +3888,9 @@ fn null_control_name_length_smd_is_pinned() {
         // The Orrery delivery gate (2026-09-12, current canonical merge
         // product): the same fixture reads -0.033_664_353_490_275_48; the
         // null remains comfortably inside the pre-registered bound.
-        (namelen - -0.033_664_353_490_275_48).abs() < 1e-9,
+        // Anchor Orbit close regen (2026-09-14, canonical census at e2aad7ad6):
+        // remeasured to -0.033_779_857_690_449_354.
+        (namelen - -0.033_779_857_690_449_354).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
