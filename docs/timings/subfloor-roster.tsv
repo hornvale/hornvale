@@ -1446,6 +1446,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_column
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_292_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -1767,7 +1768,6 @@ hornvale-lab::suite$health_calibration::one_stuck_creature_among_nine_recovering
 hornvale-lab::suite$health_calibration::searching_is_not_distress
 hornvale-lab::suite$health_calibration::the_chronic_threshold_is_exact_at_chronic_ticks
 hornvale-lab::suite$hearth_population_calibration::the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close
-hornvale-lab::suite$hearth_population_calibration::the_hearth_never_worsens_a_planted_cold_built_population
 hornvale-lab::suite$individuation::awakening_is_a_fact_and_the_large_owlbear_stays_large
 hornvale-lab::suite$individuation::mighty_things_in_the_cold_north
 hornvale-lab::suite$individuation::the_roster_passes_integrity_and_stays_out_of_the_canon
@@ -3718,6 +3718,8 @@ hornvale-worldgen::hornvale_worldgen$harvest::tests::periodic_over_one_year
 hornvale-worldgen::hornvale_worldgen$harvest::tests::southern_hemisphere_is_half_a_year_out_of_phase
 hornvale-worldgen::hornvale_worldgen$hazard::tests::a_transform_boundary_is_seismic_and_never_volcanic
 hornvale-worldgen::hornvale_worldgen$hazard::tests::an_amagmatic_vertex_never_erupts
+hornvale-worldgen::hornvale_worldgen$hazard::tests::an_empty_or_reversed_window_yields_nothing
+hornvale-worldgen::hornvale_worldgen$hazard::tests::busier_ground_produces_more_events
 hornvale-worldgen::hornvale_worldgen$hazard::tests::events_in_is_a_pure_read
 hornvale-worldgen::hornvale_worldgen$hazard::tests::events_lie_inside_the_window_and_are_ordered
 hornvale-worldgen::hornvale_worldgen$hazard::tests::every_interval_lies_inside_its_authored_bracket
@@ -4064,6 +4066,7 @@ hornvale-worldgen::suite$history_emit::end_of_life_facts_are_day_stamped_at_ende
 hornvale-worldgen::suite$history_emit::founded_from_and_ended_by_resolve_to_the_right_entities
 hornvale-worldgen::suite$history_emit::occupation_records_round_trip_every_committed_field
 hornvale-worldgen::suite$history_emit::outbreak_events_emit_as_a_paired_dated_fact
+hornvale-worldgen::suite$history_emit::person_years_matches_epochs_credited_at_their_end
 hornvale-worldgen::suite$history_emit::present_frame_crosses_the_bake_year_by_days_per_year
 hornvale-worldgen::suite$history_emit::same_day_layers_order_by_material_facts_not_mint_order
 hornvale-worldgen::suite$history_emit::territories_group_alive_occupations_by_people
@@ -4496,6 +4499,7 @@ hornvale::suite$provision::declared_absent_row_carries_its_reason
 hornvale::suite$provision::declared_but_unserved_token_is_not_served
 hornvale::suite$provision::feels_toward_does_not_resolve
 hornvale::suite$regularity_corpus::a_corpus_parses_its_items_criteria_and_verdicts
+hornvale::suite$regularity_corpus::a_deferred_item_whose_registry_row_settled_is_stale
 hornvale::suite$regularity_corpus::a_doc_anchor_into_generated_prose_resolves
 hornvale::suite$regularity_corpus::a_doc_anchor_into_hand_written_prose_is_refused
 hornvale::suite$regularity_corpus::a_lost_regularity_is_red

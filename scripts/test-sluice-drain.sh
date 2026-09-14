@@ -426,5 +426,44 @@ kill -9 "$_lp" 2>/dev/null
 wait 2>/dev/null
 rm -rf "$_orph"
 
+echo "== box_is_busy: answers the LOCK, so a holder with no claim file still counts"
+# THE CASE THAT MOTIVATED THIS. A census delivery holds the box lock through
+# its gnomon-arms phase and writes NO claim file, so a claim-file check reports
+# free while the box is busy. These drive the real function against a
+# redirected lock, with no claim file anywhere, which is exactly that shape.
+_lk="$(mktemp -d)/box.lock"
+
+if HV_CENSUS_LOCK="$_lk" box_is_busy; then
+    bad "an unheld lock reads as BUSY — every drainer would idle forever"
+else
+    ok "an unheld lock reads as free"
+fi
+
+# Hold it from another process, with no claim file in existence.
+( flock 9; sleep 30 ) 9>"$_lk" &
+_holder=$!
+_w=0
+while [ "$_w" -lt 50 ]; do
+    if ! ( flock -n 9 ) 9>"$_lk" 2>/dev/null; then break; fi
+    sleep 0.1; _w=$((_w+1))
+done
+if HV_CENSUS_LOCK="$_lk" box_is_busy; then
+    ok "a HELD lock reads as BUSY even though no claim file exists anywhere"
+else
+    bad "a held lock read as free — this is the defect: a drainer claims a row, marks it running, and then blocks in flock"
+fi
+kill -9 "$_holder" 2>/dev/null; wait "$_holder" 2>/dev/null
+
+# THE CONTROL, and it is the one that matters: a lock freed by a KILLED holder
+# must read free again. If it did not, one dead job would wedge every drainer.
+_w=0
+while [ "$_w" -lt 50 ] && HV_CENSUS_LOCK="$_lk" box_is_busy; do sleep 0.1; _w=$((_w+1)); done
+if HV_CENSUS_LOCK="$_lk" box_is_busy; then
+    bad "the lock still reads BUSY after the holder was killed — drainers would never resume"
+else
+    ok "CONTROL: the lock reads free again once the holder dies (kernel released it)"
+fi
+rm -rf "$(dirname "$_lk")"
+
 printf '\ntest-sluice-drain: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

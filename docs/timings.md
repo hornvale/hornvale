@@ -7652,3 +7652,17 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-14T01:17:16Z | gate-commit | 64.231 | 82.305 | 17.612 | 1.56 | 0 | 67deca81a | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-14T01:32:34Z | gate-commit | 124.116 | 78.977 | 16.611 | 0.77 | 0 | 67deca81a | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-14T01:45:33Z | gate-commit | 46.019 | 82.368 | 20.250 | 2.23 | 0 | 67deca81a | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-13T23:38:05Z | census-tail-chorus | 31.273 | 594.967 | 16.930 | 19.57 | 0 | a98f5dd8d |  | lefford | 40 |
+| 2026-09-13T23:38:08Z | census-tail-domesday | 1.674 | 1.483 | 0.134 | 0.97 | 0 | a98f5dd8d |  | lefford | 40 |
+| 2026-09-13T23:38:08Z | census-tail-anomalies | 1.080 | 0.915 | 0.166 | 1.00 | 0 | a98f5dd8d |  | lefford | 40 |
+| 2026-09-13T23:38:40Z | sluice:artifacts | 258.069 | 1442.858 | 41.515 | 5.75 | 0 | a98f5dd8d |  | lefford | 40 |
+| 2026-09-13T23:40:49Z | sluice:outboard | 128.293 | 89.218 | 80.299 | 1.32 | 0 | 55ceb26c4 |  | lefford | 40 |
+| 2026-09-13T23:56:39Z | sluice:gate | 949.586 | 28790.534 | 959.574 | 31.33 | 0 | 9d03bac84 |  | lefford | 40 |
+| 2026-09-14T00:01:19Z | census-tail-chorus | 29.340 | 583.763 | 28.162 | 20.86 | 0 | 2412238d3 |  | lefford | 40 |
+| 2026-09-14T00:01:21Z | census-tail-domesday | 1.498 | 1.269 | 0.175 | 0.96 | 0 | 2412238d3 |  | lefford | 40 |
+| 2026-09-14T00:01:21Z | census-tail-anomalies | 0.891 | 0.766 | 0.125 | 1.00 | 0 | 2412238d3 |  | lefford | 40 |
+| 2026-09-14T00:01:52Z | sluice:artifacts | 233.654 | 1426.294 | 52.159 | 6.33 | 0 | 2412238d3 |  | lefford | 40 |
+| 2026-09-14T00:03:57Z | sluice:outboard | 124.690 | 89.727 | 79.110 | 1.35 | 0 | 002bbdf44 |  | lefford | 40 |
+| 2026-09-14T00:19:39Z | sluice:gate | 941.085 | 28745.069 | 931.422 | 31.53 | 0 | 6545dc29c |  | lefford | 40 |
+| 2026-09-14T00:24:19Z | sluice:clients | 279.827 | 4179.668 | 297.259 | 16.00 | 0 | db2aee6f4 |  | lefford | 40 |
+| 2026-09-14T00:33:47Z | sluice:heavy | 567.890 | 15934.998 | 379.206 | 28.73 | 0 | 8751526d6 |  | lefford | 40 |

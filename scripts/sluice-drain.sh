@@ -412,7 +412,29 @@ head_queued_kind() {
 # costs nothing -- the row is not going anywhere -- and keeps the queue's own
 # report honest, which is this change's whole subject.
 box_is_busy() {
-    (cd "$repo_root" && bash scripts/census-run.sh status 2>&1) | grep -q "running:"
+    # ASK THE LOCK, NOT THE CLAIM FILE.
+    #
+    # This asked `census-run.sh status`, which reads /tmp/hv-census.claim -- and
+    # a census DELIVERY holds the box lock through its gnomon-arms phase while
+    # deliberately writing no claim file. Its own log says so: "holds the box
+    # lock for the arms after 0s queued (no claim file -- see the header)". So
+    # for the length of that phase the box is busy and this function said free,
+    # which is the exact case it exists to catch.
+    #
+    # Observed twice on 2026-09-13, the second time by this very function: the
+    # merge drainer claimed a row, marked it `running`, and launched a
+    # sluice-run.sh whose only child was `flock -w 7200 9`. Two rows then read
+    # `running` in the queue at once while one of them did nothing but wait.
+    # Nothing was corrupted -- the flock serializes and sluice-run.sh touches
+    # the shared worktree only under it -- but the queue lied, which is the
+    # thing this whole file was changed to stop doing.
+    #
+    # A non-blocking flock answers for EVERY holder, claim file or not. It takes
+    # the lock for the instant of the test and releases it on subshell exit; a
+    # job racing that instant waits a millisecond, which is cheaper than the
+    # misreport. Same correction, one layer down, as the drainer registry above:
+    # a lock cannot go stale, and a file can be absent or left behind.
+    ! ( flock -n 9 ) 9>"${HV_CENSUS_LOCK:-/tmp/hv-census.lock}" 2>/dev/null
 }
 
 # Watch the queue and drain the kinds this policy claims, until stopped.
