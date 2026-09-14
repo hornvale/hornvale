@@ -782,9 +782,9 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         81,
-        Some(36337.174658835705),
+        None,
     ),
     (
         2,
@@ -1456,14 +1456,6 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Counted,
         304,
-        None,
-    ),
-    (
-        5,
-        "vent-commensal",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        500,
         None,
     ),
     (

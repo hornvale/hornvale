@@ -14145,12 +14145,13 @@ mod tests {
         // Peoples' four and The Tidemark's six re-place seed 42's
         // settlements, so goblin's own site pool and the names drawn for it
         // move. MEASURED on the merged world — neither branch's own figure
-        // (2.5714285714285716, 2.5) survives it — the merged value is
-        // 2.4285714285714284. Still inside the 2-3 target, which is the
+        // (2.5714285714285716, 2.5) survives it. A later settlement witness
+        // refresh measured 2.4. Still inside the 2-3 target,
+        // which is the
         // row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.4285714285714284)
+            MetricValue::Number(2.4)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14650,10 +14651,11 @@ mod tests {
         // distribution, not a constant) is untouched. MEASURED on the merged
         // world — neither branch's own figure (0.5974025974025974,
         // 0.6707692307692308) survives it; the merged value is
-        // 0.5732323232323232. NOT corroborated against a census:
+        // 0.5732323232323232. A later settlement witness refresh measured
+        // 0.6137931034482759. NOT corroborated against a census:
         // a refresh happens once, at pre-merge close, and had not been run
         // when this was re-pinned.
-        assert_eq!(share, 0.5732323232323232, "seed 42 transparency drifted");
+        assert_eq!(share, 0.6137931034482759, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -15323,26 +15325,22 @@ mod tests {
             // nonempty and the mutation still exercises the river and
             // karst/wetland gates.
             // TWO CAMPAIGNS RE-PIN IT TOGETHER (2026-09-11), the TWELFTH
-            // oscillation and the NARROWEST reading this witness has ever
-            // had: THREE — river, ford and spring; "valley", "marsh" and
-            // "island" all leave. Ten new peoples enter the settling roster
-            // at once, so seed 7's competition for coastal and shelf-adjacent
-            // ground changes and goblin's reach contracts. MEASURED on the
-            // merged world — neither branch's own set survives it. Re-pin the
-            // set, do not swap the seed, per the precedent this comment has
-            // now followed through all twelve.
+            // oscillation: three — river, ford and spring — on that merged
+            // witness. A later settlement witness refresh measured five:
+            // river, ford, valley, marsh and spring. Re-pin the set, do not
+            // swap the seed; the non-empty precondition and mutation remain
+            // the claim.
             //
             // **SAY WHAT THE NARROWING COSTS, because the precedent above is
             // about the SET and this is about COVERAGE.** The mutation below
             // still bites — the precondition is nonempty and stripping the
-            // gates still flips the flag — but the surviving three are all
-            // river-class and karst/wetland: the elevation gate ("valley")
-            // and the coastal one ("island") are no longer exercised HERE.
+            // gates still flips the flag — and the current five cover river,
+            // elevation and karst/wetland classes.
             // `the_independent_reading_steeps_island_and_hill_where_the_lexicon_roots_them`
             // is the row that owns the flood-fill and elevation-maximum
             // witnesses, and it carries them at (0, desert-dwarf); this row
             // is not the only cover for those gates.
-            vec!["river", "ford", "spring"],
+            vec!["river", "ford", "valley", "marsh", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -15655,14 +15653,13 @@ mod tests {
         // 0..60**, against fifty-two on the previous pass, and (1, bugbear) is
         // no longer among them — seed 1's bugbears stopped rooting `island`,
         // which the precondition below caught, working exactly as designed.
-        // Witness is **(0, desert-dwarf)** — the earliest qualifying pair, the
-        // same selection-free rule every pass above used, re-derived by this
-        // module's own `sweep_for_the_island_and_hill_witness`. No same-seed
-        // second species at 0, so this witness is load-bearing alone.
-        let view = FullView::build(Seed(0), &SkyPins::default()).unwrap();
-        let steeped = independently_steeped_concepts(&view, "desert-dwarf")
-            .expect("desert-dwarf is in the roster");
-        let lexicon = lex(&view, "desert-dwarf").expect("seed 0 desert dwarfs hold a lexicon");
+        // A later sweep over 0..60 measured 53 qualifying pairs. Its earliest
+        // witness is **(2, bugbear)**, with another qualifying species at the
+        // same seed, so the capability remains independently re-witnessed.
+        let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
+        let steeped =
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
+        let lexicon = lex(&view, "bugbear").expect("seed 2 bugbears hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),

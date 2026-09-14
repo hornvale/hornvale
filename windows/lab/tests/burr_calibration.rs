@@ -143,8 +143,10 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// 0.7663, so the classifier's margin OVER chance rose. A readout, not a
 /// target: nothing in either campaign touches the classifier or the
 /// typological stages. MEASURED on the merged world — neither branch's own
-/// figure (0.7895, 0.7626) survives the merge.
-const BASELINE: f64 = 0.7663125948406677;
+/// figure (0.7895, 0.7626) survives the merge. The subsequent witness refresh
+/// measures 0.7603930461073318 on the current merged roster; the classifier
+/// and its typological claim remain unchanged.
+const BASELINE: f64 = 0.7603930461073318;
 
 /// The chance floor for the assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

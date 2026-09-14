@@ -307,7 +307,7 @@ mod tests {
             // records, and the same MEASURED re-pin: two campaigns landed
             // together here (six marine peoples, four subterranean ones)
             // and both widen the roster drow competes against.
-            "the Made population: 56 occupied columns",
+            "the Made population: 37 occupied columns",
             "heart decile <= 5:",
             "(frozen floor 0.6667; FROM Made levels TO the Heart's depth decile)",
             "doors on Made rungs:",

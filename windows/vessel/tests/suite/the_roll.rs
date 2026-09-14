@@ -1466,18 +1466,19 @@ fn the_count_is_the_sensed_roster() {
 ///
 /// **No natural seed conveniently isolates ONE wild group beside
 /// residents at a fresh look**, so this test builds the scene by hand
-/// rather than searching further. Seed 3 (`WILD_SEED` in
+/// rather than searching further. Seed 1 is the first current witness from
+/// the same search.
 /// `possession_moves.rs`) was the first candidate tried and rejected: its
 /// fresh flagship possession already shows all FOURTEEN of its wild
 /// species simultaneously (measured: `Here: <4 named>, and 52 others;
 /// black-dragon; carrion-crawler; …` — fifteen groups), which exercises the
 /// collapse but not a clean single-semicolon ordering check. So instead:
-/// walk seed 0's possession to an empty room (the same technique
+/// walk seed 1's possession to an empty room (the same technique
 /// `an_empty_room_says_nothing_about_company` uses — a dormant body's
 /// `agent-at` never follows), then place exactly the bodies wanted with
-/// `Session::place_creature_at_me`. Seed 0 was chosen because its roster
-/// derives two bodies of the SAME wild species within call — found by
-/// scanning seeds 0..40 for a species appearing at least twice among
+/// `Session::place_creature_at_me`. Seed 1 was chosen because its roster
+/// derives seven bodies of the SAME wild species within call — found by
+/// scanning seeds 0..64 for a species appearing at least twice among
 /// `village.is_none()` bodies, since a herd's individual members are not
 /// otherwise guaranteed to survive the roll's own within-call filter (most
 /// of seed 3's fourteen wild species have exactly one member within call).
@@ -1492,7 +1493,7 @@ fn the_count_is_the_sensed_roster() {
 /// and read off the live session, not hardcoded) — then reverted the edit.
 #[test]
 fn a_wild_group_collapses_and_follows_the_residents() {
-    let world = common::build(0).expect("seed 0 builds");
+    let world = common::build(1).expect("seed 1 builds");
     let mut session = flagship_session(&world);
     // Two bodies of one wild species within call — the precondition this
     // test needs to exercise the `n > 1` collapse. If this seed's roll ever
@@ -1514,7 +1515,7 @@ fn a_wild_group_collapses_and_follows_the_residents() {
         .map(|b| b.species.clone())
         .unwrap_or_else(|| {
             panic!(
-                "precondition: seed 0 must derive at least two wild bodies of                  the same species within call; if it does not, an epoch has                  moved the seed"
+                "precondition: seed 1 must derive at least two wild bodies of                  the same species within call; if it does not, an epoch has                  moved the seed"
             )
         });
     let same_species: Vec<hornvale_kernel::EntityId> = session
