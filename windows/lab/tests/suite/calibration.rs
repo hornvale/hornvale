@@ -490,7 +490,21 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // is expected to move again at the post-merge census.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (151, 41),
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. locked-world per-people head split (151, 41)
+        // -> (153, 39); the pair still sums to 192. The
+        // spinning-yet-eternal row below is MASKED by this one and was read
+        // in the SAME softened pass.
+        (153, 39),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -564,7 +578,21 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // claim: nothing here asserts a direction. Expected to move again at the
     // post-merge census.
     assert_eq!(
-        spinning_eternal, 14,
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. spinning-yet-eternal 14 -> 12. MASKED by the
+        // locked-world split above and read in the SAME softened pass.
+        // WITNESS, not claim: nothing here asserts a direction.
+        spinning_eternal,
+        12,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -900,8 +928,21 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // read in ONE softened pass, not one per failing run -- the inland row is
     // masked by the coastal one. WITNESS, not claim: nothing here asserts a
     // direction. Expected to move again at the post-merge census.
-    assert_eq!(coastal, 182, "coastal flagship count drifted");
-    assert_eq!(inland, 817, "inland flagship count drifted");
+    // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+    // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote all
+    // 1000 rows of the-census `rows.csv` and re-authored all eight Gnomon
+    // injection arms at the same ref. This pin reads census output. THE
+    // MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S COMMITTED (STALE)
+    // CENSUS, so this row returns to the value this branch's own earlier
+    // delivery (bdc59cc18) recorded -- measured, not assumed: that census
+    // and this one differ on exactly three metric columns, all astronomy
+    // (`figure-count`, `largest-figure-members`, `ecliptic-figure-count`),
+    // and none of them feeds this row. coastal 182 -> 194, inland 817 ->
+    // 805 (the pair still sums to 999). BOTH rows were read in ONE softened
+    // pass, not one per failing run -- the inland row is masked by the
+    // coastal one. WITNESS, not claim: nothing here asserts a direction.
+    assert_eq!(coastal, 194, "coastal flagship count drifted");
+    assert_eq!(inland, 805, "inland flagship count drifted");
 }
 
 #[test]
@@ -1383,8 +1424,23 @@ fn blind_attribution_beats_chance_decisively() {
     // among spinning, mooned pairs) -- which these two lines mask -- was
     // re-checked in the same softened pass and passed. Both rows were read in
     // that one pass. Expected to move again at the post-merge census.
-    assert_eq!(correct, 871, "blind-attribution count drifted");
-    assert_eq!(total, 982, "attributable-pair count drifted");
+    // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+    // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote all
+    // 1000 rows of the-census `rows.csv` and re-authored all eight Gnomon
+    // injection arms at the same ref. This pin reads census output. THE
+    // MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S COMMITTED (STALE)
+    // CENSUS, so this row returns to the value this branch's own earlier
+    // delivery (bdc59cc18) recorded -- measured, not assumed: that census
+    // and this one differ on exactly three metric columns, all astronomy
+    // (`figure-count`, `largest-figure-members`, `ecliptic-figure-count`),
+    // and none of them feeds this row. correct 871 -> 872, total 982 -> 983
+    // (872/983 = 0.887). BOTH rows were read in ONE softened pass. The 0.75
+    // floor asserted ABOVE stayed ARMED and cleared by a wide margin, and
+    // the mooned-pair invariant below (perfect attribution among spinning,
+    // mooned pairs) -- which these two lines mask -- stayed ARMED through
+    // the same pass and held.
+    assert_eq!(correct, 872, "blind-attribution count drifted");
+    assert_eq!(total, 983, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1696,7 +1752,22 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Expected to move again at the post-merge census.
     assert_eq!(
         (k_false, k_absent),
-        (982, 18),
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. kobold false/absent split (982, 18) -> (983,
+        // 17). The goblin split above did NOT move ((999, 1)) and the
+        // `g_false_seeds` roster-equality guard and the loop's inner
+        // `assert!(!*v)` both stayed ARMED through the softened pass and
+        // held, so every kobold world still reads FALSE.
+        (983, 17),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -2359,7 +2430,21 @@ fn name_collision_rate_is_measured_and_pinned() {
         // The Orrery delivery gate (2026-09-12, current canonical merge
         // product): the same fixture reads 0.525_123_563_979_999; this is a
         // small re-pin, not a changed directional claim.
-        (mean - 0.525_123_563_979_999).abs() < 1e-6,
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. mean 0.525_123_563_979_999 ->
+        // 0.527_216_074_640_001. The zero/nonzero/absent count rows above
+        // did NOT move (0 / 1000 / 0) and stayed ARMED through the softened
+        // pass.
+        (mean - 0.527_216_074_640_001).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2640,7 +2725,24 @@ fn name_length_distributions_are_measured_and_pinned() {
         // NOTE: goblin appears TWICE in this table (here and below). That duplication
         // is PRE-EXISTING, not introduced by this re-pin; both arms are updated
         // together, and the duplicate is reported rather than silently deleted.
-        ("goblin", 999u32, 8.492_322_954_254_249),
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. goblin 8.492_322_954_254_249 ->
+        // 8.551_386_390_790_796 (present unmoved at 999); kobold
+        // 6.926_498_556_008_148 -> 6.918_919_202_238_042 and present 982 ->
+        // 983. ALL THREE table arms -- goblin is duplicated here,
+        // pre-existing and reported rather than deleted -- were read in ONE
+        // softened pass. The `present + absent == 1000` structural row
+        // stayed ARMED through that pass and held.
+        ("goblin", 999u32, 8.551_386_390_790_796),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2824,8 +2926,20 @@ fn name_length_distributions_are_measured_and_pinned() {
         // Re-checked rather than assumed: the `present + absent == 1000`
         // structural row below stayed ARMED through the softened pass and
         // held. Expected to move again at the post-merge census.
-        ("goblin", 999u32, 8.492_322_954_254_249),
-        ("kobold", 982u32, 6.926_498_556_008_148),
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. SECOND goblin arm of the duplicated pair --
+        // moved together with the first, above.
+        ("goblin", 999u32, 8.551_386_390_790_796),
+        ("kobold", 983u32, 6.918_919_202_238_042),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -3085,8 +3199,24 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // absent-parity assertion inside the loop stayed ARMED through the
         // softened pass and held. Expected to move again at the post-merge
         // census.
-        ("goblin", 999u32, 2.707_807_533_233_231_6),
-        ("kobold", 982u32, 2.219_112_594_602_85),
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. goblin 2.707_807_533_233_231_6 ->
+        // 2.723_809_030_930_932 (present unmoved at 999); kobold
+        // 2.219_112_594_602_85 -> 2.216_176_219_226_857 and present 982 ->
+        // 983. BOTH species were read in ONE softened pass. The per-row
+        // absent-parity assertion inside the loop and the `present + absent
+        // == 1000` row stayed ARMED through that pass and held.
+        ("goblin", 999u32, 2.723_809_030_930_932),
+        ("kobold", 983u32, 2.216_176_219_226_857),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -3420,7 +3550,22 @@ fn name_transparency_is_measured_and_pinned() {
         // rows above did NOT move (1000 / 0). The floor and ceiling rows below
         // are MASKED by this line and were read in the SAME softened pass, not
         // on later runs. Expected to move again at the post-merge census.
-        (mean - 0.694_843_139_979_999_5).abs() < 1e-9,
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. mean 0.694_843_139_979_999_5 ->
+        // 0.693_758_744_690_001. The present/absent rows above did NOT move
+        // (1000 / 0) and stayed ARMED through the softened pass. The floor
+        // and ceiling rows below are MASKED by this line and were read in
+        // the SAME softened pass, not on later runs.
+        (mean - 0.693_758_744_690_001).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3532,7 +3677,24 @@ fn name_transparency_is_measured_and_pinned() {
         // mean is still a real distribution over worlds, not the uniformity
         // defect this row guards. Read the two together before treating
         // either as a trend. Expected to move again at the post-merge census.
-        (min - 0.238_095_24).abs() < 1e-8,
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. floor 0.238_095_24 -> 0.340_659_34. MASKED
+        // by the mean assertion above and read in the SAME softened pass.
+        // The floor RISES and the ceiling below rises too, so the spread
+        // narrows from both ends; a 0.341-to-0.969 span around a 0.694 mean
+        // is still a real distribution over worlds, not the uniformity
+        // defect this row guards. Read the two together before treating
+        // either as a trend.
+        (min - 0.340_659_34).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -3585,7 +3747,23 @@ fn name_transparency_is_measured_and_pinned() {
         // than toward it; the standing instruction above asks a rise toward
         // 1.0 to be read against, and this is not one. No world reads fully
         // transparent. Expected to move again at the post-merge census.
-        (max - 0.960_612_69).abs() < 1e-8,
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. ceiling 0.960_612_69 -> 0.969_498_91. MASKED
+        // by the mean assertion above and read in the SAME softened pass.
+        // The ceiling RISES while the floor above also rises, so the span
+        // narrows from BOTH ends; it is still short of 1.0, so no world
+        // reads fully transparent and the standing instruction above (read
+        // a rise TOWARD 1.0 against the defect) is not triggered.
+        (max - 0.969_498_91).abs() < 1e-8,
         "name-transparency maximum drifted: {max:.15}"
     );
 }

@@ -335,7 +335,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5667 over 120 pairs; twelfth canonical reading, incomparable because the Underworld Peoples re-seated the world and fixture inputs; the scorer is unchanged, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5333 over 120 pairs; thirteenth canonical reading, incomparable because the Trencher's post-merge census re-seated the world and fixture inputs; the scorer is unchanged and the evaluable surface shrank 181 -> 179 with a measured share of exactly zero, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -707,7 +707,93 @@ fn h1_recall_at_10() {
 /// another incomparable one; the six comparable readings remain within one
 /// standard error of the 0.60 bar, so the verdict remains "cannot tell".
 ///
-/// claim: invariant(the committed battery scores exactly 68 hits over 120
+/// **RE-READ AT THE TRENCHER'S CLOSE (2026-09-13), AND IT IS THE FIRST
+/// SHRINKING SURFACE THIS WITNESS HAS SEEN.** The post-merge census
+/// (`06055072d639`, goldens `0865b31bb`) rewrote all 1,000 census rows and
+/// re-authored all eight injection arms at the same ref. The witness reads
+/// **64/120 = 0.5333**, zero void pairs. Arm for arm: geothermal 20/20,
+/// unconformity 2/20, aquifer 20/20, karst 3/20, pantheon 6/20, phonology
+/// 13/20. The bar is still 0.60 and this re-read does not move it.
+///
+/// **The instrument did not move, and that was established rather than
+/// assumed.** `windows/lab/src/domesday/` — the scorer, `score_row`,
+/// `REPORT_SIZE`, `TAIL_DEPTH_BAR` and `evaluable_columns` itself — has ZERO
+/// commits between the previously pinned reading's tree (`0865b31bb~1`) and
+/// this one. No metric was registered or deregistered: a sorted, line-by-line
+/// diff of the two censuses' CSV headers is EMPTY (295 columns less `seed`,
+/// `pin_set` and `refusal` on both). The evaluable surface nonetheless moved
+/// 181 -> 179, because `evaluable_columns` is a pure function of the
+/// committed CSV and two EXISTING columns crossed to the excluded rails on
+/// their own moved values: `first-day-occ-cause-famine` (32 at min, 15 at max
+/// of 707) and `toponymic-roots-won` (11 at min, 603 at max of 1,000).
+/// Nothing crossed the other way.
+///
+/// **THE PRESCRIBED ABLATION DOES NOT FIT A SHRINK, AND THAT IS THE FINDING
+/// WORTH MORE THAN THE NUMBER.** Every worked case above — The Winze, The
+/// Weft, The Warp — is a surface that GREW, where the instrument delta is a
+/// set of columns present only in the new census, so removing them literally
+/// reconstructs the old surface and "restores the previous reading arm for
+/// arm" is a reachable null. On a shrink the delta is columns the new census
+/// still CONTAINS but now classifies as excluded. They are already outside
+/// its evaluable surface, so ablating them is a **no-op by construction** —
+/// measured, 64/120 before and after, arm for arm. No operation on the new
+/// census restores the old surface, because ablation removes columns and what
+/// would be needed is to re-admit two the classifier rejected, i.e. to
+/// override `evaluable_columns`' verdict on the data in order to manufacture
+/// comparability. The null arm being unreachable means the **non-null arm
+/// fires spuriously**: a shrink always reads "non-null", and the standing
+/// instruction ("THAT is when to stop and say so") would have refused this
+/// re-pin on the epoch carrying the cleanest instrument evidence this witness
+/// has ever had. "Ablate family by family" has no unit here either — nothing
+/// was registered, and the 97 value-moving columns span 37 name prefixes, 24
+/// of them singletons, so prefix-grouping partitions the world's movement
+/// rather than the instrument's.
+///
+/// **The generalisation that does fit: two-sided invariance.** Ablate the
+/// symmetric difference from BOTH epochs and ask whether EITHER side's tally
+/// moves, instead of whether the two sides meet. If neither moves, the
+/// surface delta is inert and its share is zero — strictly stronger than "the
+/// numbers restore". Measured over the same rows, dropping columns from the
+/// in-memory `Census` by name:
+///
+/// ```text
+///     ablated                        census  surface(eval/excl)  tally    arms (geo, unc, aqu, kar, pan, pho)
+///     none                           OLD        181 / 51         68/120   20, 1, 20, 3, 7, 17
+///     none                           NEW        179 / 53         64/120   20, 2, 20, 3, 6, 13
+///     the 2 departed columns         OLD        179 / 51         68/120   20, 1, 20, 3, 7, 17
+///     the 2 departed columns         NEW        179 / 51         64/120   20, 2, 20, 3, 6, 13
+///     all 97 value-movers            OLD        106 / 45         51/100   20, 1, 20, 2, -, 8
+///     all 97 value-movers            NEW        106 / 45         51/100   20, 1, 20, 2, -, 8
+/// ```
+///
+/// Rows 3 and 4 are the two-sided null: the surface delta changes NEITHER
+/// epoch's tally, so its share is exactly zero. Rows 5 and 6 are the control
+/// this witness has never had — on the surface where no value moved between
+/// the two epochs, the two censuses read **identically, arm for arm**, which
+/// says the scorer is stable and the entire -4 lives in the 97 columns whose
+/// values moved. (The pantheon arm voids there: all 20 of its pairs move only
+/// ablated columns, which is why the denominator is 100.) Row 1 is also the
+/// positive control — the harness reproduces the pinned 68/120 and its arm
+/// breakdown exactly before anything is ablated.
+///
+/// **Why the world moved is measured too, and it is not the absorb.** The
+/// tally the pin held (68) was taken against main's COMMITTED census, which
+/// was stale relative to the code. This branch's own earlier delivery
+/// (`bdc59cc18`, pre-merge) and this one differ on exactly THREE metric
+/// columns, all astronomy — `figure-count`, `largest-figure-members`,
+/// `ecliptic-figure-count` — so the 41 absorbed commits of origin/main moved
+/// almost nothing here, and the eleven calibration rows re-pinned alongside
+/// this one return to their delivery-era values. Task 10's chorus memoisation
+/// is byte-neutral and was proven so before it landed.
+///
+/// So 64/120 is the thirteenth canonical reading and incomparable to the
+/// six-epoch series — but for the ORDINARY reason readings eleven and twelve
+/// were (moved world facts arriving with moved census and fixture inputs),
+/// NOT for an instrument reason. The series stays 0.5667 / 0.6083 / 0.6000 /
+/// 0.6083 / 0.6083 / 0.6000, the verdict stays "cannot tell", and the remedy
+/// is still more pairs rather than a moved bar.
+///
+/// claim: invariant(the committed battery scores exactly 64 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
 #[test]
@@ -720,13 +806,16 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
             t.void_no_movement,
             t.void_unrankable_only
         ),
-        (68, 120, 0, 0),
+        (64, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's finding (recall@10 now reads 68/120 = 0.5667 against the \
+         Gnomon's finding (recall@10 now reads 64/120 = 0.5333 against the \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
-         adjudicate; this twelfth reading is incomparable to the six-epoch \
-         series, as the seventh, eighth, and ninth were; its ablation is non-null in \
-         exactly ONE direction, the new surface, see the doc comment), and it is pinned so \
+         adjudicate; this thirteenth reading is incomparable to the six-epoch \
+         series, as the seventh through twelfth were, but for the ORDINARY \
+         reason — moved world facts arriving with moved census and fixture \
+         inputs — and NOT for an instrument reason: the surface delta's share \
+         was measured at exactly ZERO in both directions, see the doc \
+         comment), and it is pinned so \
          that a change to \
          the report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable \
          surface, the census, or the fixtures — cannot silently turn the \
@@ -799,7 +888,44 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          arm for arm (20, 4, 20, 2, 7, 19) — unchanged across two further \
          epochs, which is the control. Had only the newest family been \
          ablated, two of the three moved hits would have been silently \
-         attributed to the world."
+         attributed to the world. \
+         \
+         AND NOW THE CASE THE THREE PARAGRAPHS ABOVE DO NOT COVER: A SURFACE \
+         THAT SHRINKS. Every worked example above is a surface that GREW. The \
+         Trencher (2026-09-13) is the first shrink — evaluable 181 -> 179, no \
+         column added or removed, two EXISTING columns reclassified to `both \
+         rails tied` by their own moved values — and the prescribed test \
+         MISFIRES ON IT IN BOTH ARMS. (1) The null arm is unreachable by \
+         construction: `restores the previous reading` needs ablation to be \
+         able to remove the instrument delta, and on a grow it can, because \
+         the delta is columns present only in the new census. On a shrink the \
+         delta is columns the new census STILL CONTAINS but now classifies as \
+         excluded — already outside its evaluable surface — so ablating them \
+         is a NO-OP. Measured: 64/120 before and after, arm for arm. Nothing \
+         done to the new census restores the old surface, because ablation \
+         REMOVES columns and what would be needed is to RE-ADMIT two the \
+         classifier rejected, which is overriding `evaluable_columns` to \
+         manufacture comparability. (2) The non-null arm therefore fires \
+         spuriously: a shrink always reads non-null, so `THAT is when to stop \
+         and say so` would have refused this re-pin on the epoch with the \
+         CLEANEST instrument evidence this witness has ever had. (3) `Family \
+         by family` also has no unit here — nothing was registered, and the \
+         97 value-movers span 37 name prefixes, 24 of them singletons, so \
+         prefix-grouping partitions the WORLD's movement, not the \
+         instrument's. \
+         \
+         THE TEST THAT DOES FIT A SHRINK, and run it instead: ablate the \
+         symmetric difference from BOTH epochs and ask whether EITHER side's \
+         tally moves, rather than whether the two sides meet. Two-sided \
+         invariance is the right null — if neither moves, the surface delta \
+         is INERT and its share is zero, which is a stronger claim than `the \
+         numbers restore`. For The Trencher both sides were exactly \
+         invariant: 68/120 -> 68/120 and 64/120 -> 64/120, arm for arm. And \
+         the complementary control gives the scorer null this witness never \
+         had: ablating every column whose VALUE moved (97 of 292) from both \
+         epochs reads 51/100 IDENTICALLY, arm for arm (20, 1, 20, 2, -, 8). \
+         On the value-stable surface the two censuses agree exactly, so the \
+         whole -4 is world and the instrument's share is measured at zero."
     );
 }
 

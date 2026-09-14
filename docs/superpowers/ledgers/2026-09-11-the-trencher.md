@@ -3121,3 +3121,83 @@ inside a closing campaign. It is also **astronomy's code, not ours**.
 
 **Ideonomy passes / overturns:** one overturn — my own candidate, falsified by
 the instrument I asked for.
+
+---
+
+## #37 [G5] — Round 2, and an implementer correctly refused to author my finding for me
+
+Twelve reds fixed; my thirteenth blocked the commit. **The implementer
+declined to write my yellow-log row**, and its reason is the best thing in the
+report:
+
+> writing the row myself would mean authoring a profiling finding I never
+> measured into the one log whose stated purpose is that
+> acknowledging-without-profiling is the failure it replaced.
+
+It also enumerated and rejected every route around the guard —
+`--no-verify` (forbidden), `HV_SUBFLOOR_EXCLUDE` (narrows the roster),
+`HV_CENSUS_DELIVERY=1` (would misrepresent the commit *and* stand down the
+column-count witness it had just re-pinned). **Refusing to satisfy a guard by
+becoming its false witness is exactly right**, and it is the same instinct as
+`#28`'s "never weaken an anti-vacuity guard," applied to a log rather than a
+test.
+
+The row is written now, from Task 10's real profile.
+
+### The protocol did not fit, and saying so was the finding
+
+`anomaly_injection`'s pin prescribes ablating column families to separate
+instrument movement from world movement. I flagged that every worked example
+in it describes a surface that GREW while ours SHRANK. The implementer
+measured, and the method **misfires in both arms** on a shrink:
+
+- **The null is unreachable by construction.** Ablation removes columns; our
+  delta is two columns the new census *still contains* but now classifies as
+  excluded — already outside the evaluable surface, so ablating them is a
+  **no-op** (64/120 before and after). Restoring comparability would require
+  *re-admitting* columns the classifier rejected.
+- **So the other arm fires spuriously.** A shrink always reads "non-null", and
+  the protocol's "THAT is when to stop and say so" would have refused a re-pin
+  on the epoch with **the cleanest instrument evidence this witness has ever
+  had**.
+- **"Family by family" has no unit here**: nothing was registered; the 97
+  value-movers span 37 prefixes, 24 of them singletons.
+
+**The generalisation it proposed instead is better than the original:**
+ablate the symmetric difference from *both* epochs and ask whether *either*
+side moves. Neither did — so the surface delta's share is **exactly zero**.
+And the complementary control gave the scorer a null this witness never had:
+ablating all 97 value-movers from both epochs reads **51/100 identically, arm
+for arm**, with the positive control reproducing the pinned 68/120 and its
+exact arm breakdown.
+
+That licenses a re-pin to `(64, 120, 0, 0)` as a **world** move, incomparable
+to the six-epoch series for the *ordinary* reason rather than an instrument
+one — and explicitly does **not** license adding the reading to that series,
+which it did not do. All four named sites re-stated.
+
+### Two measurements worth keeping
+
+**The 41 absorbed commits moved almost nothing.** This branch's own earlier
+delivery `bdc59cc18` and this census differ on exactly **three** columns, all
+astronomy — and all eleven calibration re-pins return to their delivery-era
+values. The merge churn was ours re-measured against main's stale fixtures,
+not new world movement.
+
+**The softened sweep found 31 quantities, 12 of them masked** behind a failing
+assert — including both halves of the duplicated `goblin` row and the kobold
+arms the goblin-first loop hides. It also ran `golden-pins.sql` through DuckDB
+**before** editing as an independent second opinion: same 19 rows, same values,
+agreeing to ~1e-15. The 38 literals were resynced under an **assertion that
+each old literal appeared exactly twice per line**, so the half-moved row I
+warned about could not be written.
+
+### A SIXTH instance of `PROC-prose-claims-no-assertion-checks`, parked
+
+`idea-registry.md`'s `TOOL-anomaly-report` row says *"116 evaluable columns —
+47 excluded"*; live is **179/53**. Pre-existing, not one of the twelve,
+correctly reported rather than touched. Same class as the margin ratio: a
+prose number nothing checks. Recorded in the row's instance list.
+
+**Ideonomy passes / overturns:** none; a task acceptance plus a protocol found
+not to fit its case.

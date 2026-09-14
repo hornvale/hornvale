@@ -961,14 +961,50 @@ mod tests {
         // to move again at the post-merge census, which will carry this
         // campaign's metabolite/supply work the committed CSV does not yet
         // have.
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): evaluable 181 -> 179,
+        // excluded 51 -> 53. The excluded row is MASKED by the evaluable one
+        // and was read in the SAME softened pass.
+        //
+        // THE 292-COLUMN METRIC SURFACE THIS TEST'S NAME CARRIES IS
+        // UNCHANGED, and that was checked rather than assumed: a sorted,
+        // line-by-line diff of the two censuses' CSV headers is EMPTY — 295
+        // columns less `seed`, `pin_set` and `refusal` on both. So this test's
+        // name and its exact-name entry in `docs/timings/subfloor-roster.tsv`
+        // do not move in this commit. The merge re-pin's expectation that the
+        // post-merge census would carry new metabolite/supply columns did NOT
+        // come true: no metric was registered or deregistered at this epoch.
+        //
+        // NO COLUMN WAS ADDED OR REMOVED; TWO EXISTING COLUMNS WERE
+        // RECLASSIFIED BY THEIR OWN VALUES, and that is the informative part
+        // here, because it is the first epoch in this note's history where the
+        // surface SHRANK. Both departures are `both rails tied`, identified by
+        // the method this note prescribes — instrumenting `evaluable_columns`
+        // and comparing its evaluable/excluded sets across the two censuses,
+        // rather than diffing present values:
+        //
+        //   first-day-occ-cause-famine  both rails tied: 32 at min, 15 at max of 707
+        //   toponymic-roots-won         both rails tied: 11 at min, 603 at max of 1000
+        //
+        // Nothing crossed the other way (the arrived set is empty), so the
+        // -2/+2 is one movement, not two that happened to net out.
+        //
+        // THE SHRINK IS A DATA VERDICT, NOT A SCHEMA FACT, and this comment
+        // says so rather than treating either column as permanently degenerate
+        // — The Wanderers' entry above records `first-day-occ-tech-neolithic`
+        // moving the other way for the same kind of reason. `evaluable_columns`
+        // is a pure function of the committed CSV: `windows/lab/src/domesday/`
+        // has ZERO commits between the previously pinned reading's tree
+        // (0865b31bb~1) and this one, so the classifier that rendered both
+        // verdicts is byte-identical and only its input moved.
         assert_eq!(
             evaluable.len(),
-            181,
+            179,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            51,
+            53,
             "excluded count moved — re-measure and update this"
         );
     }

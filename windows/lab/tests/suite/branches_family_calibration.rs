@@ -914,13 +914,30 @@ fn homophony_count_is_measured_and_pinned() {
     // re-pins the witnesses rather than the claim; the `mb > mg && mb > mh`
     // invariant below stayed ARMED through the softened pass and held.
     // Expected to move again at the post-merge census.
-    assert!((mg - 6.595).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.856).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 24.465).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+    // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote all
+    // 1000 rows of the-census `rows.csv` and re-authored all eight Gnomon
+    // injection arms at the same ref. This pin reads census output. THE
+    // MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S COMMITTED (STALE)
+    // CENSUS, so this row returns to the value this branch's own earlier
+    // delivery (bdc59cc18) recorded -- measured, not assumed: that census
+    // and this one differ on exactly three metric columns, all astronomy
+    // (`figure-count`, `largest-figure-members`, `ecliptic-figure-count`),
+    // and none of them feeds this row. goblin 6.595 -> 6.52, hobgoblin
+    // 6.856 -> 6.76, bugbear 24.465 -> 24.188, kobold 7.013 -> 7.089. ALL
+    // FOUR were re-measured in ONE softened pass, not one per failing run
+    // -- the failure named only goblin, and this file's own note above
+    // records that mistake being made before. Bugbear remains highest by
+    // more than 3x, so this re-pins the witnesses rather than the claim;
+    // the `mb > mg && mb > mh` invariant below stayed ARMED through the
+    // softened pass and held.
+    assert!((mg - 6.52).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 6.76).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 24.188).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
     // Unmoved at 6.326 through The Foliot and The Sources' second and third
     // censuses; 6.326 -> 6.36 at The Precedence's, with the other three.
-    assert!((mk - 7.013).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mk - 7.089).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

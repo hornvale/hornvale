@@ -263,7 +263,25 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // mean below is re-pinned. What this refuses is the SILENT case.
     let margin_ratio = UNIFORM_SPHERE_BASELINE / mean;
     assert!(
-        (margin_ratio - 1.8530).abs() < 5e-4,
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. margin ratio 1.8530x -> 1.8056x, moving WITH
+        // the mean below (17.6474 -> 18.1105) in the SAME softened pass,
+        // which is what this pin exists to force. The margin continues to
+        // narrow and is now well under the 2x this file's history claimed
+        // eleven times; the directional claim asserted above -- below the
+        // uniform-sphere baseline of 32.7 -- still holds and stayed ARMED
+        // through that pass. This is a re-pin with a stated cause, not a
+        // failure, and nothing here was retuned to rescue a margin.
+        (margin_ratio - 1.8056).abs() < 5e-4,
         "the margin ratio moved: {margin_ratio:.4}x (pinned 1.8530x, mean          {mean:.4} against baseline {UNIFORM_SPHERE_BASELINE}). This is a          re-pin with a stated cause, not a failure — but do not restate a          margin in prose without moving this number, which is the mistake          eleven entries below made."
     );
     // Pinned calibration row (measured 2026-07-13, same 200-seed
@@ -572,7 +590,24 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
         // ARMED through the softened pass that took this measurement, so
         // 17.6474 cleared it. Expected to move again at the post-merge
         // census.
-        (mean - 17.6474).abs() < 1e-3,
+        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
+        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
+        // all 1000 rows of the-census `rows.csv` and re-authored all eight
+        // Gnomon injection arms at the same ref. This pin reads census
+        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
+        // COMMITTED (STALE) CENSUS, so this row returns to the value this
+        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
+        // not assumed: that census and this one differ on exactly three
+        // metric columns, all astronomy (`figure-count`,
+        // `largest-figure-members`, `ecliptic-figure-count`), and none of
+        // them feeds this row. mean 17.6474 -> 18.1105. THE ASSERTED CLAIM
+        // IS UNCHANGED AND RE-CHECKED RATHER THAN ASSUMED: the
+        // preregistered directional assertion (mean < the uniform-sphere
+        // baseline of 32.7) sits ABOVE this line and stayed ARMED through
+        // the softened pass that took this measurement, so 18.1105 cleared
+        // it. The margin-ratio pin above moved WITH this row, in the same
+        // pass.
+        (mean - 18.1105).abs() < 1e-3,
         "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.6474)"
     );
 }

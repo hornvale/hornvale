@@ -726,3 +726,78 @@ inputs together; the scorer was unchanged. The witness reads **68/120 =
 This is the twelfth canonical reading and another incomparable one. The six
 comparable readings remain within one standard error of the 0.60 bar, so the
 verdict remains “cannot tell.”
+
+## Postscript 11 — the surface shrinks, and the ablation stops working (The Trencher, 2026-09-13)
+
+The Trencher's post-merge census (`06055072d639`) rewrote all 1,000 census rows
+and re-authored all eight injection arms at the same ref. The witness reads
+**64/120 = 0.5333**, with no void pairs: geothermal 20/20, unconformity 2/20,
+aquifer 20/20, karst 3/20, pantheon 6/20, phonology 13/20. The bar stays 0.60.
+
+What makes this reading worth a postscript is not the number. It is that the
+evaluable surface **shrank** — 181 → 179 — for the first time in this witness's
+history, and the ablation protocol the last three postscripts built does not
+work on a shrink.
+
+Nothing was registered or deregistered; a sorted diff of the two censuses'
+headers is empty. What moved is that two *existing* columns crossed onto the
+excluded rails on their own values — `first-day-occ-cause-famine` and
+`toponymic-roots-won`, both `both rails tied`. `evaluable_columns` is a pure
+function of the committed CSV, and `windows/lab/src/domesday/` has zero commits
+since the previously pinned reading, so the classifier that rendered both
+verdicts is byte-identical and only its input moved.
+
+That breaks the prescribed test in both of its arms. Its null — *ablate the
+moved columns and see whether the previous reading is restored arm for arm* —
+is reachable only when the instrument delta is a set of columns present solely
+in the newer census, which is what a growing surface gives you. On a shrink the
+delta is columns the new census still contains but now excludes. They are
+already outside its evaluable surface, so ablating them is a no-op: 64/120
+before, 64/120 after, arm for arm. Nothing done to the new census restores the
+old surface, because ablation removes columns and what would be needed is to
+re-admit two the classifier rejected — overriding the instrument to manufacture
+comparability. And because the null is unreachable, the *other* arm fires
+spuriously: a shrink always reads “non-null”, so following the instruction
+literally would have declared this reading incomparable and refused the re-pin,
+on the epoch carrying the cleanest instrument evidence the witness has ever had.
+
+The repair is to ask a two-sided question instead. Ablate the symmetric
+difference from **both** epochs and ask whether *either* side's tally moves,
+rather than whether the two sides meet. If neither moves, the surface delta is
+inert and its share is zero — which is a stronger statement than “the numbers
+restore”, and it is the one that is true here.
+
+```text
+    ablated                  census   surface(eval/excl)   tally    arms (geo, unc, aqu, kar, pan, pho)
+    none                     OLD         181 / 51          68/120   20, 1, 20, 3, 7, 17
+    none                     NEW         179 / 53          64/120   20, 2, 20, 3, 6, 13
+    the 2 departed columns   OLD         179 / 51          68/120   20, 1, 20, 3, 7, 17
+    the 2 departed columns   NEW         179 / 51          64/120   20, 2, 20, 3, 6, 13
+    all 97 value-movers      OLD         106 / 45          51/100   20, 1, 20, 2, -, 8
+    all 97 value-movers      NEW         106 / 45          51/100   20, 1, 20, 2, -, 8
+```
+
+Rows three and four are that two-sided null: the surface delta changes neither
+epoch's tally. Rows five and six are a control this witness has never had — on
+the surface where no value moved between the two censuses, the two epochs read
+*identically, arm for arm*. The scorer is stable; the whole −4 lives in the 97
+columns whose values moved. Row one is the positive control: the harness
+reproduces the pinned 68/120 and its arm breakdown exactly.
+
+“Ablate family by family” also has no unit at this epoch. The Winze, Weft and
+Warp families were blocks of newly *registered* metrics. Nothing was registered
+here, and the 97 value-movers span 37 name prefixes, 24 of them singletons — so
+grouping them by prefix partitions the world's movement, not the instrument's.
+
+So 64/120 is the thirteenth canonical reading and incomparable to the six-epoch
+series, but for the ordinary reason the eleventh and twelfth were: moved world
+facts arriving with moved census and fixture inputs. Not for an instrument
+reason — that share was measured, and it is zero. The verdict stays “cannot
+tell.”
+
+The durable lesson sits one level above the protocol it corrects. A test framed
+as *does ablation restore the previous number* silently assumes the instrument
+changed in the direction ablation can undo. When it changed the other way, the
+test does not report “I cannot tell” — it reports “incomparable”, confidently
+and wrongly. Ask whether the delta is inert, not whether removing it reproduces
+a number.
