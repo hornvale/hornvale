@@ -4,12 +4,12 @@
 
 use crate::anchor::Rotation;
 use crate::ephemeris::{
-    OrbitalElements, OrbitalFrame, OrbitalState, OrbitalValidity, orbital_phase_at,
-    orbital_state_at,
+    AnchorState, OrbitalElements, OrbitalError, OrbitalFrame, OrbitalState, OrbitalValidity,
+    orbital_phase_at, orbital_state_at,
 };
 use crate::sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 use crate::system::StarSystem;
-use crate::units::{Au, Degrees, Megameters, StdDays, StdInstant};
+use crate::units::{Degrees, Megameters, StdDays, StdInstant};
 use hornvale_kernel::math;
 use hornvale_kernel::units::TickSpan;
 
@@ -18,7 +18,7 @@ mod tests {
     use super::*;
     use crate::pins::{MoonsPin, RotationPin, SkyPins};
     use crate::system::generate;
-    use crate::units::Degrees;
+    use crate::units::{Au, Degrees};
     use hornvale_kernel::Seed;
 
     fn spinning_system() -> StarSystem {
@@ -44,23 +44,31 @@ mod tests {
     /// Forcing is zeroed (no tilt, no drift, no phase offset), so the moon's
     /// illumination phase is a bare synodic cycle with day 0 at phase 0.
     fn calendar_with_moon(sidereal_days: f64, year_days: f64) -> Calendar {
+        let year = StdDays::new(year_days).unwrap();
+        let forcing = crate::forcing::OrbitalForcing {
+            obliquity_mean: 0.0,
+            obliquity_amp: 0.0,
+            obliquity_phase: 0.0,
+            ecc_mean: 0.0,
+            ecc_amp: 0.0,
+            ecc_phase: 0.0,
+            precession_phase: 0.0,
+            year_phase_offset: 0.0,
+            day_phase_offset: 0.0,
+            moon_phase_offsets: vec![0.0],
+        };
+        let mut system = spinning_system();
+        system.anchor.orbit = Au(1.0);
+        system.anchor.year = year;
+        system.forcing = forcing.clone();
+        system.moons[0].distance = Megameters(1.0);
+        system.moons[0].period = StdDays::new(sidereal_days).unwrap();
         Calendar {
             day: None,
-            anchor_orbit: Au(1.0),
-            year: StdDays::new(year_days).unwrap(),
+            system,
+            year,
             moon_orbits: vec![(Megameters(1.0), StdDays::new(sidereal_days).unwrap())],
-            forcing: crate::forcing::OrbitalForcing {
-                obliquity_mean: 0.0,
-                obliquity_amp: 0.0,
-                obliquity_phase: 0.0,
-                ecc_mean: 0.0,
-                ecc_amp: 0.0,
-                ecc_phase: 0.0,
-                precession_phase: 0.0,
-                year_phase_offset: 0.0,
-                day_phase_offset: 0.0,
-                moon_phase_offsets: vec![0.0],
-            },
+            forcing,
             retrograde: false,
         }
     }
@@ -201,9 +209,13 @@ mod tests {
             day_phase_offset: 0.0,
             moon_phase_offsets: Vec::new(),
         };
+        let mut system = spinning_system();
+        system.anchor.orbit = Au(1.0);
+        system.anchor.year = StdDays::new(365.25).unwrap();
+        system.forcing = forcing.clone();
         let cal = Calendar {
             day: Some(TickSpan::from_std_days(1.0).unwrap()),
-            anchor_orbit: Au(1.0),
+            system,
             year: StdDays::new(365.25).unwrap(),
             forcing,
             moon_orbits: Vec::new(),
@@ -622,7 +634,7 @@ pub struct Calendar {
     /// world. Stored as the integer (The Foliot) and exposed continuously by
     /// [`Calendar::day_length`]; the integer is the truth.
     day: Option<TickSpan>,
-    anchor_orbit: Au,
+    system: StarSystem,
     year: StdDays,
     moon_orbits: Vec<(Megameters, StdDays)>,
     forcing: crate::forcing::OrbitalForcing,
@@ -637,7 +649,7 @@ pub fn calendar_of(system: &StarSystem) -> Calendar {
     };
     Calendar {
         day,
-        anchor_orbit: system.anchor.orbit,
+        system: system.clone(),
         year: system.anchor.year,
         moon_orbits: system
             .moons
@@ -694,8 +706,19 @@ pub fn wanderer_calendar_marks(
 }
 
 impl Calendar {
+    fn anchor_state_at(&self, t: StdInstant) -> Result<AnchorState, OrbitalError> {
+        crate::ephemeris::anchor_state_at(&self.system, t)
+    }
+
+    /// Compatibility state retained for eclipse geometry until its dedicated
+    /// migration. Calendar solar geometry does not consume this legacy view.
     pub(crate) fn anchor_orbital_state_at(&self, t: StdInstant) -> Option<OrbitalState> {
-        crate::ephemeris::anchor_orbital_state_at(self.anchor_orbit, self.year, &self.forcing, t)
+        crate::ephemeris::anchor_orbital_state_at(
+            self.system.anchor.orbit,
+            self.system.anchor.year,
+            &self.system.forcing,
+            t,
+        )
     }
 
     pub(crate) fn moon_orbital_state_at(
@@ -812,9 +835,29 @@ impl Calendar {
         // back a phase of -0.49. Byte-neutral for every existing world:
         // for a non-negative operand `trunc` and `floor` coincide, so the
         // two agree exactly.
-        // The calendar keeps the mean-longitude compatibility projection.
+        // The calendar keeps the mean-longitude compatibility clock. Solar
+        // geometry uses `solar_longitude_turns`, while eclipse and scene
+        // consumers retain this projection until their dedicated migration.
         self.anchor_orbital_state_at(t)
             .map_or(0.0, |state| state.mean_longitude_turns)
+    }
+
+    /// The anchor's true orbital longitude in normalized turns. Calendar
+    /// season and daylight geometry use this physical projection; adding a
+    /// half-turn converts it to the system-plane center sightline.
+    ///
+    /// Calendar's established scalar APIs cannot carry [`OrbitalError`], so
+    /// invalid physical state fails here with the instant and source error.
+    /// type-audit: bare-ok(ratio)
+    fn solar_longitude_turns(&self, t: StdInstant) -> f64 {
+        self.anchor_state_at(t)
+            .unwrap_or_else(|error| {
+                panic!(
+                    "calendar cannot evaluate anchor longitude at day {}: {error}",
+                    t.get()
+                )
+            })
+            .true_longitude_turns
     }
     /// Seasonal phase; present when either driver (tilt or eccentricity) acts.
     /// type-audit: bare-ok(ratio)
@@ -824,7 +867,7 @@ impl Calendar {
         if obliquity == 0.0 && ecc == 0.0 {
             return None;
         }
-        Some(self.year_phase(t))
+        Some(self.solar_longitude_turns(t))
     }
     /// Daylight fraction: the tilt sinusoid (time-varying obliquity) plus a
     /// smaller apsidal term from eccentricity (a tilt-independent driver).
@@ -834,7 +877,7 @@ impl Calendar {
         self.day?;
         let obliquity = self.forcing.obliquity_at(t.0);
         let ecc = self.forcing.eccentricity_at(t.0);
-        let phase = self.year_phase(t);
+        let phase = self.solar_longitude_turns(t);
         let tilt_term = (obliquity / 90.0) * 0.5 * math::sin(std::f64::consts::TAU * phase);
         let apsidal_term = ecc * 0.5 * math::sin(std::f64::consts::TAU * phase);
         Some((0.5 + tilt_term + apsidal_term).clamp(0.0, 1.0))
@@ -850,7 +893,8 @@ impl Calendar {
         // Solar declination: the sub-solar latitude oscillates over the year,
         // its amplitude the (time-varying) obliquity.
         let obliquity = self.forcing.obliquity_at(t.0).to_radians();
-        let declination = obliquity * math::sin(std::f64::consts::TAU * self.year_phase(t));
+        let declination =
+            obliquity * math::sin(std::f64::consts::TAU * self.solar_longitude_turns(t));
         let phi = latitude.to_radians();
         // cos H0 = −tan φ · tan δ; the clamp yields polar day (−1 → H0 = π,
         // fraction 1) and polar night (1 → H0 = 0, fraction 0) past the polar
@@ -864,7 +908,8 @@ impl Calendar {
     /// daylight model already uses.
     /// type-audit: pending(wave-1)
     pub fn solar_declination(&self, t: StdInstant) -> f64 {
-        self.forcing.obliquity_at(t.0) * math::sin(std::f64::consts::TAU * self.year_phase(t))
+        self.forcing.obliquity_at(t.0)
+            * math::sin(std::f64::consts::TAU * self.solar_longitude_turns(t))
     }
 
     /// Hour angle (radians, 0 at local solar noon), declination and
@@ -1068,6 +1113,8 @@ impl Calendar {
     /// The sun's equatorial position at `t` (exact spherical form; the shipped
     /// small-angle `solar_declination` is the coarse tier of the same object).
     pub fn solar_equatorial(&self, t: StdInstant) -> EquatorialCoord {
+        // Scene and eclipse orientation retain this compatibility projection
+        // until their dedicated migration in Task 3.
         let lam = (360.0 * self.year_phase(t)).to_radians();
         let e = self.forcing.obliquity_at(t.0).to_radians();
         EquatorialCoord {

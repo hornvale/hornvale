@@ -666,13 +666,30 @@ pub struct StellarIllumination {
 
 /// Resolve both stars' fluxes at the anchor without changing climate forcing.
 pub fn stellar_illumination_at(system: &StarSystem, instant: StdInstant) -> StellarIllumination {
-    let anchor = anchor_position_at(system, instant);
+    // Preserve this established total public projection for malformed systems:
+    // the typed evaluator remains the authority for every valid state, while
+    // its error boundary retains the legacy deterministic origin fallback.
+    let anchor_state = anchor_state_at(system, instant).ok();
+    let anchor = OrbitalPosition {
+        x_au: anchor_state
+            .as_ref()
+            .map_or(0.0, |state| state.position_au[0]),
+        y_au: anchor_state
+            .as_ref()
+            .map_or(0.0, |state| state.position_au[1]),
+    };
     let sources: Vec<_> = stellar_positions_at(system, instant)
         .into_iter()
         .enumerate()
         .map(|(index, position)| {
             let relative = relative_position(position, anchor);
-            let squared = relative.x_au * relative.x_au + relative.y_au * relative.y_au;
+            let squared = if position.x_au == 0.0 && position.y_au == 0.0 {
+                anchor_state
+                    .as_ref()
+                    .map_or(0.0, |state| state.radius_au * state.radius_au)
+            } else {
+                relative.x_au * relative.x_au + relative.y_au * relative.y_au
+            };
             let star = if index == 0 {
                 &system.star
             } else {

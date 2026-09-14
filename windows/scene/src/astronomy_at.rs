@@ -111,7 +111,12 @@ pub fn astronomy_at_scene_in(
     let instant =
         StdInstant::new(at.as_std_days()).map_err(|e| SceneError::AstronomyQuery(e.to_string()))?;
     let system = &ctx.system;
-    let anchor = ephemeris::anchor_position_at(system, instant);
+    let anchor_state = hornvale_astronomy::anchor_state_at(system, instant)
+        .map_err(|e| SceneError::AstronomyQuery(e.to_string()))?;
+    let anchor = ephemeris::OrbitalPosition {
+        x_au: anchor_state.position_au[0],
+        y_au: anchor_state.position_au[1],
+    };
     let radius = hornvale_astronomy::anchor_radius(system.anchor.mass)
         .map_err(|e| SceneError::AstronomyQuery(e.to_string()))?;
     let mut bodies = vec![AstronomyBody {

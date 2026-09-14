@@ -74,8 +74,11 @@
 **Files:**
 - Modify: `domains/astronomy/src/calendar.rs`
 - Modify: `domains/astronomy/src/ephemeris.rs`
+- Modify: `windows/scene/src/astronomy_at.rs`: consume the shared anchor
+  position because it is the existing consumer of instantaneous illumination.
 - Test: `domains/astronomy/tests/suite/sky_conformance.rs`
 - Test: `domains/astronomy/tests/suite/calendar_negative_time.rs`
+- Test: `windows/scene/tests/suite/astronomy_at.rs`
 
 **Interfaces:**
 - Consumes `anchor_state_at(&StarSystem, StdInstant) -> Result<AnchorState, OrbitalError>`.
@@ -87,13 +90,13 @@
 - [ ] **Step 3: Route calendar solar geometry through `anchor_state_at`.** Replace the calendar's private duplicate anchor evaluation with the shared result and translate `OrbitalError` at the existing calendar boundary without turning a valid no-event condition into an error.
 - [ ] **Step 4: Route instantaneous insolation through the shared radius.** Preserve the existing luminosity and operation order unless the state contract requires a documented change; do not substitute the deep-time forcing envelope for instantaneous radius.
 - [ ] **Step 5: Run focused tests and inspect one failure list.** Run `cargo nextest run -p hornvale-astronomy --test suite -E 'test(calendar_anchor_coherence) or test(insolation_anchor_coherence) or test(calendar_negative_time)'`; expected: PASS.
-- [ ] **Step 6: Commit.** Run `git add domains/astronomy/src/calendar.rs domains/astronomy/src/ephemeris.rs domains/astronomy/tests/suite` and commit with `refactor(astronomy): share anchor state with calendar and insolation`.
+- [ ] **Step 6: Commit.** Run `git add domains/astronomy/src/calendar.rs domains/astronomy/src/ephemeris.rs windows/scene/src/astronomy_at.rs domains/astronomy/tests/suite windows/scene/tests/suite/astronomy_at.rs` and commit with `refactor(astronomy): share anchor state with calendar and insolation`.
 
 ---
 
 ## Stage 3: Eclipse and Scene Projections
 
-**Goal:** Remove independent anchor geometry from eclipse and scene consumers while preserving their public event and wire semantics.
+**Goal:** Remove the remaining independent anchor geometry from eclipse and scene orientation consumers while preserving their public event and wire semantics.
 
 **Success Criteria:** Eclipse alignment, shadow geometry, scene position, and surface orientation all derive from the same state; the scene still converts `WorldTime` exactly once at its boundary.
 

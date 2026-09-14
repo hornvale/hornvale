@@ -25,7 +25,7 @@
 //! must lie in `[0, 1)`.
 
 use hornvale_astronomy::units::StdInstant;
-use hornvale_astronomy::{Calendar, RotationPin, SkyPins, calendar_of, generate};
+use hornvale_astronomy::{Calendar, RotationPin, SkyPins, anchor_state_at, calendar_of, generate};
 use hornvale_kernel::Seed;
 
 /// Built through astronomy's own entry point: a domain's tests may not reach a
@@ -232,4 +232,27 @@ fn alignment_drift_is_defined_across_genesis() {
             assert!(d.is_finite(), "alignment_drift_deg across genesis: {d}");
         }
     }
+}
+
+/// Negative-time calendar season geometry evaluates the requested physical
+/// state instead of clamping to genesis or rebuilding a mean orbit.
+#[test]
+fn calendar_negative_time_anchor_coherence_uses_true_longitude() {
+    let mut system = generate(Seed(42), &SkyPins::default())
+        .expect("seed 42 builds")
+        .value;
+    system.forcing.ecc_mean = 0.2;
+    system.forcing.ecc_amp = 0.0;
+    let calendar = calendar_of(&system);
+    let instant = StdInstant::new(-1234.5).expect("finite negative instant");
+    let state = anchor_state_at(&system, instant).expect("negative orbit is evaluable");
+    let calendar_longitude = calendar
+        .season_phase(instant)
+        .expect("eccentricity defines a season");
+
+    assert!(
+        (calendar_longitude - state.true_longitude_turns).abs() < 1e-12,
+        "calendar longitude {calendar_longitude} != anchor true longitude {}",
+        state.true_longitude_turns
+    );
 }

@@ -14,7 +14,11 @@
 //! at test time — production code inside the crate under test. Frozen here,
 //! they can no longer drift with the implementation they check.
 
-use hornvale_astronomy::{GeneratedSky, MoonsPin, RotationPin, SkyPins, generate};
+use hornvale_astronomy::{
+    GeneratedSky, MoonsPin, RotationPin, SkyPins, SpinPin, StarSystem, StdInstant, StellarTopology,
+    anchor_state_at, calendar_of, generate, insolation_rel_at, luminosity_at,
+    stellar_illumination_at, stellar_positions_at,
+};
 use hornvale_kernel::{EntityId, ObserverContext, PhenomenaSource, Seed, Venue, WorldTime};
 
 /// The registered concept a sun is: every sky's day-sky body reports it.
@@ -53,6 +57,160 @@ fn regimes() -> Vec<SkyPins> {
             ..SkyPins::default()
         },
     ]
+}
+
+fn eccentric_system(pins: &SkyPins) -> StarSystem {
+    let mut system = generate(Seed(42), pins).expect("seed 42 builds").value;
+    system.forcing.ecc_mean = 0.2;
+    system.forcing.ecc_amp = 0.0;
+    system.forcing.ecc_phase = 0.0;
+    system
+}
+
+fn turn_distance(a: f64, b: f64) -> f64 {
+    ((a - b + 0.5).rem_euclid(1.0) - 0.5).abs()
+}
+
+/// Calendar season geometry follows the anchor's true orbital longitude.
+/// Keeping the old mean-longitude projection makes this fail on eccentric
+/// worlds. Rotation changes the local horizon, not the orbital longitude.
+#[test]
+fn calendar_anchor_coherence_covers_locked_and_retrograde_worlds() {
+    let pin_sets = [
+        SkyPins::default(),
+        SkyPins {
+            rotation: Some(RotationPin::Locked),
+            ..SkyPins::default()
+        },
+        SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            spin: Some(SpinPin::Retrograde),
+            ..SkyPins::default()
+        },
+    ];
+
+    for pins in pin_sets {
+        let system = eccentric_system(&pins);
+        let calendar = calendar_of(&system);
+        for day in [-10_000.0, -1.0, 0.0, 1.0, 10_000.0] {
+            let instant = StdInstant::new(day).expect("finite instant");
+            let state = anchor_state_at(&system, instant).expect("valid anchor orbit");
+            let calendar_longitude = calendar
+                .season_phase(instant)
+                .expect("eccentricity defines a season");
+
+            assert!(
+                turn_distance(calendar_longitude, state.true_longitude_turns) < 1e-12,
+                "day {day}: calendar {calendar_longitude} != anchor {}",
+                state.true_longitude_turns
+            );
+        }
+    }
+}
+
+/// Calendar longitude remains coherent on both sides of its wrap. Discovering
+/// the wrap from the state avoids assuming mean and true anomaly cross zero at
+/// the same instant.
+#[test]
+fn calendar_anchor_coherence_survives_the_true_longitude_wrap() {
+    let system = eccentric_system(&SkyPins::default());
+    let calendar = calendar_of(&system);
+    let year = system.anchor.year.get();
+    let mut before = StdInstant::new(0.0).expect("finite instant");
+    let mut before_state = anchor_state_at(&system, before).expect("valid anchor orbit");
+    let mut crossing = None;
+
+    for step in 1..=4096 {
+        let after = StdInstant::new(year * f64::from(step) / 4096.0).expect("finite instant");
+        let after_state = anchor_state_at(&system, after).expect("valid anchor orbit");
+        if after_state.true_longitude_turns < before_state.true_longitude_turns {
+            crossing = Some((before, before_state, after, after_state));
+            break;
+        }
+        before = after;
+        before_state = after_state;
+    }
+
+    let (before, before_state, after, after_state) = crossing.expect("one orbit crosses zero");
+    let before_calendar = calendar
+        .season_phase(before)
+        .expect("eccentricity defines a season");
+    let after_calendar = calendar
+        .season_phase(after)
+        .expect("eccentricity defines a season");
+
+    assert!(turn_distance(before_calendar, before_state.true_longitude_turns) < 1e-12);
+    assert!(turn_distance(after_calendar, after_state.true_longitude_turns) < 1e-12);
+    assert!(
+        turn_distance(before_calendar, after_calendar) < 0.01,
+        "calendar wrap must be angular, not a physical jump"
+    );
+}
+
+/// Instantaneous stellar flux uses the evaluated anchor radius. Substituting
+/// the semi-major axis makes the distance and inverse-square assertions fail;
+/// the separate deep-time insolation function remains tied to that axis.
+#[test]
+fn insolation_anchor_coherence_uses_the_shared_instantaneous_radius() {
+    let system = eccentric_system(&SkyPins {
+        topology: Some(StellarTopology::Single),
+        ..SkyPins::default()
+    });
+
+    for day in [-1234.5, 0.0, 9876.5] {
+        let instant = StdInstant::new(day).expect("finite instant");
+        let state = anchor_state_at(&system, instant).expect("valid anchor orbit");
+        let illumination = stellar_illumination_at(&system, instant);
+        let primary = illumination.sources.first().expect("single primary light");
+        let expected_flux =
+            luminosity_at(&system.star, instant).get() / (state.radius_au * state.radius_au);
+
+        assert!((primary.distance.get() - state.radius_au).abs() < 1e-12);
+        assert!((primary.flux_rel - expected_flux).abs() < 1e-12);
+        assert!((illumination.combined_flux_rel - expected_flux).abs() < 1e-12);
+
+        let semi_major_squared = system.anchor.orbit.get() * system.anchor.orbit.get();
+        let expected_deep_time = luminosity_at(&system.star, instant).get() / semi_major_squared;
+        assert_eq!(
+            insolation_rel_at(&system.star, &system.anchor, instant),
+            expected_deep_time,
+            "deep-time insolation remains a semi-major-axis model"
+        );
+    }
+}
+
+/// Binary source distances use the anchor state's Cartesian position. Restoring
+/// the legacy circular anchor position changes these distances on an eccentric
+/// orbit even though the stars' own ephemerides are unchanged.
+#[test]
+fn insolation_anchor_coherence_uses_the_shared_position_for_binary_sources() {
+    for topology in [StellarTopology::WideBinary, StellarTopology::CloseBinary] {
+        let system = eccentric_system(&SkyPins {
+            topology: Some(topology),
+            ..SkyPins::default()
+        });
+        let instant = StdInstant::new(1234.5).expect("finite instant");
+        let state = anchor_state_at(&system, instant).expect("valid anchor orbit");
+        let stars = stellar_positions_at(&system, instant);
+        let illumination = stellar_illumination_at(&system, instant);
+
+        assert_eq!(illumination.sources.len(), stars.len());
+        for (source, star) in illumination.sources.iter().zip(stars) {
+            let dx = star.x_au - state.position_au[0];
+            let dy = star.y_au - state.position_au[1];
+            let expected_distance = if star.x_au == 0.0 && star.y_au == 0.0 {
+                state.radius_au
+            } else {
+                (dx * dx + dy * dy).sqrt()
+            };
+            assert!(
+                (source.distance.get() - expected_distance).abs() < 1e-12,
+                "{topology:?} source {} distance {} != {expected_distance}",
+                source.star,
+                source.distance.get()
+            );
+        }
+    }
 }
 
 /// There is a sun and it owns the day sky. Every generated sky keeps

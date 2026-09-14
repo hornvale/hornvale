@@ -30,7 +30,11 @@ fn astronomy_at_matches_native_all_topologies_and_preserves_missing_dimensions()
             let at = WorldTime::from_ticks(ticks);
             let t = StdInstant::new(at.as_std_days()).unwrap();
             let scene = astronomy_at_scene_in(&ctx, at).unwrap();
-            let a = anchor_position_at(s, t);
+            let state = hornvale_astronomy::anchor_state_at(s, t).unwrap();
+            let a = OrbitalPosition {
+                x_au: state.position_au[0],
+                y_au: state.position_au[1],
+            };
             let doc: serde_json::Value = serde_json::from_str(&astronomy_at_json(&scene)).unwrap();
             assert_eq!(doc["ticks"].as_i64(), Some(ticks));
             for (i, p) in stellar_positions_at(s, t).iter().enumerate() {
