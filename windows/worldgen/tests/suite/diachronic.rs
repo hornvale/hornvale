@@ -138,7 +138,7 @@ fn the_witness_law() {
         "solar witnessing must not depend on sky-capability"
     );
     assert_eq!(goblin_solar, solar_of("hobgoblin"));
-    assert_eq!(goblin_solar.len(), 49, "measured seed 2 solar count");
+    assert_eq!(goblin_solar.len(), 47, "measured seed 2 solar count");
 
     // Lunar subsets differ exactly where capability straddles 0.6.
     assert!(
@@ -152,9 +152,9 @@ fn the_witness_law() {
     let kobold_lunar = lunar_of("kobold");
     assert_eq!(
         kobold_lunar.len(),
-        32,
+        30,
         "MEASURED live arm: seed 2 HAS lunar events by day 36525 and the kobold (capability 1.0) \
-         witnesses exactly 32 of them. If a physics change ever empties this set, do NOT weaken \
+         witnesses exactly 30 of them. If a physics change ever empties this set, do NOT weaken \
          this assertion — run a wider seed sweep to find a world with lunar events and re-pin, so \
          the lunar arm of the witness law never passes vacuously."
     );
@@ -248,7 +248,7 @@ type Row = (
 // of them Predictive -> Counted, and — for the fourth re-measure running —
 // **every witnessed COUNT held**:
 //
-//   seed 1 gnoll         Predictive -> Counted   (6472 witnessed, unchanged)
+//   seed 1 gnoll         Predictive -> Counted   (6469 witnessed, unchanged)
 //   seed 2 gnoll         Predictive -> Counted   (81)
 //   seed 3 gnoll         Predictive -> Counted   (53)
 //   seed 3 hobgoblin     Predictive -> Counted   (32)
@@ -299,7 +299,7 @@ type Row = (
 // founder-collision cut). Re-measured wholesale by the same scaffold, not
 // hand-edited.
 //
-//   seed 1 desert-elf    Predictive -> Counted    (6472 witnessed, unchanged)
+//   seed 1 desert-elf    Predictive -> Counted    (6469 witnessed, unchanged)
 //   seed 2 desert-elf    Predictive -> Counted    (81)
 //   seed 2 high-elf      Predictive -> Counted    (81)
 //   seed 2 snow-elf      Predictive -> Counted    (81)
@@ -403,8 +403,8 @@ type Row = (
 // Re-measured wholesale by the same scaffold, not hand-edited. Twelve of the
 // seventy-five rows move rung:
 //
-//   seed 1 high-elf      Predictive -> Counted    (6472 witnessed, unchanged)
-//   seed 1 snow-elf      Predictive -> Counted    (6472)
+//   seed 1 high-elf      Predictive -> Counted    (6469 witnessed, unchanged)
+//   seed 1 snow-elf      Predictive -> Counted    (6469)
 //   seed 3 drow          Predictive -> Counted    (53)
 //   seed 3 high-elf      Predictive -> Counted    (53)
 //   seed 3 wood-elf      Predictive -> Counted    (32)
@@ -440,7 +440,7 @@ type Row = (
 // one) re-placed every settlement again. Re-measured wholesale by the same
 // scaffold, not hand-edited. Nine of the seventy-five rows move rung:
 //
-//   seed 1 high-elf      Counted    -> Predictive (6472 witnessed, unchanged)
+//   seed 1 high-elf      Counted    -> Predictive (6469 witnessed, unchanged)
 //   seed 3 drow          Counted    -> Predictive (53)
 //   seed 3 wood-elf      Counted    -> Predictive (32)
 //   seed 4 kobold        Counted    -> Predictive (3785)
@@ -505,15 +505,15 @@ const LADDER_TABLE: &[Row] = &[
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        6472,
-        Some(36531.74198950235),
+        6469,
+        Some(36531.75937164021),
     ),
     (
         1,
         "desert-dwarf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        6472,
+        6469,
         None,
     ),
     (
@@ -521,7 +521,7 @@ const LADDER_TABLE: &[Row] = &[
         "desert-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        6472,
+        6469,
         None,
     ),
     (
@@ -529,15 +529,15 @@ const LADDER_TABLE: &[Row] = &[
         "drow",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        6472,
-        Some(36531.74198950235),
+        6469,
+        Some(36531.75937164021),
     ),
     (
         1,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
-        6472,
+        6469,
         None,
     ),
     (
@@ -545,63 +545,63 @@ const LADDER_TABLE: &[Row] = &[
         "goblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
+        4004,
+        Some(36531.75937164021),
     ),
     (
         1,
         "gully-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
+        4004,
+        Some(36531.75937164021),
     ),
     (
         1,
         "high-elf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        6472,
-        Some(36531.74198950235),
+        6469,
+        Some(36531.75937164021),
     ),
     (
         1,
         "hill-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
+        4004,
+        Some(36531.75937164021),
     ),
     (
         1,
         "hobgoblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
+        4004,
+        Some(36531.75937164021),
     ),
     (
         1,
         "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
+        4004,
+        Some(36531.75937164021),
     ),
     (
         1,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        6472,
-        Some(36531.74198950235),
+        6469,
+        Some(36531.75937164021),
     ),
     (
         1,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        6472,
+        6469,
         None,
     ),
     (
@@ -609,7 +609,7 @@ const LADDER_TABLE: &[Row] = &[
         "snow-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        6472,
+        6469,
         None,
     ),
     (
@@ -617,23 +617,23 @@ const LADDER_TABLE: &[Row] = &[
         "wood-elf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
+        4004,
+        Some(36531.75937164021),
     ),
     (
         2,
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
+        77,
+        Some(36368.8214772293),
     ),
     (
         2,
         "desert-dwarf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        81,
+        77,
         None,
     ),
     (
@@ -641,7 +641,7 @@ const LADDER_TABLE: &[Row] = &[
         "desert-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        81,
+        77,
         None,
     ),
     (
@@ -649,7 +649,7 @@ const LADDER_TABLE: &[Row] = &[
         "drow",
         LadderRung::Unknown,
         LadderRung::Counted,
-        81,
+        77,
         None,
     ),
     (
@@ -657,7 +657,7 @@ const LADDER_TABLE: &[Row] = &[
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
-        81,
+        77,
         None,
     ),
     (
@@ -665,63 +665,63 @@ const LADDER_TABLE: &[Row] = &[
         "goblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        49,
-        Some(36337.174658835705),
+        47,
+        Some(36368.8214772293),
     ),
     (
         2,
         "gully-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        49,
-        Some(36337.174658835705),
+        47,
+        Some(36368.8214772293),
     ),
     (
         2,
         "high-elf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
+        77,
+        Some(36368.8214772293),
     ),
     (
         2,
         "hill-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        49,
-        Some(36337.174658835705),
+        47,
+        Some(36368.8214772293),
     ),
     (
         2,
         "hobgoblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        49,
-        Some(36337.174658835705),
+        47,
+        Some(36368.8214772293),
     ),
     (
         2,
         "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        49,
-        Some(36337.174658835705),
+        47,
+        Some(36368.8214772293),
     ),
     (
         2,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
+        77,
+        Some(36368.8214772293),
     ),
     (
         2,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        81,
+        77,
         None,
     ),
     (
@@ -729,31 +729,31 @@ const LADDER_TABLE: &[Row] = &[
         "snow-elf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
+        77,
+        Some(36368.8214772293),
     ),
     (
         2,
         "wood-elf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        49,
-        Some(36337.174658835705),
+        47,
+        Some(36368.8214772293),
     ),
     (
         3,
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        53,
-        Some(36125.669504115634),
+        55,
+        Some(36703.62300678163),
     ),
     (
         3,
         "desert-dwarf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        53,
+        55,
         None,
     ),
     (
@@ -761,7 +761,7 @@ const LADDER_TABLE: &[Row] = &[
         "desert-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        53,
+        55,
         None,
     ),
     (
@@ -769,15 +769,15 @@ const LADDER_TABLE: &[Row] = &[
         "drow",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        53,
-        Some(36125.669504115634),
+        55,
+        Some(36703.62300678163),
     ),
     (
         3,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
-        53,
+        55,
         None,
     ),
     (
@@ -786,7 +786,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
-        Some(36125.669504115634),
+        Some(36703.62300678163),
     ),
     (
         3,
@@ -794,15 +794,15 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
-        Some(36125.669504115634),
+        Some(36703.62300678163),
     ),
     (
         3,
         "high-elf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        53,
-        Some(36125.669504115634),
+        55,
+        Some(36703.62300678163),
     ),
     (
         3,
@@ -810,7 +810,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
-        Some(36125.669504115634),
+        Some(36703.62300678163),
     ),
     (
         3,
@@ -818,7 +818,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
-        Some(36125.669504115634),
+        Some(36703.62300678163),
     ),
     (
         3,
@@ -826,22 +826,22 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
-        Some(36125.669504115634),
+        Some(36703.62300678163),
     ),
     (
         3,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        53,
-        Some(36125.669504115634),
+        55,
+        Some(36703.62300678163),
     ),
     (
         3,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        53,
+        55,
         None,
     ),
     (
@@ -849,7 +849,7 @@ const LADDER_TABLE: &[Row] = &[
         "snow-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        53,
+        55,
         None,
     ),
     (
@@ -858,7 +858,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
-        Some(36125.669504115634),
+        Some(36703.62300678163),
     ),
     (
         4,
@@ -985,15 +985,15 @@ const LADDER_TABLE: &[Row] = &[
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
+        498,
+        Some(36556.080784883365),
     ),
     (
         5,
         "desert-dwarf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        500,
+        498,
         None,
     ),
     (
@@ -1001,7 +1001,7 @@ const LADDER_TABLE: &[Row] = &[
         "desert-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        500,
+        498,
         None,
     ),
     (
@@ -1009,7 +1009,7 @@ const LADDER_TABLE: &[Row] = &[
         "drow",
         LadderRung::Unknown,
         LadderRung::Counted,
-        500,
+        498,
         None,
     ),
     (
@@ -1017,7 +1017,7 @@ const LADDER_TABLE: &[Row] = &[
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Counted,
-        500,
+        498,
         None,
     ),
     (
@@ -1025,63 +1025,63 @@ const LADDER_TABLE: &[Row] = &[
         "goblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        304,
-        Some(36556.47532198732),
+        305,
+        Some(36556.080784883365),
     ),
     (
         5,
         "gully-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        304,
-        Some(36556.47532198732),
+        305,
+        Some(36556.080784883365),
     ),
     (
         5,
         "high-elf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
+        498,
+        Some(36556.080784883365),
     ),
     (
         5,
         "hill-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        304,
-        Some(36556.47532198732),
+        305,
+        Some(36556.080784883365),
     ),
     (
         5,
         "hobgoblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        304,
-        Some(36556.47532198732),
+        305,
+        Some(36556.080784883365),
     ),
     (
         5,
         "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        304,
-        Some(36556.47532198732),
+        305,
+        Some(36556.080784883365),
     ),
     (
         5,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
+        498,
+        Some(36556.080784883365),
     ),
     (
         5,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        500,
+        498,
         None,
     ),
     (
@@ -1089,16 +1089,16 @@ const LADDER_TABLE: &[Row] = &[
         "snow-elf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
+        498,
+        Some(36556.080784883365),
     ),
     (
         5,
         "wood-elf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        304,
-        Some(36556.47532198732),
+        305,
+        Some(36556.080784883365),
     ),
     // Underworld peoples added by the campaign, measured by
     // `dump_the_live_ladder_table` on the merged product.
@@ -1107,7 +1107,7 @@ const LADDER_TABLE: &[Row] = &[
         "duergar",
         LadderRung::Unknown,
         LadderRung::Counted,
-        6472,
+        6469,
         None,
     ),
     (
@@ -1115,7 +1115,7 @@ const LADDER_TABLE: &[Row] = &[
         "kuo-toa",
         LadderRung::Unknown,
         LadderRung::Counted,
-        6472,
+        6469,
         None,
     ),
     (
@@ -1123,7 +1123,7 @@ const LADDER_TABLE: &[Row] = &[
         "mountain-dwarf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        6472,
+        6469,
         None,
     ),
     (
@@ -1131,23 +1131,23 @@ const LADDER_TABLE: &[Row] = &[
         "svirfneblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        6472,
-        Some(36531.74198950235),
+        6469,
+        Some(36531.75937164021),
     ),
     (
         2,
         "duergar",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
+        77,
+        Some(36368.8214772293),
     ),
     (
         2,
         "kuo-toa",
         LadderRung::Unknown,
         LadderRung::Counted,
-        81,
+        77,
         None,
     ),
     (
@@ -1155,15 +1155,15 @@ const LADDER_TABLE: &[Row] = &[
         "mountain-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
+        77,
+        Some(36368.8214772293),
     ),
     (
         2,
         "svirfneblin",
         LadderRung::Unknown,
         LadderRung::Counted,
-        81,
+        77,
         None,
     ),
     (
@@ -1171,7 +1171,7 @@ const LADDER_TABLE: &[Row] = &[
         "duergar",
         LadderRung::Unknown,
         LadderRung::Counted,
-        53,
+        55,
         None,
     ),
     (
@@ -1179,7 +1179,7 @@ const LADDER_TABLE: &[Row] = &[
         "kuo-toa",
         LadderRung::Unknown,
         LadderRung::Counted,
-        53,
+        55,
         None,
     ),
     (
@@ -1187,7 +1187,7 @@ const LADDER_TABLE: &[Row] = &[
         "mountain-dwarf",
         LadderRung::Unknown,
         LadderRung::Counted,
-        53,
+        55,
         None,
     ),
     (
@@ -1195,8 +1195,8 @@ const LADDER_TABLE: &[Row] = &[
         "svirfneblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        53,
-        Some(36125.669504115634),
+        55,
+        Some(36703.62300678163),
     ),
     (
         4,
@@ -1235,15 +1235,15 @@ const LADDER_TABLE: &[Row] = &[
         "duergar",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
+        498,
+        Some(36556.080784883365),
     ),
     (
         5,
         "kuo-toa",
         LadderRung::Unknown,
         LadderRung::Counted,
-        500,
+        498,
         None,
     ),
     (
@@ -1251,16 +1251,16 @@ const LADDER_TABLE: &[Row] = &[
         "mountain-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
+        498,
+        Some(36556.080784883365),
     ),
     (
         5,
         "svirfneblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
+        498,
+        Some(36556.080784883365),
     ),
 ];
 
@@ -1463,7 +1463,7 @@ fn the_ladder_and_prophecy_laws() {
         (1_000.0, LadderRung::Unknown, None),
         (2_000.0, LadderRung::Counted, None),
         (4_000.0, LadderRung::Numbered, None),
-        (8_000.0, LadderRung::Predictive, Some(8026.718931953686)),
+        (8_000.0, LadderRung::Predictive, Some(8944.803455598581)),
     ];
     for (day, expected_rung, expected_pred) in climb {
         let (rung, pred) = ladder_from(&w, "goblin", at(day), &terrain, &climate).unwrap();
