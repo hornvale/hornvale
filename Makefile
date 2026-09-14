@@ -505,13 +505,14 @@ sluice-ack: ## Adjudicate an out-of-band landing on main (REASON='what you check
 	@test -n "$(REASON)" || { echo "usage: make sluice-ack REASON='what you checked'" >&2; exit 2; }
 	@bash scripts/sluice-ack.sh "$(REASON)"
 
-sluice-status: ## The queue: who is draining it, then what is queued, running, held, landed, reported (reads the canonical box over ssh)
+sluice-status: ## The queue: who is draining it, then every LIVE row and a short tail of finished ones (ALL=1 for the raw file)
 	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && \
 	    if [ -x scripts/sluice-drainers.sh ]; then scripts/sluice-drainers.sh; \
 	    else echo "drainers: unavailable — the canonical box checkout predates The Watchman, so no drainer holds a lock there yet"; fi' || true
 	@echo
-	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; \
-	    cat "$$d/queue.tsv" 2>/dev/null || true' \
+	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && \
+	    if [ -x scripts/sluice-status.sh ]; then HV_STATUS_ALL=$(if $(ALL),1,0) scripts/sluice-status.sh; \
+	    else d=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; cat "$$d/queue.tsv" 2>/dev/null; fi' \
 	    | column -t -s "$$(printf '\t')" || true
 
 sluice-drain: ## Drain the queue continuously (KINDS=merge,stage,census); one drainer per kind, canonical box only
