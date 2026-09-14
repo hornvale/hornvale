@@ -97,8 +97,51 @@ adjudicate_number() {
     esac
 }
 
-# HV_VET_LIB=1 sources the block-adjudication functions above without vetting
-# anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
+# Does the census a candidate ships still describe its own tip? Takes the sha;
+# prints the CENSUS section. Driven directly by test-sluice-vet-blocks.sh under
+# HV_VET_LIB=1, for the reason given above: a decision rule that cannot be
+# driven directly gets tested through whatever end-to-end path happens to
+# exist.
+census_freshness() {
+    local sha="$1" census_dir base census_commit after n_after world_all n_all
+    census_dir='book/src/laboratory/generated/the-census/'
+    echo
+    echo "CENSUS"
+    base="$(git merge-base "$sha" origin/main 2>/dev/null)"
+    census_commit="$(git log -1 --format=%H "$base..$sha" -- "$census_dir" 2>/dev/null)"
+    if [ -z "$census_commit" ]; then
+        printf '  ships no census\n'
+        world_all="$(world_since "$base" "$sha")"
+        n_all="$(printf '%s' "$world_all" | grep -c .)"
+        if [ "$n_all" -gt 0 ]; then
+            printf '  >> but %s world-producing source file(s) changed on this branch\n' "$n_all"
+            printf '     If any of them moves a golden, census_sentinel reds this at merge.\n'
+        fi
+        return
+    fi
+    after="$(world_since "$census_commit" "$sha")"
+    n_after="$(printf '%s' "$after" | grep -c .)"
+    printf '  census last moved at %s\n' "$(git rev-parse --short=9 "$census_commit")"
+    if [ "$n_after" -eq 0 ]; then
+        printf '  no world-producing source changed after it — the goldens describe this tip\n'
+    else
+        printf '  >> %s world-producing source file(s) changed AFTER the census:\n' "$n_after"
+        printf '%s\n' "$after" | sed 's/^/       /'
+        printf '     The goldens may not describe this tip. File-level: a hunk inside\n'
+        printf '     a test module is counted here and is a false alarm — read the hunks.\n'
+    fi
+}
+
+# World-PRODUCING sources changed in (FROM, TO]. A change under tests/ or
+# benches/ cannot move a golden, and counting one turns a freshness signal into
+# noise nobody reads.
+world_since() {
+    git log --format='' --name-only "$1..$2" -- kernel/ domains/ windows/ 2>/dev/null |
+        grep -E '\.rs$' | grep -vE '(^|/)(tests|benches)/' | sort -u
+}
+
+# HV_VET_LIB=1 sources the adjudication functions above --- decision blocks and
+# census freshness --- without vetting anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
 # verdict is a DECISION RULE, and a decision rule that cannot be driven
 # directly is one that gets tested through whatever end-to-end path happens to
 # exist --- which is how the truncation this whole script exists to prevent
@@ -210,6 +253,32 @@ for n in $minted; do
         fi
     done
 done
+
+# --- census freshness AGAINST THE BRANCH'S OWN TIP --------------------------
+# THE MOST EXPENSIVE RED THIS QUEUE PRODUCES, and the one the SURFACES section
+# below cannot see. Those lines report what a candidate TOUCHES. This reports
+# ORDER: whether the world-producing sources moved AFTER the census that ships
+# with them. A census measures the world THROUGH the code at the moment it
+# runs, so a golden taken before the branch's own last world commit describes
+# a world that no longer exists, and census_sentinel says so on the canonical
+# box after the claim has already been spent.
+#
+# It discriminates, which is the only reason it is worth printing. Measured
+# 2026-09-14 over the three candidates then in flight:
+#
+#   the-tidemark    census c3e45424e, 5 world-producing files after it
+#   anchor          census 965a0e7db, 0 after it
+#   the-coherence   census d858f5212, 0 after it
+#
+# All three changed world-producing code. Only one censused before doing so,
+# and it is the one whose goldens disagreed with anchor's on 101 columns.
+#
+# IT IS FILE-LEVEL AND SAYS SO. A hunk that lands inside `mod tests` in a
+# world-producing file still counts here, exactly as it does for the
+# `lab metrics.rs` surface below --- campaign/the-tidemark's metrics.rs change
+# was entirely inside `mod tests` and was a false alarm on both lines. Reading
+# the hunks is the operator's job; this narrows where to look.
+census_freshness "$sha"
 
 # --- the surfaces that cost a chamber run when missed ----------------------
 echo
