@@ -20,6 +20,134 @@
 
 set -u
 
+# The allocator's ledger. HV_BLOCK_DIR is scripts/decision-block.sh's own
+# variable, honoured here so the two agree about where the ledger lives and so
+# a test can point both at a scratch copy.
+ledger="${HV_BLOCK_DIR:-$HOME/.local/state/hornvale/decision-blocks}/blocks.tsv"
+
+# Which campaign's reserved block contains a decision number, if any. Prints
+# "<campaign>\t<lo>-<hi>", or nothing when the allocator has never issued it.
+# The campaign column is written both bare and `campaign/`-prefixed over the
+# ledger's history, so it is normalised here rather than at every call site.
+block_owner_of() {
+    [ -s "$ledger" ] || return 0
+    awk -F'\t' -v n="$((10#$1))" '
+        NF >= 4 {
+            lo = $3 + 0; hi = $4 + 0
+            if (n >= lo && n <= hi) {
+                name = $2; sub(/^campaign\//, "", name)
+                printf "%s\t%04d-%04d\n", name, lo, hi
+            }
+        }' "$ledger" | tail -1
+}
+
+# THREE-VALUED, and the third value is the point. This answers "can that
+# campaign still mint into its block?", which is the question an operator
+# actually has when a candidate mints a number someone else reserved --- and
+# which this script used to hand back as homework ("verify ... its owner
+# finished"). It was done by hand three times before being written down.
+#
+#   CLOSED  - no pushed branch is ahead of main AND main carries the campaign's
+#             chronicle and retrospective. Nothing more can come from it, so a
+#             number inside its block is permanently free.
+#   LIVE    - a pushed branch is ahead of main. It can still mint.
+#   UNKNOWN - neither. A campaign running in a worktree that has never pushed
+#             looks exactly like this, so UNKNOWN must never be read as safe.
+#
+# The allocator has no release operation, so a CLOSED campaign's unused tail
+# is dead space: nobody else will ever be issued it either, which is precisely
+# why reusing it is safe rather than merely tolerated.
+campaign_status() {
+    local slug="$1" ref="refs/remotes/origin/campaign/$1"
+    if git rev-parse --verify --quiet "$ref" >/dev/null 2>&1; then
+        if ! git merge-base --is-ancestor "$ref" origin/main 2>/dev/null; then
+            echo LIVE; return
+        fi
+    fi
+    if git cat-file -e "origin/main:book/src/chronicle/$slug.md" 2>/dev/null &&
+        git cat-file -e "origin/main:docs/retrospectives/$slug.md" 2>/dev/null; then
+        echo CLOSED; return
+    fi
+    echo UNKNOWN
+}
+
+# Report one minted number that falls outside the candidate's own block.
+adjudicate_number() {
+    local n="$1" own owner range status
+    own="$(block_owner_of "$n")"
+    if [ -z "$own" ]; then
+        printf '  >> %s lies in NO reserved block — the allocator has never issued it\n' "$n"
+        return
+    fi
+    owner="${own%%	*}"; range="${own##*	}"
+    status="$(campaign_status "$owner")"
+    case "$status" in
+    CLOSED)
+        printf '  >> %s lies inside the %s block reserved by %s, which is CLOSED\n' "$n" "$range" "$owner"
+        printf '     (no branch ahead of main; chronicle and retrospective both landed) — the number is safe\n'
+        ;;
+    LIVE)
+        printf '  >> %s lies inside the %s block reserved by %s, which is LIVE and can still mint it\n' "$n" "$range" "$owner"
+        printf '     COLLISION RISK — check that branch before dispatching\n'
+        ;;
+    *)
+        printf '  >> %s lies inside the %s block reserved by %s, whose state is UNKNOWN\n' "$n" "$range" "$owner"
+        printf '     (no pushed branch and no close package — it may be running unpushed). Do NOT read this as safe\n'
+        ;;
+    esac
+}
+
+# Does the census a candidate ships still describe its own tip? Takes the sha;
+# prints the CENSUS section. Driven directly by test-sluice-vet-blocks.sh under
+# HV_VET_LIB=1, for the reason given above: a decision rule that cannot be
+# driven directly gets tested through whatever end-to-end path happens to
+# exist.
+census_freshness() {
+    local sha="$1" census_dir base census_commit after n_after world_all n_all
+    census_dir='book/src/laboratory/generated/the-census/'
+    echo
+    echo "CENSUS"
+    base="$(git merge-base "$sha" origin/main 2>/dev/null)"
+    census_commit="$(git log -1 --format=%H "$base..$sha" -- "$census_dir" 2>/dev/null)"
+    if [ -z "$census_commit" ]; then
+        printf '  ships no census\n'
+        world_all="$(world_since "$base" "$sha")"
+        n_all="$(printf '%s' "$world_all" | grep -c .)"
+        if [ "$n_all" -gt 0 ]; then
+            printf '  >> but %s world-producing source file(s) changed on this branch\n' "$n_all"
+            printf '     If any of them moves a golden, census_sentinel reds this at merge.\n'
+        fi
+        return
+    fi
+    after="$(world_since "$census_commit" "$sha")"
+    n_after="$(printf '%s' "$after" | grep -c .)"
+    printf '  census last moved at %s\n' "$(git rev-parse --short=9 "$census_commit")"
+    if [ "$n_after" -eq 0 ]; then
+        printf '  no world-producing source changed after it — the goldens describe this tip\n'
+    else
+        printf '  >> %s world-producing source file(s) changed AFTER the census:\n' "$n_after"
+        printf '%s\n' "$after" | sed 's/^/       /'
+        printf '     The goldens may not describe this tip. File-level: a hunk inside\n'
+        printf '     a test module is counted here and is a false alarm — read the hunks.\n'
+    fi
+}
+
+# World-PRODUCING sources changed in (FROM, TO]. A change under tests/ or
+# benches/ cannot move a golden, and counting one turns a freshness signal into
+# noise nobody reads.
+world_since() {
+    git log --format='' --name-only "$1..$2" -- kernel/ domains/ windows/ 2>/dev/null |
+        grep -E '\.rs$' | grep -vE '(^|/)(tests|benches)/' | sort -u
+}
+
+# HV_VET_LIB=1 sources the adjudication functions above --- decision blocks and
+# census freshness --- without vetting anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
+# verdict is a DECISION RULE, and a decision rule that cannot be driven
+# directly is one that gets tested through whatever end-to-end path happens to
+# exist --- which is how the truncation this whole script exists to prevent
+# survived a session.
+[ "${HV_VET_LIB:-0}" = 1 ] && return 0
+
 branch="${1:?usage: sluice-vet.sh <branch> <full-sha>}"
 ref="${2:?usage: sluice-vet.sh <branch> <full-sha>}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -55,7 +183,6 @@ conflicts="$(printf '%s\n' "$mouth" | grep -c 'conflict:')"
 # --- decisions and their block ---------------------------------------------
 echo
 echo "DECISIONS"
-ledger="$HOME/.local/state/hornvale/decision-blocks/blocks.tsv"
 block="$(grep -iE "	(campaign/)?${branch#campaign/}	" "$ledger" 2>/dev/null | awk -F'\t' '{print $3"-"$4}')"
 # ADDED files only. `--diff-filter=A` is the whole fix and it is not cosmetic:
 # a three-dot diff lists every decision file the branch TOUCHED, and an
@@ -79,11 +206,16 @@ if [ -n "$minted" ] && [ -n "$block" ]; then
     lo="${block%%-*}"; hi="${block##*-}"
     for n in $minted; do
         d=$((10#$n))
-        [ "$d" -ge "$((10#$lo))" ] && [ "$d" -le "$((10#$hi))" ] \
-            || printf '  >> %s is OUTSIDE %s — check the ledger before assuming a mis-mint\n' "$n" "$block"
+        if [ "$d" -lt "$((10#$lo))" ] || [ "$d" -gt "$((10#$hi))" ]; then
+            printf '  >> %s is OUTSIDE the block this candidate reserved (%s)\n' "$n" "$block"
+            adjudicate_number "$n"
+        fi
     done
 elif [ -n "$minted" ]; then
-    printf '  >> minted with no reserved block — verify the range is free and its owner finished\n'
+    printf '  minted with no reserved block of its own — each number adjudicated below\n'
+    for n in $minted; do
+        adjudicate_number "$n"
+    done
 fi
 
 # --- cross-branch decision collisions ---------------------------------------
@@ -105,10 +237,14 @@ vet_refs() {
 }
 for n in $minted; do
     d=$((10#$n)); nn="$(printf '%04d' "$d")"
-    owner="$(awk -F'\t' -v d="$d" '$3+0<=d && d<=$4+0 {print $2}' "$ledger" 2>/dev/null | tail -1)"
-    if [ -n "$owner" ] && [ "${owner#campaign/}" != "${branch#campaign/}" ]; then
-        printf '  >> %s falls inside a block reserved by %s — NOT this campaign\n' "$nn" "$owner"
-    fi
+    # The ledger question — whose block is this number in, and can that
+    # campaign still mint into it — is answered ONCE, by adjudicate_number in
+    # the DECISIONS section above. A weaker second copy lived here and did its
+    # own awk over the ledger to say only "NOT this campaign": the alarm
+    # without the adjudication, in a different voice, immediately under a line
+    # that had already called the same number safe. Deleted rather than kept
+    # as a cross-check, because it was not an independent derivation — same
+    # script, same ledger, strictly less information.
     for r in $(vet_refs); do
         case "$r" in origin/"${branch#origin/}"|"$branch") continue ;; esac
         if git ls-tree -r --name-only "$r" -- docs/decisions/ 2>/dev/null \
@@ -117,6 +253,32 @@ for n in $minted; do
         fi
     done
 done
+
+# --- census freshness AGAINST THE BRANCH'S OWN TIP --------------------------
+# THE MOST EXPENSIVE RED THIS QUEUE PRODUCES, and the one the SURFACES section
+# below cannot see. Those lines report what a candidate TOUCHES. This reports
+# ORDER: whether the world-producing sources moved AFTER the census that ships
+# with them. A census measures the world THROUGH the code at the moment it
+# runs, so a golden taken before the branch's own last world commit describes
+# a world that no longer exists, and census_sentinel says so on the canonical
+# box after the claim has already been spent.
+#
+# It discriminates, which is the only reason it is worth printing. Measured
+# 2026-09-14 over the three candidates then in flight:
+#
+#   the-tidemark    census c3e45424e, 5 world-producing files after it
+#   anchor          census 965a0e7db, 0 after it
+#   the-coherence   census d858f5212, 0 after it
+#
+# All three changed world-producing code. Only one censused before doing so,
+# and it is the one whose goldens disagreed with anchor's on 101 columns.
+#
+# IT IS FILE-LEVEL AND SAYS SO. A hunk that lands inside `mod tests` in a
+# world-producing file still counts here, exactly as it does for the
+# `lab metrics.rs` surface below --- campaign/the-tidemark's metrics.rs change
+# was entirely inside `mod tests` and was a false alarm on both lines. Reading
+# the hunks is the operator's job; this narrows where to look.
+census_freshness "$sha"
 
 # --- the surfaces that cost a chamber run when missed ----------------------
 echo
