@@ -17,8 +17,11 @@
 # per test, forever.
 #
 # Reasons: build-path (asserts on the build itself), artifacts (needs
-# GeneratedTerrain/GeneratedClimate, which are not Serialize -- declared and
-# currently UNUSED, no row carries it), identity (a seed, pin set, build
+# GeneratedTerrain/GeneratedClimate, which are not Serialize -- declared in
+# anticipation and UNUSED until 2026-09-14, when
+# metabolite_consumer_seam.rs became its first row: it runs the real
+# per_species_capacity over a live terrain+climate, and neither type can come
+# out of a committed fixture), identity (a seed, pin set, build
 # depth or component set with no committed fixture), production (a real code
 # path), unmigrated (grandfathered -- the ONLY reason that may not grow).
 #
@@ -203,6 +206,7 @@ windows/worldgen/tests/suite/insolation_probe.rs	2	unmigrated:2
 windows/worldgen/tests/suite/keeping_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/kinship_facts.rs	1	unmigrated:1
 windows/worldgen/tests/suite/lot_probe.rs	1	identity:1
+windows/worldgen/tests/suite/metabolite_consumer_seam.rs	1	artifacts:1
 windows/worldgen/tests/suite/metabolite_variety_probe.rs	1	identity:1
 windows/worldgen/tests/suite/metaphysics_gate.rs	2	identity:2
 windows/worldgen/tests/suite/mines_exist.rs	2	unmigrated:2

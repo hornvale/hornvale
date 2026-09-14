@@ -3906,3 +3906,103 @@ discover will be mandatory from that moment.
 **Ideonomy passes / overturns:** one — *an axis with no consumer is
 unfalsifiable by the world*, which generalises to any field a simulation
 computes and nothing reads.
+
+## #46 [Ruling] — What "food for things that do not exist yet" actually implies, enumerated against the code
+
+Nathan: *"this campaign exists to provide food for things that don't strictly
+exist yet. Does that have practical implications for what we do in the
+remaining tasks?"* It does, and #45's headline was too broad. Corrected and
+enumerated.
+
+### First, the accurate state of the seam — "nothing eats it" was imprecise
+
+| consumer | what it reads | can it tell methane from hydrogen? |
+| --- | --- | --- |
+| species niches (`domains/species`) | the four axes, **all weights 0** | **no** — the data is missing |
+| `per_species_capacity`'s dot product | all four axes, per-axis | **capable, unused** |
+| `dominant_inhabitant` (`windows/vessel`) | `energy: f64`, the saturated **sum** | **no** — the scalar discards identity |
+| `dominant_source` → `source_phrase` → chamber prose | the **argmax** source | **YES — and it is the only one** |
+
+So the chemistry is **narrated but not eaten**. `inhabitant_datum` renders "A
+xorn moves in the dark here, drawn to the porous, water-logged carbonate", and
+all seven sources carry distinct phrases. #45 said the axes have no consumer;
+they have no *ecological* consumer, and exactly one *descriptive* one.
+
+**The most useful consequence: this is a DATA gap, not an ARCHITECTURE gap.**
+`per_species_capacity`'s `per_axis` list already carries `HYDROGEN`,
+`REDUCED_IRON`, `REDUCED_SULPHUR` and `METHANE` into the capacity calculation
+with a per-species weight. A future author writes
+`ResourceVector::new(&[(METHANE, 1.0)])` and it works. Nothing needs building.
+
+### Implication 1 — the campaign's central claim is untested end to end
+
+Every guard here is over a **field**. Nothing asserts the contract the campaign
+is actually selling: *that a niche weighting `METHANE` gets more capacity where
+methane is abundant.* That is exactly why "the axes are inert" survived twelve
+tasks unnoticed.
+
+**Resolution:** a **synthetic-consumer test**. Construct a `BiosphereTraits`
+weighting `METHANE 1.0` in the test itself, run it through the real
+`per_species_capacity_at`, and assert its capacity tracks methane supply and
+diverges from a `HYDROGEN 1.0` twin at the same vertices. No species is
+shipped, no accession cohort moves, no world changes, no epoch. It makes every
+calibration in this campaign falsifiable **now** rather than whenever biota
+arrive.
+
+### Implication 2 — Task 17 should retarget onto the consumer that exists
+
+The plan was "a metabolite leader-and-margin readout". There is already a
+leader readout in the player's face (`source_phrase`), so a parallel one would
+be a readout nobody reads.
+
+**Resolution:** Task 17 **improves the chamber prose** instead — name the
+leader *and* whether it is decisive or contested, which is precisely
+leader-and-margin, delivered where a human meets it. Testable in both
+directions: the phrase must vary across chambers, and a near-tie must read
+differently from a runaway.
+
+### Implication 3 — Task 16's bands are an INTERFACE, not a description
+
+#42 framed thresholds as read off the measured distribution. With no
+ecological consumer, fitting to that distribution is fitting to variation
+nothing will ever notice, and it will rot silently.
+
+**Resolution, amending #42:** choose thresholds for **authorability** — round,
+nameable, physically meaningful values a species author can reason about —
+keep #42's two-way occupancy guard, and **add a distribution-drift guard**.
+That guard is the deliberate substitute for the missing consumer: if the
+distribution moves out from under the bands, nothing else in the tree will
+ever go red. #42's other clauses stand.
+
+### Implication 4 — there are TWO fit paths and only one carries identity
+
+`per_species_capacity` (the bake) is per-axis capable.
+`dominant_inhabitant` (the walk) takes `energy: f64`. So even after a species
+weights `METHANE`, **chamber residents would still be chosen by total energy,
+not by chemistry.** A methane specialist would be sited correctly by the bake
+and then ignored by the walk.
+
+**Resolution:** not this campaign's to fix — it is a signature change on a
+vessel seam — but it is the first thing the biota campaign will hit, so it is
+recorded as an idea-registry row rather than a ledger line.
+
+### Implication 5 — do NOT author a species here
+
+Authoring one is an accession-cohort event (an inserted cohort re-deals every
+later lexicon draw and renames committed peoples), world-changing, and census
+churn. Nathan already ruled the biota out to a successor campaign under Option
+A. **Hold that line**; prove the seam with Implication 1's test and register
+the gap.
+
+### Implication 6 — the absence must be recorded where a future author hits it
+
+Not only in this ledger. A note belongs on the axes themselves: these four
+have zero niche weights today, and **the first niche that weights one makes
+every calibration in this campaign world-affecting**, at which point the
+multi-seed discipline #45 had to discover becomes mandatory rather than
+advisory.
+
+**Ideonomy passes / overturns:** one — *a field with no consumer is
+unfalsifiable by the world, so its guard must be a drift check over its own
+distribution.* That generalises to anything a simulation computes before its
+reader exists.
