@@ -12,7 +12,7 @@ use bevy::{
     app::{AppLabel, SubApps},
     asset::RenderAssetUsages,
     camera::RenderTarget,
-    light::Atmosphere,
+    light::{Atmosphere, cluster::GlobalClusterSettings},
     pbr::AtmosphereSettings,
     prelude::*,
     render::{
@@ -99,6 +99,11 @@ impl Renderer {
         app.finish();
         app.cleanup();
         let world = app.world_mut();
+        // Bevy selects clustering capabilities during plugin finish; override them
+        // afterwards so this renderer uses CPU light clustering even on llvmpipe.
+        if let Some(mut settings) = world.get_resource_mut::<GlobalClusterSettings>() {
+            settings.gpu_clustering = None;
+        }
         let mut target = Image::new_uninit(
             Extent3d {
                 width,
@@ -513,5 +518,29 @@ impl Renderer {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn offscreen_renderer_uses_cpu_light_clustering() {
+        let mut mirror =
+            ObservationMirror::new(include_str!("../tests/fixtures/initial.json")).unwrap();
+        mirror.request(0).unwrap();
+        mirror
+            .accept(include_str!("../tests/fixtures/reply.json"))
+            .unwrap();
+        let renderer = Renderer::new(&mirror, 64, 64).unwrap();
+        assert!(
+            renderer
+                .apps
+                .main
+                .world()
+                .resource::<GlobalClusterSettings>()
+                .gpu_clustering
+                .is_none()
+        );
     }
 }
