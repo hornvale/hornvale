@@ -9,6 +9,8 @@
 //! `tests/suite/`). This collapses 4 separate integration-test
 //! binaries into 1.
 
+#[path = "suite/anchor_coherence.rs"]
+mod anchor_coherence;
 #[path = "suite/anchor_radius.rs"]
 mod anchor_radius;
 #[path = "suite/anchor_state.rs"]

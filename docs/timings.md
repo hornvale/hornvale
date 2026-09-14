@@ -7513,3 +7513,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-14T13:12:25Z | gate-commit | 40.333 | 74.613 | 20.727 | 2.36 | 0 | 36f4a036a | campaign/anchor-orbital-coherence | MacBookPro | 10 |
 | 2026-09-14T13:20:50Z | gate-commit | 59.653 | 127.420 | 42.094 | 2.84 | 0 | 125f00664 | campaign/anchor-orbital-coherence | MacBookPro | 10 |
 | 2026-09-14T13:45:23Z | gate-commit | 95.121 | 484.968 | 49.226 | 5.62 | 0 | c7cc8e1c7 | campaign/anchor-orbital-coherence | MacBookPro | 10 |
+| 2026-09-14T13:46:37Z | gate-commit | 39.789 | 74.710 | 20.691 | 2.40 | 0 | c7cc8e1c7 | campaign/anchor-orbital-coherence | MacBookPro | 10 |
+| 2026-09-14T13:54:44Z | gate-commit | 51.681 | 122.441 | 45.373 | 3.25 | 0 | 9af4b24b0 | campaign/anchor-orbital-coherence | MacBookPro | 10 |
+| 2026-09-14T14:08:09Z | census-tail-chorus | 66.827 | 243.773 | 7.954 | 3.77 | 0 | fafb0ff28 | campaign/anchor-orbital-coherence | MacBookPro | 10 |
+| 2026-09-14T14:08:09Z | census-tail-anomalies | 0.310 | 0.249 | 0.030 | 0.90 | 0 | fafb0ff28 | campaign/anchor-orbital-coherence | MacBookPro | 10 |
+| 2026-09-14T14:08:09Z | census-tail-domesday | 0.461 | 0.384 | 0.034 | 0.91 | 0 | fafb0ff28 | campaign/anchor-orbital-coherence | MacBookPro | 10 |
+| 2026-09-14T14:08:23Z | rebaseline | 224.170 | 550.375 | 22.576 | 2.56 | 0 | fafb0ff28 | campaign/anchor-orbital-coherence | MacBookPro | 10 |
+| 2026-09-14T14:13:34Z | gate-commit | 3.730 | 4.089 | 0.665 | 1.27 | 0 | fafb0ff28 | campaign/anchor-orbital-coherence | MacBookPro | 10 |
+| 2026-09-14T14:14:39Z | gate-commit | 50.972 | 104.930 | 37.895 | 2.80 | 0 | fafb0ff28 | campaign/anchor-orbital-coherence | MacBookPro | 10 |

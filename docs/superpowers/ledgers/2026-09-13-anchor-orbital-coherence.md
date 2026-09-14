@@ -108,3 +108,39 @@ elements-plus-instant transformation and its decomposable body-family shape.
 
 **Capture actions:** Detailed implementation plan and root stage tracker;
 execution uses fresh implementers with review after each task.
+
+## #7 [G3] — Should eclipse and scene consumers retain the old mean orbit?
+
+**Decision:** Route eclipse radius, eclipse longitude, and scene body geometry
+through the shared physical anchor state; retain only the explicitly named
+calendar compatibility projection where downstream semantics still require it.
+
+**Why:** Eclipse tracks and rendered positions are physical geometry. Leaving
+their old mean-longitude reconstruction in place would preserve a hidden
+second orbit and allow the calendar, event, and scene surfaces to disagree.
+
+**Alternatives discarded:** Re-baselining tests without migrating consumers
+would hide the divergence; replacing all calendar projections at once would
+break the documented compatibility boundary.
+
+**Capture actions:** Eclipse and scene migrations, negative-time geometry
+tests, and the intentional seed-42 eclipse artifact refresh.
+
+## #8 [G5] — What closes the anchor coherence slice?
+
+**Decision:** Close with a cross-consumer battery over eccentric, retrograde,
+locked, negative-time, wrap, malformed, and reordered explicit-time probes,
+plus a mutation tripwire and byte-level scene repeatability check.
+
+**Why:** A green individual consumer test can still leave duplicated state or
+ambient-time dependence. The battery checks the shared invariants directly,
+while the tripwire proves the assertions would fail if one projection drifted.
+
+**Alternatives discarded:** A broad artifact regeneration was rejected after
+it touched unrelated gallery, world, and client outputs. Only the physically
+changed eclipse fixture, almanac prose, and matching published scene artifact
+are retained.
+
+**Capture actions:** Astronomy 76/76 and scene 23/23; focused battery and
+scene-order tests pass; generated eclipse outputs are byte-identical between
+the scene fixture and published gallery artifact; no census was run.

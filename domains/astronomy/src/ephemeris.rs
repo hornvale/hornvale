@@ -1043,6 +1043,25 @@ mod tests {
     }
 
     #[test]
+    fn orbital_evaluator_names_an_out_of_window_instant() {
+        let error = orbital_state_result_at(&elements(0.0, 0.0), StdInstant(101.0))
+            .expect_err("the private bounded evaluator must reject day 101");
+
+        assert_eq!(
+            error,
+            OrbitalError::UnsupportedTime {
+                instant: StdInstant(101.0),
+                valid_from: StdInstant(-100.0),
+                valid_until: StdInstant(100.0),
+            }
+        );
+        assert_eq!(
+            error.to_string(),
+            "orbital instant 101 is outside the supported interval [-100, 100]"
+        );
+    }
+
+    #[test]
     fn orbital_evaluator_wraps_negative_instants_before_the_epoch() {
         let orbit = elements(0.0, 0.0);
         let state = orbital_state_at(&orbit, StdInstant(-2.0)).unwrap();

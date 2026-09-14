@@ -18,10 +18,10 @@ Detailed task plan: `docs/superpowers/plans/2026-09-13-anchor-orbital-coherence.
 **Goal**: Route eclipse and scene geometry through shared anchor state.
 **Success Criteria**: Event and scene consumers agree with physical state while preserving wire semantics.
 **Tests**: Eclipse alignment, no-event behavior, scene geometry, explicit tick conversion.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 4: Qualification and Closure
 **Goal**: Prove coherence, determinism, compatibility, and artifact freshness.
 **Success Criteria**: Full battery and final local gate pass; measured artifact changes are recorded.
 **Tests**: Mutation tripwire, reordered queries, historical sweep, focused suites, final gate.
-**Status**: Not Started
+**Status**: Complete

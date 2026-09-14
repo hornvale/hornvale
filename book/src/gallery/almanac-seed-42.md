@@ -38,17 +38,17 @@ A rock wanderer rounds the sun every 7527 days. Wanderer 2 begins a retrograde l
 
 The sky holds 4 figures; 0 stand on the sun's road.
 
-On day 86, the first moon devours the sun whole along latitude 82°. At the almanac's vantage, this solar eclipse is unseen on the night side.
+On day 86, the first moon devours the sun whole along latitude 67°. At the almanac's vantage, this solar eclipse is unseen on the night side.
 
 On day 94, the full first moon darkens to a bloodred coal. At the almanac's vantage, the lunar eclipse is unseen on the day side.
 
-On day 103, the first moon devours the sun whole along latitude 11°. At the almanac's vantage, this solar eclipse is unseen on the night side.
+On day 103, the first moon devours the sun whole along latitude -6°. At the almanac's vantage, this solar eclipse is unseen on the night side.
 
 On day 111, the full first moon darkens to a bloodred coal. At the almanac's vantage, the lunar eclipse is unseen on the day side.
 
-On day 119, the first moon devours the sun whole along latitude -62°. At the almanac's vantage, this solar eclipse is unseen on the night side.
+On day 119, the first moon devours the sun whole along latitude -78°. At the almanac's vantage, this solar eclipse is unseen on the night side.
 
-On day 270, the first moon devours the sun whole along latitude -59°. At the almanac's vantage, the sun is bitten outside the central track on the day side.
+On day 270, the first moon devours the sun whole along latitude -74°. At the almanac's vantage, the sun is bitten outside the central track on the day side.
 
 0 days in this almanac window carry eclipses from more than one moon.
 

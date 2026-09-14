@@ -150,6 +150,31 @@ fn astronomy_at_repeated_time_is_byte_identical_and_ticks_are_integer() {
     let last: serde_json::Value = serde_json::from_str(&docs[4]).unwrap();
     assert_eq!(last["ticks"].as_i64(), Some(i64::MAX));
 }
+
+/// Reading the same explicit ticks in another order must not change scene
+/// bytes; ambient time or cached last-state projections make this fail.
+#[test]
+fn astronomy_at_anchor_coherence_is_query_order_independent() {
+    let w = world(StellarTopology::Single);
+    let ctx = AstronomyContext::build(&w).unwrap();
+    let ticks = [-98_765_432, -1, 0, 1, 98_765_432];
+    let forward: Vec<_> = ticks
+        .into_iter()
+        .map(|tick| {
+            astronomy_at_json(&astronomy_at_scene_in(&ctx, WorldTime::from_ticks(tick)).unwrap())
+        })
+        .collect();
+    let mut reverse: Vec<_> = ticks
+        .into_iter()
+        .rev()
+        .map(|tick| {
+            astronomy_at_json(&astronomy_at_scene_in(&ctx, WorldTime::from_ticks(tick)).unwrap())
+        })
+        .collect();
+    reverse.reverse();
+
+    assert_eq!(forward, reverse);
+}
 #[test]
 fn astronomy_at_rejects_epochs_with_nonphysical_native_luminosity() {
     let w = world(StellarTopology::Single);
