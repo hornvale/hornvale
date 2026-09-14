@@ -1085,9 +1085,13 @@ visual-check-run:
 	cargo +1.96.1 clippy --locked --manifest-path clients/visual/Cargo.toml --workspace --all-targets -- -D warnings
 	cargo +1.96.1 test --locked --manifest-path clients/visual/Cargo.toml --workspace
 	bash scripts/test-visual-proof-container.sh
-	if [ "$${HV_VISUAL_PROOF_CONTAINER:-0}" = 1 ]; then \
+	if [ "$${HV_VISUAL_PROOF_CONTAINER:-1}" = 0 ]; then \
+		echo "visual proof: native renderer explicitly selected"; \
+		cargo +1.96.1 test --locked --manifest-path clients/visual/Cargo.toml -p planetarium --test suite proof::rendered_proof_reads_distinct_frames_and_patch_readiness -- --exact --nocapture --ignored; \
+	elif command -v docker >/dev/null 2>&1; then \
 		bash scripts/visual-proof-container.sh; \
 	else \
+		echo "WARNING: Docker unavailable; falling back to native visual proof (set HV_VISUAL_PROOF_CONTAINER=0 to make this choice explicit)" >&2; \
 		cargo +1.96.1 test --locked --manifest-path clients/visual/Cargo.toml -p planetarium --test suite proof::rendered_proof_reads_distinct_frames_and_patch_readiness -- --exact --nocapture --ignored; \
 	fi
 	python3 scripts/visual-dependencies.py

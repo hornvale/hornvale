@@ -28,6 +28,24 @@ case "$command_output" in
     *"proof::rendered_proof_reads_distinct_frames_and_patch_readiness"*) ok "runs only the rendered proof";;
     *) bad "missing exact proof selector: $command_output";;
 esac
+
+echo "== visual proof container: Make dispatch"
+make_target="$(sed -n '/^visual-check-run:/,/^game-check:/p' "$root/Makefile")"
+default_value="\${HV_VISUAL_PROOF_CONTAINER:-1}"
+native_value="\${HV_VISUAL_PROOF_CONTAINER:-1}\" = 0"
+case "$make_target" in
+    *"$default_value"*) ok "container is the default";;
+    *) bad "Makefile does not default to the container";;
+esac
+case "$make_target" in
+    *"$native_value"*) ok "native mode is an explicit opt-out";;
+    *) bad "Makefile lacks the explicit native opt-out";;
+esac
+case "$make_target" in
+    *'command -v docker >/dev/null 2>&1'*'falling back to native visual proof'*) ok "Docker-missing fallback is retained";;
+    *) bad "Makefile lacks Docker-missing native fallback";;
+esac
+
 for package_pin in \
     'mesa-vulkan-drivers=25.0.7-2+deb13u1' \
     'libvulkan1=1.4.309.0-1' \
