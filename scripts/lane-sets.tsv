@@ -54,7 +54,7 @@ subfloor	commit	local	no	make --no-print-directory subfloor-run
 gate	stage	lane	no	make --no-print-directory gate-suite-run
 artifacts	stage	lane	yes	bash scripts/regenerate-artifacts.sh
 outboard	stage	lane	yes	bash scripts/lane-outboard.sh
-clients	stage	lane	yes	make --no-print-directory clients-check-run
+clients	stage	lane	yes	HV_VISUAL_PROOF_CONTAINER=1 make --no-print-directory clients-check-run
 heavy	merge	lane	yes	bash scripts/gate-full-heavy.sh
 census	campaign	lane	yes	bash scripts/census-run.sh
 seam-guard	campaign	lane	no	make --no-print-directory seam-guard

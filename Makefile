@@ -1080,6 +1080,11 @@ visual-check-run:
 	cd clients/visual && cargo +1.96.1 fmt --check
 	cargo +1.96.1 clippy --locked --manifest-path clients/visual/Cargo.toml --workspace --all-targets -- -D warnings
 	cargo +1.96.1 test --locked --manifest-path clients/visual/Cargo.toml --workspace
+	if [ "$${HV_VISUAL_PROOF_CONTAINER:-0}" = 1 ]; then \
+		bash scripts/visual-proof-container.sh; \
+	else \
+		cargo +1.96.1 test --locked --manifest-path clients/visual/Cargo.toml -p planetarium --test suite proof::rendered_proof_reads_distinct_frames_and_patch_readiness -- --exact --nocapture --ignored; \
+	fi
 	python3 scripts/visual-dependencies.py
 	python3 scripts/test-visual-dependencies.py
 

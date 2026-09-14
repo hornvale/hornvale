@@ -79,6 +79,7 @@ fn before_capture_must_differ_from_after_capture() {
 }
 
 #[test]
+#[ignore = "device-dependent: run explicitly via the pinned lavapipe proof runner"]
 fn rendered_proof_reads_distinct_frames_and_patch_readiness() {
     let proof = run_rendered_surface_proof(42).unwrap();
     assert_ne!(proof.before.png_sha256, proof.after.png_sha256, "{proof:?}");
