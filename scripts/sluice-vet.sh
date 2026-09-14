@@ -140,8 +140,48 @@ world_since() {
         grep -E '\.rs$' | grep -vE '(^|/)(tests|benches)/' | sort -u
 }
 
-# HV_VET_LIB=1 sources the adjudication functions above --- decision blocks and
-# census freshness --- without vetting anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
+# Did a candidate that MOVES census goldens also touch the pins that assert
+# against them? This is the rule that would have saved 1033 s of gate time on
+# campaign/anchor-orbital-coherence, 2026-09-14: 17 golden files moved, zero
+# calibration pin sources touched, nine calibration tests red in the chamber
+# with messages of the form "mean name-collision-rate drifted: 0.5245073".
+#
+# Measured over the three candidates in flight that night --- it discriminates,
+# which is the only reason it is printed:
+#
+#   anchor          2 golden rows.csv moved, 0 pin sources touched   <- the red
+#   the-tidemark    3 moved, all 4 pin sources touched               <- re-pinned
+#   the-coherence   0 moved, 0 touched                               <- quiet
+#
+# THE PIN LIST IS NOT THE HOOK'S LIST, and the difference is the whole check.
+# scripts/hooks/pre-commit's census_guard_files deliberately includes
+# `book/src/laboratory/generated/[^/]+/rows.csv` --- a GOLDEN, not a pin ---
+# because the hook must fire when either side moves. Counting that pattern here
+# scores anchor as "2 pin files touched" and reports the exact red it exists to
+# catch as clean. The SURFACES section's `census pins (hook list)` line uses
+# the hook's pattern and is right to; this one uses the pin SOURCES alone.
+#
+# TOUCHING A PIN SOURCE PROVES IT WAS CONSIDERED, NEVER THAT IT IS CORRECT, and
+# the report says "considered" rather than implying a guarantee it cannot make.
+CENSUS_PIN_SOURCES='windows/lab/tests/suite/(calibration|branches_family_calibration|gathering_calibration)\.rs|tools/census/queries/calibrate/golden-pins\.sql'
+
+census_pins() {
+    local sha="$1" gold pin
+    gold="$(git diff --name-only "origin/main...$sha" -- 'book/src/laboratory/generated/*/rows.csv' 2>/dev/null | grep -c .)"
+    pin="$(git diff --name-only "origin/main...$sha" 2>/dev/null | grep -cE "^(${CENSUS_PIN_SOURCES})\$")"
+    [ "$gold" -gt 0 ] || return 0
+    if [ "$pin" -gt 0 ]; then
+        printf '  %s golden rows.csv moved; %s calibration pin source(s) touched — considered\n' "$gold" "$pin"
+        return 0
+    fi
+    printf '  >> %s golden rows.csv moved and NO calibration pin source was touched\n' "$gold"
+    printf '     The calibration batteries assert against these goldens; moving one\n'
+    printf '     without re-pinning the other is the commonest red this queue produces.\n'
+    printf "     Reproduce in seconds: cargo nextest run -p hornvale-lab -E 'test(calibration::)'\n"
+}
+
+# HV_VET_LIB=1 sources the adjudication functions above --- decision blocks,
+# census freshness and census pins --- without vetting anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
 # verdict is a DECISION RULE, and a decision rule that cannot be driven
 # directly is one that gets tested through whatever end-to-end path happens to
 # exist --- which is how the truncation this whole script exists to prevent
@@ -279,6 +319,7 @@ done
 # was entirely inside `mod tests` and was a false alarm on both lines. Reading
 # the hunks is the operator's job; this narrows where to look.
 census_freshness "$sha"
+census_pins "$sha"
 
 # --- the surfaces that cost a chamber run when missed ----------------------
 echo
