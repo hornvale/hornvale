@@ -449,7 +449,51 @@ make doctor        # the repo self-map — run this first in a fresh session
 # of the campaign that submits it.
 #
 #   make sluice-ack REASON='...'         # adjudicate an out-of-band landing (see below)
-#   make sluice-status                   # what is queued, running, held, landed, reported
+#   make sluice-status                   # who is DRAINING, then what is queued, running, held, landed, reported
+#   make sluice-drain KINDS=stage,census # BE a drainer: watch the queue and drain those kinds until stopped
+#
+# WHO DRAINS THE QUEUE IS NOW VISIBLE, AND EXCLUSIVE PER KIND (The Watchman).
+# The queue's rows were always visible; the LOOPS that consume them were not.
+# On 2026-09-13 two sessions each left a drain loop running against this queue
+# and no instrument could say so: `make sluice-status` shows rows, the claim
+# shows one holder and no waiters, and a row's note says "launched by the drain
+# loop" with no field for WHICH loop. Only `ps` knew.
+#
+# The mutex was never the problem, and it is worth being exact about that,
+# because the obvious reading is wrong. `flock` on the box claim did its job
+# perfectly — one holder, one waiter, no row run twice, the shared chamber
+# worktree untouched (sluice-run.sh takes the lock before it touches it). What a
+# mutex cannot absorb is POLICY: one of those loops deliberately refused to
+# auto-drain merges and the other drained three. A mutex orders work and has no
+# opinion about which work should exist.
+#
+# SO A DRAINER NOW TAKES ONE `flock` PER QUEUE KIND IT CLAIMS, for the life of
+# its loop, and `make sluice-status` prints them first. Two drainers with
+# OVERLAPPING kinds cannot both start; two with DISJOINT kinds can, and that is
+# deliberate rather than tolerated — a merge-only dispatcher running beside a
+# stage/census loop is a correct arrangement, and "one drainer per box" would
+# have forbidden it. The refusal names the contested kind and the holder.
+#
+# IT IS A LOCK, NOT A PIDFILE, AND THE DIFFERENCE IS THE WHOLE MECHANISM. A
+# pidfile lies in both directions: it outlives a SIGKILLed drainer, and a
+# drainer killed before its cleanup leaves a file asserting life. An flock
+# cannot — the kernel releases it when the holder dies — so "is it held" and "is
+# it alive" are one question. `scripts/sluice-drainers.sh` therefore never
+# believes the registration file: it tests the lock, and reports a label whose
+# lock is free as STALE with the kind marked unclaimed. This repository already
+# solved this in `windows/lab/src/census_claim.rs`; a pidfile here would have
+# been a second, worse derivation of it.
+#
+# AND THE LOOP ITSELF LIVES IN THE REPO NOW, which is the part that matters
+# most and is not a new argument — it is `scripts/sluice-drain.sh`'s own header
+# applied one level up. That header records that the DISPATCH orchestration
+# "lived in an operator's session scratchpad for weeks, ungated and untested,
+# while doing real gating work" and caused two defects in one night. The
+# WATCHING half stayed outside and reproduced the identical failure exactly. It
+# is also mechanically forced: a lock taken inside a one-shot drain is released
+# when that drain exits, so two scratchpad `while true; do sluice-drain.sh 1;
+# done` loops would take turns and never see each other. A registration that
+# does not span the loop's own sleeps is not a registration.
 #   make sluice-log [JOB=<id>]           # read a finished chamber job back
 #   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
 #
