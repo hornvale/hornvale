@@ -425,6 +425,34 @@ for p in scripts/lane-sets.tsv scripts/sluice-run.sh scripts/sluice-drain.sh \
 done
 
 # Read from the CANDIDATE: these take effect on this very run.
+#
+# THE PHASE DRIVERS, and this section was silent about them until 2026-09-14.
+# The roster (scripts/lane-sets.tsv) is read from MAIN, but the SCRIPT a roster
+# row names is executed inside the chamber worktree, which holds the merge
+# product --- so a candidate that edits scripts/lane-outboard.sh changes what
+# outboard runs on its own merge.
+#
+# MEASURED, not reasoned. tooling/the-adjudicator added two suites to
+# lane-outboard.sh, and its own merge ran them:
+#
+#   == outboard: sluice vet blocks
+#   == outboard: sluice vet census
+#
+# The section reported "none — no gate machinery in this diff" for that
+# candidate, which is the worst answer available: a confident absence. The
+# INERT list above covers the roster and the queue plumbing; nothing covered
+# the drivers in between, so the one class of gate change that is BOTH
+# self-affecting and easy to get wrong was the class this section could not
+# see.
+_drivers="$(printf '%s\n' "$_changed" | grep -E '^scripts/(lane-[a-z0-9-]+|gate-[a-z0-9-]+)\.sh$' || true)"
+for p in $_drivers; do
+    _gate_touched=1
+    printf '  %-34s TAKES EFFECT — a phase runs this script FROM the
+' "$p"
+    printf '  %-34s   merge product, so it judges its own merge
+' ""
+done
+
 if printf '%s\n' "$_changed" | grep -q '^scripts/hooks/'; then
     _gate_touched=1
     printf '  %-34s TAKES EFFECT — core.hooksPath is relative, so the\n' "scripts/hooks/"

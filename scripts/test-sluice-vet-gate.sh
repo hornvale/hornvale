@@ -107,6 +107,49 @@ else
     bad "no TAKES EFFECT line"
 fi
 
+echo "== a phase DRIVER edit is reported as TAKING EFFECT"
+# The class this section was blind to until 2026-09-14. The roster is read from
+# MAIN, but the SCRIPT a roster row names runs inside the chamber worktree,
+# which holds the merge product. tooling/the-adjudicator added two suites to
+# scripts/lane-outboard.sh and its own merge ran them --
+#   == outboard: sluice vet blocks
+#   == outboard: sluice vet census
+# -- while this section reported "none — no gate machinery in this diff". A
+# confident absence is the worst answer available here.
+g show "$base:scripts/lane-outboard.sh" > "$tmp/driver"
+printf '# probe line\n' >> "$tmp/driver"
+c_driver="$(mint driver scripts/lane-outboard.sh "$tmp/driver")"
+out="$(section driver "$c_driver")"
+if printf '%s' "$out" | grep -q "lane-outboard.sh"; then
+    ok "the driver edit is named"
+else
+    bad "a scripts/lane-outboard.sh edit was not reported at all — the silence this case exists for"
+fi
+if printf '%s' "$out" | grep -q "TAKES EFFECT"; then
+    ok "it says the driver takes effect on this very run"
+else
+    bad "a phase driver was not reported as taking effect: $out"
+fi
+if printf '%s' "$out" | grep -q "INERT HERE"; then
+    bad "a phase driver was misreported as INERT — it runs from the merge product"
+else
+    ok "it is not misfiled with the roster and the queue plumbing"
+fi
+
+echo "== a non-phase script under scripts/ is NOT a phase driver (no crying wolf)"
+# shapecheck.py's sibling: an ordinary helper nothing in the roster invokes.
+# The driver pattern is deliberately narrow (lane-*.sh, gate-*.sh) so that
+# editing a utility does not read as changing what judges you.
+g show "$base:scripts/worktree-take.sh" > "$tmp/util"
+printf '# probe line\n' >> "$tmp/util"
+c_util="$(mint util scripts/worktree-take.sh "$tmp/util")"
+out="$(section util "$c_util")"
+if printf '%s' "$out" | grep -q "TAKES EFFECT"; then
+    bad "an ordinary helper was reported as gate machinery: $out"
+else
+    ok "an ordinary scripts/ helper is not reported"
+fi
+
 echo "== an ordinary Makefile edit is NOT reported (no crying wolf)"
 g show "$base:Makefile" | sed 's/^sweep-dry:.*/&\n\t@echo probe/' > "$tmp/mk2"
 c_mk2="$(mint quiet Makefile "$tmp/mk2")"
