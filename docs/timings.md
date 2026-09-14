@@ -7577,3 +7577,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-14T00:19:39Z | sluice:gate | 941.085 | 28745.069 | 931.422 | 31.53 | 0 | 6545dc29c |  | lefford | 40 |
 | 2026-09-14T00:24:19Z | sluice:clients | 279.827 | 4179.668 | 297.259 | 16.00 | 0 | db2aee6f4 |  | lefford | 40 |
 | 2026-09-14T00:33:47Z | sluice:heavy | 567.890 | 15934.998 | 379.206 | 28.73 | 0 | 8751526d6 |  | lefford | 40 |
+| 2026-09-14T15:34:03Z | census-tail-chorus | 66.733 | 901.824 | 23.717 | 13.87 | 0 | 969bb7210 |  | lefford | 40 |
+| 2026-09-14T15:34:05Z | census-tail-domesday | 1.296 | 1.091 | 0.151 | 0.96 | 0 | 969bb7210 |  | lefford | 40 |
+| 2026-09-14T15:34:05Z | census-tail-anomalies | 0.681 | 0.577 | 0.104 | 1.00 | 0 | 969bb7210 |  | lefford | 40 |
+| 2026-09-14T15:34:35Z | sluice:artifacts | 324.250 | 2631.684 | 97.662 | 8.42 | 0 | 969bb7210 |  | lefford | 40 |
+| 2026-09-14T15:37:12Z | sluice:outboard | 156.598 | 173.151 | 100.736 | 1.75 | 0 | 6c01112e6 |  | lefford | 40 |
+| 2026-09-14T15:53:50Z | sluice:gate | 997.469 | 30142.827 | 956.903 | 31.18 | 0 | 838f972c1 |  | lefford | 40 |
+| 2026-09-14T15:59:07Z | sluice:clients | 317.125 | 4668.105 | 365.701 | 15.87 | 0 | c82604e38 |  | lefford | 40 |
+| 2026-09-14T16:08:11Z | sluice:heavy | 543.734 | 15670.318 | 311.711 | 29.39 | 0 | b28306cf3 |  | lefford | 40 |

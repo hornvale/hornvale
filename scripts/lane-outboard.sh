@@ -126,6 +126,7 @@ run "gnomon injection" bash scripts/test-gnomon-injection.sh
 # an operator's scratchpad, because an unrun test is the failure this set was
 # widened to fix twice already (test-pre-push.sh, then the seam-guard suite).
 run "sluice drain"    bash scripts/test-sluice-drain.sh
+run "sluice status"   bash scripts/test-sluice-status.sh
 run "sluice vet"      bash scripts/test-sluice-vet.sh
 # The delivery classification, wired in the same commit that fixed it — a test
 # nothing runs is a test that does not exist, and this file has had to be
