@@ -379,7 +379,6 @@ hornvale-astronomy::hornvale_astronomy$provider::tests::a_locked_sun_is_aperiodi
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_moon_below_the_phase_threshold_is_a_smear_not_a_face
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_mooned_sky_promises_bloodred_lunar_eclipses_at_night
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_night_sky_reports_each_body_as_its_own_phrase
-hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_wandering_star_across_two_synodic_periods
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_query_has_a_documented_answer
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_sky_answers_for_the_instant_asked
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_small_moon_leaves_a_burning_ring
@@ -1505,7 +1504,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
@@ -3570,7 +3568,6 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
-hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -4480,7 +4477,6 @@ hornvale::suite$lane_sets::every_rostered_set_is_well_formed
 hornvale::suite$lane_sets::the_commit_gate_is_local_and_everything_else_is_the_lane
 hornvale::suite$lane_sets::the_phase_lists_and_the_roster_rungs_agree_both_ways
 hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
-hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty
 hornvale::suite$lexicon_guard::the_tokenizer_counts_affixed_bare_and_shouting_forms
 hornvale::suite$murrain_epidemiology::h_m1_binds_catalogue_rows_and_uses_the_monotonicity_grid
@@ -4501,11 +4497,9 @@ hornvale::suite$observations::observations_evidence_status_rejects_editorial_onl
 hornvale::suite$observations::observations_export_missing_manifest_does_not_create_output_directory
 hornvale::suite$observations::observations_export_neighbors_preserves_the_authoritative_scene_and_refuses_systems
 hornvale::suite$observations::observations_export_neighbors_refuses_missing_or_mismatched_declared_world
-hornvale::suite$observations::observations_export_neighbors_resolves_declared_world_from_repository_root
 hornvale::suite$observations::observations_export_refuses_every_non_existing_capability_state_by_name
 hornvale::suite$observations::observations_export_refuses_needs_simulation_extension
 hornvale::suite$observations::observations_fixture_is_a_valid_internal_record
-hornvale::suite$observations::observations_hv_009_neighbor_fixture_is_producer_backed
 hornvale::suite$observations::observations_missing_count_unit_is_refused
 hornvale::suite$observations::observations_missing_object_or_scale_is_refused
 hornvale::suite$observations::observations_non_finite_frame_rate_and_time_are_refused
@@ -4754,7 +4748,6 @@ hornvale::suite$walk_depth_agreement::the_definitions_prose_agrees_with_its_code
 hornvale::suite$walk_depth_agreement::the_independent_list_is_empty_on_purpose
 hornvale::suite$walk_depth_agreement::the_offset_is_stated_exactly_once_in_the_repository
 hornvale::suite$world_build_sites::every_row_is_well_formed
-hornvale::suite$world_build_sites::no_unrostered_world_build_appears
 hornvale::suite$world_build_sites::the_roster_only_shrinks
 hornvale::suite$world_build_sites::the_scan_actually_resolves_the_workspace
 hornvale::suite$world_build_sites::the_unmigrated_tally_never_grows
