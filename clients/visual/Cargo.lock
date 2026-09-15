@@ -2578,6 +2578,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "image",
+ "libm",
  "serde",
  "serde_json",
 ]
@@ -3740,6 +3741,7 @@ dependencies = [
  "hornvale-bevy-view",
  "hornvale-visual-source",
  "image",
+ "libc",
  "serde",
  "serde_json",
  "sha2",

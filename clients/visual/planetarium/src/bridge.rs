@@ -74,10 +74,17 @@ impl Bridge {
             match loaded {
                 Ok((mut source, initial)) => {
                     tx.send(Ok(initial)).map_err(|e| e.to_string())?;
-                    Ok(
-                        Box::new(move |q: &str| source.observe(q).map_err(|e| e.to_string()))
-                            as Observer,
-                    )
+                    Ok(Box::new(move |q: &str| {
+                        if serde_json::from_str::<serde_json::Value>(q)
+                            .ok()
+                            .and_then(|value| value["schema"].as_str().map(str::to_owned))
+                            .is_some_and(|schema| schema == "visual/surface-request/v1")
+                        {
+                            source.observe_surface(q).map_err(|e| e.to_string())
+                        } else {
+                            source.observe(q).map_err(|e| e.to_string())
+                        }
+                    }) as Observer)
                 }
                 Err(e) => {
                     let _ = tx.send(Err(e.clone()));

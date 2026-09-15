@@ -28,8 +28,46 @@ pub(crate) struct Reply<'a> {
 pub(crate) struct Initial<'a> {
     pub schema: &'static str,
     pub binding: &'a Binding,
+    pub surface_revision: SurfaceRevisionWire,
     pub system: &'a RawValue,
     pub moons: &'a RawValue,
     pub tiles: &'a RawValue,
     pub ticks_per_std_day: i64,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SurfaceRequest {
+    pub schema: String,
+    pub binding: Binding,
+    pub request_id: u64,
+    pub generation: u64,
+    pub address: FacetAddressWire,
+    #[serde(default)]
+    pub transition_address: Option<FacetAddressWire>,
+    pub expected_revision: SurfaceRevisionWire,
+}
+
+#[derive(Serialize)]
+pub(crate) struct SurfaceReply<'a> {
+    pub schema: &'static str,
+    pub binding: &'a Binding,
+    pub request_id: u64,
+    pub generation: u64,
+    pub patch: &'a RawValue,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct FacetAddressWire {
+    pub macro_face: u32,
+    pub child_path: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SurfaceRevisionWire {
+    pub source_revision: String,
+    pub algorithm_version: String,
+    pub configuration_hash_hex: String,
 }

@@ -5,6 +5,7 @@
 //! Persistent GPU scene and synchronous draft witness; source ticks advance only
 //! after screenshot completion. Final film packaging belongs to the application.
 use crate::capture::{CaptureMachine, CaptureSettings, CaptureState};
+use crate::documents::SurfacePatchCacheKey;
 use crate::lifecycle::*;
 use crate::{Binding, CameraPose, ObservationMirror, ViewError};
 use bevy::{
@@ -303,6 +304,47 @@ impl Renderer {
         }
         self.applied = Some(identity);
         Ok(())
+    }
+
+    pub fn set_desired_surface_patches(
+        &mut self,
+        mirror: &ObservationMirror,
+        desired: Vec<SurfacePatchCacheKey>,
+    ) -> Result<(), ViewError> {
+        self.catalog.set_desired_surface_patches(mirror, desired)
+    }
+
+    pub fn schedule_surface_patch(
+        &mut self,
+        key: SurfacePatchCacheKey,
+        request: String,
+    ) -> Result<(), ViewError> {
+        self.catalog.schedule_surface_patch(key, request)
+    }
+
+    pub fn apply_surface_reply(&mut self, json: &str) -> Result<(), ViewError> {
+        self.catalog
+            .apply_surface_reply(self.apps.main.world_mut(), json)?;
+        Ok(())
+    }
+
+    pub fn surface_render_evidence(&self) -> SurfaceRenderEvidence {
+        self.catalog.surface_render_evidence(self.apps.main.world())
+    }
+
+    pub fn set_cosmetic_clouds_visible(&mut self, visible: bool) {
+        self.catalog
+            .set_cosmetic_clouds_visible(self.apps.main.world_mut(), visible);
+    }
+
+    pub fn set_narrow_features_visible(&mut self, visible: bool) {
+        self.catalog
+            .set_narrow_features_visible(self.apps.main.world_mut(), visible);
+    }
+
+    pub fn set_fallback_surface_visible(&mut self, visible: bool) {
+        self.catalog
+            .set_fallback_surface_visible(self.apps.main.world_mut(), visible);
     }
     fn update(&mut self, timeout: Duration) -> Result<(), ViewError> {
         self.apps.update();

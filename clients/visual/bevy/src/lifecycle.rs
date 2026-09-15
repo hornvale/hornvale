@@ -1,10 +1,20 @@
 //! GPU-independent scene ownership, asset lifetime and atomic ECS application.
-use crate::{Binding, CameraPose, ObservationMirror, ViewError, astronomy::surface};
+use crate::{
+    Binding, CameraPose, ObservationMirror, ViewError,
+    astronomy::surface,
+    camera::OrbitCamera,
+    cube,
+    documents::{
+        self, SurfaceFeatureId, SurfacePatchCacheKey, SurfacePatchDocument, SurfacePatchRevision,
+    },
+};
 use bevy::{
     camera::visibility::RenderLayers,
     light::{Atmosphere, atmosphere::ScatteringMedium},
     prelude::*,
 };
+use std::collections::BTreeMap;
+use std::sync::{Mutex, OnceLock};
 pub const KM_PER_UNIT: f64 = 1000.;
 #[derive(Component)]
 pub(crate) struct BodyVisual {
@@ -13,6 +23,20 @@ pub(crate) struct BodyVisual {
 }
 #[derive(Component)]
 struct CosmeticCloud;
+#[derive(Component)]
+struct SurfacePatchVisual {
+    binding: Binding,
+    generation: u64,
+    key: SurfacePatchCacheKey,
+}
+/// Render identity for one source-owned feature ribbon.
+#[derive(Component, Clone, Debug, PartialEq)]
+pub struct SurfaceFeatureVisual {
+    pub feature: SurfaceFeatureId,
+    pub binding: Binding,
+    pub generation: u64,
+    pub key: SurfacePatchCacheKey,
+}
 #[derive(Component)]
 struct PointVisual {
     pub(crate) id: String,
@@ -56,6 +80,10 @@ pub struct SceneCatalog {
     generation: u64,
     selected: Option<String>,
     capture: bool,
+    surface: CatalogSurfaceState,
+    fallback_surface: Option<Entity>,
+    surface_radius_km: Option<f64>,
+    surface_sea_level_m: Option<f64>,
 }
 /// Application camera/viewport; source geometry always comes from the mirror.
 pub struct SceneTarget {
@@ -63,7 +91,656 @@ pub struct SceneTarget {
     pub width: u32,
     pub height: u32,
 }
+
+/// Mesh and material data prepared from one revision-qualified patch.
+pub struct SurfaceMeshHandles {
+    pub key: SurfacePatchCacheKey,
+    pub mesh: Mesh,
+    pub material: StandardMaterial,
+    pub feature_meshes: Vec<SurfaceFeatureMesh>,
+}
+
+/// Prepared renderer assets retaining their source feature identity.
+pub struct SurfaceFeatureMesh {
+    pub feature: SurfaceFeatureId,
+    pub mesh: Mesh,
+    pub material: StandardMaterial,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SurfacePatchCatalogState {
+    pub desired: Vec<SurfacePatchCacheKey>,
+    pub pending: Vec<SurfacePatchCacheKey>,
+    pub ready: Vec<SurfacePatchCacheKey>,
+    pub retired: Vec<SurfacePatchCacheKey>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SurfaceRenderEvidence {
+    pub patch_entities: usize,
+    pub narrow_feature_entities: usize,
+    pub fallback_visible: bool,
+    pub narrow_feature_color: Option<[u8; 3]>,
+}
+
+#[derive(Default)]
+struct CatalogSurfaceState {
+    desired: Vec<SurfacePatchCacheKey>,
+    pending: BTreeMap<(Binding, u64, u64), SurfacePatchCacheKey>,
+    ready: Vec<ReadySurfacePatch>,
+    retired: Vec<SurfacePatchCacheKey>,
+    retired_requests: BTreeMap<(Binding, u64, u64), SurfacePatchCacheKey>,
+}
+
+struct ReadySurfacePatch {
+    key: SurfacePatchCacheKey,
+    entity: Entity,
+    mesh: Handle<Mesh>,
+    material: Handle<StandardMaterial>,
+    feature_entities: Vec<Entity>,
+    feature_meshes: Vec<Handle<Mesh>>,
+    feature_materials: Vec<Handle<StandardMaterial>>,
+    feature_color: Option<[u8; 3]>,
+}
+
+fn prepare_feature_meshes(document: &SurfacePatchDocument) -> Vec<SurfaceFeatureMesh> {
+    document
+        .strips
+        .iter()
+        .map(|strip| SurfaceFeatureMesh {
+            feature: strip.feature.clone(),
+            mesh: surface::feature_strip_mesh(strip),
+            material: surface::feature_strip_material(strip),
+        })
+        .collect()
+}
+
+const MACRO_PATCH_DEPTH: usize = 6;
+const FEATURE_SURFACE_LIFT_KM: f64 = 0.05;
+
+fn cache_key_order(key: &SurfacePatchCacheKey) -> (&str, u32, &[u8]) {
+    (&key.revision, key.macro_face, &key.child_path)
+}
+
+fn packed_macro_face(face: usize, x: u32, y: u32) -> u32 {
+    let mut pathword = 1_u32;
+    for bit in (0..MACRO_PATCH_DEPTH).rev() {
+        let digit = (((x >> bit) & 1) << 1) | ((y >> bit) & 1);
+        pathword = (pathword << 2) | digit;
+    }
+    (pathword << 5) | face as u32
+}
+
+/// Select the camera-facing Level-6 macro patch and its bounded globe-local ring.
+/// Integer address sorting makes repeated selection independent of reply order.
+pub fn visible_surface_patches(
+    camera: &OrbitCamera,
+    body_position_km: [f64; 3],
+    body_radius_km: f64,
+    revision: &SurfacePatchRevision,
+) -> Result<Vec<SurfacePatchCacheKey>, ViewError> {
+    visible_surface_patches_for_body(camera, body_position_km, None, body_radius_km, revision)
+}
+
+pub fn visible_surface_patches_for_body(
+    camera: &OrbitCamera,
+    body_position_km: [f64; 3],
+    body_to_frame: Option<[[f64; 3]; 3]>,
+    body_radius_km: f64,
+    revision: &SurfacePatchRevision,
+) -> Result<Vec<SurfacePatchCacheKey>, ViewError> {
+    documents::validate_surface_patch_revision(revision)?;
+    let eye = bevy::math::DVec3::from_array(camera.pose.eye_km);
+    let center = bevy::math::DVec3::from_array(body_position_km);
+    let frame_offset = eye - center;
+    let offset = body_to_frame
+        .map(|columns| bevy::math::DMat3::from_cols_array_2d(&columns).transpose() * frame_offset)
+        .unwrap_or(frame_offset);
+    if !body_radius_km.is_finite()
+        || body_radius_km <= 0.0
+        || !offset.is_finite()
+        || offset.length() <= body_radius_km
+    {
+        return Err(ViewError::Range(
+            "camera has no valid body-facing envelope".into(),
+        ));
+    }
+    let direction = offset.normalize().to_array();
+    let (face, a, b) = cube::locate(direction);
+    let scale = 1_u32 << MACRO_PATCH_DEPTH;
+    let coordinate = |parameter: f64| {
+        (((parameter + 1.0) * 0.5 * f64::from(scale)).floor() as i64).clamp(0, i64::from(scale - 1))
+    };
+    let (x, y) = (coordinate(a) as u32, coordinate(b) as u32);
+    let revision = revision.cache_token();
+    let center = packed_macro_face(face, x, y);
+    let mut selected = cube::neighbors(center)
+        .into_iter()
+        .chain(std::iter::once(center))
+        .map(|macro_face| SurfacePatchCacheKey {
+            revision: revision.clone(),
+            macro_face,
+            child_path: Vec::new(),
+        })
+        .collect::<Vec<_>>();
+    selected.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+    Ok(selected)
+}
+
+#[derive(Default)]
+struct SurfacePatchState {
+    generation: u64,
+    pending: BTreeMap<(Binding, u64, u64), SurfacePatchCacheKey>,
+}
+
+static ACTIVE_SURFACE_PATCHES: OnceLock<Mutex<SurfacePatchState>> = OnceLock::new();
+
+fn surface_patch_state() -> &'static Mutex<SurfacePatchState> {
+    ACTIVE_SURFACE_PATCHES.get_or_init(|| Mutex::new(SurfacePatchState::default()))
+}
+
+/// Invalidate every outstanding surface request when the source mirror resets.
+pub fn reset_surface_patches() {
+    let mut state = surface_patch_state()
+        .lock()
+        .expect("surface schedule state is not poisoned");
+    state.generation = state
+        .generation
+        .checked_add(1)
+        .expect("surface generation overflow");
+    state.pending.clear();
+}
+
+/// Generation to put on a new source request.
+pub fn surface_patch_generation() -> u64 {
+    surface_patch_state()
+        .lock()
+        .expect("surface schedule state is not poisoned")
+        .generation
+}
+
+/// Register a source request as the active patch generation.
+///
+/// The request body is intentionally opaque here: source-side schema validation
+/// remains the source's responsibility. The renderer records only the cache
+/// identity needed to reject a late document from another observation.
+pub fn schedule_surface_patch(
+    mut key: SurfacePatchCacheKey,
+    request: String,
+) -> Result<(), ViewError> {
+    let request: documents::SurfaceRequestDocument = serde_json::from_str(&request)
+        .map_err(|error| ViewError::Document(format!("invalid surface request: {error}")))?;
+    if request.schema != "visual/surface-request/v1" {
+        return Err(ViewError::Document("unknown surface request schema".into()));
+    }
+    request.binding.validate()?;
+    if request.expected_revision.source_revision != request.binding.source_revision {
+        return Err(ViewError::Binding(
+            "surface request revision does not match its binding".into(),
+        ));
+    }
+    documents::validate_surface_patch_revision(&request.expected_revision)?;
+    documents::validate_surface_patch_address(&request.address)?;
+    if let Some(transition_address) = &request.transition_address {
+        documents::validate_surface_patch_address(transition_address)?;
+    }
+    if key.revision == request.expected_revision.source_revision {
+        key.revision = request.expected_revision.cache_token();
+    }
+    if key.revision != request.expected_revision.cache_token()
+        || key.macro_face != request.address.macro_face
+        || key.child_path != request.address.child_path
+    {
+        return Err(ViewError::Binding(
+            "surface request does not match its cache key".into(),
+        ));
+    }
+    let mut state = surface_patch_state()
+        .lock()
+        .expect("surface schedule state is not poisoned");
+    if request.generation != state.generation {
+        return Err(ViewError::Binding(
+            "surface request belongs to a stale source generation".into(),
+        ));
+    }
+    let identity = (
+        request.binding.clone(),
+        request.request_id,
+        request.generation,
+    );
+    if state.pending.contains_key(&identity) {
+        return Err(ViewError::Binding(
+            "surface request ID is already scheduled for this binding".into(),
+        ));
+    }
+    state.pending.insert(identity, key);
+    Ok(())
+}
+
+/// Apply a source-owned patch only if it belongs to the currently scheduled
+/// observation. Asset creation is pure until the caller inserts the returned
+/// handles into Bevy's asset collections.
+pub fn apply_surface_patch(
+    document: &SurfacePatchDocument,
+) -> Result<SurfaceMeshHandles, ViewError> {
+    documents::validate_surface_patch(document)?;
+    let key = document.cache_key();
+    let mut state = surface_patch_state()
+        .lock()
+        .expect("surface schedule state is not poisoned");
+    let matches: Vec<_> = state
+        .pending
+        .iter()
+        .filter(|(_, scheduled)| *scheduled == &key)
+        .map(|(identity, _)| identity.clone())
+        .collect();
+    let [identity] = matches.as_slice() else {
+        return Err(ViewError::Binding(
+            if matches.is_empty() {
+                "surface patch has no active scheduled request"
+            } else {
+                "surface patch is ambiguous across concurrent requests"
+            }
+            .into(),
+        ));
+    };
+    state.pending.remove(identity);
+    Ok(SurfaceMeshHandles {
+        key,
+        mesh: surface::surface_mesh(document, None),
+        material: surface::surface_material(document),
+        feature_meshes: prepare_feature_meshes(document),
+    })
+}
+
+/// Decode, identity-check and apply a complete source reply atomically.
+pub fn apply_surface_reply(json: &str) -> Result<SurfaceMeshHandles, ViewError> {
+    let reply = documents::surface_reply(json)?;
+    let key = reply.patch.cache_key();
+    let mut state = surface_patch_state()
+        .lock()
+        .expect("surface schedule state is not poisoned");
+    let identity = (reply.binding.clone(), reply.request_id, reply.generation);
+    if reply.generation != state.generation {
+        return Err(ViewError::Binding(
+            "surface reply belongs to a stale source generation".into(),
+        ));
+    }
+    if state.pending.get(&identity) != Some(&key) {
+        return Err(ViewError::Binding(
+            "surface reply belongs to a stale binding, request, generation, or patch".into(),
+        ));
+    }
+    state.pending.remove(&identity);
+    drop(state);
+    Ok(SurfaceMeshHandles {
+        key,
+        mesh: surface::surface_mesh(&reply.patch, None),
+        material: surface::surface_material(&reply.patch),
+        feature_meshes: prepare_feature_meshes(&reply.patch),
+    })
+}
 impl SceneCatalog {
+    pub fn surface_patch_state(&self) -> SurfacePatchCatalogState {
+        let mut pending = self.surface.pending.values().cloned().collect::<Vec<_>>();
+        let mut ready = self
+            .surface
+            .ready
+            .iter()
+            .map(|patch| patch.key.clone())
+            .collect::<Vec<_>>();
+        pending.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+        ready.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+        SurfacePatchCatalogState {
+            desired: self.surface.desired.clone(),
+            pending,
+            ready,
+            retired: self.surface.retired.clone(),
+        }
+    }
+
+    pub fn set_desired_surface_patches(
+        &mut self,
+        mirror: &ObservationMirror,
+        mut desired: Vec<SurfacePatchCacheKey>,
+    ) -> Result<(), ViewError> {
+        let binding = &mirror.initial().binding;
+        if self.binding.as_ref() != Some(binding) || self.generation != mirror.generation() {
+            return Err(ViewError::Binding(
+                "surface selection does not match the catalog binding and generation".into(),
+            ));
+        }
+        desired.sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+        desired.dedup();
+        let pending = std::mem::take(&mut self.surface.pending);
+        for (identity, key) in pending {
+            if desired.contains(&key) {
+                self.surface.pending.insert(identity, key);
+            } else {
+                self.surface.retired.push(key.clone());
+                self.surface.retired_requests.insert(identity, key);
+            }
+        }
+        self.surface.desired = desired;
+        self.surface
+            .retired
+            .sort_by(|left, right| cache_key_order(left).cmp(&cache_key_order(right)));
+        self.surface.retired.dedup();
+        Ok(())
+    }
+
+    pub fn schedule_surface_patch(
+        &mut self,
+        mut key: SurfacePatchCacheKey,
+        request: String,
+    ) -> Result<(), ViewError> {
+        let request: documents::SurfaceRequestDocument = serde_json::from_str(&request)
+            .map_err(|error| ViewError::Document(format!("invalid surface request: {error}")))?;
+        if request.schema != "visual/surface-request/v1" {
+            return Err(ViewError::Document("unknown surface request schema".into()));
+        }
+        request.binding.validate()?;
+        documents::validate_surface_patch_revision(&request.expected_revision)?;
+        documents::validate_surface_patch_address(&request.address)?;
+        if let Some(transition) = &request.transition_address {
+            documents::validate_surface_patch_address(transition)?;
+        }
+        if key.revision == request.expected_revision.source_revision {
+            key.revision = request.expected_revision.cache_token();
+        }
+        if self.binding.as_ref() != Some(&request.binding)
+            || self.generation != request.generation
+            || request.expected_revision.source_revision != request.binding.source_revision
+            || key.revision != request.expected_revision.cache_token()
+            || key.macro_face != request.address.macro_face
+            || key.child_path != request.address.child_path
+            || !self.surface.desired.contains(&key)
+        {
+            return Err(ViewError::Binding(
+                "surface request does not match desired catalog identity".into(),
+            ));
+        }
+        let identity = (request.binding, request.request_id, request.generation);
+        if self.surface.pending.contains_key(&identity) {
+            return Err(ViewError::Binding(
+                "surface request ID is already scheduled for this binding".into(),
+            ));
+        }
+        self.surface.pending.insert(identity, key);
+        Ok(())
+    }
+
+    /// Validate identity before insertion, then publish a complete selected set
+    /// in one exclusive world mutation. Until then the legacy globe remains.
+    pub fn apply_surface_reply(
+        &mut self,
+        world: &mut World,
+        json: &str,
+    ) -> Result<Option<Entity>, ViewError> {
+        let reply = documents::surface_reply(json)?;
+        let key = reply.patch.cache_key();
+        let identity = (reply.binding.clone(), reply.request_id, reply.generation);
+        if reply.generation < self.generation {
+            return Ok(None);
+        }
+        if self.surface.retired_requests.get(&identity) == Some(&key) {
+            self.surface.retired_requests.remove(&identity);
+            return Ok(None);
+        }
+        if self.binding.as_ref() != Some(&reply.binding) || self.generation != reply.generation {
+            return Err(ViewError::Binding(
+                "surface reply corrupts the current catalog binding or generation".into(),
+            ));
+        }
+        if self.surface.pending.get(&identity) != Some(&key) || !self.surface.desired.contains(&key)
+        {
+            return Err(ViewError::Binding(
+                "surface reply belongs to a stale binding, request, generation, or patch".into(),
+            ));
+        }
+        self.surface.pending.remove(&identity);
+        let anchor_transform = self
+            .fallback_surface
+            .and_then(|entity| world.get::<Transform>(entity).copied())
+            .unwrap_or(Transform::IDENTITY);
+        let radius_km = self
+            .surface_radius_km
+            .ok_or_else(|| ViewError::Binding("catalog has no anchor surface radius".into()))?;
+        let sea_level_m = self
+            .surface_sea_level_m
+            .ok_or_else(|| ViewError::Binding("catalog has no source sea level".into()))?;
+        let mut mesh = surface::surface_mesh(&reply.patch, None);
+        let positions = reply
+            .patch
+            .vertices
+            .iter()
+            .map(|vertex| {
+                let direction = Vec3::from_array(vertex.position.map(|value| value as f32));
+                let height_above_sea_km = (vertex.height_m - sea_level_m) / 1000.0;
+                let radius = (radius_km + height_above_sea_km) / KM_PER_UNIT;
+                (direction * radius as f32).to_array()
+            })
+            .collect::<Vec<_>>();
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        let mesh = world.resource_mut::<Assets<Mesh>>().add(mesh);
+        let mut surface_material = surface::surface_material(&reply.patch);
+        // Keep the monolithic globe for uncovered pixels. The ready patch itself
+        // is the region-specific suppression mask: positive Bevy depth bias pulls
+        // only its triangles ahead of the fallback instead of drawing coplanar.
+        surface_material.depth_bias = 1.0;
+        let material = world
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(surface_material);
+        let entity = world
+            .spawn((
+                Mesh3d(mesh.clone()),
+                MeshMaterial3d(material.clone()),
+                anchor_transform,
+                Visibility::Hidden,
+                SurfacePatchVisual {
+                    binding: reply.binding.clone(),
+                    generation: reply.generation,
+                    key: key.clone(),
+                },
+                RenderLayers::layer(0),
+            ))
+            .id();
+        self.meshes.push(mesh.clone());
+        self.materials.push(material.clone());
+        self.entities.push(entity);
+        let mut feature_entities = Vec::new();
+        let mut feature_meshes = Vec::new();
+        let mut feature_materials = Vec::new();
+        for (strip, mut prepared) in reply
+            .patch
+            .strips
+            .iter()
+            .zip(prepare_feature_meshes(&reply.patch))
+        {
+            prepared.mesh.insert_attribute(
+                Mesh::ATTRIBUTE_POSITION,
+                strip
+                    .vertices
+                    .iter()
+                    .map(|vertex| {
+                        let direction = Vec3::from_array(vertex.position.map(|value| value as f32));
+                        let height_above_sea_km = (vertex.height_m - sea_level_m) / 1000.0;
+                        let radius = (radius_km + height_above_sea_km + FEATURE_SURFACE_LIFT_KM)
+                            / KM_PER_UNIT;
+                        (direction * radius as f32).to_array()
+                    })
+                    .collect::<Vec<_>>(),
+            );
+            let feature_mesh = world.resource_mut::<Assets<Mesh>>().add(prepared.mesh);
+            prepared.material.unlit = true;
+            prepared.material.depth_bias = 100_000.0;
+            prepared.material.cull_mode = None;
+            let feature_material = world
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(prepared.material);
+            let feature_entity = world
+                .spawn((
+                    Mesh3d(feature_mesh.clone()),
+                    MeshMaterial3d(feature_material.clone()),
+                    anchor_transform,
+                    Visibility::Hidden,
+                    SurfaceFeatureVisual {
+                        feature: prepared.feature,
+                        binding: reply.binding.clone(),
+                        generation: reply.generation,
+                        key: key.clone(),
+                    },
+                    RenderLayers::layer(0),
+                ))
+                .id();
+            self.meshes.push(feature_mesh.clone());
+            self.materials.push(feature_material.clone());
+            self.entities.push(feature_entity);
+            feature_entities.push(feature_entity);
+            feature_meshes.push(feature_mesh);
+            feature_materials.push(feature_material);
+        }
+        self.surface.ready.push(ReadySurfacePatch {
+            key,
+            entity,
+            mesh,
+            material,
+            feature_entities,
+            feature_meshes,
+            feature_materials,
+            feature_color: reply.patch.strips.first().map(surface::feature_strip_color),
+        });
+        let complete = !self.surface.desired.is_empty()
+            && self
+                .surface
+                .desired
+                .iter()
+                .all(|desired| self.surface.ready.iter().any(|ready| &ready.key == desired));
+        if complete {
+            let mut retained = Vec::new();
+            for ready in self.surface.ready.drain(..) {
+                if self.surface.desired.contains(&ready.key) {
+                    retained.push(ready);
+                } else {
+                    self.surface.retired.push(ready.key);
+                    world.despawn(ready.entity);
+                    world.resource_mut::<Assets<Mesh>>().remove(ready.mesh.id());
+                    world
+                        .resource_mut::<Assets<StandardMaterial>>()
+                        .remove(ready.material.id());
+                    for entity in &ready.feature_entities {
+                        world.despawn(*entity);
+                    }
+                    for mesh in &ready.feature_meshes {
+                        world.resource_mut::<Assets<Mesh>>().remove(mesh.id());
+                    }
+                    for material in &ready.feature_materials {
+                        world
+                            .resource_mut::<Assets<StandardMaterial>>()
+                            .remove(material.id());
+                    }
+                    self.entities.retain(|entity| *entity != ready.entity);
+                    self.entities
+                        .retain(|entity| !ready.feature_entities.contains(entity));
+                    self.meshes.retain(|handle| handle != &ready.mesh);
+                    self.meshes
+                        .retain(|handle| !ready.feature_meshes.contains(handle));
+                    self.materials.retain(|handle| handle != &ready.material);
+                    self.materials
+                        .retain(|handle| !ready.feature_materials.contains(handle));
+                }
+            }
+            self.surface.ready = retained;
+            for ready in &self.surface.ready {
+                world.entity_mut(ready.entity).insert(Visibility::Visible);
+                for entity in &ready.feature_entities {
+                    world.entity_mut(*entity).insert(Visibility::Visible);
+                }
+            }
+        }
+        Ok(Some(entity))
+    }
+
+    pub fn fallback_surface_visible(&self, world: &World) -> bool {
+        self.fallback_surface.is_some_and(|entity| {
+            world
+                .get::<Visibility>(entity)
+                .is_none_or(|visibility| *visibility != Visibility::Hidden)
+        })
+    }
+
+    pub fn surface_render_evidence(&self, world: &World) -> SurfaceRenderEvidence {
+        let patch_entities = self
+            .surface
+            .ready
+            .iter()
+            .filter(|patch| world.get_entity(patch.entity).is_ok())
+            .count();
+        let narrow_feature_entities = self
+            .surface
+            .ready
+            .iter()
+            .flat_map(|patch| patch.feature_entities.iter())
+            .filter(|entity| world.get_entity(**entity).is_ok())
+            .count();
+        SurfaceRenderEvidence {
+            patch_entities,
+            narrow_feature_entities,
+            fallback_visible: self.fallback_surface_visible(world),
+            narrow_feature_color: self
+                .surface
+                .ready
+                .iter()
+                .find_map(|patch| patch.feature_color),
+        }
+    }
+
+    /// Toggle the cosmetic cloud shell for close-up diagnostics. Source-owned
+    /// terrain and narrow features remain unchanged; review captures can
+    /// isolate their contribution without changing simulation data.
+    pub fn set_cosmetic_clouds_visible(&self, world: &mut World, visible: bool) {
+        let value = if visible {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        let entities = world
+            .query_filtered::<Entity, With<CosmeticCloud>>()
+            .iter(world)
+            .collect::<Vec<_>>();
+        for entity in entities {
+            world.entity_mut(entity).insert(value);
+        }
+    }
+
+    pub fn set_narrow_features_visible(&self, world: &mut World, visible: bool) {
+        let value = if visible {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        let entities = self
+            .surface
+            .ready
+            .iter()
+            .flat_map(|patch| patch.feature_entities.iter())
+            .copied()
+            .collect::<Vec<_>>();
+        for entity in entities {
+            world.entity_mut(entity).insert(value);
+        }
+    }
+
+    pub fn set_fallback_surface_visible(&self, world: &mut World, visible: bool) {
+        if let Some(entity) = self.fallback_surface {
+            world.entity_mut(entity).insert(if visible {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            });
+        }
+    }
+
     /// Prepare the entire snapshot first, then queue one atomic ECS application.
     pub fn apply(
         &mut self,
@@ -194,6 +871,7 @@ impl SceneCatalog {
                 "capture cannot span source reset".into(),
             ));
         }
+        reset_surface_patches();
         for entity in self.entities.drain(..) {
             world.despawn(entity);
         }
@@ -215,6 +893,10 @@ impl SceneCatalog {
         }
         self.selected = None;
         self.atmosphere = None;
+        self.surface = CatalogSurfaceState::default();
+        self.fallback_surface = None;
+        self.surface_radius_km = None;
+        self.surface_sea_level_m = None;
         self.binding = Some(mirror.initial().binding.clone());
         self.generation = mirror.generation();
         world.insert_resource(CaptureResult::default());
@@ -251,6 +933,8 @@ impl SceneCatalog {
             .find(|b| b.id == "anchor")
             .and_then(|b| b.radius_km)
             .ok_or_else(|| ViewError::Document("missing anchor radius".into()))?;
+        self.surface_radius_km = Some(radius);
+        self.surface_sea_level_m = Some(mirror.initial().tiles.sea_level_m);
         let medium = world
             .resource_mut::<Assets<ScatteringMedium>>()
             .add(ScatteringMedium::earth(256, 256).with_density_multiplier(0.18));
@@ -343,20 +1027,22 @@ impl SceneCatalog {
                     ..default()
                 });
             materials.push(material.clone());
-            entities.push(
-                world
-                    .spawn((
-                        Mesh3d(mesh),
-                        MeshMaterial3d(material),
-                        Transform::IDENTITY,
-                        BodyVisual {
-                            binding: reply.binding.clone(),
-                            id: body.id.clone(),
-                        },
-                        RenderLayers::layer(0),
-                    ))
-                    .id(),
-            );
+            let entity = world
+                .spawn((
+                    Mesh3d(mesh),
+                    MeshMaterial3d(material),
+                    Transform::IDENTITY,
+                    BodyVisual {
+                        binding: reply.binding.clone(),
+                        id: body.id.clone(),
+                    },
+                    RenderLayers::layer(0),
+                ))
+                .id();
+            if body.id == "anchor" {
+                self.fallback_surface = Some(entity);
+            }
+            entities.push(entity);
         }
         // A static, source-coverage-conditioned presentation layer. It never casts
         // an eclipse/cloud shadow and is not part of the physical body inventory.
@@ -490,6 +1176,30 @@ pub(crate) fn apply_pending_scene(world: &mut World) {
         .iter_mut(world)
     {
         *t = transforms[&visual.id];
+    }
+    let patch_identity = {
+        let mirror = world.resource::<ObservationMirror>();
+        (mirror.initial().binding.clone(), mirror.generation())
+    };
+    for (patch, mut t) in world
+        .query::<(&SurfacePatchVisual, &mut Transform)>()
+        .iter_mut(world)
+    {
+        if (patch.binding.clone(), patch.generation) == patch_identity
+            && !patch.key.revision.is_empty()
+        {
+            *t = transforms["anchor"];
+        }
+    }
+    for (feature, mut t) in world
+        .query::<(&SurfaceFeatureVisual, &mut Transform)>()
+        .iter_mut(world)
+    {
+        if (feature.binding.clone(), feature.generation) == patch_identity
+            && !feature.key.revision.is_empty()
+        {
+            *t = transforms["anchor"];
+        }
     }
     for mut t in world
         .query_filtered::<&mut Transform, With<CosmeticCloud>>()
