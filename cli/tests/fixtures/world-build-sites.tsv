@@ -181,6 +181,7 @@ windows/worldgen/tests/suite/drift_reach_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/era_substrate.rs	1	unmigrated:1
 windows/worldgen/tests/suite/explanations.rs	1	unmigrated:1
 windows/worldgen/tests/suite/exposure.rs	4	identity:4
+windows/worldgen/tests/suite/facet_context.rs	1	identity:1
 windows/worldgen/tests/suite/fathom_column_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/fixture.rs	1	build-path:1
 windows/worldgen/tests/suite/founder_collision.rs	1	unmigrated:1

@@ -86,3 +86,32 @@ Summary [5.692s] 75 tests run: 75 passed, 246 skipped
 ```
 
 All yielded commands were polled through completion. Final status is clean. Diff from initial controller HEAD is empty for frozen engine/checker/comparator/contract/owners, original panel/bundle, supervisor, production Thing/Settlement source and digest lock. No production script or simulation source was edited. Root owns remaining full-12 canonical and independent full replay invocations, scoped review, ledger/stage/freeze updates and eventual campaign acceptance. Index/commit and local compilation slots are released.
+
+## Task 6 fix round 2 — coherent-ground Bevy surface consumption
+
+Reviewed findings addressed in the existing coherent-ground implementation:
+
+- `channel_distance_m` remains finite and bounded to the supported surface
+  distance envelope, but may be signed. Channel material influence uses its
+  magnitude, preserving bank-side sign without painting one side as wholly
+  inside the channel.
+- Source-owned `flow_direction` and `ridge_direction` are copied into aligned
+  custom Bevy mesh attributes. No terrain meaning or ridge orientation is
+  reconstructed from client-side geometry.
+- Mixed-LOD transition documents now remap their topology through a combined
+  vertex layout, appending unmatched transition vertices before emitting any
+  indices. A distinct-layout regression covers this path.
+
+Regression evidence:
+
+```text
+Bevy surface suite: 19 passed, 33 skipped
+visual source surface suite: 7 passed, 3 skipped
+scene facet suite: 2 passed, 21 skipped
+cargo fmt --check: passed
+git diff --check: passed
+```
+
+This fix round does not modify `progress.md`, run a census, rebaseline
+artifacts, or dispatch subagents. The pre-existing working-tree change in
+`docs/timings.md` remains outside this fix.

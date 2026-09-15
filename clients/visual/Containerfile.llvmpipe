@@ -1,0 +1,23 @@
+FROM rust@sha256:1f0dbad1df66647807e6952d1db85d0b2bda7606cb2139d82517e4f009967376
+
+LABEL org.hornvale.renderer="lavapipe" \
+      org.hornvale.mesa="25.0.7-2+deb13u1" \
+      org.hornvale.libvulkan="1.4.309.0-1" \
+      org.hornvale.vulkan-tools="1.4.304.0+dfsg1-1"
+
+RUN apt-get update \
+    && test "$(apt-cache policy mesa-vulkan-drivers | awk '$1 == "Candidate:" { print $2 }')" = "25.0.7-2+deb13u1" \
+    && test "$(apt-cache policy libvulkan1 | awk '$1 == "Candidate:" { print $2 }')" = "1.4.309.0-1" \
+    && test "$(apt-cache policy vulkan-tools | awk '$1 == "Candidate:" { print $2 }')" = "1.4.304.0+dfsg1-1" \
+    || { echo "Pinned Mesa/Vulkan package is unavailable in Debian trixie" >&2; exit 1; } \
+    && apt-get install --no-install-recommends --yes \
+        mesa-vulkan-drivers=25.0.7-2+deb13u1 \
+        libvulkan1=1.4.309.0-1 \
+        vulkan-tools=1.4.304.0+dfsg1-1 \
+        libx11-6 libxext6 libxrandr2 libxi6 libxfixes3 libxcursor1 \
+        libxkbcommon0 libudev1 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+    LIBGL_ALWAYS_SOFTWARE=1 \
+    WGPU_BACKEND=vulkan

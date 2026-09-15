@@ -44,6 +44,471 @@ pub struct Tiles {
     pub moisture: Vec<f64>,
     pub t_mean_c: Vec<f64>,
 }
+
+/// The source-owned revision carried by one derived surface document.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchRevision {
+    pub source_revision: String,
+    pub algorithm_version: String,
+    pub configuration_hash_hex: String,
+}
+
+/// Address of a rendered patch. This is a client cache address, not save data.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchAddress {
+    pub macro_face: u32,
+    pub child_path: Vec<u8>,
+}
+
+/// Stable identity of a source-owned semantic feature.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfaceFeatureId {
+    pub kind: String,
+    pub macro_anchor: u64,
+    pub ordinal: u32,
+}
+
+/// Endpoint metadata is retained so the renderer never has to infer routing.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchEndpoint {
+    pub feature: SurfaceFeatureId,
+    pub side: String,
+    pub boundary: Option<SurfacePatchBoundary>,
+    pub terminal: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchBoundary {
+    pub address: SurfacePatchAddress,
+    pub edge: u8,
+    pub t: f64,
+}
+
+/// One source-owned feature curve, including its narrow render footprint.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchFeature {
+    pub feature: SurfaceFeatureId,
+    pub points: Vec<[f64; 3]>,
+    pub width_rad: Vec<f64>,
+    pub endpoints: [SurfacePatchEndpoint; 2],
+}
+
+/// One source-owned signed edge vertex of an adaptive feature ribbon.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchStripVertex {
+    pub position: [f64; 3],
+    pub height_m: f64,
+    pub normal: [f64; 3],
+    pub side: i8,
+    pub signed_distance_rad: f64,
+}
+
+/// Adaptive source-owned geometry for a feature that may miss terrain vertices.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchStrip {
+    pub feature: SurfaceFeatureId,
+    pub centerline: Vec<[f64; 3]>,
+    pub width_rad: Vec<f64>,
+    pub vertices: Vec<SurfacePatchStripVertex>,
+    pub triangles: Vec<[u32; 3]>,
+    pub semantic_mask: [f64; 8],
+    pub endpoints: [SurfacePatchEndpoint; 2],
+}
+
+/// One source-owned surface sample. The renderer consumes these values as-is.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchVertex {
+    pub position: [f64; 3],
+    pub height_m: f64,
+    pub normal: [f64; 3],
+    pub material_weights: [f64; 8],
+    pub shoreline_distance_m: f64,
+    pub water_depth_m: f64,
+    pub flow_direction: [f64; 3],
+    pub flow_strength: f64,
+    pub channel_distance_m: f64,
+    pub channel_width_m: f64,
+    pub floodplain_weight: f64,
+    pub bank_weight: f64,
+    pub terrace_weight: f64,
+    pub delta_weight: f64,
+    pub ridge_direction: [f64; 3],
+    pub ridge_strength: f64,
+}
+
+/// Derived patch document used only at the renderer boundary.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchDocument {
+    pub schema: String,
+    pub revision: SurfacePatchRevision,
+    pub address: SurfacePatchAddress,
+    #[serde(rename = "samples", alias = "vertices")]
+    pub vertices: Vec<SurfacePatchVertex>,
+    #[serde(rename = "curves", alias = "features")]
+    pub features: Vec<SurfacePatchFeature>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub strips: Vec<SurfacePatchStrip>,
+    pub triangles: Vec<[u32; 3]>,
+    /// Optional source-carried replacement topology for an unequal-LOD seam.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub transition_triangles: Vec<[u32; 3]>,
+}
+
+/// The complete source envelope for one surface observation.
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfaceReplyDocument {
+    pub schema: String,
+    pub binding: Binding,
+    pub request_id: u64,
+    pub generation: u64,
+    pub patch: SurfacePatchDocument,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SurfaceRequestDocument {
+    pub schema: String,
+    pub binding: Binding,
+    pub request_id: u64,
+    pub generation: u64,
+    pub address: SurfacePatchAddress,
+    #[serde(default)]
+    pub transition_address: Option<SurfacePatchAddress>,
+    pub expected_revision: SurfacePatchRevision,
+}
+
+/// Full revision-qualified cache identity for a surface patch.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfacePatchCacheKey {
+    pub revision: String,
+    pub macro_face: u32,
+    pub child_path: Vec<u8>,
+}
+
+fn valid_surface_number(value: f64) -> bool {
+    value.is_finite() && (value as f32).is_finite()
+}
+
+fn valid_surface_height(value: f64) -> bool {
+    // Mesh bounds and culling square f32 coordinates. Reserve headroom for
+    // the datum/radius conversion as well as the cast itself.
+    valid_surface_number(value) && value.abs() <= f64::from(f32::MAX.sqrt())
+}
+
+const MAX_SURFACE_CHILD_DEPTH: usize = 23;
+// The supported anchor-radius interval makes a planet's half-circumference
+// smaller than this bound. Channel distance remains signed within that
+// physical surface-distance envelope.
+const MAX_CHANNEL_DISTANCE_M: f64 = 100_000_000.0;
+const UNIT_TOLERANCE: f64 = 1.0e-5;
+const WEIGHT_TOLERANCE: f64 = 1.0e-5;
+
+fn valid_revision_component(value: &str, max_len: usize) -> bool {
+    !value.is_empty()
+        && value.len() <= max_len
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_graphic() && byte != b':')
+}
+
+fn valid_unit_vector(value: [f64; 3], allow_zero: bool) -> bool {
+    let length = value
+        .into_iter()
+        .map(|component| component * component)
+        .sum::<f64>()
+        .sqrt();
+    length.is_finite()
+        && ((allow_zero && length <= UNIT_TOLERANCE) || (length - 1.0).abs() <= UNIT_TOLERANCE)
+}
+
+fn valid_weight(value: f64) -> bool {
+    value.is_finite() && (0.0..=1.0).contains(&value)
+}
+
+fn valid_feature_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "channel_reach" | "confluence" | "shoreline" | "ridge" | "material_transition"
+    )
+}
+
+fn valid_terminal(terminal: &str) -> bool {
+    matches!(
+        terminal,
+        "headwater" | "confluence" | "lake" | "ocean" | "continuation"
+    )
+}
+
+fn valid_endpoint(
+    endpoint: &SurfacePatchEndpoint,
+    feature: &SurfaceFeatureId,
+    expected_side: &str,
+) -> bool {
+    endpoint.feature == *feature
+        && endpoint.side == expected_side
+        && valid_terminal(&endpoint.terminal)
+        && endpoint.boundary.as_ref().is_none_or(|boundary| {
+            valid_macro_face(boundary.address.macro_face)
+                && boundary.edge < 4
+                && (0.0..=1.0).contains(&boundary.t)
+                && boundary.address.child_path.len() <= MAX_SURFACE_CHILD_DEPTH
+                && boundary.address.child_path.iter().all(|digit| *digit <= 3)
+        })
+        && (endpoint.terminal == "continuation") == endpoint.boundary.is_some()
+}
+
+fn valid_macro_face(value: u32) -> bool {
+    let face = value & 0x1f;
+    let pathword = value >> 5;
+    face < 6 && (0x1000..0x2000).contains(&pathword)
+}
+
+pub(crate) fn validate_surface_patch_revision(
+    revision: &SurfacePatchRevision,
+) -> Result<(), ViewError> {
+    check(
+        revision.source_revision.len() == 40
+            && revision
+                .source_revision
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+            && valid_revision_component(&revision.algorithm_version, 128)
+            && revision.configuration_hash_hex.len() == 64
+            && revision
+                .configuration_hash_hex
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase()),
+        "invalid surface patch revision",
+    )
+}
+
+pub(crate) fn validate_surface_patch_address(
+    address: &SurfacePatchAddress,
+) -> Result<(), ViewError> {
+    check(
+        valid_macro_face(address.macro_face)
+            && address.child_path.len() <= MAX_SURFACE_CHILD_DEPTH
+            && address.child_path.iter().all(|digit| *digit <= 3),
+        "invalid surface patch address",
+    )
+}
+
+pub(crate) fn validate_surface_patch(document: &SurfacePatchDocument) -> Result<(), ViewError> {
+    check(
+        document.schema == "scene/surface/v1",
+        "unknown surface patch schema",
+    )?;
+    check(
+        !document.revision.source_revision.is_empty()
+            && document.revision.source_revision.len() == 40
+            && document
+                .revision
+                .source_revision
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+            && valid_revision_component(&document.revision.algorithm_version, 128)
+            && document.revision.configuration_hash_hex.len() == 64
+            && document
+                .revision
+                .configuration_hash_hex
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase()),
+        "invalid surface patch revision",
+    )?;
+    check(
+        document.address.child_path.len() <= MAX_SURFACE_CHILD_DEPTH
+            && document.address.child_path.iter().all(|digit| *digit <= 3),
+        "surface child path digit is outside 0..=3",
+    )?;
+    check(
+        valid_macro_face(document.address.macro_face),
+        "surface macro face is not a packed Level-6 facet",
+    )?;
+    check(
+        !document.vertices.is_empty(),
+        "surface patch has no samples",
+    )?;
+    check(
+        document.vertices.iter().all(|vertex| {
+            valid_unit_vector(vertex.position, false)
+                && valid_surface_height(vertex.height_m)
+                && valid_unit_vector(vertex.normal, false)
+                && vertex.material_weights.iter().copied().all(valid_weight)
+                && (vertex.material_weights.iter().sum::<f64>() - 1.0).abs() <= WEIGHT_TOLERANCE
+                && vertex.water_depth_m >= 0.0
+                && vertex.channel_distance_m.abs() <= MAX_CHANNEL_DISTANCE_M
+                && vertex.channel_width_m >= 0.0
+                && vertex.flow_strength >= 0.0
+                && vertex.flow_strength <= 1.0
+                && valid_unit_vector(vertex.flow_direction, true)
+                && valid_unit_vector(vertex.ridge_direction, true)
+                && [
+                    vertex.floodplain_weight,
+                    vertex.bank_weight,
+                    vertex.terrace_weight,
+                    vertex.delta_weight,
+                    vertex.ridge_strength,
+                ]
+                .into_iter()
+                .all(valid_weight)
+                && vertex.position.into_iter().all(valid_surface_number)
+                && [
+                    vertex.height_m,
+                    vertex.shoreline_distance_m,
+                    vertex.water_depth_m,
+                    vertex.flow_strength,
+                    vertex.channel_distance_m,
+                    vertex.channel_width_m,
+                    vertex.floodplain_weight,
+                    vertex.bank_weight,
+                    vertex.terrace_weight,
+                    vertex.delta_weight,
+                    vertex.ridge_strength,
+                ]
+                .into_iter()
+                .all(valid_surface_number)
+        }),
+        "surface patch contains a non-finite sample",
+    )?;
+    check(
+        document
+            .triangles
+            .iter()
+            .chain(document.transition_triangles.iter())
+            .all(|triangle| {
+                triangle
+                    .iter()
+                    .all(|index| (*index as usize) < document.vertices.len())
+                    && triangle[0] != triangle[1]
+                    && triangle[1] != triangle[2]
+                    && triangle[0] != triangle[2]
+            }),
+        "surface topology references an invalid or degenerate triangle",
+    )?;
+    check(
+        document.features.iter().all(|feature| {
+            valid_feature_kind(&feature.feature.kind)
+                && feature.points.len() >= 2
+                && feature.points.len() == feature.width_rad.len()
+                && feature
+                    .points
+                    .iter()
+                    .copied()
+                    .all(|point| valid_unit_vector(point, false))
+                && feature.width_rad.iter().all(|width| {
+                    valid_surface_number(*width) && (0.0..=std::f64::consts::PI).contains(width)
+                })
+                && valid_endpoint(&feature.endpoints[0], &feature.feature, "upstream")
+                && valid_endpoint(&feature.endpoints[1], &feature.feature, "downstream")
+        }),
+        "surface feature curve is incomplete or non-finite",
+    )?;
+    check(
+        document.strips.iter().all(|strip| {
+            valid_feature_kind(&strip.feature.kind)
+                && strip.centerline.len() >= 2
+                && strip.centerline.len() == strip.width_rad.len()
+                && strip.vertices.len() >= 3
+                && strip
+                    .centerline
+                    .iter()
+                    .copied()
+                    .all(|point| valid_unit_vector(point, false))
+                && strip.width_rad.iter().all(|width| {
+                    width.is_finite() && *width > 0.0 && *width <= std::f64::consts::PI
+                })
+                && strip.semantic_mask.iter().copied().all(valid_weight)
+                && strip.semantic_mask.iter().any(|weight| *weight > 0.0)
+                && valid_endpoint(&strip.endpoints[0], &strip.feature, "upstream")
+                && valid_endpoint(&strip.endpoints[1], &strip.feature, "downstream")
+                && strip.vertices.iter().all(|vertex| {
+                    valid_unit_vector(vertex.position, false)
+                        && valid_unit_vector(vertex.normal, false)
+                        && valid_surface_height(vertex.height_m)
+                        && vertex.signed_distance_rad.is_finite()
+                        && vertex.signed_distance_rad.abs() <= std::f64::consts::PI * 0.5
+                        && match vertex.side {
+                            -1 => vertex.signed_distance_rad < 0.0,
+                            0 => vertex.signed_distance_rad == 0.0,
+                            1 => vertex.signed_distance_rad > 0.0,
+                            _ => false,
+                        }
+                })
+                && !strip.triangles.is_empty()
+                && strip.triangles.iter().all(|triangle| {
+                    triangle
+                        .iter()
+                        .all(|index| (*index as usize) < strip.vertices.len())
+                        && triangle[0] != triangle[1]
+                        && triangle[1] != triangle[2]
+                        && triangle[0] != triangle[2]
+                })
+        }),
+        "surface feature strip is incomplete, malformed, or non-finite",
+    )?;
+    Ok(())
+}
+
+impl SurfacePatchDocument {
+    pub fn cache_key(&self) -> SurfacePatchCacheKey {
+        SurfacePatchCacheKey {
+            revision: self.revision.cache_token(),
+            macro_face: self.address.macro_face,
+            child_path: self.address.child_path.clone(),
+        }
+    }
+}
+
+impl SurfacePatchRevision {
+    /// A cache revision includes every source-owned revision component. The
+    /// separator is outside the allowed hexadecimal/hash and revision fields,
+    /// so distinct revisions cannot collapse to one cache entry.
+    pub fn cache_token(&self) -> String {
+        format!(
+            "{}:{}{}:{}{}",
+            self.source_revision.len(),
+            self.source_revision,
+            self.algorithm_version.len(),
+            self.algorithm_version,
+            self.configuration_hash_hex
+        )
+    }
+}
+
+/// Decode and validate one source-owned surface patch document.
+pub fn surface_patch(json: &str) -> Result<SurfacePatchDocument, ViewError> {
+    let document: SurfacePatchDocument = serde_json::from_str(json)?;
+    validate_surface_patch(&document)?;
+    Ok(document)
+}
+
+/// Decode and validate the complete source-owned surface reply envelope.
+pub fn surface_reply(json: &str) -> Result<SurfaceReplyDocument, ViewError> {
+    let reply: SurfaceReplyDocument = serde_json::from_str(json)?;
+    check(
+        reply.schema == "visual/surface-reply/v1",
+        "unknown surface reply schema",
+    )?;
+    reply.binding.validate()?;
+    check(
+        reply.patch.revision.source_revision == reply.binding.source_revision,
+        "surface reply patch revision does not match its binding",
+    )?;
+    validate_surface_patch(&reply.patch)?;
+    Ok(reply)
+}
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Body {
     pub id: String,
