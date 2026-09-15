@@ -45,7 +45,7 @@ visual_proof_container_command() {
     printf '%q ' docker run --rm --network=host \
         --tmpfs /tmp:exec \
         -e WGPU_BACKEND=vulkan \
-        -e VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+        -e VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
         -e LIBGL_ALWAYS_SOFTWARE=1 \
         -e CARGO_TARGET_DIR=/tmp/hornvale-target \
         -e "PLANETARIUM_BUILD_PROVENANCE_REVISION=$revision" \
@@ -72,7 +72,7 @@ run_proof() {
         docker run --rm --network=host
         --tmpfs /tmp:exec
         -e WGPU_BACKEND=vulkan
-        -e VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+        -e VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
         -e LIBGL_ALWAYS_SOFTWARE=1
         -e CARGO_TARGET_DIR=/tmp/hornvale-target
         -e "PLANETARIUM_BUILD_PROVENANCE_REVISION=$revision"

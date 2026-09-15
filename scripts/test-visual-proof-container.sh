@@ -25,6 +25,10 @@ case "$command_output" in
     *) bad "missing Vulkan backend: $command_output";;
 esac
 case "$command_output" in
+    *"VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json"*) ok "uses the packaged lavapipe ICD path";;
+    *) bad "missing packaged lavapipe ICD path: $command_output";;
+esac
+case "$command_output" in
     *"proof::rendered_proof_reads_distinct_frames_and_patch_readiness"*) ok "runs only the rendered proof";;
     *) bad "missing exact proof selector: $command_output";;
 esac
@@ -83,6 +87,11 @@ for package_pin in \
         bad "Containerfile is missing $package_pin"
     fi
 done
+if grep -Fq 'VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json' "$root/clients/visual/Containerfile.llvmpipe"; then
+    ok "Containerfile exports the packaged lavapipe ICD path"
+else
+    bad "Containerfile is missing the packaged lavapipe ICD path"
+fi
 
 echo "== visual proof container: pin validation"
 if visual_proof_validate_pins "25.0.7-2+deb13u1" "1.4.309.0-1" "1.4.304.0+dfsg1-1"; then
