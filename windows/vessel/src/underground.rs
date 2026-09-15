@@ -1152,17 +1152,20 @@ pub(crate) fn inhabitant_datum(
     tenancy: hornvale_worldgen::delve_seating::Tenancy,
     hoard: &[&str],
 ) -> String {
+    // Bound OUT of the `format!`s below, deliberately: `syn` does not descend
+    // into macro token streams, so `tools/seam-guard`'s call-site scanner
+    // cannot see a call that only ever appears inside `format!(...)`. With the
+    // calls inlined, `source_phrase` registered as a seam and reported "(no
+    // call sites found)" — a registration the tool could never probe, which is
+    // worse than no registration at all because the committed roster reads
+    // healthy. Keep these bindings.
+    let leader_phrase = source_phrase(standing.leader);
     let mut out = if tenancy == hornvale_worldgen::delve_seating::Tenancy::Inhabited {
-        format!(
-            "A {} is kept here, in {}",
-            kind.0,
-            source_phrase(standing.leader)
-        )
+        format!("A {} is kept here, in {leader_phrase}", kind.0)
     } else {
         format!(
-            "A {} moves in the dark here, drawn to {}",
-            kind.0,
-            source_phrase(standing.leader)
+            "A {} moves in the dark here, drawn to {leader_phrase}",
+            kind.0
         )
     };
     // THE MARGIN, not just the leader (The Trencher, Task 17). A chamber where
@@ -1171,10 +1174,8 @@ pub(crate) fn inhabitant_datum(
     // about both. `is_contested` is false for a barren reading, so a dead
     // chamber is never described as a close-run thing.
     if standing.is_contested() {
-        out.push_str(&format!(
-            ", though {} runs it close",
-            source_phrase(standing.runner_up)
-        ));
+        let runner_up_phrase = source_phrase(standing.runner_up);
+        out.push_str(&format!(", though {runner_up_phrase} runs it close"));
     }
     if let Some(listed) = crate::chamber_prose::listed(hoard) {
         out.push_str(&format!(", sitting on: {listed}"));
