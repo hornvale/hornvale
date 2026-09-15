@@ -128,6 +128,7 @@ census_freshness() {
     after="$(world_since "$census_commit" "$sha")"
     n_after="$(printf '%s' "$after" | grep -c .)"
     printf '  census last moved at %s\n' "$(git rev-parse --short=9 "$census_commit")"
+    census_freshness_against_main "$base"
     if [ "$n_after" -eq 0 ]; then
         printf '  no world-producing source changed after it — the goldens describe this tip\n'
     else
@@ -329,6 +330,47 @@ PATHS
     [ "$noise" -gt 0 ] && printf '  (%s artifacts-authored conflicts not listed; the chamber resolves those)\n' "$noise"
     printf '     This candidate would pass the mouth against TODAY main, take the claim,\n'
     printf '     and die at <merge> rc=10 having tested nothing. Absorb and resubmit.\n'
+}
+
+# THE OTHER HALF OF CENSUS FRESHNESS, and the half that is not about the
+# branch at all. `census_freshness` asks whether the CANDIDATE moved
+# world-producing code after its own census. It says nothing about whether MAIN
+# did, beneath the candidate, while it sat in the queue --- and a census
+# measures the world through the code, so main's movement invalidates a
+# candidate's goldens exactly as surely as its own.
+#
+# Done by hand twice on 2026-09-14/15 before being written down, which is this
+# project's stated threshold for putting a rule in code:
+#
+#   campaign/the-tidemark    52 commits behind main, all scripts/docs/Makefile
+#                            -> census survived the wait
+#   campaign/the-coherence   changed terrain and worldgen, and I told
+#                            campaign/anchor-orbital-coherence it had not,
+#                            because I asserted the absence without looking
+#
+# IT IS A FLAG, NOT A VERDICT, and the second case above is exactly why.
+# the-coherence moved terrain sources and moved ZERO census goldens --- proven
+# by its heavy phase running census_fixtures_match_a_probe_of_live_seeds
+# against the committed fixtures and passing. Main can move world-producing
+# code that is inert for every censused metric. So this reports what to go
+# check, and names the test that settles it, rather than pretending to know.
+census_freshness_against_main() {
+    local base="$1" moved n
+    [ -n "$base" ] || return 0
+    moved="$(world_since "$base" origin/main)"
+    n="$(printf '%s' "$moved" | grep -c .)"
+    if [ "$n" -eq 0 ]; then
+        printf '  main moved no world-producing source since this branch diverged\n'
+        return 0
+    fi
+    printf '  >> MAIN moved %s world-producing source file(s) since this branch diverged:\n' "$n"
+    printf '%s\n' "$moved" | sed 's/^/       /' | head -8
+    [ "$n" -gt 8 ] && printf '       ... and %s more\n' "$((n - 8))"
+    printf '     A census measures the world THROUGH the code, so these can invalidate\n'
+    printf '     goldens the candidate measured before they landed. They may equally be\n'
+    printf '     inert: check whether the landing moved any golden\n'
+    printf '       git diff --stat <main-before>..<main-after> -- book/src/laboratory/generated/\n'
+    printf '     and whether heavy ran census_fixtures_match_a_probe_of_live_seeds green.\n'
 }
 
 # HV_VET_LIB=1 sources the adjudication functions above --- decision blocks,
