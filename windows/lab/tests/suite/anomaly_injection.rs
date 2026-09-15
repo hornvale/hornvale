@@ -1057,3 +1057,85 @@ fn tally_recall() -> Tally {
     );
     t
 }
+
+/// claim: invariant(forall-arm, substitution-target-is-live) — every injection
+/// arm's OLD text still occurs exactly once in the file it names.
+///
+/// # Why this test exists, and what it cost not to have
+///
+/// Each arm in `scripts/gnomon-injection.sh` substitutes a constant by **exact
+/// string match**, so its `old` field is a hand-copied duplicate of a literal
+/// that lives in `domains/`. When the original moves, the arm does not fail
+/// loudly — it stops matching, and the script refuses. The refusal is correct
+/// and it arrives **far too late**: the substitution is asserted inside the
+/// per-arm loop, after the two baselines and several arms have already run, at
+/// the end of a full census.
+///
+/// That is not hypothetical. The Trencher's Task 13 re-placed
+/// `CLASTIC_AQUIFER_MIN_POROSITY` from `0.46` to `0.53`, which voided the
+/// `aquifer` arm. Nothing said so until a **1,915-second** queued census
+/// reached the injection battery and refused the delivery (`8f506c1d9997`,
+/// 2026-09-15) — a whole run of the canonical box spent to learn something a
+/// string comparison answers instantly. The census itself had succeeded.
+///
+/// The script's own `check` subcommand does not cover this: it validates the
+/// host and that the tree is clean, and nothing about the arms. This test is
+/// the cheap half, and it runs on every commit.
+///
+/// It deliberately parses the shell script rather than a generated fixture.
+/// The fixture is rebuilt by the very script whose arms may be stale, so a
+/// fixture-based check would agree with the thing it is supposed to police.
+#[test]
+fn every_injection_arm_still_matches_its_target_exactly_once() {
+    let script = std::fs::read_to_string(Path::new("../../scripts/gnomon-injection.sh"))
+        .expect("the authoring script is readable from windows/lab");
+    let mut checked = 0usize;
+    let mut stale: Vec<String> = Vec::new();
+    for line in script.lines() {
+        let line = line.trim();
+        // ARMS entries are `"name|file|old|new|why"`; the two baselines carry
+        // empty file/old fields and are skipped by the `is_empty` guard below.
+        if !line.starts_with('"') || !line.contains('|') {
+            continue;
+        }
+        let body = line
+            .trim_start_matches('"')
+            .trim_end_matches(',')
+            .trim_end_matches('"');
+        let parts: Vec<&str> = body.split('|').collect();
+        if parts.len() < 4 {
+            continue;
+        }
+        let (file, old) = (parts[1].trim(), parts[2].trim());
+        if file.is_empty() || old.is_empty() {
+            continue;
+        }
+        let path = Path::new("../..").join(file);
+        let Ok(src) = std::fs::read_to_string(&path) else {
+            stale.push(format!("{}: names {file}, which does not exist", parts[0]));
+            continue;
+        };
+        let hits = src.matches(old).count();
+        checked += 1;
+        if hits != 1 {
+            stale.push(format!(
+                "{}: `{old}` occurs {hits} time(s) in {file}, expected exactly 1",
+                parts[0]
+            ));
+        }
+    }
+    assert!(
+        checked >= 5,
+        "parsed only {checked} substituting arms out of scripts/gnomon-injection.sh — the ARMS \
+         format changed and this guard is reading nothing, which would pass vacuously forever"
+    );
+    assert!(
+        stale.is_empty(),
+        "these injection arms can no longer find what they substitute: {stale:?}\n\
+         An arm whose target has moved is VOID: the script refuses, and it refuses at the end of \
+         a full census rather than here. Update the arm's OLD side in \
+         scripts/gnomon-injection.sh to the constant's current text. Update NEW only if the \
+         perturbation is no longer the one the domain argues for — restoring the previous \
+         arithmetic delta is not itself a reason."
+    );
+}

@@ -4520,3 +4520,74 @@ pay and a row I can write.
 **Ideonomy passes / overturns:** one — *a guard's deferral may live in its
 enforcer rather than its definition, so "the test does not mention the flag" is
 evidence about the test and none about the guard.*
+
+## #54 [G5] — The census went red, the census was fine, and the cause was a constant I moved in Task 13
+
+`req-8f506c1d9997` — CHAMBER RED rc=4 after 1915 s. Read the log before
+concluding anything, and the headline is not what the status line suggests.
+
+**The census SUCCEEDED.** `timed.sh: 'census' wall=1693.082s user=49955.358s
+cpu_ratio=29.84 rc=0`, 1000 rows, 0 refusals, 416 golden paths moved. The
+duration deferral (#53) worked exactly as it should: 1693 s is over the 1650 s
+ceiling and the delivery was **not** refused on its own row. The alarm is owed
+a profiling follow-up; the deadlock did not happen.
+
+What failed is the step after: **`gnomon-injection` rc=1.**
+
+```
+gnomon-injection: TARGET NOT FOUND (or not unique) in domains/terrain/src/lithology.rs:
+  const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.46;
+gnomon-injection: matched 0 times; expected exactly 1.
+```
+
+**Task 13 re-placed that constant `0.46 -> 0.53`.** The Gnomon's injection arms
+substitute by exact string match, so the `aquifer` arm's `old` field — a
+hand-copied duplicate of a literal living in `domains/` — stopped matching. The
+arm was VOID from the moment Task 13 landed, and the script is right to refuse:
+*"a VOID arm is a real finding; do not deliver the goldens without the arms."*
+
+**My projection was also wrong, in the direction that mattered less.** I
+predicted ~1742 s; it ran 1693 s. Over the ceiling, as expected, but I
+over-estimated the absorb's cost.
+
+### The repair, and the one decision inside it
+
+The arm's `old` is updated to `0.53`. **`new` is left at `0.30`**, which is a
+judgment and is recorded as one: the script's header says the injections "were
+chosen by reading the domains, not prescribed", so `0.30` carries its own
+domain meaning and is not merely `old` minus a delta. The consequence is stated
+in the arm itself — the perturbation is now `-0.23` rather than the authored
+`-0.16`, and if that proves too wide to stay localised the fix is to re-choose
+`new` against the domain, **not** to shrink it to restore the old arithmetic.
+
+All five other arms were checked and match exactly once. Only mine rotted.
+
+### The class, fixed cheaply, which is the part worth keeping
+
+A voided arm cost **a 1,915-second run of the canonical box** to discover
+something a string comparison answers instantly. The refusal is asserted inside
+the per-arm loop, after two baselines and several arms have run, at the end of
+a full census — and the script's own `check` subcommand does not cover it at
+all (it validates the host and a clean tree, and nothing about the arms).
+
+`every_injection_arm_still_matches_its_target_exactly_once` now parses the ARMS
+table and asserts each `old` occurs exactly once in the file it names.
+**7 milliseconds, on every commit.** Mutation-proved by restoring the stale
+`0.46`: it reds with the arm named and the count reported.
+
+It parses the **shell script**, not the generated fixture, deliberately — the
+fixture is rebuilt by the very script whose arms may be stale, so a
+fixture-based check would agree with the thing it is supposed to police. It
+also asserts it parsed at least five substituting arms, so an ARMS-format
+change cannot make it pass vacuously.
+
+**The staged goldens are unusable regardless**, and that removes the time
+pressure the board's perishability warning would otherwise create: they were
+produced at `8f506c1d9997`, which lacks this fix, so the arms cannot be
+re-authored against them. A fresh run is required either way — which is exactly
+why the guard was worth writing first rather than after.
+
+**Ideonomy passes / overturns:** one — *a hand-copied literal is a join with no
+integrity check; when the original moves, the copy does not fail, it stops
+matching — and the distance between those two is however long the cheapest
+thing that notices takes to run.*
