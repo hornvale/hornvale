@@ -36,16 +36,45 @@ prev="${2:-}"
 # Every distinct failing test path. A FAIL line's last field is the test path;
 # nextest prints each one twice (once live, once in the failure block), so
 # distinct names is the meaningful figure.
-names_of() { grep -aE '^ *FAIL \[' "$1" | awk '{print $NF}' | sort -u; }
+# TWO HARNESSES RUN IN THIS CHAMBER, AND THIS TOOL SAW ONLY ONE.
+#
+# The workspace phases run nextest, which prints `FAIL [   0.0s] name`. The
+# `clients` phase runs plain `cargo test` — the clients are outside the cargo
+# workspace and carry their own toolchains — and libtest prints
+# `test name ... FAILED` instead. This function read only the first form.
+#
+# So on 2026-09-15 campaign/the-tidemark died at `clients` with FOUR failing
+# portolan tests in clients/game/bin/src/driver.rs, and this tool — written
+# specifically to refuse under-reporting — reported ZERO, with its own
+# cross-check printing "ok: the list is not shorter than the run reported".
+# A silent, confident, wrong all-clear from the guard against exactly that.
+#
+# The cross-check could not catch it either: with no nextest Summary carrying a
+# failure count, max_failed was 0, and 0 names is not shorter than 0.
+names_of() {
+    {
+        grep -aE '^ *FAIL \[' "$1" | awk '{print $NF}'
+        # libtest: `test some::name ... FAILED`, possibly indented by the
+        # chamber's log capture.
+        grep -aE '^ *test [A-Za-z0-9_:]+ \.\.\. FAILED' "$1" | awk '{print $2}'
+    } | sort -u
+}
 
 # What the run itself said. A log may hold several nextest invocations (the gate
 # phase, docs-tests, the sub-floor tier), so every Summary is reported; the
 # LARGEST failed-count is the floor the list must clear.
 summaries_of() { grep -a 'Summary \[' "$1" | sed 's/^ *//'; }
+# The largest failure count either harness reported. nextest writes
+# `Summary [ ... ] N tests run: P passed, F failed`; libtest writes
+# `test result: FAILED. P passed; F failed`. Reading only the first is how the
+# clients phase became invisible — see names_of above.
 max_failed_of() {
-    grep -a 'Summary \[' "$1" \
-        | sed -n 's/.*: [0-9]* passed[^,]*, \([0-9]*\) failed.*/\1/p' \
-        | sort -rn | head -1
+    {
+        grep -a 'Summary \[' "$1" \
+            | sed -n 's/.*: [0-9]* passed[^,]*, \([0-9]*\) failed.*/\1/p'
+        grep -a 'test result: FAILED' "$1" \
+            | sed -n 's/.*; \([0-9]*\) failed.*/\1/p'
+    } | sort -rn | head -1
 }
 
 printf '%s\n' "== the run's own summary lines"
