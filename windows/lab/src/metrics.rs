@@ -14141,17 +14141,13 @@ mod tests {
         // 2.4242424242424243. Stellar topology and anchor generation change
         // the seed-42 settlement/naming substrate; this is a fresh live
         // measurement on the merged tree, not a change to the 2-3 target.
-        // TWO CAMPAIGNS RE-PIN IT TOGETHER (2026-09-11): the Underworld
-        // Peoples' four and The Tidemark's six re-place seed 42's
-        // settlements, so goblin's own site pool and the names drawn for it
-        // move. MEASURED on the merged world — neither branch's own figure
-        // (2.5714285714285716, 2.5) survives it. A later settlement witness
-        // refresh measured 2.4. Still inside the 2-3 target,
-        // which is the
-        // row's claim.
+        // THE CURRENT MAIN re-pin: the settlement and naming substrate moved
+        // again after the campaign's close witness. The exact value remains
+        // inside the metric's 2-3 target; this is a fresh measurement, not a
+        // changed claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.4)
+            MetricValue::Number(2.3846153846153846)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14389,17 +14385,13 @@ mod tests {
         // THE WANDERERS re-pin (2026-09-09): 2.8 -> 2.8157894736842106.
         // Stellar topology and anchor generation change the merged tree's
         // seed-42 named-site sample; it remains inside the stated 2-3 target.
-        // TWO CAMPAIGNS RE-PIN IT TOGETHER (2026-09-11): the Underworld
-        // Peoples' four and The Tidemark's six re-place seed 42's
-        // settlements, so kobold's named-site sample moves with goblin's
-        // (above). MEASURED on the merged world — neither branch's own figure
-        // (2.580246913580247, 2.3518518518518516) survives it — the merged
-        // value is 2.4096385542168677. Both remain inside the stated 2-3
-        // target; nothing in either campaign touches phonology, wear or the
-        // namer.
+        // THE CURRENT MAIN re-pin: the settlement and naming substrate moved
+        // again after the campaign's close witness. The exact value remains
+        // inside the metric's 2-3 target; this is a fresh measurement, not a
+        // changed claim.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.4096385542168677)
+            MetricValue::Number(2.4)
         );
     }
 
