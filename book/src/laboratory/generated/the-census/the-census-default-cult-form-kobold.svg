@@ -8,13 +8,13 @@
 <text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">750</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1000</text>
-<rect x="70.2" y="174.0" width="160.9" height="62.0" fill="#5b8dd9" rx="2" />
-<text x="150.7" y="170.0" font-size="11" fill="currentColor" text-anchor="middle">310</text>
+<rect x="70.2" y="177.0" width="160.9" height="59.0" fill="#5b8dd9" rx="2" />
+<text x="150.7" y="173.0" font-size="11" fill="currentColor" text-anchor="middle">295</text>
 <text x="150.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 150.7 252.0)">folk</text>
-<rect x="259.5" y="101.6" width="160.9" height="134.4" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="97.6" font-size="11" fill="currentColor" text-anchor="middle">672</text>
+<rect x="259.5" y="98.2" width="160.9" height="137.8" fill="#5b8dd9" rx="2" />
+<text x="340.0" y="94.2" font-size="11" fill="currentColor" text-anchor="middle">689</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">organized</text>
-<rect x="448.9" y="232.4" width="160.9" height="3.6" fill="#5b8dd9" rx="2" />
-<text x="529.3" y="228.4" font-size="11" fill="currentColor" text-anchor="middle">18</text>
+<rect x="448.9" y="232.8" width="160.9" height="3.2" fill="#5b8dd9" rx="2" />
+<text x="529.3" y="228.8" font-size="11" fill="currentColor" text-anchor="middle">16</text>
 <text x="529.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 529.3 252.0)">absent</text>
 </svg>

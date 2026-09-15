@@ -14,7 +14,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.006483896 | 0.14363568 | 0.20083387 | 0.25994415 | 0.56800975 | 0.20553696 |
+| 0.090453586 | 0.16511249 | 0.19619552 | 0.22705747 | 0.43548277 | 0.19846315 |
 
 ### `channel-band-monotonicity`
 
@@ -34,7 +34,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.96484375 | 0.98235294 | 0.98627451 | 0.99015748 | 1 | 0.98578551 |
+| 0.96666667 | 0.98228346 | 0.98622047 | 0.99015748 | 0.99804688 | 0.98532925 |
 
 ### `channel-connectivity`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0019848061 | 0.0021244083 | 0.0021703794 | 0.0022181322 | 0.0023791491 | 0.0021706782 |
+| 0.0019767143 | 0.0021215376 | 0.0021656365 | 0.0022126949 | 0.0023727517 | 0.0021671868 |
 
 ### `channel-transect-dry-reach`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.66992188 | 0.743083 | 0.76086957 | 0.77929688 | 0.8359375 | 0.76055563 |
+| 0.66601562 | 0.74015748 | 0.75787402 | 0.7734375 | 0.84179688 | 0.75675382 |
 
 ### `coast-roughness-slope`
 
@@ -74,7 +74,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.10170349 | 0.21659881 | 0.25541154 | 0.27934681 | 0.35013046 | 0.24641712 |
+| 0.10081913 | 0.21928192 | 0.25479087 | 0.27870024 | 0.34990104 | 0.24625017 |
 
 ### `delta-count`
 
@@ -84,7 +84,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 4 | 5 | 5 | 9 | 4.791 |
+| 2 | 4 | 5 | 5 | 9 | 4.768 |
 
 ### `endorheic-coverage`
 
@@ -94,7 +94,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.12058127 | 0.24541669 | 0.28209795 | 0.32391779 | 0.45921657 | 0.28494938 |
+| 0.13206425 | 0.25099215 | 0.28944514 | 0.32622588 | 0.45982906 | 0.29008854 |
 
 ### `hydro-variant-coverage`
 
@@ -114,7 +114,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.01216584 | 0.089948836 | 0.11243012 | 0.13081133 | 0.23541969 | 0.10916129 |
+| 0.010808546 | 0.079285618 | 0.10355412 | 0.12221835 | 0.21938514 | 0.099833144 |
 
 ### `rerouted-flow-fraction`
 
@@ -124,7 +124,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.036942488 | 0.082850322 | 0.096764304 | 0.11391599 | 0.18882055 | 0.099774166 |
+| 0.037504139 | 0.084296483 | 0.099082053 | 0.11555737 | 0.18719704 | 0.10107164 |
 
 ### `shelf-fraction`
 
@@ -134,7 +134,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.057565549 | 0.074068649 | 0.080769982 | 0.087300425 | 0.17015771 | 0.081060666 |
+| 0.058810605 | 0.075997266 | 0.082808457 | 0.089351106 | 0.17145159 | 0.08317919 |
 
 ### `shelf-width-active-median`
 
@@ -144,7 +144,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 2 | 2 | 2 | 2.5 | 1.9975 |
+| 1 | 2 | 2 | 2 | 3 | 2.001 |
 
 ### `shelf-width-passive-median`
 
@@ -154,7 +154,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 1 | 1 | 1 | 2 | 1.2355 |
+| 1 | 1 | 1 | 1 | 2 | 1.218 |
 
 ### `shoreline-development`
 
@@ -164,7 +164,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 5.0999345 | 7.4104239 | 8.2780951 | 9.0688031 | 11.438392 | 8.2338318 |
+| 5.1049222 | 7.4153338 | 8.2524064 | 9.0645765 | 11.498583 | 8.2150079 |
 
 ### `waterfall-count`
 
@@ -174,7 +174,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 0 | 1 | 5 | 0.437 |
+| 0 | 0 | 0 | 0 | 5 | 0.267 |
 
 ## Weaknesses found here
 
@@ -198,15 +198,15 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `karst-fraction`
 
-- **D5 strength**: declared weak tracking mean-land-temperature-c, but observed |r| = 0.025 (1000 pairs) is none
+- **D5 strength**: declared weak tracking mean-land-temperature-c, but observed |r| = 0.052 (1000 pairs) is none
 
 ### `shelf-fraction`
 
-- **D5 direction**: declared positive moderate tracking ocean-fraction, but the observed coupling is negative (r = -0.398, 1000 pairs) — the link runs backwards
+- **D5 direction**: declared positive moderate tracking ocean-fraction, but the observed coupling is negative (r = -0.394, 1000 pairs) — the link runs backwards
 
 ### `shelf-width-active-median`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 1.5 min..max range), under the 5% bar
+- **D3**: p25..p75 spans 0 (0.00% of the 2 min..max range), under the 5% bar
 
 ### `shelf-width-passive-median`
 
@@ -216,9 +216,10 @@ n = 1000 present, 0 absent (of 1000 worlds)
 ### `shoreline-development`
 
 - **D5 strength**: declared weak tracking total-tide, but observed |r| = 0.004 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking largest-continent-share, but observed r = -0.258 (1000 pairs) is weak (negative)
+- **D5 strength**: declared moderate tracking largest-continent-share, but observed r = -0.250 (1000 pairs) is weak (negative)
 
 ### `waterfall-count`
 
+- **D3**: p25..p75 spans 0 (0.00% of the 5 min..max range), under the 5% bar
 - **D4**: median 0 equals the min (0 .. 5)
 

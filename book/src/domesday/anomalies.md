@@ -8,158 +8,107 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ## Top worlds
 
+### Seed `738`
+
+Score **23**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `goblin-settlement-count` | 0 | 124 |
+| `lunar-eclipses-per-century` | 0 | 10017 |
+| `sediment-volume` | 0 | 654461.15 |
+| `solar-eclipses-per-century` | 0.001001001 | 10237 |
+| `warp-channel-mi-overhang` | 0.001001001 | 0.031117375 |
+| `weft-existence-density-overhang` | 0.001001001 | 0.0050358484 |
+| `weft-legibility-mi-overhang` | 0.001001001 | 0.022913752 |
+| `unrest-coverage` | 0.002002002 | 0.0010009277 |
+| `warp-channel-null-overhang` | 0.002002002 | 0.010823197 |
+| `warp-learner-gain-overhang` | 0.002002002 | 0.014622409 |
+
 ### Seed `459`
 
-Score **24**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `epidemic-largest-metapopulation-now` | 0 | 402.45398 |
-| `warp-found-fraction-overhang` | 0 | 0.9200492 |
-| `warp-learner-gain-overhang` | 0 | 0.15572748 |
-| `warp-oracle-gain-overhang` | 0 | 0.17517359 |
-| `weft-legibility-mi-overhang` | 0 | 0.18275241 |
-| `cold-built-room-share` | 0.001001001 | 0.97701149 |
-| `raid-initiator-rate` | 0.001001001 | 0.0084210526 |
-| `raid-victim-rate` | 0.001001001 | 0.0084210526 |
-| `warp-channel-mi-overhang` | 0.001001001 | 0.18904859 |
-| `mean-warning-legibility` | 0.002002002 | 0.089260768 |
-
-### Seed `619`
-
-Score **24**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `goblin-flagship-population` | 0 | 2 |
-| `mean-warning-legibility` | 0 | 0.074032222 |
-| `settlement-count` | 0 | 72 |
-| `total-population` | 0 | 1550 |
-| `name-people-recoverability` | 0.0005005005 | 0.33333333 |
-| `epidemic-largest-metapopulation-now` | 0.001001001 | 486.92684 |
-| `goblin-settlement-count` | 0.001001001 | 1 |
-| `largest-holding-share` | 0.001001001 | 0.025806452 |
-| `peoples-alive-at-bake-end` | 0.001001001 | 18 |
-| `peoples-placed` | 0.001001001 | 18 |
-
-### Seed `775`
-
 Score **22**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `chorus-distortion` | 0 | 0.42417154 |
-| `goblin-settlement-count` | 0 | 0 |
-| `name-pattern-signatures` | 0 | 7 |
-| `peoples-alive-at-bake-end` | 0 | 15 |
-| `peoples-placed` | 0 | 15 |
-| `rank-size-slope` | 0 | -0.3103041 |
-| `name-people-recoverability` | 0.0005005005 | 0.33333333 |
-| `chorus-param-spread` | 0.001001001 | 0.1112381 |
-| `chorus-recoverability` | 0.001001001 | 0.87368421 |
-| `mean-warning-legibility` | 0.001001001 | 0.087375048 |
+| `warp-found-fraction-overhang` | 0 | 0.88478582 |
+| `warp-learner-gain-overhang` | 0 | 0.14472993 |
+| `warp-oracle-gain-overhang` | 0 | 0.14977824 |
+| `weft-legibility-mi-overhang` | 0 | 0.15248762 |
+| `cold-built-room-share` | 0.001001001 | 1 |
+| `mean-warning-legibility` | 0.002002002 | 0.13359232 |
+| `name-people-recoverability` | 0.002002002 | 0.31578947 |
+| `warp-channel-mi-overhang` | 0.002002002 | 0.16132625 |
+| `peoples-alive-at-bake-end` | 0.0035035035 | 19 |
+| `peoples-placed` | 0.0035035035 | 19 |
 
-### Seed `827`
+### Seed `689`
 
-Score **22**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+Score **20**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `warp-best-lift-thicket` | 0 | 5.6714337 |
-| `rank-size-slope` | 0.001001001 | -0.85060975 |
-| `total-population` | 0.002002002 | 1617 |
-| `largest-holding-share` | 0.003003003 | 0.024737168 |
-| `raid-initiator-rate` | 0.003003003 | 0.015306122 |
-| `raid-victim-rate` | 0.003003003 | 0.015306122 |
-| `goblin-flagship-population` | 0.003006012 | 3 |
-| `deposit-density` | 0.004004004 | 0.54557823 |
-| `mean-warning-legibility` | 0.004004004 | 0.10043279 |
-| `name-people-recoverability` | 0.005005005 | 0.3 |
+| `chorus-distortion` | 0 | 0.41488889 |
+| `chorus-recoverability` | 0 | 0.862 |
+| `largest-holding-share` | 0 | 0.026385224 |
+| `settlement-count` | 0 | 82 |
+| `total-population` | 0 | 1516 |
+| `mean-warning-legibility` | 0.001001001 | 0.12453208 |
+| `rank-size-slope` | 0.001001001 | -0.94740927 |
+| `goblin-flagship-population` | 0.001002004 | 3 |
+| `epidemic-largest-metapopulation-now` | 0.002002002 | 896.47559 |
+| `lot-souls-ever` | 0.002002002 | 45131.37 |
 
-### Seed `652`
+### Seed `417`
 
 Score **19**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `chorus-param-spread` | 0 | 0.10421053 |
-| `name-pattern-signatures` | 0.001001001 | 8 |
-| `name-length-goblin` | 0.001002004 | 5 |
-| `chorus-distortion` | 0.002002002 | 0.40926427 |
-| `peoples-alive-at-bake-end` | 0.003003003 | 19 |
-| `peoples-placed` | 0.003003003 | 19 |
-| `warp-channel-null-thicket` | 0.005005005 | 0.0122538 |
-| `lot-slots-filled-mean` | 0.006006006 | 18.005 |
-| `weft-existence-density-thicket` | 0.006006006 | 0.046944714 |
-| `mean-warning-legibility` | 0.007007007 | 0.1131796 |
+| `epidemic-largest-metapopulation-now` | 0 | 680.85707 |
+| `lot-souls-ever` | 0 | 42301.769 |
+| `mean-warning-legibility` | 0 | 0.091799239 |
+| `raid-initiator-rate` | 0 | 0.011627907 |
+| `raid-victim-rate` | 0 | 0.011627907 |
+| `tribute-relations-standing` | 0 | 8 |
+| `largest-holding-share` | 0.001001001 | 0.024570025 |
+| `name-prefix-settlement-scope` | 0.001001001 | 0.99577167 |
+| `settlement-count` | 0.001001001 | 85 |
+| `total-population` | 0.001001001 | 1628 |
+
+### Seed `300`
+
+Score **18**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `first-day-occ-tech-iron` | 0 | 365250 |
+| `lot-silent-subsistence-share` | 0.001001001 | 0.675 |
+| `tribute-relations-standing` | 0.001001001 | 11 |
+| `largest-holding-share` | 0.002002002 | 0.023724792 |
+| `name-prefix-settlement-scope` | 0.002002002 | 0.99377916 |
+| `raid-initiator-rate` | 0.002002002 | 0.017107309 |
+| `raid-victim-rate` | 0.002002002 | 0.017107309 |
+| `total-population` | 0.002002002 | 1686 |
+| `rank-size-slope` | 0.003003003 | -0.84023812 |
+| `granary-raid-phase-concentration` | 0.0035035035 | 1 |
 
 ### Seed `850`
 
-Score **18**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `aquifer-fraction` | 0 | 0.56800975 |
-| `mountain-coverage` | 0 | 0.13071099 |
-| `unconformity-fraction` | 0 | 0.85466887 |
-| `mean-geothermal-gradient` | 0.001001001 | 22.902355 |
-| `mean-land-elevation-m` | 0.001001001 | 1120.7366 |
-| `warp-channel-mi-overhang` | 0.001001001 | 0.038492206 |
-| `warp-found-fraction-overhang` | 0.001001001 | 0.63513514 |
-| `warp-learner-gain-overhang` | 0.001001001 | 0.019914899 |
-| `warp-oracle-gain-overhang` | 0.001001001 | 0.032581635 |
-| `weft-existence-density-overhang` | 0.001001001 | 0.0064617534 |
-
-### Seed `738`
-
-Score **18**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `lunar-eclipses-per-century` | 0 | 10017 |
-| `sediment-volume` | 0 | 620405.23 |
-| `goblin-settlement-count` | 0.001001001 | 140 |
-| `solar-eclipses-per-century` | 0.001001001 | 10237 |
-| `composition-variance` | 0.002002002 | 0.21451468 |
-| `unrest-coverage` | 0.002002002 | 0.0010009277 |
-| `warp-channel-mi-overhang` | 0.002002002 | 0.042172757 |
-| `warp-found-fraction-overhang` | 0.002002002 | 0.69230769 |
-| `warp-oracle-gain-overhang` | 0.002002002 | 0.037109669 |
-| `weft-existence-density-overhang` | 0.002002002 | 0.0077486376 |
-
-### Seed `907`
-
 Score **17**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `weft-coherence-occurs-count-overhang` | 0 | 0 |
-| `weft-encounter-rate-overhang` | 0 | 0 |
-| `delta-count` | 0.0005005005 | 2 |
-| `warp-best-lift-overhang` | 0.001001001 | 38.272428 |
-| `aquifer-fraction` | 0.002002002 | 0.47708682 |
-| `mean-land-elevation-m` | 0.002002002 | 1156.3617 |
-| `sediment-volume` | 0.002002002 | 645566.49 |
-| `weft-coherence-occurs-count-erratic` | 0.002002002 | 118 |
-| `mountain-coverage` | 0.004004004 | 0.16272319 |
-| `karst-fraction` | 0.005005005 | 0.18884686 |
-
-### Seed `417`
-
-Score **17**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `tribute-relations-standing` | 0.001001001 | 4 |
-| `epidemic-largest-metapopulation-now` | 0.002002002 | 629.96345 |
-| `lot-souls-ever` | 0.002002002 | 42844.795 |
-| `mean-warning-legibility` | 0.003003003 | 0.09016409 |
-| `name-prefix-settlement-scope` | 0.003003003 | 0.99546999 |
-| `chorus-distinctiveness` | 0.0045045045 | 0.19103709 |
-| `settlement-count` | 0.005005005 | 88 |
-| `total-population` | 0.005005005 | 1693 |
-| `largest-holding-share` | 0.006006006 | 0.023626698 |
-| `lot-born-last-quarter-share` | 0.007007007 | 0.23 |
+| `channel-transect-dry-reach` | 0 | 0.84179688 |
+| `mountain-coverage` | 0 | 0.12983401 |
+| `unconformity-fraction` | 0 | 0.85426262 |
+| `first-day-occ-tech-bronze` | 0.0005005005 | 73050 |
+| `mean-geothermal-gradient` | 0.001001001 | 22.903637 |
+| `mean-land-elevation-m` | 0.001001001 | 1114.6837 |
+| `warp-learner-gain-overhang` | 0.001001001 | 0.013671661 |
+| `warp-oracle-gain-overhang` | 0.001001001 | 0.026047769 |
+| `warp-channel-mi-overhang` | 0.002002002 | 0.031944638 |
+| `weft-existence-density-overhang` | 0.002002002 | 0.0051407162 |
 
 ### Seed `708`
 
@@ -167,186 +116,135 @@ Score **16**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 
 | metric | depth | value |
 |---|---|---|
-| `warp-found-fraction-spring` | 0.000501002 | 1 |
-| `weft-encounter-rate-erratic` | 0.001001001 | 0.06124498 |
-| `warp-oracle-gain-spring` | 0.001002004 | 0.0017925544 |
-| `warp-channel-mi-spring` | 0.002002002 | 0.0020915039 |
-| `weft-existence-density-spring` | 0.002002002 | 0.0001901683 |
-| `weft-legibility-mi-spring` | 0.002002002 | 0.0023629457 |
+| `warp-channel-null-overhang` | 0 | 0.04566027 |
+| `warp-oracle-gain-spring` | 0 | 0.0061744051 |
+| `weft-encounter-rate-erratic` | 0 | 0.062345679 |
+| `weft-existence-density-spring` | 0 | 0.0010532363 |
+| `warp-channel-mi-spring` | 0.001001001 | 0.0073164843 |
+| `weft-legibility-mi-spring` | 0.001001001 | 0.0050187252 |
+| `warp-channel-null-spring` | 0.002002002 | 0.0051304439 |
 | `greenhouse-forcing-k` | 0.003003003 | 0.99918031 |
-| `karst-fraction` | 0.003003003 | 0.018944392 |
-| `warp-channel-null-spring` | 0.003003003 | 0.0015214999 |
-| `warp-found-fraction-overhang` | 0.003003003 | 0.89950577 |
+| `karst-fraction` | 0.003003003 | 0.01791639 |
+| `warp-best-lift-thicket` | 0.003003003 | 1.5340869 |
 
-### Seed `768`
+### Seed `651`
 
 Score **16**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `karst-fraction` | 0.002002002 | 0.013486346 |
-| `warp-channel-null-spring` | 0.002002002 | 0.001477836 |
-| `warp-found-fraction-spring` | 0.002004008 | 0.33333333 |
-| `warp-oracle-gain-spring` | 0.002004008 | 0.0020803457 |
-| `weft-coherence-morans-i-overhang` | 0.002004008 | 0.72550387 |
-| `warp-channel-mi-spring` | 0.003003003 | 0.0023084414 |
-| `weft-existence-density-spring` | 0.003003003 | 0.00025119317 |
-| `weft-legibility-mi-spring` | 0.003003003 | 0.0025685543 |
-| `channel-transect-dry-reach` | 0.005005005 | 0.83003953 |
-| `divergence-magnitude-goblin` | 0.0055055055 | 8 |
+| `alignment-drift-deg-per-kyr` | 0 | 0.0000024431155 |
+| `hypsometric-bimodality` | 0 | 4.4418667 |
+| `warp-false-sign-net-thicket` | 0 | -0.0010979149 |
+| `weft-coherence-morans-i-overhang` | 0.001003009 | 0.98390756 |
+| `name-syllables-kobold` | 0.001017294 | 1.1071429 |
+| `lunar-eclipses-per-century` | 0.002002002 | 8203 |
+| `solar-eclipses-per-century` | 0.003003003 | 8371 |
+| `warp-found-fraction-spring` | 0.003003003 | 0 |
+| `warp-channel-null-spring` | 0.004004004 | 0.0064895324 |
+| `weft-legibility-mi-spring` | 0.004004004 | 0.0090716695 |
 
-### Seed `109`
+### Seed `652`
+
+Score **16**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `name-pattern-signatures` | 0.0005005005 | 8 |
+| `peoples-alive-at-bake-end` | 0.0015015015 | 18 |
+| `peoples-placed` | 0.0015015015 | 18 |
+| `chorus-distinctiveness` | 0.0025025025 | 0.2030105 |
+| `mean-warning-legibility` | 0.003003003 | 0.13448101 |
+| `warp-oracle-gain-erratic` | 0.003003003 | 0.0086308204 |
+| `chorus-distortion` | 0.0045045045 | 0.40572391 |
+| `name-people-recoverability` | 0.005005005 | 0.27777778 |
+| `warp-channel-mi-erratic` | 0.005005005 | 0.011455832 |
+| `weft-existence-density-thicket` | 0.005005005 | 0.046944714 |
+
+### Seed `947`
 
 Score **15**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `forgotten-fraction` | 0 | 0.94637224 |
-| `history-myth-hop-median` | 0 | 10 |
-| `mean-population` | 0.001001001 | 11.505556 |
-| `weft-coherence-morans-i-thicket` | 0.001001001 | 0.91734614 |
-| `weft-encounter-rate-any` | 0.001001001 | 0.084583333 |
-| `weft-coherence-occurs-count-thicket` | 0.0015015015 | 125 |
-| `climate-displacement-events` | 0.002002002 | 2709 |
-| `chorus-distortion` | 0.004004004 | 0.40619874 |
-| `weft-coherence-morans-i-erratic` | 0.004004004 | 0.4867875 |
-| `weft-encounter-rate-thicket` | 0.004004004 | 0.026041667 |
+| `warp-channel-mi-erratic` | 0 | 0.010219635 |
+| `warp-channel-mi-thicket` | 0 | 0.018563237 |
+| `warp-oracle-gain-erratic` | 0 | 0.0076740393 |
+| `warp-oracle-gain-thicket` | 0.001001001 | 0.01585783 |
+| `weft-legibility-mi-thicket` | 0.001001001 | 0.0056003484 |
+| `warp-channel-null-erratic` | 0.003003003 | 0.011007808 |
+| `warp-channel-null-thicket` | 0.003003003 | 0.011763834 |
+| `sediment-volume` | 0.004004004 | 1936280.3 |
+| `cold-built-room-share` | 0.006006006 | 0.97345133 |
+| `forgotten-fraction` | 0.006006006 | 0.37391304 |
 
-### Seed `39`
-
-Score **15**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `lot-souls-ever` | 0 | 38208.032 |
-| `toponymic-roots-won` | 0 | 4 |
-| `total-population` | 0.001001001 | 1559 |
-| `largest-holding-share` | 0.002002002 | 0.025657473 |
-| `settlement-count` | 0.002002002 | 79 |
-| `name-people-recoverability` | 0.0025025025 | 0.31578947 |
-| `peoples-alive-at-bake-end` | 0.003003003 | 19 |
-| `peoples-placed` | 0.003003003 | 19 |
-| `defensibility-capacity-rank-corr` | 0.004004004 | -0.37856023 |
-| `mean-warning-legibility` | 0.005005005 | 0.10103289 |
-
-### Seed `683`
-
-Score **15**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `tribute-relations-standing` | 0 | 248 |
-| `largest-holding-share` | 0.001001001 | 0.0045377797 |
-| `total-population` | 0.001001001 | 18952 |
-| `lot-souls-ever` | 0.002002002 | 419854.11 |
-| `settlement-count` | 0.002002002 | 617 |
-| `vestige-density` | 0.002002002 | 0.057248135 |
-| `weft-coherence-morans-i-overhang` | 0.003006012 | 0.73348762 |
-| `mean-land-temperature-c` | 0.005005005 | 19.637951 |
-| `weft-existence-density-thicket` | 0.005005005 | 0.17860348 |
-| `mountain-coverage` | 0.006006006 | 0.17066595 |
-
-### Seed `196`
-
-Score **15**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `weft-coherence-morans-i-thicket` | 0 | 0.98501005 |
-| `first-day-occ-tech-bronze` | 0.001001001 | 63918.75 |
-| `karst-fraction` | 0.001001001 | 0.013055273 |
-| `mean-population` | 0.001001001 | 37.12963 |
-| `aquifer-fraction` | 0.002002002 | 0.014665988 |
-| `unconformity-fraction` | 0.004004004 | 0.023228213 |
-| `warp-learner-gain-spring` | 0.0040160643 | -0.00078921645 |
-| `warp-oracle-gain-spring` | 0.00501002 | 0.0034337841 |
-| `warp-channel-mi-spring` | 0.006006006 | 0.0036940695 |
-| `weft-coherence-morans-i-erratic` | 0.006006006 | 0.67050096 |
-
-### Seed `529`
+### Seed `149`
 
 Score **14**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `first-day-is-ruin` | 0 | 73050 |
-| `first-day-occ-tech-neolithic` | 0 | 36525 |
-| `weft-existence-density-any` | 0 | 0.1144989 |
-| `first-day-occ-cause-migrated` | 0.0005005005 | 73050 |
-| `defensibility-capacity-rank-corr` | 0.001001001 | -0.40771769 |
-| `first-day-occ-cause-fled` | 0.001001001 | 73050 |
-| `name-prefix-region-full-stack` | 0.001001001 | 0.16883117 |
-| `warp-channel-null-overhang` | 0.002002002 | 0.011830545 |
-| `mean-ore-grade` | 0.004004004 | 0.039148103 |
-| `cold-built-room-share` | 0.005005005 | 0.96341463 |
+| `warp-channel-null-overhang` | 0.001001001 | 0.0098770776 |
+| `pantheon-size-kobold` | 0.001017294 | 16 |
+| `warp-channel-null-thicket` | 0.002002002 | 0.011478642 |
+| `kobold-flagship-population` | 0.002034588 | 2 |
+| `warp-channel-mi-thicket` | 0.003003003 | 0.021202507 |
+| `weft-existence-density-any` | 0.003003003 | 0.11644004 |
+| `warp-channel-mi-erratic` | 0.004004004 | 0.010655327 |
+| `warp-channel-null-erratic` | 0.005005005 | 0.011056597 |
+| `warp-oracle-gain-erratic` | 0.005005005 | 0.0087042418 |
+| `warp-oracle-gain-thicket` | 0.005005005 | 0.018309284 |
 
-### Seed `285`
-
-Score **14**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `raid-initiator-rate` | 0 | 0.0047770701 |
-| `raid-victim-rate` | 0 | 0.0047770701 |
-| `lot-slots-filled-mean` | 0.0005005005 | 17.95 |
-| `chorus-distinctiveness` | 0.0015015015 | 0.19013653 |
-| `name-prefix-settlement-scope` | 0.002002002 | 0.99681529 |
-| `settlement-count` | 0.003003003 | 86 |
-| `total-population` | 0.003003003 | 1628 |
-| `chorus-param-spread` | 0.0035035035 | 0.11619048 |
-| `channel-transect-dry-reach` | 0.004004004 | 0.83007812 |
-| `largest-holding-share` | 0.004004004 | 0.024570025 |
-
-### Seed `682`
+### Seed `160`
 
 Score **14**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `name-prefix-region-full-stack` | 0.001001001 | 0.88196721 |
-| `greenhouse-forcing-k` | 0.002002002 | -0.99844251 |
-| `plate-size-gini` | 0.002002002 | 0.32362244 |
-| `weft-existence-density-any` | 0.002002002 | 0.12091366 |
-| `warp-oracle-gain-erratic` | 0.004004004 | 0.0086949348 |
-| `warp-channel-mi-erratic` | 0.005005005 | 0.010887957 |
-| `weft-existence-density-thicket` | 0.005005005 | 0.046783319 |
-| `granary-raid-phase-concentration` | 0.00501002 | 0.74532081 |
-| `warp-channel-null-erratic` | 0.006006006 | 0.011348214 |
-| `fertile-land-fraction` | 0.007007007 | 0 |
+| `warp-channel-null-spring` | 0.001001001 | 0.004688882 |
+| `warp-channel-mi-spring` | 0.002002002 | 0.0081059182 |
+| `warp-oracle-gain-spring` | 0.002002002 | 0.0071721358 |
+| `weft-existence-density-spring` | 0.002002002 | 0.0011531365 |
+| `weft-legibility-mi-spring` | 0.002002002 | 0.0051379689 |
+| `warp-found-fraction-spring` | 0.003003003 | 0 |
+| `shoreline-development` | 0.004004004 | 11.13693 |
+| `warp-learner-gain-spring` | 0.007007007 | 0.00073505015 |
+| `breached-delving-count` | 0.008008008 | 15 |
+| `karst-fraction` | 0.008008008 | 0.021010962 |
 
-### Seed `427`
-
-Score **14**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `eclipse-year-days` | 0.0011848341 | 1132.902 |
-| `year-std-days` | 0.002002002 | 1145.5962 |
-| `warp-learner-gain-overhang` | 0.003003003 | 0.1488066 |
-| `warp-learner-gain-thicket` | 0.003003003 | -0.0038810133 |
-| `weft-coherence-morans-i-thicket` | 0.004004004 | 0.92348002 |
-| `warp-oracle-gain-erratic` | 0.005005005 | 0.0088441707 |
-| `warp-channel-mi-erratic` | 0.006006006 | 0.011488479 |
-| `warp-channel-mi-thicket` | 0.006006006 | 0.022858544 |
-| `fertile-land-fraction` | 0.007007007 | 0 |
-| `weft-existence-density-erratic` | 0.007007007 | 0.035864337 |
-
-### Seed `695`
+### Seed `768`
 
 Score **13**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `weft-existence-density-thicket` | 0 | 0.04236052 |
-| `greenhouse-forcing-k` | 0.001001001 | -0.9985256 |
-| `weft-encounter-rate-thicket` | 0.001001001 | 0.020728291 |
-| `warp-learner-gain-thicket` | 0.002002002 | -0.0041840732 |
-| `lot-born-last-quarter-share` | 0.003003003 | 0.21 |
-| `warp-oracle-gain-thicket` | 0.003003003 | 0.017507037 |
-| `weft-legibility-mi-thicket` | 0.003003003 | 0.0058452503 |
-| `habitable-fraction` | 0.005005005 | 0.039182657 |
-| `warp-channel-mi-thicket` | 0.005005005 | 0.02193775 |
-| `weft-coherence-occurs-count-thicket` | 0.005005005 | 148 |
+| `karst-fraction` | 0 | 0.010808546 |
+| `warp-channel-mi-spring` | 0 | 0.0070002208 |
+| `warp-channel-null-spring` | 0 | 0.0039063673 |
+| `weft-legibility-mi-spring` | 0 | 0.0048572403 |
+| `warp-oracle-gain-spring` | 0.001001001 | 0.0062864067 |
+| `weft-existence-density-spring` | 0.001001001 | 0.0010885037 |
+| `weft-coherence-morans-i-overhang` | 0.001003009 | 0.50825826 |
+| `warp-found-fraction-spring` | 0.003003003 | 0 |
+| `weft-coherence-occurs-count-overhang` | 0.003003003 | 2 |
+| `weft-encounter-rate-overhang` | 0.003003003 | 0.00041152263 |
+
+### Seed `619`
+
+Score **13**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `chorus-distinctiveness` | 0 | 0.20396825 |
+| `goblin-settlement-count` | 0 | 0 |
+| `name-people-recoverability` | 0 | 0.41176471 |
+| `peoples-alive-at-bake-end` | 0 | 17 |
+| `peoples-placed` | 0 | 17 |
+| `chorus-distortion` | 0.002002002 | 0.40746965 |
+| `cold-built-room-share` | 0.003003003 | 0.98255814 |
+| `chorus-variance` | 0.006006006 | 0.002336865 |
+| `homophony-count-bugbear` | 0.006006006 | 1 |
+| `weft-existence-density-any` | 0.006006006 | 0.11825135 |
 
 ### Seed `730`
 
@@ -354,50 +252,50 @@ Score **13**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 
 | metric | depth | value |
 |---|---|---|
+| `weft-encounter-rate-thicket` | 0 | 0.21882353 |
 | `homophony-count-bugbear` | 0.0005005005 | 0 |
-| `weft-encounter-rate-thicket` | 0.001001001 | 0.21882353 |
-| `weft-existence-density-thicket` | 0.001001001 | 0.1893847 |
-| `karst-fraction` | 0.002002002 | 0.20883404 |
-| `warp-channel-null-spring` | 0.003003003 | 0.029569886 |
-| `weft-coherence-occurs-count-overhang` | 0.003003003 | 8 |
+| `weft-existence-density-thicket` | 0.001001001 | 0.19032495 |
+| `karst-fraction` | 0.002002002 | 0.19203899 |
+| `epidemic-outbreak-events` | 0.003003003 | 165 |
 | `greenhouse-forcing-k` | 0.004004004 | 0.99847507 |
-| `weft-encounter-rate-overhang` | 0.004004004 | 0.0015686275 |
-| `weft-coherence-morans-i-overhang` | 0.00501002 | 0.76248552 |
-| `divergence-magnitude-bugbear` | 0.0065065065 | 9 |
+| `warp-channel-null-spring` | 0.004004004 | 0.026797626 |
+| `weft-existence-density-any` | 0.004004004 | 0.24977604 |
+| `weft-coherence-occurs-count-overhang` | 0.005005005 | 8 |
+| `weft-encounter-rate-overhang` | 0.005005005 | 0.0015686275 |
 
-### Seed `651`
+### Seed `695`
 
 Score **13**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `alignment-drift-deg-per-kyr` | 0 | 0.0000024616728 |
-| `hypsometric-bimodality` | 0 | 4.464955 |
-| `lunar-eclipses-per-century` | 0.002002002 | 8203 |
-| `weft-coherence-morans-i-overhang` | 0.002004008 | 0.98541 |
-| `solar-eclipses-per-century` | 0.003003003 | 8371 |
-| `cave-fraction` | 0.005005005 | 0.043397107 |
-| `warp-found-fraction-spring` | 0.0065130261 | 0.5 |
-| `warp-channel-mi-spring` | 0.007007007 | 0.0040698439 |
-| `warp-oracle-gain-spring` | 0.0070140281 | 0.003786879 |
-| `coincidence-days-per-century` | 0.008008008 | 330 |
+| `weft-existence-density-thicket` | 0 | 0.043057836 |
+| `greenhouse-forcing-k` | 0.001001001 | -0.9985256 |
+| `lot-born-last-quarter-share` | 0.003003003 | 0.215 |
+| `weft-encounter-rate-thicket` | 0.003003003 | 0.0275 |
+| `habitable-fraction` | 0.005005005 | 0.039573263 |
+| `weft-legibility-mi-thicket` | 0.005005005 | 0.0064114454 |
+| `warp-learner-gain-overhang` | 0.006006006 | 0.12436652 |
+| `warp-oracle-gain-thicket` | 0.006006006 | 0.019005217 |
+| `fertile-land-fraction` | 0.007007007 | 0 |
+| `warp-channel-mi-thicket` | 0.007007007 | 0.023612981 |
 
-### Seed `947`
+### Seed `196`
 
-Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+Score **13**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `warp-channel-mi-thicket` | 0 | 0.017878682 |
-| `warp-channel-null-thicket` | 0 | 0.010782119 |
-| `warp-oracle-gain-thicket` | 0 | 0.015557789 |
-| `warp-channel-null-erratic` | 0.001001001 | 0.01072258 |
-| `warp-oracle-gain-erratic` | 0.001001001 | 0.0083166969 |
-| `weft-legibility-mi-thicket` | 0.001001001 | 0.0053286487 |
-| `sediment-volume` | 0.002002002 | 1894718.9 |
-| `warp-channel-mi-erratic` | 0.004004004 | 0.010881173 |
-| `fertile-land-fraction` | 0.007007007 | 0 |
-| `plate-size-gini` | 0.007007007 | 0.35790489 |
+| `aquifer-fraction` | 0.001001001 | 0.092863422 |
+| `unconformity-fraction` | 0.004004004 | 0.024214817 |
+| `weft-existence-density-spring` | 0.004004004 | 0.0018460551 |
+| `weft-legibility-mi-spring` | 0.005005005 | 0.0096824208 |
+| `weft-encounter-rate-any` | 0.006006006 | 0.2784188 |
+| `insolation-rel` | 0.008008008 | 0.37474277 |
+| `warp-channel-mi-spring` | 0.008008008 | 0.012507145 |
+| `warp-oracle-gain-spring` | 0.008008008 | 0.010846138 |
+| `weft-coherence-morans-i-erratic` | 0.008008008 | 0.66533076 |
+| `weft-coherence-morans-i-thicket` | 0.008008008 | 0.98143507 |
 
 ### Seed `742`
 
@@ -405,33 +303,135 @@ Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 
 | metric | depth | value |
 |---|---|---|
-| `warp-channel-mi-erratic` | 0 | 0.0097251036 |
-| `warp-oracle-gain-erratic` | 0 | 0.0075556888 |
-| `warp-channel-mi-thicket` | 0.001001001 | 0.018461099 |
-| `habitable-fraction` | 0.002002002 | 0.035691617 |
-| `warp-channel-null-thicket` | 0.002002002 | 0.011391728 |
-| `warp-oracle-gain-thicket` | 0.002002002 | 0.015791802 |
-| `weft-existence-density-thicket` | 0.002002002 | 0.045134818 |
-| `warp-channel-null-erratic` | 0.004004004 | 0.010944591 |
-| `warp-learner-gain-thicket` | 0.004004004 | -0.0036013042 |
-| `weft-legibility-mi-thicket` | 0.004004004 | 0.0063985867 |
+| `warp-channel-mi-erratic` | 0.001001001 | 0.010436524 |
+| `warp-channel-null-thicket` | 0.001001001 | 0.011260572 |
+| `warp-oracle-gain-erratic` | 0.001001001 | 0.0081280716 |
+| `habitable-fraction` | 0.002002002 | 0.035496314 |
+| `warp-channel-mi-thicket` | 0.002002002 | 0.019717701 |
+| `warp-oracle-gain-thicket` | 0.002002002 | 0.016846453 |
+| `weft-existence-density-thicket` | 0.002002002 | 0.045232513 |
+| `warp-channel-null-erratic` | 0.004004004 | 0.011044292 |
+| `warp-channel-null-overhang` | 0.004004004 | 0.011337846 |
+| `weft-legibility-mi-thicket` | 0.004004004 | 0.0063999823 |
 
-### Seed `149`
+### Seed `907`
 
 Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `warp-channel-null-erratic` | 0 | 0.010186685 |
-| `pantheon-size-kobold` | 0.000509684 | 16 |
-| `warp-channel-null-overhang` | 0.001001001 | 0.010777136 |
-| `warp-channel-mi-erratic` | 0.003003003 | 0.010826375 |
-| `warp-channel-mi-thicket` | 0.003003003 | 0.021543035 |
-| `warp-channel-null-thicket` | 0.003003003 | 0.011393468 |
-| `weft-existence-density-any` | 0.003003003 | 0.12109605 |
-| `warp-oracle-gain-thicket` | 0.006006006 | 0.018723177 |
-| `aquifer-fraction` | 0.007007007 | 0.42490322 |
-| `fertile-land-fraction` | 0.007007007 | 0 |
+| `delta-count` | 0.0005005005 | 2 |
+| `weft-coherence-occurs-count-overhang` | 0.0005005005 | 0 |
+| `weft-encounter-rate-overhang` | 0.0005005005 | 0 |
+| `sediment-volume` | 0.001001001 | 661842.64 |
+| `aquifer-fraction` | 0.002002002 | 0.38720421 |
+| `weft-coherence-occurs-count-erratic` | 0.002002002 | 122 |
+| `mean-land-elevation-m` | 0.003003003 | 1147.8149 |
+| `mountain-coverage` | 0.005005005 | 0.16161262 |
+| `warp-channel-null-overhang` | 0.006006006 | 0.011604641 |
+| `warp-false-sign-net-overhang` | 0.007007007 | 0.0011654732 |
+
+### Seed `775`
+
+Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `chorus-param-spread` | 0 | 0.11345029 |
+| `rank-size-slope` | 0 | -0.30695516 |
+| `name-pattern-signatures` | 0.0005005005 | 8 |
+| `chorus-distortion` | 0.001001001 | 0.40926427 |
+| `divergence-magnitude-hobgoblin` | 0.0015015015 | 8 |
+| `peoples-alive-at-bake-end` | 0.0035035035 | 19 |
+| `peoples-placed` | 0.0035035035 | 19 |
+| `name-people-recoverability` | 0.006006006 | 0.26315789 |
+| `chorus-distinctiveness` | 0.007007007 | 0.19134133 |
+| `cold-built-room-share` | 0.007007007 | 0.95901639 |
+
+### Seed `425`
+
+Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `lot-souls-ever` | 0.001001001 | 44392.641 |
+| `name-transparency` | 0.001001001 | 0.35135135 |
+| `lot-born-last-quarter-share` | 0.002002002 | 0.21 |
+| `plate-size-gini` | 0.002002002 | 0.84038291 |
+| `warp-best-lift-overhang` | 0.003003003 | 29.490643 |
+| `largest-holding-share` | 0.005005005 | 0.020171457 |
+| `total-population` | 0.005005005 | 1983 |
+| `settlement-count` | 0.0055055055 | 111 |
+| `warp-oracle-gain-erratic` | 0.006006006 | 0.0091823063 |
+| `raid-initiator-rate` | 0.007007007 | 0.026431718 |
+
+### Seed `682`
+
+Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `warp-channel-null-erratic` | 0.001001001 | 0.01091755 |
+| `greenhouse-forcing-k` | 0.002002002 | -0.99844251 |
+| `plate-size-gini` | 0.002002002 | 0.32362244 |
+| `weft-existence-density-any` | 0.002002002 | 0.11626323 |
+| `warp-channel-mi-erratic` | 0.003003003 | 0.010619206 |
+| `warp-oracle-gain-erratic` | 0.004004004 | 0.008673536 |
+| `mean-warning-legibility` | 0.005005005 | 0.70320645 |
+| `warp-channel-null-thicket` | 0.005005005 | 0.012361977 |
+| `habitable-fraction` | 0.006006006 | 0.039622089 |
+| `weft-existence-density-thicket` | 0.006006006 | 0.046997799 |
+
+### Seed `817`
+
+Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `warp-max-class-rate-spring` | 0 | 0.56910569 |
+| `name-collision-rate` | 0.002002002 | 0.22972973 |
+| `warp-max-class-rate-erratic` | 0.002002002 | 0.12871287 |
+| `warp-best-lift-erratic` | 0.003003003 | 3.0527298 |
+| `granary-raid-phase-concentration` | 0.0035035035 | 1 |
+| `lot-silent-subsistence-share` | 0.004004004 | 0.705 |
+| `warp-best-lift-spring` | 0.005005005 | 25.780927 |
+| `weft-legibility-mi-spring` | 0.005005005 | 0.10005709 |
+| `weft-existence-density-spring` | 0.006006006 | 0.022074679 |
+| `warp-oracle-gain-spring` | 0.007007007 | 0.054972565 |
+
+### Seed `611`
+
+Score **12**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `aquifer-fraction` | 0.002002002 | 0.093564007 |
+| `mean-geothermal-gradient` | 0.002002002 | 26.508274 |
+| `mean-land-elevation-m` | 0.002002002 | 2856.9177 |
+| `hypsometric-bimodality` | 0.003003003 | 3.0174642 |
+| `landmass-count` | 0.003003003 | 32 |
+| `granary-raid-phase-concentration` | 0.0035035035 | 1 |
+| `weft-legibility-mi-thicket` | 0.004004004 | 0.062771306 |
+| `sediment-volume` | 0.006006006 | 1871620 |
+| `mountain-coverage` | 0.008008008 | 0.66074851 |
+| `first-day-occ-tech-bronze` | 0.009009009 | 45656.25 |
+
+### Seed `291`
+
+Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `deposit-density` | 0 | 0.22179258 |
+| `endorheic-coverage` | 0 | 0.13206425 |
+| `goblin-flagship-population` | 0 | 43 |
+| `coast-roughness-slope` | 0.001001001 | 0.3441876 |
+| `warp-false-sign-net-spring` | 0.001001001 | 0.0017109772 |
+| `lunar-eclipses-per-century` | 0.003003003 | 7602 |
+| `weft-encounter-rate-thicket` | 0.004004004 | 0.20700483 |
+| `ocean-fraction` | 0.006006006 | 0.75377179 |
+| `solar-eclipses-per-century` | 0.006006006 | 7692 |
+| `warp-best-lift-erratic` | 0.009009009 | 1.3860077 |
 
 ## Excluded columns
 
@@ -441,32 +441,34 @@ Every numeric/integer census column with a domain and a role that this report di
 |---|---|
 | `first-day-is-settlement` | frozen: min == max across 1000 worlds |
 | `first-day-is-person` | frozen: min == max across 1000 worlds |
-| `first-day-person-died` | both rails tied: 964 at min, 36 at max of 1000 |
+| `first-day-person-died` | both rails tied: 959 at min, 41 at max of 1000 |
 | `first-day-person-founded` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-goblin` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-kobold` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-hobgoblin` | frozen: min == max across 1000 worlds |
 | `first-day-occ-people-bugbear` | frozen: min == max across 1000 worlds |
+| `first-day-occ-tech-neolithic` | frozen: min == max across 1000 worlds |
 | `first-day-occ-tech-classical` | frozen: min == max across 1000 worlds |
 | `first-day-occ-cause-burned` | too few present values: 0 < 50 |
-| `flagship-structure-size` | both rails tied: 41 at min, 958 at max of 999 |
+| `flagship-structure-size` | both rails tied: 52 at min, 947 at max of 999 |
 | `pantheon-size-goblin-twin` | too few present values: 0 < 50 |
 | `name-length-goblin-twin` | too few present values: 0 < 50 |
 | `pantheon-cyclic-share-goblin-twin` | too few present values: 0 < 50 |
 | `cascade-rules-fired-goblin` | both rails tied: 173 at min, 75 at max of 1000 |
+| `name-prefix-region-scope` | frozen: min == max across 1000 worlds |
 | `hue-depth-goblin` | frozen: min == max across 1000 worlds |
 | `hue-depth-kobold` | frozen: min == max across 1000 worlds |
-| `shelf-width-passive-median` | both rails tied: 764 at min, 235 at max of 1000 |
+| `shelf-width-passive-median` | both rails tied: 782 at min, 218 at max of 1000 |
 | `channel-connectivity` | frozen: min == max across 1000 worlds |
 | `channel-band-monotonicity` | frozen: min == max across 1000 worlds |
 | `core-homophony-goblin` | frozen: min == max across 1000 worlds |
 | `core-homophony-hobgoblin` | frozen: min == max across 1000 worlds |
 | `core-homophony-bugbear` | frozen: min == max across 1000 worlds |
 | `core-homophony-kobold` | frozen: min == max across 1000 worlds |
-| `homophony-merger-share-goblin` | frozen: min == max across 808 worlds |
-| `homophony-merger-share-hobgoblin` | frozen: min == max across 774 worlds |
+| `homophony-merger-share-goblin` | frozen: min == max across 805 worlds |
+| `homophony-merger-share-hobgoblin` | frozen: min == max across 775 worlds |
 | `homophony-merger-share-bugbear` | frozen: min == max across 998 worlds |
-| `homophony-merger-share-kobold` | frozen: min == max across 677 worlds |
+| `homophony-merger-share-kobold` | frozen: min == max across 674 worlds |
 | `confusable-homophony-goblin` | frozen: min == max across 1000 worlds |
 | `confusable-homophony-hobgoblin` | frozen: min == max across 1000 worlds |
 | `confusable-homophony-bugbear` | frozen: min == max across 1000 worlds |

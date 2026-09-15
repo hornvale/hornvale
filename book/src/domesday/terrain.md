@@ -14,7 +14,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.034492274 | 0.081764541 | 0.096868579 | 0.115397 | 0.20860729 | 0.099646079 |
+| 0.043212421 | 0.10950059 | 0.13043634 | 0.15630252 | 0.29659116 | 0.13457364 |
 
 ### `continent-count`
 
@@ -24,7 +24,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 6 | 7 | 12 | 6.092 |
+| 1 | 5 | 6 | 7 | 12 | 6.077 |
 
 ### `deposit-density`
 
@@ -34,7 +34,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.24181566 | 0.352657 | 0.38918014 | 0.43282997 | 0.58044349 | 0.39270569 |
+| 0.22179258 | 0.31080327 | 0.34434733 | 0.38234423 | 0.52126984 | 0.34840292 |
 
 ### `dominant-commodity`
 
@@ -44,8 +44,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `salt` | 999 | 99.9% |
-| `iron` | 1 | 0.1% |
+| `salt` | 998 | 99.8% |
+| `gold` | 2 | 0.2% |
 
 ### `dominant-rock`
 
@@ -55,12 +55,14 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `evaporite` | 476 | 47.6% |
-| `gneiss` | 294 | 29.4% |
-| `andesite` | 158 | 15.8% |
-| `sandstone` | 49 | 4.9% |
-| `conglomerate` | 13 | 1.3% |
-| `granite` | 10 | 1.0% |
+| `evaporite` | 632 | 63.2% |
+| `andesite` | 234 | 23.4% |
+| `sandstone` | 72 | 7.2% |
+| `gneiss` | 27 | 2.7% |
+| `conglomerate` | 20 | 2.0% |
+| `granite` | 13 | 1.3% |
+| `schist` | 1 | 0.1% |
+| `shale` | 1 | 0.1% |
 
 ### `hypsometric-bimodality`
 
@@ -70,7 +72,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2.4084567 | 3.6802133 | 3.8196246 | 3.9550742 | 4.464955 | 3.8156322 |
+| 2.4063312 | 3.6623659 | 3.8012563 | 3.9369721 | 4.4418667 | 3.7981195 |
 
 ### `landmass-count`
 
@@ -80,7 +82,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 21 | 159 | 202 | 244 | 388 | 199.747 |
+| 21 | 160 | 200 | 241 | 397 | 197.835 |
 
 ### `largest-continent-share`
 
@@ -90,7 +92,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.1587584 | 0.30979371 | 0.38887345 | 0.52104859 | 0.99200276 | 0.43124834 |
+| 0.17724491 | 0.30966108 | 0.3900553 | 0.52197375 | 0.99200237 | 0.43268579 |
 
 ### `mean-depth-to-basement`
 
@@ -100,7 +102,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 17.66636 | 36.032146 | 43.133104 | 50.334668 | 83.804049 | 43.505972 |
+| 17.769476 | 35.704428 | 42.804893 | 50.051638 | 78.691159 | 43.112825 |
 
 ### `mean-geothermal-gradient`
 
@@ -110,7 +112,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 22.686095 | 24.500174 | 24.934778 | 25.311537 | 26.652152 | 24.918351 |
+| 22.686926 | 24.511396 | 24.939487 | 25.32018 | 26.651729 | 24.922329 |
 
 ### `mean-land-elevation-m`
 
@@ -120,7 +122,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1063.6052 | 1525.0853 | 1700.2625 | 1951.7233 | 2942.0455 | 1747.9432 |
+| 1057.5306 | 1509.9738 | 1683.2863 | 1933.1953 | 2935.8547 | 1733.4459 |
 
 ### `mean-ore-grade`
 
@@ -130,7 +132,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.034039592 | 0.056138445 | 0.062634712 | 0.069759128 | 0.095971967 | 0.062830804 |
+| 0.035138556 | 0.051492498 | 0.056990984 | 0.063094611 | 0.089209342 | 0.057512357 |
 
 ### `mountain-coverage`
 
@@ -140,7 +142,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.13071099 | 0.3202934 | 0.39027332 | 0.48373203 | 0.72677542 | 0.40076979 |
+| 0.12983401 | 0.31731985 | 0.38717559 | 0.47777655 | 0.72586081 | 0.3973183 |
 
 ### `ocean-fraction`
 
@@ -150,7 +152,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.48867243 | 0.55644256 | 0.61714516 | 0.68331624 | 0.75999707 | 0.61835909 |
+| 0.4886236 | 0.55527074 | 0.61629071 | 0.68082613 | 0.76031444 | 0.61688172 |
 
 ### `plate-count`
 
@@ -212,7 +214,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 620405.23 | 1077733.1 | 1243488.9 | 1418774.6 | 2065159.6 | 1252118 |
+| 654461.15 | 1114129.1 | 1290364.5 | 1462413.7 | 2103424 | 1292072.3 |
 
 ### `unconformity-fraction`
 
@@ -222,7 +224,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.00734167 | 0.23918433 | 0.33543373 | 0.43654459 | 0.85466887 | 0.34133031 |
+| 0.0081190798 | 0.23935189 | 0.33552498 | 0.43799582 | 0.85426262 | 0.34175567 |
 
 ### `unrest-coverage`
 
@@ -242,7 +244,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1.1189581 | 1.7684313 | 1.9463191 | 2.1427678 | 3.1738281 | 1.9738174 |
+| 1.250576 | 1.7571359 | 1.9342585 | 2.1282313 | 3.4875363 | 1.9644644 |
 
 ### `warp-best-lift-overhang`
 
@@ -252,17 +254,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 10.158884 | 12.136502 | 14.909701 | 42.168844 | 12.768529 |
+| 0 | 9.6930179 | 12.245395 | 14.968689 | 33.625287 | 11.559045 |
 
 ### `warp-best-lift-spring`
 
 The Warp's best-class lift for spring/seep (spec §5.2, H2): the largest `P(Y | sign class) / P(Y)` over sign classes carrying at least 100 land facets — the walker-facing number, "features of this kind are N times as likely where the ground reads like this". **Compare it against `warp-best-lift-erratic` on the SAME seed, never against an absolute bar**: a lift above 1 arises from tuple cardinality alone, and the erratic — whose cause is a constant — is precisely a measurement of how much. `Absent` when the kind never occurs, or when no sign class clears the support floor.
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 4.7722918 | 7.3115963 | 10.242642 | 24.316638 | 7.7623783 |
+| 0 | 3.2726932 | 5.02473 | 8.8610375 | 31.128571 | 6.8163801 |
 
 ### `warp-best-lift-thicket`
 
@@ -272,7 +274,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1.1080156 | 2.1614812 | 2.5064038 | 2.9324229 | 5.6714337 | 2.5927651 |
+| 1.1179245 | 2.1519539 | 2.4859436 | 2.905307 | 5.5614214 | 2.5834781 |
 
 ### `warp-channel-mi-erratic`
 
@@ -282,7 +284,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0097251036 | 0.019697853 | 0.02387335 | 0.027710118 | 0.03891071 | 0.023764833 |
+| 0.010219635 | 0.020132102 | 0.024062111 | 0.028275088 | 0.038876719 | 0.02423233 |
 
 ### `warp-channel-mi-overhang`
 
@@ -292,7 +294,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.028483836 | 0.10728833 | 0.12493744 | 0.14102495 | 0.18990703 | 0.12352407 |
+| 0.025037618 | 0.089223216 | 0.10558373 | 0.11900474 | 0.16377558 | 0.10387985 |
 
 ### `warp-channel-mi-spring`
 
@@ -302,7 +304,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0000000000000046703302 | 0.033772022 | 0.043227872 | 0.052704232 | 0.093199512 | 0.042434693 |
+| 0.0070002208 | 0.029490466 | 0.03764218 | 0.045092648 | 0.078837676 | 0.037240398 |
 
 ### `warp-channel-mi-thicket`
 
@@ -312,7 +314,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.017878682 | 0.062916696 | 0.072698912 | 0.080690996 | 0.10776462 | 0.069851149 |
+| 0.018563237 | 0.06375013 | 0.073401738 | 0.081399846 | 0.10924828 | 0.070550197 |
 
 ### `warp-channel-null-erratic`
 
@@ -322,7 +324,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.010186685 | 0.019745161 | 0.023673768 | 0.027402935 | 0.038157328 | 0.023655427 |
+| 0.010891239 | 0.019921009 | 0.024018462 | 0.027897303 | 0.03978229 | 0.024169837 |
 
 ### `warp-channel-null-overhang`
 
@@ -332,7 +334,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.008407995 | 0.021294569 | 0.025638262 | 0.03046629 | 0.051712553 | 0.026131154 |
+| 0.0076892005 | 0.019965682 | 0.024001926 | 0.028661545 | 0.04566027 | 0.024593781 |
 
 ### `warp-channel-null-spring`
 
@@ -342,7 +344,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0000000000000046703302 | 0.01379718 | 0.016868037 | 0.019750075 | 0.032315449 | 0.016618053 |
+| 0.0039063673 | 0.013626106 | 0.016437259 | 0.019086729 | 0.030091936 | 0.016347556 |
 
 ### `warp-channel-null-thicket`
 
@@ -352,7 +354,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.010782119 | 0.026022182 | 0.033394861 | 0.039406161 | 0.058970182 | 0.032927365 |
+| 0.01081097 | 0.026634783 | 0.033943059 | 0.040493278 | 0.060396147 | 0.033569544 |
 
 ### `warp-false-sign-net-erratic`
 
@@ -362,7 +364,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.001537693 | -0.00026418573 | -0.000016629551 | 0.00023881191 | 0.0015891527 | -0.0000047772107 |
+| -0.001324275 | -0.00026381909 | -0.000016115149 | 0.00024089612 | 0.0013844237 | 0.0000019808949 |
 
 ### `warp-false-sign-net-overhang`
 
@@ -372,7 +374,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.0012128733 | -0.00025646863 | -0.00001966214 | 0.00025688055 | 0.0018865699 | 0.0000059684416 |
+| -0.0013313884 | -0.00026393631 | -0.000004659806 | 0.00024173725 | 0.0015467971 | 0.0000061388691 |
 
 ### `warp-false-sign-net-spring`
 
@@ -382,7 +384,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.0010804825 | -0.00023045323 | -0.000020259229 | 0.00022787078 | 0.0014645933 | 0.0000093714864 |
+| -0.0014894406 | -0.00026184759 | -0.000024804762 | 0.00022555866 | 0.0021362221 | -0.0000052432095 |
 
 ### `warp-false-sign-net-thicket`
 
@@ -392,7 +394,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.0012596021 | -0.00024273434 | -0.000028837589 | 0.00022207635 | 0.0024214187 | 0.0000012721544 |
+| -0.0010979149 | -0.00023834382 | -0.00002621092 | 0.00024909813 | 0.0015221017 | 0.0000088505262 |
 
 ### `warp-found-fraction-erratic`
 
@@ -408,17 +410,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.61643836 | 0.80952381 | 0.8326943 | 0.85309973 | 0.9200492 | 0.82872418 |
+| 0.51724138 | 0.74705882 | 0.78048673 | 0.80516432 | 0.88478582 | 0.77454493 |
 
 ### `warp-found-fraction-spring`
 
 The Warp's found fraction for spring/seep (spec §5.2, H1): the share of this kind's occurrences standing on a facet whose own `macro_state` reads at or above 0.5 — how much of what a walker meets was FOUND at a cause rather than extruded by the recipe's noise floor over the other 90-odd per cent of land. This is the number the campaign's premise measurement is about: before The Warp, 333 of seed 42's 403 springs stood on a facet with no cause at all. `Absent` when the kind never occurs on land.
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.28571429 | 0.71428571 | 0.74586777 | 0.77319588 | 1 | 0.73935096 |
+| 0 | 0.29411765 | 0.39524751 | 0.45833333 | 0.59223301 | 0.36742574 |
 
 ### `warp-found-fraction-thicket`
 
@@ -428,7 +430,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.2746431 | 0.34876528 | 0.41176471 | 0.57687421 | 0.32664291 |
+| 0 | 0.27540107 | 0.34892685 | 0.41135371 | 0.56092843 | 0.32763938 |
 
 ### `warp-learner-gain-erratic`
 
@@ -438,7 +440,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.020959881 | -0.01299402 | -0.010976476 | -0.0092962595 | -0.0025397394 | -0.011178664 |
+| -0.020971922 | -0.013138635 | -0.011318296 | -0.0094516726 | -0.0042607527 | -0.011372652 |
 
 ### `warp-learner-gain-overhang`
 
@@ -448,17 +450,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.017105655 | 0.084152219 | 0.09912933 | 0.11245515 | 0.15572748 | 0.097688544 |
+| 0.011393923 | 0.06731584 | 0.079681029 | 0.092237064 | 0.14472993 | 0.07893952 |
 
 ### `warp-learner-gain-spring`
 
 The Warp's learner gain for spring/seep (spec §5.2, H3): the `P(Y | sign class)` table fitted on the EVEN-indexed land facets and scored on the ODD ones, as mean log-loss reduction against the base rate, in bits per facet. Positive means the words a walker is told genuinely help predict this kind on facets the table never saw; NEGATIVE means the table overfits, which is reported rather than clamped. The index is the facet's position in the land-only vector in vertex order, so the two halves interleave across the whole globe rather than splitting it by region. Smoothing is an EQUIVALENT-SAMPLE-SIZE PRIOR TOWARD THE BASE RATE: a class with `n` fit facets and `k` hits predicts `(k + a * p) / (n + a)`, for `a` ten facets and `p` the fit half's own base rate, so a thin or unseen class predicts the base rate and scores exactly zero, never below it. It was Laplace `(k + 1) / (n + 2)` in this metric's first implementation and that was a defect (controller ruling, ledger #10): Laplace is a prior toward 0.5, these kinds occur on 3-14% of land, and with 469 sign classes over ~11,000 facets most classes are thin enough for that prior to dominate — the table lost to the base rate in sample, which was a fact about the prior and not about the world. Read against `warp-oracle-gain-spring`, the same table's in-sample reading. `Absent` on a world with no land-eligible facet, and on one whose fit half carries no occurrence of this kind at all (or nothing but occurrences): there is no base rate to beat.
 
-n = 997 present, 3 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.0040592311 | 0.016586127 | 0.024105642 | 0.03144652 | 0.06448449 | 0.02380084 |
+| -0.0019901145 | 0.012043768 | 0.017536193 | 0.023849745 | 0.046415005 | 0.017912091 |
 
 ### `warp-learner-gain-thicket`
 
@@ -468,7 +470,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.0065357323 | 0.017107469 | 0.024024043 | 0.030003555 | 0.053594528 | 0.023356529 |
+| -0.0064692419 | 0.016935738 | 0.024075015 | 0.029834653 | 0.051789609 | 0.023126507 |
 
 ### `warp-max-class-rate-erratic`
 
@@ -478,7 +480,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.043859649 | 0.071005917 | 0.078431373 | 0.087301587 | 0.12751678 | 0.080004774 |
+| 0.048780488 | 0.070866142 | 0.07826087 | 0.087378641 | 0.14018692 | 0.079616216 |
 
 ### `warp-max-class-rate-overhang`
 
@@ -488,7 +490,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.43820225 | 0.46370224 | 0.49019608 | 0.58163265 | 0.44445373 |
+| 0 | 0.35245902 | 0.4109409 | 0.44354839 | 0.56481481 | 0.34608215 |
 
 ### `warp-max-class-rate-spring`
 
@@ -498,7 +500,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.048076923 | 0.093904703 | 0.14150943 | 0.56097561 | 0.10543015 |
+| 0 | 0.03030303 | 0.058823529 | 0.10958904 | 0.56910569 | 0.08518315 |
 
 ### `warp-max-class-rate-thicket`
 
@@ -508,7 +510,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.098360656 | 0.26168224 | 0.30272424 | 0.33333333 | 0.47572816 | 0.29704124 |
+| 0.098360656 | 0.26253687 | 0.3029236 | 0.336 | 0.47058824 | 0.2964892 |
 
 ### `warp-oracle-gain-erratic`
 
@@ -518,7 +520,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0075556888 | 0.01408707 | 0.016671906 | 0.018802432 | 0.025932295 | 0.016508779 |
+| 0.0076740393 | 0.014356826 | 0.016795314 | 0.01926047 | 0.025747837 | 0.016809136 |
 
 ### `warp-oracle-gain-overhang`
 
@@ -528,17 +530,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.025788484 | 0.098034725 | 0.11417152 | 0.12779266 | 0.17517359 | 0.11213108 |
+| 0.021520953 | 0.080640952 | 0.09530568 | 0.10691544 | 0.14977824 | 0.093684725 |
 
 ### `warp-oracle-gain-spring`
 
 The Warp's oracle gain for spring/seep (spec §5.2): the SAME `P(Y | sign class)` table as `warp-learner-gain-spring`, fitted and scored on ALL land facets with no split, under the same equivalent-sample-size prior toward the base rate. It is not a legibility reading on its own — an in-sample table always looks better than it is — and it is REPORTED, NEVER GATED. Spec §7's H3 originally asked the learner to reach at least half of this number, and that clause is WITHDRAWN (controller ruling, ledger #10; spec §7's H3 amendment): a ratio needs a denominator whose sign is fixed, and this one has none — under the withdrawn Laplace prior it read NEGATIVE for spring and erratic at seed 42, which would make "at least half of it" satisfiable by being worse. What it is good for is the difference a reader takes, how much of the in-sample reading survives the held-out half. `Absent` under the same conditions as `warp-learner-gain-spring`, over the whole land population rather than a half of it.
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.001372715 | 0.02959197 | 0.0379164 | 0.046336799 | 0.078074958 | 0.037188078 |
+| 0.0061744051 | 0.025971194 | 0.032670337 | 0.039271418 | 0.066641895 | 0.032447959 |
 
 ### `warp-oracle-gain-thicket`
 
@@ -548,7 +550,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.015557789 | 0.048297573 | 0.055622757 | 0.061260932 | 0.085272643 | 0.053714925 |
+| 0.015773156 | 0.048685006 | 0.055952326 | 0.061792022 | 0.084035565 | 0.054001233 |
 
 ### `weft-coherence-morans-i-erratic`
 
@@ -558,27 +560,27 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.47030051 | 0.56195234 | 0.58537623 | 0.6072162 | 0.70282649 | 0.58428246 |
+| 0.47012084 | 0.56179154 | 0.5854585 | 0.60765239 | 0.70214861 | 0.58429512 |
 
 ### `weft-coherence-morans-i-overhang`
 
 H2's coherence readout for overhang/hollow (spec §7) — see `weft-coherence-morans-i-spring`'s doc for the shared statistic and its companion.
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 998 present, 2 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.0001795274 | 0.90404504 | 0.92107513 | 0.93419268 | 0.9946816 | 0.91565158 |
+| -0.00014011361 | 0.8971447 | 0.91523488 | 0.93064154 | 0.99467961 | 0.90993268 |
 
 ### `weft-coherence-morans-i-spring`
 
 H2's readout for spring/seep (spec §7): Moran's I over the binary occurrence indicator, sampled along land-eligible walked paths (the same 78-walk, 4,680-step pool `weft-encounter-rate-spring` reads), weighted by within-walk chain adjacency (step `s` and `s+1` of the same walk). **This is a construction-validation (a regression guard against address-hashed speckle), not independent evidence the surface is "coherent" in a stronger sense** — `occurs` thresholds a position-continuous field, so a positive reading is near-guaranteed by construction; the discriminating power lives in `weft_prevalence.rs`'s real-vs-mutant table (real 0.998, mutant 0.209 for this kind). No numeric floor is preregistered for this statistic (spec §7 froze none); a positive reading well clear of zero over a non-degenerate occurs-count is the qualitative claim, checked against `weft-coherence-occurs-count-spring`, the anti-vacuity companion (The Ford's shape) — see that metric's own doc for why a small count makes a high reading here suspect. NOT geosphere vertex adjacency — measured on this tree, that mesh's own spacing is ~106-127 facets per step, 1.9-23x every kind's own correlation length (5-60 facets), so both a sound construction and an address-hashed defect predict `I ~= 0` at that scale — see `weft_morans_i`'s own doc for the full power argument and the discarded vertex-adjacency readings, published in full rather than discarded silently. `Absent` if the walk pool is empty or the indicator has zero variance across every walked step.
 
-n = 795 present, 205 absent (of 1000 worlds)
+n = 856 present, 144 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.0000038182367 | 0.97919824 | 0.98957156 | 0.99627564 | 1 | 0.97294044 |
+| -0.0000038182367 | 0.96134058 | 0.98063194 | 0.99134559 | 1 | 0.96170497 |
 
 ### `weft-coherence-morans-i-thicket`
 
@@ -588,7 +590,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.89596937 | 0.96029726 | 0.96551124 | 0.96967816 | 0.98501005 | 0.96432588 |
+| 0.89596937 | 0.96030295 | 0.96568249 | 0.96973602 | 0.98384739 | 0.96452519 |
 
 ### `weft-coherence-occurs-count-erratic`
 
@@ -598,7 +600,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 113 | 216 | 264 | 316 | 471 | 267.858 |
+| 113 | 218 | 265 | 316 | 471 | 268.811 |
 
 ### `weft-coherence-occurs-count-overhang`
 
@@ -608,7 +610,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 164 | 235.5 | 324 | 728 | 251.29 |
+| 0 | 131 | 192.5 | 267 | 609 | 205.323 |
 
 ### `weft-coherence-occurs-count-spring`
 
@@ -618,7 +620,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 14 | 68 | 130 | 490 | 86.846 |
+| 0 | 23 | 64.5 | 124 | 449 | 82.021 |
 
 ### `weft-coherence-occurs-count-thicket`
 
@@ -628,7 +630,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 109 | 574 | 741 | 929 | 1748 | 747.692 |
+| 128 | 577 | 744 | 933 | 1750 | 752.764 |
 
 ### `weft-encounter-rate-any`
 
@@ -638,7 +640,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.082317073 | 0.1652027 | 0.19048873 | 0.21891892 | 0.30683333 | 0.19153687 |
+| 0.075198413 | 0.15969945 | 0.1842833 | 0.210625 | 0.29751773 | 0.18530433 |
 
 ### `weft-encounter-rate-erratic`
 
@@ -648,7 +650,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.02372549 | 0.035912698 | 0.040149133 | 0.044238683 | 0.064 | 0.040259296 |
+| 0.022161172 | 0.035854342 | 0.040176794 | 0.044270833 | 0.062345679 | 0.04022236 |
 
 ### `weft-encounter-rate-overhang`
 
@@ -658,7 +660,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.025874126 | 0.036394876 | 0.048363095 | 0.11004274 | 0.037953663 |
+| 0 | 0.02029703 | 0.029210702 | 0.039885057 | 0.095940171 | 0.030835722 |
 
 ### `weft-encounter-rate-spring`
 
@@ -668,7 +670,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.0021929825 | 0.010869401 | 0.019023569 | 0.074413146 | 0.012512106 |
+| 0 | 0.003525641 | 0.010621142 | 0.017635659 | 0.060087719 | 0.011845939 |
 
 ### `weft-encounter-rate-thicket`
 
@@ -678,7 +680,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.018390805 | 0.088055556 | 0.11363636 | 0.1389881 | 0.21924883 | 0.11361935 |
+| 0.018390805 | 0.088227513 | 0.11445189 | 0.1395664 | 0.21882353 | 0.11391952 |
 
 ### `weft-existence-density-any`
 
@@ -688,7 +690,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.1144989 | 0.17590743 | 0.19716723 | 0.21706628 | 0.26750893 | 0.19587439 |
+| 0.11477962 | 0.16945107 | 0.19137055 | 0.21056557 | 0.26137818 | 0.18933334 |
 
 ### `weft-existence-density-erratic`
 
@@ -698,7 +700,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.034878203 | 0.039250715 | 0.040511933 | 0.041774822 | 0.046481217 | 0.040565577 |
+| 0.034304362 | 0.039272256 | 0.040593579 | 0.041775852 | 0.046473792 | 0.040563806 |
 
 ### `weft-existence-density-overhang`
 
@@ -708,7 +710,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0050480603 | 0.028681921 | 0.037043064 | 0.044355556 | 0.070868486 | 0.036808741 |
+| 0.0039958663 | 0.023220641 | 0.029720821 | 0.036022278 | 0.057341961 | 0.029763462 |
 
 ### `weft-existence-density-spring`
 
@@ -718,7 +720,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.0088267745 | 0.012906628 | 0.016575198 | 0.029032082 | 0.012650507 |
+| 0.0010532363 | 0.0082644628 | 0.011653577 | 0.014815321 | 0.026010575 | 0.011582061 |
 
 ### `weft-existence-density-thicket`
 
@@ -728,7 +730,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.04236052 | 0.098248286 | 0.12201211 | 0.14176363 | 0.19179713 | 0.11894478 |
+| 0.043057836 | 0.098558549 | 0.12222773 | 0.14202672 | 0.19256077 | 0.11915168 |
 
 ### `weft-legibility-mi-erratic`
 
@@ -748,7 +750,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.02212451 | 0.098098863 | 0.1154064 | 0.13079065 | 0.18275241 | 0.1138177 |
+| 0.016780485 | 0.07771766 | 0.093186011 | 0.10606578 | 0.15248762 | 0.091841615 |
 
 ### `weft-legibility-mi-spring`
 
@@ -758,7 +760,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.060141803 | 0.082466233 | 0.099666081 | 0.15477143 | 0.079111673 |
+| 0.0048572403 | 0.038968242 | 0.055697627 | 0.069805451 | 0.11194024 | 0.0544952 |
 
 ### `weft-legibility-mi-thicket`
 
@@ -768,21 +770,21 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0044639878 | 0.033202999 | 0.039745321 | 0.045802548 | 0.07429427 | 0.038741903 |
+| 0.0044424108 | 0.033391808 | 0.039764509 | 0.045710456 | 0.072919639 | 0.03880245 |
 
 ## Weaknesses found here
 
 ### `dominant-commodity`
 
-- **D1**: "salt" holds 999/1000 worlds (99.9%), at or above the 80% threshold
+- **D1**: "salt" holds 998/1000 worlds (99.8%), at or above the 80% threshold
 
 ### `weft-coherence-morans-i-overhang`
 
-- **D3**: p25..p75 spans 0.03014764000000003 (3.03% of the 0.9948611274000001 min..max range), under the 5% bar
+- **D3**: p25..p75 spans 0.03349683999999997 (3.37% of the 0.99481972361 min..max range), under the 5% bar
 
 ### `weft-coherence-morans-i-spring`
 
-- **D3**: p25..p75 spans 0.01707740000000002 (1.71% of the 1.0000038182367 min..max range), under the 5% bar
+- **D3**: p25..p75 spans 0.03000501 (3.00% of the 1.0000038182367 min..max range), under the 5% bar
 
 ### `weft-legibility-mi-erratic`
 
