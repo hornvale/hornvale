@@ -4420,3 +4420,49 @@ which decision 0016 forbids, and this project ships nulls as headlines.
 subject, diff by identity rather than position: the population itself may have
 shifted, and a line-ordered diff then reports a recipe change that did not
 happen.*
+
+## #52 [Q] — CORRECTION: astronomy-deepening landed days ago. I tested the branch REF instead of the WORK, twice.
+
+I reported twice — once here and once on the board to lefford's operator —
+that `astronomy-deepening` was "still in flight", and parked the census on it.
+Nathan says it landed. He is right.
+
+**What actually happened.** The board records its candidate as `799ad4e2a7f4`,
+ADMITTED and queued. That commit **is** an ancestor of `origin/main`, and is
+already an ancestor of this branch — it arrived in the 118-commit absorb. The
+work has been in my tree since then.
+
+**Both of my checks were wrong, in different ways, and both looked
+authoritative:**
+
+1. `git merge-base --is-ancestor origin/astronomy-deepening origin/main` → no.
+   True, and about the wrong object. That ref points at `419f7afdd`, *"Merge
+   remote-tracking branch 'origin/main' into astronomy-deepening"* — a branch
+   absorbing main **after** its own content landed. Such a tip is not an
+   ancestor of main and never will be, however completely the work merged. I
+   even printed the fact that the branch was 1 commit ahead and that the 1
+   commit was an absorb, and read it as evidence of the opposite.
+2. `git log --oneline -40 origin/main | grep -i astronom` → nothing. Also true,
+   also useless: the landing commit's subject is *"test(game): update merged sky
+   caption expectation"*. The word never appears.
+
+**The rule: a branch's mergedness is not its work's mergedness.** Ask whether
+the SHA that was queued is an ancestor, or whether a file the change had to
+touch carries it — `git log origin/main -- clients/game/bin/src/overture/sky.rs`
+answers in one command and would have answered correctly on the first day.
+A grep over commit SUBJECTS tests what someone chose to name a commit.
+
+**Cost.** The census was parked for a day on a gate that had already opened,
+and lefford's operator was told something false in a board reply. Correcting
+that post is part of this entry, not optional: they may be sequencing their own
+queue against it.
+
+This is the same class as **#43** (a count with no command beside it) and
+**#27** (a reason never re-derived): a claim that was cheap to verify exactly,
+verified approximately instead, and then repeated. Twice is the tell — the
+second telling is where a first-hand check gets replaced by agreement with
+myself.
+
+**Ideonomy passes / overturns:** one — *when a question has an exact form and a
+convenient form, the convenient one will be wrong in a way that looks right;
+name the object the question is really about before answering it.*
