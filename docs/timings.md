@@ -7802,3 +7802,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-15T14:01:34Z | gate-commit | 39.787 | 74.535 | 20.721 | 2.39 | 0 | 7e302bc7f | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-15T12:02:50Z | gate-commit | 39.703 | 75.642 | 21.030 | 2.43 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-15T14:02:58Z | gate-commit | 41.281 | 75.495 | 21.037 | 2.34 | 0 | 7e302bc7f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T14:32:48Z | census-tail-chorus | 71.858 | 1010.078 | 25.981 | 14.42 | 0 | 33c67d881 |  | lefford | 40 |
+| 2026-09-15T14:32:50Z | census-tail-domesday | 1.040 | 0.900 | 0.141 | 1.00 | 0 | 33c67d881 |  | lefford | 40 |
+| 2026-09-15T14:32:50Z | census-tail-anomalies | 0.818 | 0.711 | 0.107 | 1.00 | 0 | 33c67d881 |  | lefford | 40 |
+| 2026-09-15T14:33:26Z | sluice:artifacts | 296.637 | 1907.091 | 69.415 | 6.66 | 0 | 33c67d881 |  | lefford | 40 |
