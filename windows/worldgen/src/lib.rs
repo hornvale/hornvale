@@ -99,6 +99,7 @@ mod descent;
 pub mod disposition;
 pub mod district;
 pub mod energy;
+pub mod facet;
 pub mod fieldpack;
 pub mod fixture;
 pub mod gazetteer;
@@ -168,6 +169,10 @@ pub use d5::{
     D5SettlementProfile, d5_apex_verdict, d5_compare_peers, d5_convergence_evidence,
 };
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
+pub use facet::{
+    SurfaceBuildError, SurfaceFeatureStrip, SurfaceFeatureStripVertex, SurfacePatch,
+    SurfaceRealizationContext, SurfaceRevision,
+};
 pub use fieldpack::{FieldPack, field_pack_from};
 pub use fixture::seed_42_world;
 pub use gazetteer::{feature_name, feature_salt, gazetteer_features};

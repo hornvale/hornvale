@@ -3936,6 +3936,101 @@ else
     bad "cross-candidate: missing the ADVISORY disclaimer: $(cat "$tmp/cross1.err")"
 fi
 
+# --- 1b. THE STALE-ROW CASE: main's own history is not the candidate's ------
+# THE DISCRIMINATING FIXTURE, and the file did not have one. Case 1 branches
+# both sides from main's tip, so "what the two candidates each contribute" and
+# "what a pairwise merge conflicts on" are the same set, and the advisory was
+# computed the second way for months without any test noticing.
+#
+# The bug that shape hides: a pairwise merge-tree uses the two candidates' OWN
+# merge base, so for a row that branched long ago, everything main has taken
+# since counts as the CANDIDATE's side. Observed on tooling/the-adjudicator
+# (2026-09-14), whose whole diff is four files under scripts/: it was reported
+# as overlapping campaign/the-trencher on 20 paths it does not touch, every one
+# of them a census regeneration a third campaign had landed in between, because
+# that pair's merge base sat 123 commits behind main.
+#
+# Here: the row branches, then MAIN moves the same file, then a candidate
+# branches from the new main and touches something else entirely. The right
+# answer is no overlap — the candidate contributes nothing the row also
+# contributes.
+stale_dir="$tmp/stale-state"; mkdir -p "$stale_dir"
+cross_dir_saved="$HV_SLUICE_DIR"
+export HV_SLUICE_DIR="$stale_dir"
+
+g checkout -q main
+g checkout -q -b campaign/stale-row main
+printf 'row edit\n' > root.txt
+g add -A; g commit -qm row-edits-root
+STALE_ROW="$(g rev-parse campaign/stale-row)"
+
+g checkout -q main
+printf 'main moved on\n' > root.txt
+g add -A; g commit -qm main-also-edits-root
+
+g checkout -q -b campaign/innocent main
+mkdir -p src
+printf 'unrelated\n' > src/innocent.rs
+g add -A; g commit -qm innocent-touches-nothing-shared
+INNOCENT="$(g rev-parse campaign/innocent)"
+
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/stale-row "$STALE_ROW" merge >/dev/null
+
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/innocent "$INNOCENT" 2>"$tmp/stale.err" >/dev/null
+set -e
+if grep -q "OVERLAP — campaign/stale-row" "$tmp/stale.err"; then
+    bad "stale-row: main's own history was attributed to the candidate as an overlap: $(grep 'overlap:' "$tmp/stale.err" | tr '\n' ' ')"
+else
+    ok "stale-row: a stale row's divergence from main is not reported as the candidate's overlap"
+fi
+# ANTI-VACUITY: the same candidate against a row that really does share a path
+# must still report, or the check above passes because nothing ever reports.
+g checkout -q -b campaign/shares-innocent main
+mkdir -p src
+printf 'different content\n' > src/innocent.rs
+g add -A; g commit -qm also-touches-innocent
+SHARES="$(g rev-parse campaign/shares-innocent)"
+g checkout -q campaign/innocent
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/shares-innocent "$SHARES" merge >/dev/null
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/innocent "$INNOCENT" 2>"$tmp/shares.err" >/dev/null
+set -e
+if grep -q "overlap: *src/innocent.rs" "$tmp/shares.err"; then
+    ok "stale-row anti-vacuity: a genuinely shared path IS still reported"
+else
+    bad "stale-row anti-vacuity: a real shared path went unreported — the check above is vacuous: $(cat "$tmp/shares.err")"
+fi
+# A CLEAN-MERGING shared path must report too. The old implementation only ever
+# saw CONFLICTS, so two candidates editing one file in different regions --- the
+# commonest way two campaigns collide --- produced no advisory at all. On
+# 2026-09-14 that is precisely what happened: tooling/the-adjudicator and
+# codex/counterpart-diagnostic both change scripts/lane-outboard.sh, git merges
+# them cleanly, and the old check printed nothing while printing 21 paths that
+# were not overlaps.
+g checkout -q main
+seq 1 60 > wide.txt
+g add -A; g commit -qm wide-file
+g checkout -q -b campaign/clean-sharer main
+sed -i '60s/.*/sixty edited by sharer/' wide.txt
+g add -A; g commit -qm sharer-edits-tail
+CLEAN_SHARER="$(g rev-parse campaign/clean-sharer)"
+g checkout -q -b campaign/clean-candidate main
+sed -i '1s/.*/one edited by candidate/' wide.txt
+g add -A; g commit -qm candidate-edits-head
+CLEAN_CAND="$(g rev-parse campaign/clean-candidate)"
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/clean-sharer "$CLEAN_SHARER" merge >/dev/null
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/clean-candidate "$CLEAN_CAND" 2>"$tmp/clean.err" >/dev/null
+set -e
+if grep -q "overlap: *wide.txt" "$tmp/clean.err"; then
+    ok "clean-merging shared path: reported (an overlap is a shared path, not only a conflict)"
+else
+    bad "clean-merging shared path: unreported — the advisory is still conflict-shaped: $(cat "$tmp/clean.err")"
+fi
+export HV_SLUICE_DIR="$cross_dir_saved"
+g checkout -q campaign/candidate
+
 # --- 2. THE ANTI-NOISE CASE: a collision ONLY in a declared-artifacts path --
 # Same shape as (1), but both branches touch only docs/audits/report.md,
 # declared `artifacts` in docs/generated-paths.txt above. No advisory at all:

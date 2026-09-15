@@ -29,6 +29,7 @@ mod mirror;
 pub use mirror::ObservationMirror;
 pub mod astronomy;
 pub mod camera;
+mod cube;
 pub use camera::CameraPose;
 mod renderer;
 pub use bevy;

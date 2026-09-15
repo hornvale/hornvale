@@ -124,13 +124,42 @@ sluice_report_queue_overlaps() {
             echo "sluice-mouth: cannot resolve $rid ($rbranch, state=$rstate) — sha $rsha is not in this repository; skipping its overlap check." >&2
             continue
         fi
-        local mt_out
-        if mt_out="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-tree --write-tree --name-only "$sha" "$rsha" 2>&1)"; then
-            continue   # a clean merge against this row: no overlap
-        fi
+        # AN OVERLAP IS WHAT BOTH SIDES CONTRIBUTE, NOT WHAT A PAIRWISE MERGE
+        # CONFLICTS ON, and the difference is not academic.
+        #
+        # This was `git merge-tree --write-tree --name-only "$sha" "$rsha"`,
+        # which merges the two candidates against THEIR OWN merge base. For a
+        # stale row that base is nowhere near main, so every commit main has
+        # taken since the row branched counts as the CANDIDATE's side of the
+        # merge --- and main's own history gets reported as the candidate's
+        # overlap.
+        #
+        # Observed 2026-09-14 on tooling/the-adjudicator, whose entire diff is
+        # four files under scripts/. It was reported as overlapping
+        # campaign/the-trencher on 20 paths, including
+        # book/src/laboratory/generated/the-census/rows.csv and eleven lab
+        # injection fixtures --- none of which it touches. The merge base of
+        # those two commits was 123 commits behind main, and every reported
+        # path came from a census regeneration some third campaign had landed
+        # in between. The advisory was describing the-trencher's staleness and
+        # attributing it to the candidate being vetted.
+        #
+        # That is the cry-wolf failure this function's own header warns about,
+        # arriving by a different road: held rows accumulate (six that night,
+        # the oldest from 2026-09-05), so the longer a row sits the more of
+        # main it falsely claims, on EVERY vet.
+        #
+        # The honest question is whether the two candidates change the same
+        # paths relative to the base they will each merge into, which is what
+        # two three-dot diffs answer. It over-reports where both sides touch
+        # one file in regions git would merge cleanly --- an acceptable trade
+        # for an advisory, and the incident this function was written for
+        # (the-weft and the-housemark, both touching windows/vessel) is a path
+        # collision exactly.
         local mconf
-        mconf="$(printf '%s\n' "$mt_out" \
-            | awk 'length($0) == 40 && /^[0-9a-f]+$/ { seen = 1; next } seen && /^$/ { exit } seen { print }')"
+        mconf="$(comm -12 \
+            <(env -u GIT_DIR -u GIT_INDEX_FILE git diff --name-only "${base:-origin/main}...$sha" 2>/dev/null | sort) \
+            <(env -u GIT_DIR -u GIT_INDEX_FILE git diff --name-only "${base:-origin/main}...$rsha" 2>/dev/null | sort))"
         [ -n "$mconf" ] || continue
         # PARTITION THE PATHS; DO NOT JUDGE THE SET AS A WHOLE.
         #

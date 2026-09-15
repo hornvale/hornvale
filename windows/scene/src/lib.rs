@@ -11,8 +11,15 @@
 
 use hornvale_astronomy::StdInstant;
 use hornvale_climate::{Biome, GeneratedClimate};
-use hornvale_kernel::{NearestVertexIndex, Seed, VertexMap, World, WorldTime};
-use hornvale_terrain::GeneratedTerrain;
+use hornvale_kernel::{FacetId, NearestVertexIndex, Seed, VertexMap, World, WorldTime};
+use hornvale_terrain::{
+    EndpointSide, FacetAddress, FacetFieldSample, FeatureId, FeatureKind, GeneratedTerrain,
+    RealizedCurve, TerminalKind,
+};
+use hornvale_worldgen::{
+    SurfaceFeatureStrip, SurfacePatch, SurfaceRealizationContext, SurfaceRevision,
+    facet::{stitch_feature_transition, stitch_transition},
+};
 use serde::Serialize;
 
 mod astronomy_at;
@@ -40,7 +47,7 @@ pub const MIN_WIDTH: u32 = 16;
 pub const MAX_WIDTH: u32 = 1024;
 
 /// Scene construction failed; the reason, loudly (the GenesisError manner).
-/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(prose: AstronomyQuery.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0), bare-ok(identifier-text: UnknownTileField.0), bare-ok(prose: MalformedTileFields.0), bare-ok(diagnostic-value: ObserverLatitudeOutOfRange.0), bare-ok(diagnostic-value: ObserverLongitudeNonFinite.0)
+/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(prose: AstronomyQuery.0), bare-ok(prose: Surface.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0), bare-ok(identifier-text: UnknownTileField.0), bare-ok(prose: MalformedTileFields.0), bare-ok(diagnostic-value: ObserverLatitudeOutOfRange.0), bare-ok(diagnostic-value: ObserverLongitudeNonFinite.0)
 #[derive(Debug, Clone, PartialEq)]
 pub enum SceneError {
     /// Width must be even (height is width / 2).
@@ -51,6 +58,8 @@ pub enum SceneError {
     Build(String),
     /// Evaluated astronomy is unavailable for the requested instant.
     AstronomyQuery(String),
+    /// The coherent surface could not be queried or serialized.
+    Surface(String),
     /// Regional query: `face` must be 0..=5.
     RegionFaceOutOfRange(u32),
     /// Regional query: `level` must be 0..=MAX_REGION_LEVEL.
@@ -96,6 +105,7 @@ impl std::fmt::Display for SceneError {
                 write!(f, "--width {w} is outside {MIN_WIDTH}..={MAX_WIDTH}")
             }
             SceneError::AstronomyQuery(e) => write!(f, "astronomy query: {e}"),
+            SceneError::Surface(e) => write!(f, "surface query: {e}"),
             SceneError::Build(e) => write!(f, "building the world: {e}"),
             SceneError::RegionFaceOutOfRange(f_) => {
                 write!(f, "--face {f_} is outside 0..=5 (six cube faces)")
@@ -425,6 +435,8 @@ pub struct SceneContext {
     climate_index: NearestVertexIndex,
     /// The per-vertex biome map (`biome_map()` returns by value, so it is built once).
     biomes: VertexMap<Biome>,
+    /// The source-owned coherent surface realization, retained for patch queries.
+    surface: SurfaceRealizationContext,
 }
 
 impl SceneContext {
@@ -433,6 +445,26 @@ impl SceneContext {
     // sculpts/fits once, shared by every reader built from this context.
     #[allow(clippy::disallowed_methods)]
     pub fn build(world: &World) -> Result<SceneContext, SceneError> {
+        Self::build_internal(world, None)
+    }
+
+    /// Build a scene context while preserving a source boundary's revision
+    /// identity. Terrain and climate are handed to the surface context after
+    /// this one derivation, rather than being reconstructed there.
+    /// type-audit: bare-ok(identifier-text: source_revision)
+    #[allow(clippy::disallowed_methods)]
+    pub fn build_with_source_revision(
+        world: &World,
+        source_revision: &str,
+    ) -> Result<SceneContext, SceneError> {
+        Self::build_internal(world, Some(source_revision))
+    }
+
+    #[allow(clippy::disallowed_methods)]
+    fn build_internal(
+        world: &World,
+        source_revision: Option<&str>,
+    ) -> Result<SceneContext, SceneError> {
         let terrain =
             hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
         let climate = hornvale_worldgen::climate_from(world, &terrain)
@@ -440,6 +472,16 @@ impl SceneContext {
         let terrain_index = NearestVertexIndex::new(terrain.geosphere());
         let climate_index = NearestVertexIndex::new(climate.geosphere());
         let biomes = climate.biome_map();
+        let surface = match source_revision {
+            Some(source_revision) => SurfaceRealizationContext::from_parts_with_source_revision(
+                world,
+                terrain.clone(),
+                climate.clone(),
+                source_revision,
+            ),
+            None => SurfaceRealizationContext::from_parts(world, terrain.clone(), climate.clone()),
+        }
+        .map_err(|e| SceneError::Surface(e.to_string()))?;
         Ok(SceneContext {
             seed: world.seed,
             terrain,
@@ -447,6 +489,7 @@ impl SceneContext {
             terrain_index,
             climate_index,
             biomes,
+            surface,
         })
     }
 
@@ -454,6 +497,340 @@ impl SceneContext {
     pub fn seed(&self) -> Seed {
         self.seed
     }
+
+    /// The revision of the retained source-owned coherent surface.
+    pub fn surface_revision(&self) -> &SurfaceRevision {
+        &self.surface.revision
+    }
+}
+
+/// A request for one derived, addressed coherent ground patch.
+pub struct SurfacePatchQuery {
+    /// The Level-6 macro face and refinement path to realize.
+    pub address: FacetAddress,
+    /// The revision the caller has observed and is prepared to consume.
+    pub expected_revision: SurfaceRevision,
+}
+
+/// Decode the compact source-wire address into a scene query.
+/// type-audit: bare-ok(index: macro_face), bare-ok(index: child_path)
+pub fn surface_patch_query_from_packed(
+    macro_face: u32,
+    child_path: Vec<u8>,
+    expected_revision: SurfaceRevision,
+) -> Result<SurfacePatchQuery, SceneError> {
+    let macro_face = FacetId(u64::from(macro_face))
+        .unpack()
+        .map_err(|e| SceneError::Surface(format!("invalid macro face: {e:?}")))?;
+    let address = FacetAddress::new(macro_face, child_path)
+        .map_err(|e| SceneError::Surface(format!("invalid surface address: {e:?}")))?;
+    Ok(SurfacePatchQuery {
+        address,
+        expected_revision,
+    })
+}
+
+/// Query one coherent surface patch from a previously built scene context.
+pub fn surface_patch_scene(
+    context: &SceneContext,
+    query: &SurfacePatchQuery,
+) -> Result<SurfacePatch, SceneError> {
+    surface_patch_scene_with_transition(context, query, None)
+}
+
+/// Query a patch and, when requested, attach source-computed replacement
+/// triangles and canonical stitched feature strips for its coarse edge beside
+/// an immediate finer neighbor.
+pub fn surface_patch_scene_with_transition(
+    context: &SceneContext,
+    query: &SurfacePatchQuery,
+    transition_address: Option<&FacetAddress>,
+) -> Result<SurfacePatch, SceneError> {
+    if query.expected_revision != context.surface.revision {
+        return Err(SceneError::Surface(
+            "expected surface revision does not match the scene context".into(),
+        ));
+    }
+    let mut patch = context
+        .surface
+        .realize(&query.address)
+        .map_err(|error| SceneError::Surface(error.to_string()))?;
+    if let Some(transition_address) = transition_address {
+        let fine = context
+            .surface
+            .realize(transition_address)
+            .map_err(|error| SceneError::Surface(error.to_string()))?;
+        patch.transition_triangles = stitch_transition(&patch, &fine)
+            .map_err(|error| SceneError::Surface(error.to_string()))?;
+        patch.strips = stitch_feature_transition(&patch, &fine)
+            .map_err(|error| SceneError::Surface(error.to_string()))?;
+    }
+    Ok(patch)
+}
+
+#[derive(Serialize)]
+struct SurfacePatchDocument {
+    schema: &'static str,
+    revision: SurfaceRevisionDocument,
+    address: SurfaceAddressDocument,
+    samples: Vec<SurfaceSampleDocument>,
+    curves: Vec<SurfaceCurveDocument>,
+    strips: Vec<SurfaceStripDocument>,
+    triangles: Vec<[u32; 3]>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    transition_triangles: Vec<[u32; 3]>,
+}
+
+#[derive(Serialize)]
+struct SurfaceRevisionDocument {
+    source_revision: String,
+    algorithm_version: &'static str,
+    configuration_hash_hex: String,
+}
+
+#[derive(Serialize)]
+struct SurfaceAddressDocument {
+    macro_face: u32,
+    child_path: Vec<u8>,
+}
+
+#[derive(Serialize)]
+struct SurfaceFeatureDocument {
+    kind: &'static str,
+    macro_anchor: u64,
+    ordinal: u32,
+}
+
+#[derive(Serialize)]
+struct SurfaceBoundaryDocument {
+    address: SurfaceAddressDocument,
+    edge: u8,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    t: f64,
+}
+
+#[derive(Serialize)]
+struct SurfaceEndpointDocument {
+    feature: SurfaceFeatureDocument,
+    side: &'static str,
+    boundary: Option<SurfaceBoundaryDocument>,
+    terminal: &'static str,
+}
+
+#[derive(Serialize)]
+struct SurfaceCurveDocument {
+    feature: SurfaceFeatureDocument,
+    points: Vec<Vec<f64>>,
+    width_rad: Vec<f64>,
+    endpoints: [SurfaceEndpointDocument; 2],
+}
+
+#[derive(Serialize)]
+struct SurfaceStripDocument {
+    feature: SurfaceFeatureDocument,
+    centerline: Vec<Vec<f64>>,
+    width_rad: Vec<f64>,
+    vertices: Vec<SurfaceStripVertexDocument>,
+    triangles: Vec<[u32; 3]>,
+    semantic_mask: Vec<f64>,
+    endpoints: [SurfaceEndpointDocument; 2],
+}
+
+#[derive(Serialize)]
+struct SurfaceStripVertexDocument {
+    position: Vec<f64>,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    height_m: f64,
+    normal: Vec<f64>,
+    side: i8,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    signed_distance_rad: f64,
+}
+
+#[derive(Serialize)]
+struct SurfaceSampleDocument {
+    position: Vec<f64>,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    height_m: f64,
+    normal: Vec<f64>,
+    material_weights: Vec<f64>,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    shoreline_distance_m: f64,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    water_depth_m: f64,
+    flow_direction: Vec<f64>,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    flow_strength: f64,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    channel_distance_m: f64,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    channel_width_m: f64,
+    floodplain_weight: f64,
+    bank_weight: f64,
+    terrace_weight: f64,
+    delta_weight: f64,
+    ridge_direction: Vec<f64>,
+    ridge_strength: f64,
+}
+
+fn quantized_vector(values: impl IntoIterator<Item = f64>) -> Vec<f64> {
+    values.into_iter().map(hornvale_kernel::quantize).collect()
+}
+
+fn surface_address_document(address: &FacetAddress) -> SurfaceAddressDocument {
+    SurfaceAddressDocument {
+        macro_face: address
+            .macro_face
+            .pack()
+            .expect("surface patches carry valid macro faces")
+            .0
+            .try_into()
+            .expect("Level-6 facet IDs fit in the surface wire integer"),
+        child_path: address.child_path.clone(),
+    }
+}
+
+fn surface_feature_document(feature: FeatureId) -> SurfaceFeatureDocument {
+    SurfaceFeatureDocument {
+        kind: match feature.kind {
+            FeatureKind::ChannelReach => "channel_reach",
+            FeatureKind::Confluence => "confluence",
+            FeatureKind::Shoreline => "shoreline",
+            FeatureKind::Ridge => "ridge",
+            FeatureKind::MaterialTransition => "material_transition",
+        },
+        macro_anchor: u64::from(feature.macro_anchor.0),
+        ordinal: feature.ordinal,
+    }
+}
+
+fn surface_terminal_document(terminal: TerminalKind) -> &'static str {
+    match terminal {
+        TerminalKind::Headwater => "headwater",
+        TerminalKind::Confluence => "confluence",
+        TerminalKind::Lake => "lake",
+        TerminalKind::Ocean => "ocean",
+        TerminalKind::Continuation => "continuation",
+    }
+}
+
+fn surface_endpoint_document(
+    endpoint: &hornvale_terrain::FeatureEndpoint,
+) -> SurfaceEndpointDocument {
+    SurfaceEndpointDocument {
+        feature: surface_feature_document(endpoint.feature),
+        side: match endpoint.side {
+            EndpointSide::Upstream => "upstream",
+            EndpointSide::Downstream => "downstream",
+        },
+        boundary: endpoint
+            .boundary
+            .as_ref()
+            .map(|boundary| SurfaceBoundaryDocument {
+                address: surface_address_document(&boundary.address),
+                edge: boundary.edge,
+                t: boundary.t,
+            }),
+        terminal: surface_terminal_document(endpoint.terminal),
+    }
+}
+
+fn surface_curve_document(curve: &RealizedCurve) -> SurfaceCurveDocument {
+    SurfaceCurveDocument {
+        feature: surface_feature_document(curve.feature),
+        points: curve
+            .points
+            .iter()
+            .map(|point| quantized_vector(*point))
+            .collect(),
+        width_rad: quantized_vector(curve.width.iter().copied()),
+        endpoints: [
+            surface_endpoint_document(&curve.endpoints[0]),
+            surface_endpoint_document(&curve.endpoints[1]),
+        ],
+    }
+}
+
+fn surface_strip_document(strip: &SurfaceFeatureStrip) -> SurfaceStripDocument {
+    SurfaceStripDocument {
+        feature: surface_feature_document(strip.feature),
+        centerline: strip
+            .centerline
+            .iter()
+            .map(|point| quantized_vector(*point))
+            .collect(),
+        width_rad: quantized_vector(strip.width_rad.iter().copied()),
+        vertices: strip
+            .vertices
+            .iter()
+            .map(|vertex| SurfaceStripVertexDocument {
+                position: quantized_vector(vertex.position),
+                height_m: vertex.height_m,
+                normal: quantized_vector(vertex.normal),
+                side: vertex.side,
+                signed_distance_rad: vertex.signed_distance_rad,
+            })
+            .collect(),
+        triangles: strip.triangles.clone(),
+        semantic_mask: quantized_vector(strip.semantic_mask.map(f64::from)),
+        endpoints: [
+            surface_endpoint_document(&strip.endpoints[0]),
+            surface_endpoint_document(&strip.endpoints[1]),
+        ],
+    }
+}
+
+fn surface_sample_document(sample: FacetFieldSample) -> SurfaceSampleDocument {
+    SurfaceSampleDocument {
+        position: quantized_vector(sample.position),
+        height_m: sample.height_m,
+        normal: quantized_vector(sample.normal),
+        material_weights: quantized_vector(sample.material_weights.map(f64::from)),
+        shoreline_distance_m: sample.shoreline_distance_m,
+        water_depth_m: sample.water_depth_m,
+        flow_direction: quantized_vector(sample.flow_direction),
+        flow_strength: sample.flow_strength,
+        channel_distance_m: sample.channel_distance_m,
+        channel_width_m: sample.channel_width_m,
+        floodplain_weight: hornvale_kernel::quantize(f64::from(sample.floodplain_weight)),
+        bank_weight: hornvale_kernel::quantize(f64::from(sample.bank_weight)),
+        terrace_weight: hornvale_kernel::quantize(f64::from(sample.terrace_weight)),
+        delta_weight: hornvale_kernel::quantize(f64::from(sample.delta_weight)),
+        ridge_direction: quantized_vector(sample.ridge_direction),
+        ridge_strength: hornvale_kernel::quantize(f64::from(sample.ridge_strength)),
+    }
+}
+
+/// Serialize a coherent surface patch as its canonical derived scene document.
+/// The field order and quantized values are stable; this document is not saved
+/// in the world ledger and carries no living-weather fields.
+/// type-audit: bare-ok(artifact: return)
+pub fn surface_patch_json(patch: &SurfacePatch) -> String {
+    let revision = &patch.revision;
+    let document = SurfacePatchDocument {
+        schema: "scene/surface/v1",
+        revision: SurfaceRevisionDocument {
+            source_revision: revision.source_revision.clone(),
+            algorithm_version: revision.algorithm_version,
+            configuration_hash_hex: revision
+                .configuration_hash
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect(),
+        },
+        address: surface_address_document(&patch.address),
+        samples: patch
+            .samples
+            .iter()
+            .copied()
+            .map(surface_sample_document)
+            .collect(),
+        curves: patch.curves.iter().map(surface_curve_document).collect(),
+        strips: patch.strips.iter().map(surface_strip_document).collect(),
+        triangles: patch.triangles.clone(),
+        transition_triangles: patch.transition_triangles.clone(),
+    };
+    serde_json::to_string(&document).expect("surface patch document always serializes")
 }
 
 /// The `width` contract shared by [`tiles_scene`] and [`temperature_grid`]:

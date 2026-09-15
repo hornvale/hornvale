@@ -12,3 +12,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.10"
 image = { version = "=0.25.10", default-features = false, features = ["png"] }
+libc = "0.2"

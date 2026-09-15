@@ -31,3 +31,13 @@ read as *intentional* rather than merely non-contradictory. Making a
 generated myth fit three committed astronomical facts is search; making it
 *good* is the research problem. The [Open Questions](../open-questions.md)
 chapter keeps this honest.
+
+The Planetarium now exercises the same principle at the visual boundary. A
+camera requests bounded, revision-qualified local patches from the Level-6
+surface; source-owned conditioned relief and inherited hydrology add detail at
+facet scale, while adaptive strips preserve features that do not pass through
+macro vertices. This is lazy realization, not a global macro-level promotion:
+adjacent patches share boundary evaluations and the fallback remains for
+uncovered regions during handoff. The rendered proof qualifies one region and
+leaves broader coverage, Level 8, and dynamic weather to measured follow-on
+campaigns.

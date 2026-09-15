@@ -3,7 +3,9 @@
 mod protocol;
 use hornvale_kernel::{World, WorldTime};
 use hornvale_scene::{AstronomyContext, SceneContext};
-use protocol::{Binding, Initial, Reply, Request};
+use protocol::{
+    Binding, Initial, Reply, Request, SurfaceReply, SurfaceRequest, SurfaceRevisionWire,
+};
 use serde_json::value::RawValue;
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, path::Path};
@@ -45,6 +47,18 @@ impl std::fmt::Display for SourceError {
 impl std::error::Error for SourceError {}
 fn raw(json: String) -> Result<Box<RawValue>, SourceError> {
     RawValue::from_string(json).map_err(|e| SourceError::Serialize(e.to_string()))
+}
+
+fn surface_revision_wire(revision: &hornvale_worldgen::SurfaceRevision) -> SurfaceRevisionWire {
+    SurfaceRevisionWire {
+        source_revision: revision.source_revision.clone(),
+        algorithm_version: revision.algorithm_version.into(),
+        configuration_hash_hex: revision
+            .configuration_hash
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect(),
+    }
 }
 
 /// One worker's immutable world and cached scientific observation contexts.
@@ -125,10 +139,22 @@ impl Source {
         }
         if self.terrain.is_none() {
             self.terrain = Some(
-                native_build!(3, SceneContext::build(&self.world))
-                    .map_err(|e| SourceError::Observation(e.to_string()))?,
+                native_build!(
+                    3,
+                    SceneContext::build_with_source_revision(
+                        &self.world,
+                        &self.binding.source_revision
+                    )
+                )
+                .map_err(|e| SourceError::Observation(e.to_string()))?,
             );
         }
+        let surface_revision = surface_revision_wire(
+            self.terrain
+                .as_ref()
+                .expect("terrain initialized")
+                .surface_revision(),
+        );
         let tiles = native_build!(
             4,
             hornvale_scene::tiles_scene_in(
@@ -142,6 +168,7 @@ impl Source {
         let doc = serde_json::to_string(&Initial {
             schema: "visual/initial/v1",
             binding: &self.binding,
+            surface_revision,
             system: &self.system,
             moons: &self.moons,
             tiles: &tiles,
@@ -180,6 +207,87 @@ impl Source {
         })
         .map_err(|e| SourceError::Serialize(e.to_string()))
     }
+
+    /// Validate and observe one canonical source-owned coherent surface patch.
+    /// Binding and revision mismatches are rejected before patch realization.
+    pub fn observe_surface(&mut self, request_json: &str) -> Result<String, SourceError> {
+        let request: SurfaceRequest = serde_json::from_str(request_json)
+            .map_err(|e| SourceError::InvalidRequest(e.to_string()))?;
+        if request.schema != "visual/surface-request/v1" {
+            return Err(SourceError::InvalidRequest(format!(
+                "unsupported surface schema {:?}",
+                request.schema
+            )));
+        }
+        if request.binding != self.binding {
+            return Err(SourceError::InvalidRequest(
+                "binding does not belong to this source (source/scope/world/revision must all match)".into(),
+            ));
+        }
+        let revision = hornvale_worldgen::SurfaceRealizationContext::revision_for(
+            &self.world,
+            &self.binding.source_revision,
+        );
+        let expected_hash = revision
+            .configuration_hash
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        if request.expected_revision.source_revision != revision.source_revision
+            || request.expected_revision.algorithm_version != revision.algorithm_version
+            || request.expected_revision.configuration_hash_hex != expected_hash
+        {
+            return Err(SourceError::InvalidRequest(
+                "expected surface revision does not match the active source".into(),
+            ));
+        }
+        if self.terrain.is_none() {
+            self.terrain = Some(
+                native_build!(
+                    3,
+                    SceneContext::build_with_source_revision(
+                        &self.world,
+                        &self.binding.source_revision
+                    )
+                )
+                .map_err(|e| SourceError::Observation(e.to_string()))?,
+            );
+        }
+        let context = self.terrain.as_ref().expect("terrain initialized");
+        let query = hornvale_scene::surface_patch_query_from_packed(
+            request.address.macro_face,
+            request.address.child_path,
+            revision.clone(),
+        )
+        .map_err(|e| SourceError::InvalidRequest(e.to_string()))?;
+        let transition_address = request
+            .transition_address
+            .map(|address| {
+                hornvale_scene::surface_patch_query_from_packed(
+                    address.macro_face,
+                    address.child_path,
+                    revision.clone(),
+                )
+                .map(|query| query.address)
+                .map_err(|e| SourceError::InvalidRequest(e.to_string()))
+            })
+            .transpose()?;
+        let patch = hornvale_scene::surface_patch_scene_with_transition(
+            context,
+            &query,
+            transition_address.as_ref(),
+        )
+        .map_err(|e| SourceError::Observation(e.to_string()))?;
+        let patch = raw(hornvale_scene::surface_patch_json(&patch))?;
+        serde_json::to_string(&SurfaceReply {
+            schema: "visual/surface-reply/v1",
+            binding: &self.binding,
+            request_id: request.request_id,
+            generation: request.generation,
+            patch: &patch,
+        })
+        .map_err(|e| SourceError::Serialize(e.to_string()))
+    }
 }
 #[cfg(test)]
 mod tests {
@@ -205,5 +313,37 @@ mod tests {
         source.initial_document(32).unwrap();
         assert_eq!(CONSTRUCTIONS.get(), [1, 1, 1, 1, 2]);
         assert_eq!(source.initial.len(), 2);
+    }
+
+    #[test]
+    fn stale_surface_revision_is_rejected_before_context_build() {
+        CONSTRUCTIONS.set([0; 5]);
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../cli/tests/fixtures/world-seed-42.json");
+        let mut source = Source::open(
+            &path,
+            "4e06e33492a82e245aec899559b8cdf33ac7fdcd",
+            "early-rejection-test",
+        )
+        .unwrap();
+        assert_eq!(CONSTRUCTIONS.get(), [1, 1, 1, 0, 0]);
+        let request = serde_json::json!({
+            "schema": "visual/surface-request/v1",
+            "binding": source.binding,
+            "request_id": 1,
+            "generation": 0,
+            "address": {"macro_face": 0, "child_path": [1]},
+            "expected_revision": {
+                "source_revision": "0",
+                "algorithm_version": "stale",
+                "configuration_hash_hex": "0"
+            }
+        });
+
+        let error = source.observe_surface(&request.to_string()).unwrap_err();
+        assert!(
+            matches!(error, SourceError::InvalidRequest(message) if message.contains("revision"))
+        );
+        assert_eq!(CONSTRUCTIONS.get(), [1, 1, 1, 0, 0]);
     }
 }

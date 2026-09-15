@@ -454,7 +454,7 @@ fn the_heavy_roster_is_exactly_this_fixture() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 40] = [
+const EXPECTED_UNTOKENISED: [&str; 41] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5333 over 120 pairs; thirteenth canonical reading, incomparable because the Trencher's post-merge census re-seated the world and fixture inputs; the scorer is unchanged and the evaluable surface shrank 181 -> 179 with a measured share of exactly zero, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
@@ -475,6 +475,7 @@ const EXPECTED_UNTOKENISED: [&str; 40] = [
     "claim: readout(preregistered, 0016) — builds one seed-42 Climate-rung world and reads all 22 weft-* metrics off it (~524ms release-mode grid sweep, measured); see this file's module doc for the full table",
     "compiles the workspace in release; CI runs it with -- --ignored",
     "cost: 64 world builds (~4 min); run by hand at stage boundaries, results in the ledger",
+    "device-dependent: run explicitly via the pinned lavapipe proof runner",
     "failing — investigate later",
     "flaky after the refactor",
     "measurement: builds eight full worlds; run explicitly with --ignored",

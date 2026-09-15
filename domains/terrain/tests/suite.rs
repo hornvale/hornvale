@@ -19,6 +19,8 @@ mod cave_construction_proof;
 mod channel_golden;
 #[path = "suite/channel_properties.rs"]
 mod channel_properties;
+#[path = "suite/facet_properties.rs"]
+mod facet_properties;
 #[path = "suite/rift_probe.rs"]
 mod rift_probe;
 #[path = "suite/rill_probe.rs"]

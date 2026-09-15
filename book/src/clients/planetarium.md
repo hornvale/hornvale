@@ -47,8 +47,12 @@ identity, position, orientation, physical dimensions and source illumination.
 Within a shot, body-size and distance ratios remain physical. Stars provide
 illumination without a rendered disk or point. Wanderers with no supplied radius
 appear as unresolved inspection markers.
-Source terrain elevation is reconstructed relative to its sea datum. Relief is
-not an invented walkable landscape. The Earth-like anchor radius is a declared
+Source terrain elevation is reconstructed relative to its sea datum. At a
+camera-visible region, the renderer can lazily replace the fallback globe with
+revision-qualified source-owned surface patches: conditioned facet relief,
+inherited channel and ridge structure, and adaptive narrow-feature strips.
+This is a visual realization of the Level-6 world, not a new macro authority or
+an invented walkable landscape. The Earth-like anchor radius is a declared
 mass–radius model, not a simulated interior.
 
 Materials interpret source biome, elevation and moon descriptors. Fine pigment,
@@ -61,6 +65,9 @@ validate an eclipse. No generated concept image is used as physical source data.
 
 The camera is orbital: it stays at least twice each body's outer radius from its
 center, including positive terrain relief. Near-surface landings are unsupported.
+The current coherent-ground proof is regional and camera-driven; it does not
+promise global patch coverage, Level-8 macro detail, or dynamic clouds,
+precipitation, currents, snow, foam, or weather-qualified roughness.
 The reusable conversion supports origins through 1e12 km, camera-relative
 coordinates through 2e10 km and vertical FOV 0.005–2.5 radians; the interactive
 pilot further bounds camera distance to 2e9 km. Physical radius starts at 0.001 km;
