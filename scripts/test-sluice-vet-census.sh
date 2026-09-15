@@ -228,6 +228,79 @@ else
     bad "spoke about pins on a candidate that moved no golden"
 fi
 
+# --- census rivals: who else holds the reference? ---------------------------
+# No gate compares two candidates' censuses. On 2026-09-15 three campaigns each
+# held one, pairwise disagreeing on 101-104 of 295 columns, and the queue could
+# not say so: the-trencher had already spent 2118 s on a census that was stale
+# before use and was running a fourth.
+# shellcheck disable=SC2016  # deliberately unexpanded; positional args.
+rivals() ( cd "$repo" && env -u GIT_DIR -u GIT_INDEX_FILE bash -c '
+    HV_VET_LIB=1 . "$1/scripts/sluice-vet.sh"; census_rivals "$2" "$3"' _ "$root" "$2" "$3" )
+
+build_rivals() {
+    build
+    mkdir -p "$repo/book/src/laboratory/generated/the-census"
+    g -C "$repo" add -A; g -C "$repo" commit -q -m sim-base 2>/dev/null || true
+    g -C "$repo" update-ref refs/remotes/origin/main HEAD
+    export HV_SLUICE_DIR="$scratch/rq"; rm -rf "$HV_SLUICE_DIR"; mkdir -p "$HV_SLUICE_DIR"
+    : > "$HV_SLUICE_DIR/queue.tsv"
+}
+censusing_branch() {  # censusing_branch <name> <content> -> prints sha
+    g -C "$repo" checkout -q -b "$1" main
+    mkdir -p "$repo/book/src/laboratory/generated/the-census"
+    echo "$2" > "$repo/book/src/laboratory/generated/the-census/rows.csv"
+    g -C "$repo" add -A; g -C "$repo" commit -q -m "$1 census"
+    g -C "$repo" rev-parse HEAD
+}
+qrow() { printf '%s\treq-%s\t%s\t%s\t%s\tmerge\t\n' "$1" "$2" "$3" "$4" "$5" >> "$HV_SLUICE_DIR/queue.tsv"; }
+
+echo "== another live row also ships a census"
+build_rivals
+MINE="$(censusing_branch campaign/mine minecsv)"
+OTHER="$(censusing_branch campaign/other othercsv)"
+qrow 2026-01-01T00:00:00Z a campaign/mine  "$MINE"  queued
+qrow 2026-01-02T00:00:00Z b campaign/other "$OTHER" held
+out="$(rivals x "$MINE" campaign/mine)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"SO DO THESE LIVE ROWS"*) ok "names the collision" ;; *) bad "missed a census rival: $out" ;; esac
+case "$out" in *campaign/other*) ok "names the rival branch" ;; *) bad "did not name the rival" ;; esac
+case "$out" in *"owns the reference"*) bad "also said it owns the reference" ;; *) ok "does not also bless it" ;; esac
+
+echo "== no rival: this candidate owns the reference"
+build_rivals
+MINE="$(censusing_branch campaign/solo solocsv)"
+qrow 2026-01-01T00:00:00Z a campaign/solo "$MINE" queued
+out="$(rivals x "$MINE" campaign/solo)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"owns the reference"*) ok "says it owns the reference" ;; *) bad "did not say so: $out" ;; esac
+case "$out" in *"SO DO THESE"*) bad "invented a rival" ;; *) ok "invents no rival" ;; esac
+
+echo "== a second row on the SAME branch is not a rival"
+# A campaign superseding itself, or a stage row beside a merge row, is one
+# campaign holding one census -- counting it would cry wolf on every resubmit.
+build_rivals
+MINE="$(censusing_branch campaign/self selfcsv)"
+qrow 2026-01-01T00:00:00Z a campaign/self "$MINE" queued
+qrow 2026-01-02T00:00:00Z b campaign/self "$MINE" held
+out="$(rivals x "$MINE" campaign/self)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"owns the reference"*) ok "a candidate is not its own rival" ;; *) bad "counted itself: $out" ;; esac
+
+echo "== a candidate shipping NO census says nothing at all"
+build_rivals
+g -C "$repo" checkout -q -b campaign/nocensus main
+echo doc > "$repo/README.md"; g -C "$repo" add -A; g -C "$repo" commit -q -m docs
+NOC="$(g -C "$repo" rev-parse HEAD)"
+OTHER="$(censusing_branch campaign/other2 o2csv)"
+qrow 2026-01-01T00:00:00Z a campaign/nocensus "$NOC"   queued
+qrow 2026-01-02T00:00:00Z b campaign/other2   "$OTHER" held
+out="$(rivals x "$NOC" campaign/nocensus)"
+if [ -z "$(printf '%s' "$out" | tr -d '[:space:]')" ]; then
+    ok "stays silent for a candidate that ships no census"
+else
+    bad "spoke to a candidate with no census: $out"
+fi
+
 index_after="$(g -C "$root" write-tree 2>/dev/null || echo unavailable)"
 if [ "$index_before" != "$index_after" ]; then
     bad "THIS SUITE REWROTE THE INDEX of the worktree it ran in ($index_before -> $index_after)"

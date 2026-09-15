@@ -373,6 +373,61 @@ census_freshness_against_main() {
     printf '     and whether heavy ran census_fixtures_match_a_probe_of_live_seeds green.\n'
 }
 
+# WHICH OTHER LIVE CANDIDATES ALSO SHIP A CENSUS.
+#
+# No gate compares two candidates' censuses, and the chamber gates main plus
+# ONE branch, so three campaigns can each hold a census that invalidates the
+# other two and nothing says so until one lands and the others go red.
+#
+# That is not hypothetical. Measured 2026-09-15, with all four rows.csv read
+# and compared column by column:
+#
+#   the-tidemark  97/295 columns from main    tidemark vs anchor    101
+#   anchor        17/295                      tidemark vs trencher  103
+#   the-trencher 100/295                      anchor   vs trencher  104
+#
+# By then the-trencher had already spent 2118 s on a census that was stale
+# before it was used and was running a fourth; anchor had re-pinned nine
+# calibration values against a world about to move. Two re-censuses are
+# unavoidable with three campaigns --- that is N-1, and no ordering avoids it.
+# Everything beyond two was waste that nothing in the queue could see.
+#
+# A census is the ONE artifact where being second is expensive, because it is
+# the reference every calibration battery asserts against. So this names the
+# rivals at submission time, when a campaign can still choose to wait instead
+# of spending 1400-1600 s of strictly serial box time on a measurement that
+# will be thrown away.
+census_rivals() {
+    local sha="$1" branch="$2" q rb rs rstate mine n=0
+    q="${HV_SLUICE_DIR:-$HOME/.local/state/hornvale/sluice}/queue.tsv"
+    [ -r "$q" ] || return 0
+    mine="$(git diff --name-only "origin/main...$sha" 2>/dev/null \
+        -- 'book/src/laboratory/generated/*/rows.csv' | grep -c .)"
+    [ "$mine" -gt 0 ] || return 0
+    while IFS=$'\t' read -r rb rs rstate; do
+        [ -n "$rs" ] || continue
+        [ "$rb" = "$branch" ] && continue
+        git rev-parse --verify --quiet "$rs^{commit}" >/dev/null 2>&1 || continue
+        if [ "$(git diff --name-only "origin/main...$rs" 2>/dev/null \
+            -- 'book/src/laboratory/generated/*/rows.csv' | grep -c .)" -gt 0 ]; then
+            if [ "$n" -eq 0 ]; then
+                printf '  >> THIS CANDIDATE SHIPS A CENSUS, AND SO DO THESE LIVE ROWS:\n'
+            fi
+            n=$((n + 1))
+            printf '     rival: %-34s %-8s %s\n' "$rb" "$rstate" "$(git rev-parse --short=9 "$rs")"
+        fi
+    done <<ROWS
+$(awk -F'\t' '$5=="queued"||$5=="running"||$5=="held" {print $3"\t"$4"\t"$5}' "$q" | sort -u)
+ROWS
+    if [ "$n" -eq 0 ]; then
+        printf '  no other live candidate ships a census — this one owns the reference\n'
+        return 0
+    fi
+    printf '     Whichever lands first, the others describe a world that no longer\n'
+    printf '     exists and owe a re-run (1400-1600 s each, serial). Agree an order\n'
+    printf '     before spending the box: do not census until the one ahead lands.\n'
+}
+
 # HV_VET_LIB=1 sources the adjudication functions above --- decision blocks,
 # census freshness and census pins --- without vetting anything, on sluice-drain.sh's HV_DRAIN_LIB precedent. The three-valued
 # verdict is a DECISION RULE, and a decision rule that cannot be driven
@@ -534,6 +589,7 @@ done
 projected_merge "$sha" "$branch"
 census_freshness "$sha"
 census_pins "$sha"
+census_rivals "$sha" "$branch"
 
 # --- the surfaces that cost a chamber run when missed ----------------------
 echo
