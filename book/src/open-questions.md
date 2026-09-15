@@ -1700,6 +1700,36 @@ power is available, not exercised. Mountain-dwarf and Duergar can now be given
 different food; nothing has given it to them. The biome-vocabulary half this
 passage names is likewise untouched.
 
+**Re-scored 2026-09-15. The first of those two is resolved; the second is
+sharper, better evidenced, and still open.**
+
+*The usable count is four, not three.* Methane's dimness was **arity, not
+chemistry**: a yield built as a product of `k` gating terms each in `[0,1]` has
+mean `1/2^k`, and the two depressed axes were exactly the two fed by three-term
+reactions while the two healthy ones were fed by two-term reactions. Replacing
+each yield with the geometric mean of its own terms — the `k`-th root, so a
+reaction is not penalised for having been described in more detail — lifts
+methane's share of the readings where it leads from `0.043` to `0.105` and
+narrows the four-axis spread from `0.376` to `0.297`. Methane now reads p10
+`0.313`, median `0.546`, p90 `0.867`; it is no longer a fourteenth of anything.
+Each axis carries a band ladder in its own raw units, and all four shift their
+top-two-band share across the depth ladder — sulphur most sharply, from
+**exactly zero** at the shallowest rung to `0.460` at the deepest.
+
+*Nothing eats any of it, and that is now measured rather than observed.* The
+count of species niches weighting hydrogen, reduced iron, reduced sulphur or
+methane is **zero on all four** — which is why changing all four produces a
+byte-identical world on five seeds, and why every calibration here is
+unfalsifiable by the world in the ordinary way. What changed is that the gap is
+now known to be **data, not machinery**: two synthetic creatures identical in
+mass, tolerance, realm and temperament, differing only in the axis they eat,
+receive measurably different capacity in the right direction at thousands of
+vertices on three seeds. An author writes one appetite vector and it works.
+
+So the bet moves from *"the power may not be expressible"* to *"the power is
+expressible, demonstrated, and unexercised"* — a weaker claim to have left
+open, and a more actionable one. The biome-vocabulary half is still untouched.
+
 
 **A finding about the contest, not about elves, and it is new.** Two peoples
 authored to share a mass and an affinity row have capacity fields that are

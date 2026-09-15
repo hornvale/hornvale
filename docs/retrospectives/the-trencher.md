@@ -137,3 +137,113 @@ learning to name it in other people's code.
 
 Naming a defect class does not protect the next thing you write from it. It
 only makes it faster to recognise afterwards.
+
+---
+
+## The second half of the campaign, and what it cost to learn
+
+Tasks 15–17 ran after the passage above was written. It predicted them.
+
+## A falsifier that could not fire, and fired open
+
+The yield-form change was preregistered with five predictions, one of them
+labelled **"THE FALSIFIER FOR THE WHOLE APPROACH"**: *the median leader margin
+stays ≥ 0.02*. The quantity it named already existed and returns a **ratio of
+leader to runner-up**, which after a descending sort is bounded below by `1.0`.
+The threshold was satisfied at every reading that can exist, under every arm,
+however degenerate.
+
+The direction is the part worth keeping. That clause existed to stop a
+compressing transform from shipping; as written it would have returned HELD for
+a transform that flattened all four axes into a tie. **It failed open, toward
+the answer argued for two paragraphs earlier in the same entry.** The
+implementer caught it and adjudicated against an absolute difference instead.
+
+The narrow rule: **a preregistered threshold must name the quantity and its
+unit, not just a number.** "Margin" named two quantities that differ by whether
+`0.02` is trivial or decisive, and nothing said which.
+
+## A probe over a field is not a probe over a world
+
+The four-metabolite probe sampled 104,845 readings and could not have seen that
+the shipping change cost seed 42 forty-four percent of its facts, because
+population is downstream of a history bake the probe never runs. Field
+measurements and world measurements answer different questions and the first
+does not bound the second.
+
+Its companion: **one world is an anecdote.** That forty-four percent was
+reported as an effect size; across five seeds the effect is about ten percent
+and seed 42 is a three-to-fourfold outlier. The campaign had already written
+this lesson down before making the mistake.
+
+## Three statistics, each wrong in a different way
+
+Writing the band guard falsified three of the author's own choices in
+succession — and each was wrong for a *different* reason, which is why none of
+them was caught by being careful about the previous one:
+
+- **wrong normalisation** — ratio spread where absolute was the question. Every
+  axis's `p90/p10` compressed hard, which read as a flattened world; in
+  absolute terms, which is what a threshold uses, methane's range *grew* 35%.
+- **wrong order statistic** — the modal band reported one of four axes moving
+  with depth. A mode moves only when the bulk crosses a cut and is blind to a
+  distribution sliding underneath it. The share-above-a-cut shows four of four.
+- **degenerate on the shape** — a plain median, on an axis where 54.6% of
+  readings are exactly zero, *is* exactly zero. It cannot report drift at all
+  until the absent share crosses one half, then jumps.
+
+**Writing the guard is what exposed each.** None was visible from the design.
+
+## Diagnosing a class confers no immunity — now with dates
+
+The passage above says naming a defect class does not protect the next thing
+you write. Tasks 15–17 supplied two more instances, both committed **after**
+writing the paragraph explaining why they were wrong, in the file whose entire
+purpose is guarding an unfalsifiable surface:
+
+- a declared frequency (`per_100k`) that **nothing read** — a seventh instance
+  of the prose-claims-no-assertion-checks row this campaign itself minted;
+- **one tolerance for four differently-shaped axes**, which is the exact
+  argument the per-axis band cuts are built on, one level up. A tolerance is a
+  threshold. The bands got per-axis cuts after measuring; their guard got a
+  single shared number, four hundred times looser than the claim it protected.
+
+## Guards can be defeated by syntax, not only by omission
+
+`source_phrase` — the only place a metabolite's identity reaches a human — was
+registered as a seam and the registration was **inert**. The scanner found no
+call sites, because every call sat inside a `format!` and the parser does not
+descend into macro token streams. A registration the tool cannot probe is worse
+than none: the committed roster reads healthy while nothing is checked.
+
+Check that a newly registered guard can **see** its subject before trusting its
+green. Hoisting the calls into bindings made it real, and the verdict then came
+back GUARDED at both sites.
+
+## Two operational facts learned expensively
+
+- **Do not wrap `seam-guard run` in a timeout.** Two call sites at a full
+  scoped test run each exceed fifteen minutes, and the kill leaves its mutation
+  in the working tree. It surfaced only because the next run refused on a dirty
+  tree and the diff was read rather than assumed. A `git add -A` would have
+  committed a neutralised seam whose guard is the test it defeats.
+- **Pay for the attribution build.** When an absorb produces new failures they
+  have three possible owners — main landed red, the branch was already red, or
+  the merge product alone — and each implies a different response. A detached
+  worktree at `origin/main` running exactly the new failures answered it in one
+  run: all eleven passed there, so it was a collision, and the repair was ours.
+  Guessing would have been free and wrong.
+
+## Two findings that are about evidence, not code
+
+- **A stale claim that later turns out true does not retroactively become
+  evidence.** A statistic this campaign was corrected for restating without
+  re-deriving has since genuinely stopped holding. The comfortable reading is
+  that the correction was unnecessary; the correction was about provenance, not
+  about the conclusion, and provenance is a property of *when* a thing was
+  asserted.
+- **When a control moves alongside its subject, diff by identity, not
+  position.** A control golden moved 75% and looked like a recipe change; the
+  population itself had shifted (240 facets out, 221 in), and diffing by vertex
+  id showed the true control unchanged at **0 of 10,978**. A line-ordered diff
+  would have reported a regression that did not happen.
