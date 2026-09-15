@@ -7790,3 +7790,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-15T11:32:05Z | census-tail-anomalies | 0.367 | 0.249 | 0.033 | 0.77 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-15T11:32:33Z | rebaseline | 229.195 | 618.265 | 28.634 | 2.82 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-15T12:02:00Z | gate-commit | 41.049 | 76.614 | 21.567 | 2.39 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T12:08:02Z | census-tail-chorus | 66.472 | 925.925 | 24.658 | 14.30 | 0 | 26dea9798 |  | lefford | 40 |
+| 2026-09-15T12:08:04Z | census-tail-domesday | 1.352 | 1.182 | 0.113 | 0.96 | 0 | 26dea9798 |  | lefford | 40 |
+| 2026-09-15T12:08:04Z | census-tail-anomalies | 0.790 | 0.676 | 0.114 | 1.00 | 0 | 26dea9798 |  | lefford | 40 |
+| 2026-09-15T12:08:34Z | sluice:artifacts | 314.646 | 3062.031 | 115.860 | 10.10 | 0 | 26dea9798 |  | lefford | 40 |
+| 2026-09-15T12:12:36Z | sluice:outboard | 241.912 | 221.009 | 124.256 | 1.43 | 0 | 6abfae4bf |  | lefford | 40 |
+| 2026-09-15T12:29:45Z | sluice:gate | 1029.005 | 31723.153 | 1024.897 | 31.82 | 0 | fa1b43e3e |  | lefford | 40 |
+| 2026-09-15T12:44:50Z | sluice:clients | 904.172 | 5558.576 | 365.594 | 6.55 | 0 | 15aae4da5 |  | lefford | 40 |
+| 2026-09-15T12:53:52Z | sluice:heavy | 542.091 | 15733.080 | 313.318 | 29.60 | 0 | 2b6518d79 |  | lefford | 40 |

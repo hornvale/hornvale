@@ -116,6 +116,62 @@ out="$(report)"; printf '%s\n' "$out" | sed 's/^/    /'
 case "$out" in *"ships no census"*) ok "says it ships no census" ;; *) bad "did not say so" ;; esac
 case "$out" in *"census_sentinel"*) bad "warned about a prose-only candidate — cry-wolf" ;; *) ok "stays quiet" ;; esac
 
+# --- the OTHER half: did MAIN move the world under the candidate? -----------
+# A census measures the world THROUGH the code, so main's movement invalidates
+# a candidate's goldens exactly as its own does. This was done by hand twice
+# before being written down, and the second time I got it WRONG in the
+# reassuring direction -- I told campaign/anchor-orbital-coherence that
+# campaign/the-coherence "touches no world-producing code" without looking, and
+# it had changed five terrain and worldgen sources.
+# shellcheck disable=SC2016  # deliberately unexpanded; positional args.
+main_side() ( cd "$repo" && env -u GIT_DIR -u GIT_INDEX_FILE bash -c '
+    HV_VET_LIB=1 . "$1/scripts/sluice-vet.sh"
+    census_freshness_against_main "$(git merge-base HEAD origin/main)"' _ "$root" )
+
+build_main_side() {
+    build
+    mkdir -p "$repo/domains/terrain/src" "$repo/windows/worldgen/tests" "$repo/scripts"
+    echo base > "$repo/domains/terrain/src/lib.rs"
+    g -C "$repo" add -A; g -C "$repo" commit -q -m sim-base
+    g -C "$repo" update-ref refs/remotes/origin/main HEAD
+    g -C "$repo" checkout -q -b cand
+    echo branchwork > "$repo/README.md"
+    g -C "$repo" add -A; g -C "$repo" commit -q -m branchwork
+}
+# Advance origin/main without moving the candidate.
+advance_main() {  # advance_main <path> <content>
+    g -C "$repo" checkout -q main
+    mkdir -p "$repo/$(dirname "$1")"
+    echo "$2" > "$repo/$1"
+    g -C "$repo" add -A; g -C "$repo" commit -q -m "main moves $1"
+    g -C "$repo" update-ref refs/remotes/origin/main HEAD
+    g -C "$repo" checkout -q cand
+}
+
+echo "== MAIN moved a world-producing source since the branch diverged"
+build_main_side
+advance_main domains/terrain/src/lib.rs changed
+out="$(main_side)"; printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"MAIN moved 1 world-producing"*) ok "flags main's movement" ;; *) bad "missed main's movement: $out" ;; esac
+case "$out" in *domains/terrain/src/lib.rs*) ok "names the file" ;; *) bad "did not name the file" ;; esac
+case "$out" in *census_fixtures_match_a_probe_of_live_seeds*) ok "names the test that settles it" ;; *) bad "gave no way to settle it" ;; esac
+case "$out" in *"moved no world-producing"*) bad "also said main moved nothing" ;; *) ok "does not also bless it" ;; esac
+
+echo "== MAIN moved only scripts and docs (the-tidemark's real case)"
+build_main_side
+advance_main scripts/sluice-vet.sh tooling
+out="$(main_side)"; printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"moved no world-producing"*) ok "a tooling-only main does not alarm" ;; *) bad "cried wolf on scripts/: $out" ;; esac
+case "$out" in *"MAIN moved"*) bad "flagged a scripts-only advance" ;; *) ok "flags nothing" ;; esac
+
+echo "== MAIN moved only a TEST under a sim tree"
+# The same exclusion census_freshness uses: a change under tests/ cannot move a
+# golden, and counting it turns this into noise nobody reads.
+build_main_side
+advance_main windows/worldgen/tests/suite.rs testonly
+out="$(main_side)"; printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"moved no world-producing"*) ok "excludes tests/ on main's side too" ;; *) bad "counted a tests/ change: $out" ;; esac
+
 # --- census_pins: goldens moved, were the pins even considered? -------------
 # The rule that would have caught campaign/anchor-orbital-coherence's red on
 # 2026-09-14 before the chamber spent 1033 s on it. The third case is the one
@@ -170,6 +226,79 @@ if [ -z "$(printf '%s' "$out" | tr -d '[:space:]')" ]; then
     ok "says nothing when no golden moved"
 else
     bad "spoke about pins on a candidate that moved no golden"
+fi
+
+# --- census rivals: who else holds the reference? ---------------------------
+# No gate compares two candidates' censuses. On 2026-09-15 three campaigns each
+# held one, pairwise disagreeing on 101-104 of 295 columns, and the queue could
+# not say so: the-trencher had already spent 2118 s on a census that was stale
+# before use and was running a fourth.
+# shellcheck disable=SC2016  # deliberately unexpanded; positional args.
+rivals() ( cd "$repo" && env -u GIT_DIR -u GIT_INDEX_FILE bash -c '
+    HV_VET_LIB=1 . "$1/scripts/sluice-vet.sh"; census_rivals "$2" "$3"' _ "$root" "$2" "$3" )
+
+build_rivals() {
+    build
+    mkdir -p "$repo/book/src/laboratory/generated/the-census"
+    g -C "$repo" add -A; g -C "$repo" commit -q -m sim-base 2>/dev/null || true
+    g -C "$repo" update-ref refs/remotes/origin/main HEAD
+    export HV_SLUICE_DIR="$scratch/rq"; rm -rf "$HV_SLUICE_DIR"; mkdir -p "$HV_SLUICE_DIR"
+    : > "$HV_SLUICE_DIR/queue.tsv"
+}
+censusing_branch() {  # censusing_branch <name> <content> -> prints sha
+    g -C "$repo" checkout -q -b "$1" main
+    mkdir -p "$repo/book/src/laboratory/generated/the-census"
+    echo "$2" > "$repo/book/src/laboratory/generated/the-census/rows.csv"
+    g -C "$repo" add -A; g -C "$repo" commit -q -m "$1 census"
+    g -C "$repo" rev-parse HEAD
+}
+qrow() { printf '%s\treq-%s\t%s\t%s\t%s\tmerge\t\n' "$1" "$2" "$3" "$4" "$5" >> "$HV_SLUICE_DIR/queue.tsv"; }
+
+echo "== another live row also ships a census"
+build_rivals
+MINE="$(censusing_branch campaign/mine minecsv)"
+OTHER="$(censusing_branch campaign/other othercsv)"
+qrow 2026-01-01T00:00:00Z a campaign/mine  "$MINE"  queued
+qrow 2026-01-02T00:00:00Z b campaign/other "$OTHER" held
+out="$(rivals x "$MINE" campaign/mine)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"SO DO THESE LIVE ROWS"*) ok "names the collision" ;; *) bad "missed a census rival: $out" ;; esac
+case "$out" in *campaign/other*) ok "names the rival branch" ;; *) bad "did not name the rival" ;; esac
+case "$out" in *"owns the reference"*) bad "also said it owns the reference" ;; *) ok "does not also bless it" ;; esac
+
+echo "== no rival: this candidate owns the reference"
+build_rivals
+MINE="$(censusing_branch campaign/solo solocsv)"
+qrow 2026-01-01T00:00:00Z a campaign/solo "$MINE" queued
+out="$(rivals x "$MINE" campaign/solo)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"owns the reference"*) ok "says it owns the reference" ;; *) bad "did not say so: $out" ;; esac
+case "$out" in *"SO DO THESE"*) bad "invented a rival" ;; *) ok "invents no rival" ;; esac
+
+echo "== a second row on the SAME branch is not a rival"
+# A campaign superseding itself, or a stage row beside a merge row, is one
+# campaign holding one census -- counting it would cry wolf on every resubmit.
+build_rivals
+MINE="$(censusing_branch campaign/self selfcsv)"
+qrow 2026-01-01T00:00:00Z a campaign/self "$MINE" queued
+qrow 2026-01-02T00:00:00Z b campaign/self "$MINE" held
+out="$(rivals x "$MINE" campaign/self)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"owns the reference"*) ok "a candidate is not its own rival" ;; *) bad "counted itself: $out" ;; esac
+
+echo "== a candidate shipping NO census says nothing at all"
+build_rivals
+g -C "$repo" checkout -q -b campaign/nocensus main
+echo doc > "$repo/README.md"; g -C "$repo" add -A; g -C "$repo" commit -q -m docs
+NOC="$(g -C "$repo" rev-parse HEAD)"
+OTHER="$(censusing_branch campaign/other2 o2csv)"
+qrow 2026-01-01T00:00:00Z a campaign/nocensus "$NOC"   queued
+qrow 2026-01-02T00:00:00Z b campaign/other2   "$OTHER" held
+out="$(rivals x "$NOC" campaign/nocensus)"
+if [ -z "$(printf '%s' "$out" | tr -d '[:space:]')" ]; then
+    ok "stays silent for a candidate that ships no census"
+else
+    bad "spoke to a candidate with no census: $out"
 fi
 
 index_after="$(g -C "$root" write-tree 2>/dev/null || echo unavailable)"
