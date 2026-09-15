@@ -10,23 +10,23 @@ What peoples believe: pantheons, cults, and the vestiges belief leaves in the wo
 
 Sentiment of the bugbear flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one
 
-n = 997 present, 3 absent (of 1000 worlds)
+n = 993 present, 7 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `cyclic` | 898 | 90.1% |
-| `ambient` | 88 | 8.8% |
-| `eternal` | 11 | 1.1% |
+| `cyclic` | 893 | 89.9% |
+| `ambient` | 88 | 8.9% |
+| `eternal` | 12 | 1.2% |
 
 ### `belief-kind-goblin`
 
 Sentiment of the goblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `cyclic` | 951 | 95.2% |
+| `cyclic` | 952 | 95.2% |
 | `eternal` | 48 | 4.8% |
 
 ### `belief-kind-hobgoblin`
@@ -44,23 +44,23 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 Sentiment of the kobold flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one
 
-n = 983 present, 17 absent (of 1000 worlds)
+n = 984 present, 16 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `cyclic` | 925 | 94.1% |
-| `eternal` | 58 | 5.9% |
+| `cyclic` | 923 | 93.8% |
+| `eternal` | 61 | 6.2% |
 
 ### `blind-attribution-correct`
 
 Whether the fixed structural rule (lunar head, then cyclic share, then size — no lexical input) attributes the kobold pantheon correctly; Absent unless both peoples hold pantheons
 
-n = 983 present, 17 absent (of 1000 worlds)
+n = 984 present, 16 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 872 | 88.7% |
-| `false` | 111 | 11.3% |
+| `true` | 877 | 89.1% |
+| `false` | 107 | 10.9% |
 
 ### `crisis-fires`
 
@@ -77,23 +77,23 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 The goblin flagship's pantheon's shared cult form ('organized' or 'folk'); Absent if no goblin beliefs
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 956 | 95.7% |
-| `folk` | 43 | 4.3% |
+| `organized` | 953 | 95.3% |
+| `folk` | 47 | 4.7% |
 
 ### `cult-form-goblin`
 
 Cult form of the goblin flagship's pantheon (organized/folk); Absent without one
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 956 | 95.7% |
-| `folk` | 43 | 4.3% |
+| `organized` | 953 | 95.3% |
+| `folk` | 47 | 4.7% |
 
 ### `cult-form-goblin-twin`
 
@@ -108,22 +108,22 @@ n = 0 present, 1000 absent (of 1000 worlds)
 
 Cult form of the kobold flagship's pantheon (organized/folk); Absent without one
 
-n = 983 present, 17 absent (of 1000 worlds)
+n = 984 present, 16 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 668 | 68.0% |
-| `folk` | 315 | 32.0% |
+| `organized` | 663 | 67.4% |
+| `folk` | 321 | 32.6% |
 
 ### `head-deity-domain-goblin`
 
 Venue domain of the goblin flagship's head deity: solar, lunar, or ambient; Absent without a goblin pantheon
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `solar` | 999 | 100.0% |
+| `solar` | 1000 | 100.0% |
 
 ### `head-deity-domain-goblin-twin`
 
@@ -138,33 +138,33 @@ n = 0 present, 1000 absent (of 1000 worlds)
 
 Venue domain of the kobold flagship's head deity: solar, lunar, or ambient; Absent without a kobold pantheon
 
-n = 983 present, 17 absent (of 1000 worlds)
+n = 984 present, 16 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `lunar` | 856 | 87.1% |
-| `solar` | 127 | 12.9% |
+| `lunar` | 859 | 87.3% |
+| `solar` | 125 | 12.7% |
 
 ### `head-deity-periodicity`
 
 The sentiment tag of the goblin flagship's head deity (the most salient belief): 'eternal', 'cyclic', or 'ambient'; Absent if no goblin beliefs
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `cyclic` | 951 | 95.2% |
+| `cyclic` | 952 | 95.2% |
 | `eternal` | 48 | 4.8% |
 
 ### `pantheon-cyclic-share-goblin`
 
 Fraction of the goblin flagship pantheon's source phenomena that are periodic (the pick_kobold input the null control needs); Absent without a goblin pantheon
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.9 | 1 | 1 | 1 | 0.92742868 |
+| 0 | 0.9 | 1 | 1 | 1 | 0.927191 |
 
 ### `pantheon-cyclic-share-goblin-twin`
 
@@ -176,21 +176,21 @@ n = 0 present, 1000 absent (of 1000 worlds) — no world reports a value.
 
 Number of beliefs in the goblin flagship's pantheon; Absent if there are none
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 7 | 10 | 19 | 7.7357357 |
+| 1 | 5 | 7 | 10 | 18 | 7.731 |
 
 ### `pantheon-size-goblin`
 
 Number of deities in the goblin flagship's pantheon; Absent without one
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 7 | 10 | 19 | 7.7357357 |
+| 1 | 5 | 7 | 10 | 18 | 7.731 |
 
 ### `pantheon-size-goblin-twin`
 
@@ -202,31 +202,31 @@ n = 0 present, 1000 absent (of 1000 worlds) — no world reports a value.
 
 Number of deities in the kobold flagship's pantheon; Absent without one
 
-n = 983 present, 17 absent (of 1000 worlds)
+n = 984 present, 16 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 7 | 9 | 16 | 7.0824008 |
+| 1 | 5 | 6.5 | 9 | 17 | 7.0731707 |
 
 ### `pantheon-verticality`
 
 Whether the goblin flagship's pantheon is ranked (a high god presides) or flat; Absent if there is no goblin flagship pantheon
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `flat` | 999 | 100.0% |
+| `flat` | 1000 | 100.0% |
 
 ## Weaknesses found here
 
 ### `belief-kind-bugbear`
 
-- **D1**: "cyclic" holds 898/997 worlds (90.1%), at or above the 80% threshold
+- **D1**: "cyclic" holds 893/993 worlds (89.9%), at or above the 80% threshold
 
 ### `belief-kind-goblin`
 
-- **D1**: "cyclic" holds 951/999 worlds (95.2%), at or above the 80% threshold
+- **D1**: "cyclic" holds 952/1000 worlds (95.2%), at or above the 80% threshold
 
 ### `belief-kind-hobgoblin`
 
@@ -234,31 +234,31 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 ### `belief-kind-kobold`
 
-- **D1**: "cyclic" holds 925/983 worlds (94.1%), at or above the 80% threshold
+- **D1**: "cyclic" holds 923/984 worlds (93.8%), at or above the 80% threshold
 
 ### `blind-attribution-correct`
 
-- **D1**: "true" holds 872/983 worlds (88.7%), at or above the 80% threshold
+- **D1**: "true" holds 877/984 worlds (89.1%), at or above the 80% threshold
 
 ### `cult-form`
 
-- **D1**: "organized" holds 956/999 worlds (95.7%), at or above the 80% threshold
+- **D1**: "organized" holds 953/1000 worlds (95.3%), at or above the 80% threshold
 
 ### `cult-form-goblin`
 
-- **D1**: "organized" holds 956/999 worlds (95.7%), at or above the 80% threshold
+- **D1**: "organized" holds 953/1000 worlds (95.3%), at or above the 80% threshold
 
 ### `head-deity-domain-goblin`
 
-- **D1**: "solar" holds 999/999 worlds (100.0%), at or above the 80% threshold
+- **D1**: "solar" holds 1000/1000 worlds (100.0%), at or above the 80% threshold
 
 ### `head-deity-domain-kobold`
 
-- **D1**: "lunar" holds 856/983 worlds (87.1%), at or above the 80% threshold
+- **D1**: "lunar" holds 859/984 worlds (87.3%), at or above the 80% threshold
 
 ### `head-deity-periodicity`
 
-- **D1**: "cyclic" holds 951/999 worlds (95.2%), at or above the 80% threshold
+- **D1**: "cyclic" holds 952/1000 worlds (95.2%), at or above the 80% threshold
 
 ### `pantheon-cyclic-share-goblin`
 
@@ -266,5 +266,5 @@ n = 999 present, 1 absent (of 1000 worlds)
 
 ### `pantheon-verticality`
 
-- **D1**: "flat" holds 999/999 worlds (100.0%), at or above the 80% threshold
+- **D1**: "flat" holds 1000/1000 worlds (100.0%), at or above the 80% threshold
 

@@ -16,15 +16,16 @@
 <text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 233.5 252.0)">[0.1, 0.2)</text>
 <text x="304.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 304.5 252.0)">[0.2, 0.3)</text>
-<text x="375.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<rect x="345.3" y="235.8" width="60.4" height="0.2" fill="#5b8dd9" rx="2" />
+<text x="375.5" y="231.8" font-size="11" fill="currentColor" text-anchor="middle">1</text>
 <text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 375.5 252.0)">[0.3, 0.5)</text>
-<rect x="416.3" y="234.8" width="60.4" height="1.2" fill="#5b8dd9" rx="2" />
-<text x="446.5" y="230.8" font-size="11" fill="currentColor" text-anchor="middle">6</text>
+<rect x="416.3" y="234.6" width="60.4" height="1.4" fill="#5b8dd9" rx="2" />
+<text x="446.5" y="230.6" font-size="11" fill="currentColor" text-anchor="middle">7</text>
 <text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 446.5 252.0)">[0.5, 0.7)</text>
 <rect x="487.3" y="37.8" width="60.4" height="198.2" fill="#5b8dd9" rx="2" />
 <text x="517.5" y="33.8" font-size="11" fill="currentColor" text-anchor="middle">991</text>
 <text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 517.5 252.0)">&gt;= 0.7</text>
-<rect x="558.3" y="235.4" width="60.4" height="0.6" fill="#5b8dd9" rx="2" />
-<text x="588.5" y="231.4" font-size="11" fill="currentColor" text-anchor="middle">3</text>
+<rect x="558.3" y="235.8" width="60.4" height="0.2" fill="#5b8dd9" rx="2" />
+<text x="588.5" y="231.8" font-size="11" fill="currentColor" text-anchor="middle">1</text>
 <text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 588.5 252.0)">absent</text>
 </svg>

@@ -7846,3 +7846,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-15T11:36:54Z | gate-commit | 44.019 | 84.646 | 20.094 | 2.38 | 0 | 8f506c1d9 | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-15T12:15:31Z | gate-commit | 43.180 | 84.485 | 19.966 | 2.42 | 0 | 0c6b06702 | campaign/the-trencher | MacBookPro | 10 |
 | 2026-09-15T12:16:29Z | gate-commit | 41.877 | 83.608 | 19.952 | 2.47 | 0 | 0c6b06702 | campaign/the-trencher | MacBookPro | 10 |
+| 2026-09-15T13:57:32Z | census-tail-chorus | 68.148 | 863.913 | 27.067 | 13.07 | 0 | 1134145e2 |  | lefford | 40 |
+| 2026-09-15T14:12:19Z | census-study-the-census | 887.650 | 33449.835 | 232.442 | 37.95 | 0 | 1134145e2 |  | lefford | 40 |
+| 2026-09-15T14:18:17Z | census-study-the-meeting | 357.637 | 12881.440 | 174.606 | 36.51 | 0 | 1134145e2 |  | lefford | 40 |
+| 2026-09-15T14:18:19Z | census-tail-domesday | 1.412 | 1.210 | 0.145 | 0.96 | 0 | 1134145e2 |  | lefford | 40 |
+| 2026-09-15T14:18:19Z | census-tail-anomalies | 0.864 | 0.731 | 0.133 | 1.00 | 0 | 1134145e2 |  | lefford | 40 |
+| 2026-09-15T14:18:56Z | census | 1607.931 | 48229.846 | 482.098 | 30.29 | 0 | 1134145e2 |  | lefford | 40 |
+| 2026-09-15T14:27:06Z | gnomon-injection | 472.751 | 5507.884 | 168.173 | 12.01 | 0 | 1134145e2 |  | lefford | 40 |

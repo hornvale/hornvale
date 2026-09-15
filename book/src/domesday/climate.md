@@ -26,13 +26,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `taiga` | 248 | 24.8% |
-| `ice` | 190 | 19.0% |
-| `alpine` | 179 | 17.9% |
-| `temperate-forest` | 165 | 16.5% |
-| `tundra` | 136 | 13.6% |
-| `tropical-seasonal-forest` | 61 | 6.1% |
-| `temperate-grassland` | 19 | 1.9% |
+| `taiga` | 245 | 24.5% |
+| `ice` | 191 | 19.1% |
+| `alpine` | 177 | 17.7% |
+| `temperate-forest` | 162 | 16.2% |
+| `tundra` | 139 | 13.9% |
+| `tropical-seasonal-forest` | 64 | 6.4% |
+| `temperate-grassland` | 20 | 2.0% |
 | `savanna` | 2 | 0.2% |
 
 ### `dominant-soil-order`
@@ -53,7 +53,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.039223377 | 0.069196159 | 0.10508716 | 0.21820782 | 0.073576159 |
+| 0 | 0.040109062 | 0.069163062 | 0.10575988 | 0.2169967 | 0.074346743 |
 
 ### `habitable-fraction`
 
@@ -63,7 +63,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.02866071 | 0.13302573 | 0.17576046 | 0.21786046 | 0.30264636 | 0.17287095 |
+| 0.029734876 | 0.13431961 | 0.17721303 | 0.21808017 | 0.30320785 | 0.17394041 |
 
 ### `mean-land-temperature-c`
 
@@ -73,7 +73,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -35.378763 | -10.73628 | -3.5418074 | 4.6836426 | 21.844769 | -3.3237308 |
+| -35.335421 | -10.707389 | -3.4531262 | 4.7295432 | 22.527559 | -3.2199515 |
 
 ## Weaknesses found here
 
@@ -83,18 +83,18 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `fertile-land-fraction`
 
-- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed r = +0.726 (1000 pairs) is dominant (positive)
+- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed r = +0.725 (1000 pairs) is dominant (positive)
 
 ### `habitable-fraction`
 
 - **D5 strength**: declared moderate tracking obliquity-degrees, but observed |r| = 0.023 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking mountain-coverage, but observed r = +0.115 (1000 pairs) is weak — and the sign is backwards: the coupling is positive, not the declared negative
+- **D5 strength**: declared moderate tracking mountain-coverage, but observed r = +0.111 (1000 pairs) is weak — and the sign is backwards: the coupling is positive, not the declared negative
 
 ### `mean-land-temperature-c`
 
-- **D5 strength**: declared dominant tracking year-std-days, but observed |r| = 0.087 (1000 pairs) is none
-- **D5 strength**: declared weak tracking brightening-per-gyr, but observed |r| = 0.023 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.097 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking mountain-coverage, but observed r = -0.125 (1000 pairs) is weak (negative)
-- **D6**: median -3.5418073999999997 vs Earth's 14 differs by 17.541807, exceeding the band 10
+- **D5 strength**: declared dominant tracking year-std-days, but observed |r| = 0.086 (1000 pairs) is none
+- **D5 strength**: declared weak tracking brightening-per-gyr, but observed |r| = 0.024 (1000 pairs) is none
+- **D5 strength**: declared moderate tracking ocean-fraction, but observed r = +0.102 (1000 pairs) is weak (positive)
+- **D5 strength**: declared moderate tracking mountain-coverage, but observed r = -0.127 (1000 pairs) is weak (negative)
+- **D6**: median -3.4531262 vs Earth's 14 differs by 17.453126, exceeding the band 10
 

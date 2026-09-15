@@ -13,7 +13,7 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 | Astronomy | 26 | 5 | [page](./astronomy.md) |
 | Terrain | 73 | 5 | [page](./terrain.md) |
 | Climate | 6 | 9 | [page](./climate.md) |
-| Hydrology | 17 | 14 | [page](./hydrology.md) |
+| Hydrology | 17 | 15 | [page](./hydrology.md) |
 | Biology | 15 | 34 | [page](./biology.md) |
 | Settlement | 20 | 11 | [page](./settlement.md) |
 | Demography | 8 | 7 | [page](./demography.md) |
@@ -39,7 +39,7 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | detector | findings |
 |---|---|
 | D1 | 29 |
-| D2 | 42 |
+| D2 | 43 |
 | D3 | 18 |
 | D4 | 56 |
 | D5 direction | 1 |
