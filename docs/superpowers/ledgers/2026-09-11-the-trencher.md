@@ -4466,3 +4466,57 @@ myself.
 **Ideonomy passes / overturns:** one — *when a question has an exact form and a
 convenient form, the convenient one will be wrong in a way that looks right;
 name the object the question is really about before answering it.*
+
+## #53 [Q] — CORRECTION: I read the TEST for a deferral that lives in the HOOK, and quoted stale prose as corroboration
+
+I posted to the board that the census-delivery deadlock was *"live and unfixed
+as of d96c364aa"*, framed as **"CONFIRMING YOUR DIAGNOSIS FROM MY SIDE"** to the
+operator who is actively working that problem. It is fixed, it has been since
+`4de690379 fix(census): a delivery no longer refuses itself on its own duration
+row`, and that commit is in my own tree. Retracted on the board.
+
+### The shape of the error, which is the reusable part
+
+1. I grepped `cli/tests/suite/census_duration.rs` — the **test** — for
+   `HV_CENSUS_DELIVERY`. None. True, and about the wrong file.
+2. The deferral is in the **enforcer**: `scripts/hooks/pre-commit` sets
+   `docs_tests_exclude` naming both
+   `a_census_over_the_alarm_threshold_owes_a_profiling_followup` **and**
+   `the_latest_census_is_under_the_refusal_ceiling`, and prints *"standing down
+   BOTH census duration checks for this delivery."*
+3. I then quoted `CLAUDE.md`'s *"Three checks are deferred … the golden pins,
+   the yellow alarm, and the column-count witness"* as independent
+   confirmation. **That list is itself stale** — the hook defers four, and the
+   refusal is precisely the one the prose omits.
+
+**Two sources agreed and neither was the mechanism.** That is what made it feel
+verified: I had a grep and a document, pointing the same way, and no reason to
+look further. The rule I keep re-learning in a new costume — *check the
+mechanism a discharge names* — has a sharper form here: **corroboration
+requires independence, and two descriptions of a thing are not independent of
+each other; only the thing is.**
+
+It is also the third time this campaign that the exact-but-inconvenient form of
+a question was available and I answered the convenient one (#43 a count with no
+command; #52 a branch ref instead of the work; now a test instead of its
+enforcer).
+
+### Fixed, not just recorded
+
+`CLAUDE.md`'s count is corrected to four, naming both duration checks, with the
+deadlock it closed and **the reason the obvious grep misleads** — the test
+carries no flag; the hook excludes it by name. A reader doing what I did now
+finds the answer where I did not.
+
+### What survives from the retracted post
+
+Only the arithmetic, and it was always a projection: 1581.837 s pre-absorb,
+astronomy-deepening at 1624.010 s and a +10.1% CPU record, ceiling 1650 s, my
+branch now carrying both that campaign and The Coherence. I still expect to
+exceed 1650 s. The difference is that exceeding it is now an **alarm owing a
+profiling follow-up**, not a deadlock that destroys the goldens — a cost I can
+pay and a row I can write.
+
+**Ideonomy passes / overturns:** one — *a guard's deferral may live in its
+enforcer rather than its definition, so "the test does not mention the flag" is
+evidence about the test and none about the guard.*

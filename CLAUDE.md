@@ -443,10 +443,31 @@ make doctor        # the repo self-map — run this first in a fresh session
 # refused at pre-flight with the goldens left staged. THE RULE, so the next
 # census-shaped check is placed by it and not by precedent: a delivery
 # SATISFIES every check a regeneration remedies and DEFERS only what needs a
-# human re-statement. Three checks are deferred under HV_CENSUS_DELIVERY —
-# the golden pins, the yellow alarm, and the column-count witness whose name
-# carries the count — and the MERGE of the delivery branch demands all three
-# of the campaign that submits it.
+# human re-statement. FOUR checks are deferred under HV_CENSUS_DELIVERY —
+# the golden pins, BOTH census duration checks (the yellow alarm AND the
+# refusal ceiling), and the column-count witness whose name carries the
+# count — and the MERGE of the delivery branch demands all four of the
+# campaign that submits it.
+#
+# THIS SAID **THREE**, OMITTING THE REFUSAL, AND THE OMISSION COST A FALSE
+# BOARD POST (The Trencher, 2026-09-15). The refusal's deferral landed in
+# `4de690379 fix(census): a delivery no longer refuses itself on its own
+# duration row`, which closed a real deadlock: the duration guard reads
+# `docs/timings.md` from the WORKING TREE, a census writes its own row there
+# before the delivery commit, so a slow run was gated on a measurement of
+# itself and could never deliver — and each retry `reset --hard`ed the shared
+# worktree, destroying the previous attempt's staged goldens. campaign/the-
+# tidemark lost 109 that way.
+#
+# **AND THE DEFERRAL IS IN THE HOOK, NOT THE TEST**, which is the part that
+# misleads. `cli/tests/suite/census_duration.rs` contains no
+# `HV_CENSUS_DELIVERY` at all; `scripts/hooks/pre-commit` excludes the test BY
+# NAME through `HV_DOCS_TESTS_EXCLUDE`. A reader who greps the test file for
+# the flag — the obvious move — finds nothing and concludes the check is not
+# deferred. Reading this list as corroboration then completes the mistake:
+# two sources agreeing is not corroboration when neither is the mechanism.
+# Check `scripts/hooks/pre-commit`'s `docs_tests_exclude`, which is the
+# enforcer.
 #
 #   make sluice-ack REASON='...'         # adjudicate an out-of-band landing (see below)
 #   make sluice-status                   # who is DRAINING, then what is queued, running, held, landed, reported
