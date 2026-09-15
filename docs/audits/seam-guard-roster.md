@@ -26,12 +26,13 @@ comment.
 
 ## `source_phrase`
 
-- Defined at `windows/vessel/src/underground.rs:1207`
+- Defined at `windows/vessel/src/underground.rs:1208`
 - Operator: `returns("the rock")`
 - Test scope: `hornvale-vessel`
 - No declaration: a survivor here fails the gate.
 - Call sites:
-  - _none found_
+  - `windows/vessel/src/underground.rs:1162`
+  - `windows/vessel/src/underground.rs:1177`
 
 ## `ledger_day_of_bake_year`
 

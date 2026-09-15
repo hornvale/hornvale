@@ -27,6 +27,47 @@
 //! Test fixture (decision 0092): calls the sculpt derivation entry point
 //! (`terrain_of`) directly to build its own world state, the sanctioned
 //! test-fixture posture.
+//!
+//! **THE TRENCHER REPAIR ROUND (2026-09-14): the golden moved, and it is a
+//! world move, not a recipe move.** This campaign absorbed 118 `origin/main`
+//! commits (main's coherent-terrain work) on top of this campaign's own
+//! Task 13 (widened carbonate/porosity), and the golden drifted. Checked
+//! before regenerating, because a moved CONTROL is a more serious signal
+//! than a moved subject:
+//!
+//! - `git log` over `windows/worldgen/src/weft/` across the merge commit
+//!   (`5b3fe5c92`) shows **zero files touched** — the recipe code this file
+//!   pins (`prevalence_with_weights`'s sign/control branch, `thicket_
+//!   macro_state`, `erratic_macro_state`) is byte-identical to before the
+//!   absorb.
+//! - Comparing old vs. new goldens **by vertex id**, not by line position
+//!   (the land-eligible set itself moved: 240 vertices left it, 221
+//!   entered, of 11,218 — the same land/ocean shift `weft_prevalence.rs`
+//!   measured as its walk count falling from 78 to 74): of the 10,978
+//!   vertices present in both, **erratic's bit pattern changed at ZERO of
+//!   them**. Erratic's `macro_state` is a bare constant
+//!   (`ERRATIC_MACRO_BASELINE`, no pack field at all) and its noise is
+//!   purely positional, so this is the strongest available confirmation
+//!   that geometry and noise math are completely stable across the absorb —
+//!   erratic could only move if the recipe code, the noise stream, or the
+//!   land mask moved, and only the land mask did.
+//! - **Thicket changed at 8,215 of those same 10,978 (75%).** Thicket's
+//!   `macro_state` reads `pack.temperature` and `pack.moisture` — climate
+//!   fields downstream of elevation — so a broad shift there is consistent
+//!   with main's coherent-terrain rework moving elevation broadly, which
+//!   ripples into climate almost everywhere. This is the same shape as
+//!   `windows/worldgen/tests/suite/founder_collision.rs`,
+//!   `kinship_facts.rs` and `portolan_resolution.rs`'s pins in this same
+//!   repair round: the world moved, and the pin needs re-deriving, not the
+//!   code.
+//!
+//! Regenerated with `REBASELINE=1 cargo test -p hornvale-worldgen --test
+//! suite -- weft_controls` and reviewed by the measurement above rather than
+//! by eye (an 11k-facet byte-golden cannot be reviewed by eye). The
+//! preceding paragraph's "which, for the life of this campaign, they may
+//! not" refers to The Warp's own campaign, which closed once the sign/
+//! control split landed; this repair round is a different campaign
+//! resolving a real absorb collision, not a retune of The Warp's own work.
 
 use hornvale_kernel::{Facet, NearestVertexIndex, Vertex, blend_corner_weights};
 use hornvale_worldgen::WeftKind;

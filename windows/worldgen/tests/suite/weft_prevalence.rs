@@ -288,26 +288,56 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// STATE (the blended carbonate/drainage and induration/slope fields), which
 /// is a real property and a different one. Thicket and erratic keep the
 /// Weft's expression and keep the original guarantee unchanged.
+///
+/// ---
+///
+/// **THE TRENCHER REPAIR ROUND (2026-09-14) — spring is no longer silent in
+/// the walk band, and the special case is removed.** This campaign's Task 13
+/// widened carbonate and porosity (raising `Hydro::Spring`'s share), and a
+/// concurrent absorb of 118 `origin/main` commits changed which ground the
+/// walk band crosses (main's coherent-terrain work). Together, the pool
+/// (also now 74 land-eligible walks / 4,440 facets, down from 78 / 4,680 —
+/// the SAME land/ocean shift, not a second cause) sees spring's soft step
+/// open for real:
+///
+/// | kind | pooled spread | total occurs | lag-1 r | max adjacent delta |
+/// | --- | --- | --- | --- | --- |
+/// | spring | **0.95000** (`[0.00000, 0.95000]`) | **65 / 4,440** | **0.99999** | 0.01070 |
+///
+/// **Verified this is a world move, not a code move, by mutation on this
+/// tree.** The same in-place noise-swap this file's tests already use
+/// (`facet.centroid()` → `facet.seed(seed).stream().next_f64()`, reverted
+/// after measuring) leaves spring's max delta and lag-1 r **completely
+/// unchanged** (`0.01070`/`0.99999` both ways) — confirming the module doc's
+/// own prediction two paragraphs up: a sign kind's `floor = 0.0` multiplies
+/// the address-hashable noise term out of prevalence entirely, so this
+/// mutation cannot move spring's numbers and was never expected to. What
+/// discriminates spring now is the same thing that discriminates overhang:
+/// continuity of the macro state (blended carbonate/drainage), which this
+/// pool's real r (`0.99999`) already shows is intact.
+///
+/// **The two re-derived floors carry the same ~2x headroom-below-real
+/// margin every other row in this table uses** (overhang, thicket and
+/// erratic's floors above are all 1.8x-2.3x under their own measured
+/// values): `min_pooled_spread = 0.45` (2.11x under `0.95000`),
+/// `min_total_occurs = 30` (2.17x under `65`). `max_allowed_delta` moves
+/// from the silent-era `0.010` to `0.02` (1.87x over the measured
+/// `0.01070`) — headroom over the real max only, on the same basis
+/// overhang's `0.045` already rests on (its own real max delta this pool,
+/// `0.00639`, is ~7x under its bound): with the noise term proven inert,
+/// there is no address-hashed mutant to stay under, only a real value to
+/// clear.
+///
+/// **`AUTOCORR_BOUNDS`' spring threshold (`0.6`) needed no change**: it was
+/// retained rather than invented, and the fresh real `r = 0.99999` clears it
+/// with the same wide margin overhang's `0.5` and erratic's `0.5` already
+/// carry.
 const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
-    // Spring's two floors are NOT READ while `SILENT_IN_THE_WALK_BAND`'s
-    // exact-zero witness stands (that special case `continue`s before the
-    // generic asserts). They are `0.0, 0` so that deleting the witness
-    // cannot leave a live bound that is vacuously satisfied — re-derive both
-    // from a fresh measurement in the same edit that removes the case.
-    (WeftKind::Spring, 0.010, 0.0, 0),
+    (WeftKind::Spring, 0.02, 0.45, 30),
     (WeftKind::Overhang, 0.045, 0.25, 50),
     (WeftKind::Thicket, 0.015, 0.20, 400),
     (WeftKind::Erratic, 0.060, 0.04, 100),
 ];
-
-/// The Warp, Task 6 (2026-09-05): the kind whose two floors in
-/// [`KIND_BOUNDS`] are zero, and whose lag-1 autocorrelation is therefore
-/// undefined, because its prevalence is identically zero over this pool.
-/// Named once here so the two tests that special-case it cannot drift apart,
-/// and so that adding a second such kind is a deliberate edit rather than a
-/// second copy of the same `if`. See [`KIND_BOUNDS`]'s own doc for the
-/// measurement and why the walk band has no power for it.
-const SILENT_IN_THE_WALK_BAND: WeftKind = WeftKind::Spring;
 
 /// Per-kind `(kind, min_lag1_autocorrelation)` — the PRIMARY
 /// decorrelated-noise discriminator fix round 1 added (C1). Pearson
@@ -329,22 +359,21 @@ const SILENT_IN_THE_WALK_BAND: WeftKind = WeftKind::Spring;
 ///
 /// **The Warp, Task 6 (2026-09-05).** Re-measured at the frozen constants:
 /// overhang `0.98238` → `0.99994`, thicket and erratic unchanged
-/// (`0.99994`, `0.86795`), and **spring is now undefined** — its prevalence
-/// is a constant zero over this pool, so the Pearson denominator is zero and
-/// the statistic reads `NaN`. Spring's threshold below is retained at `0.6`
-/// and is NOT read while that holds; the test asserts the constant-zero
-/// series directly instead, which is a stronger statement than a correlation
-/// bound and goes red the moment the series stops being constant. See
-/// [`KIND_BOUNDS`]'s Warp paragraph for the measurement, for why the walk
-/// band has no power for spring, and for the separate fact that a zero floor
-/// takes the address-hashable noise term out of both sign kinds' prevalence
-/// altogether.
+/// (`0.99994`, `0.86795`), and spring was undefined for the life of that
+/// pool — its prevalence was a constant zero, so the Pearson denominator was
+/// zero and the statistic read `NaN`. Spring's threshold below was retained
+/// at `0.6` through that era on the expectation it would be exercised again;
+/// see [`KIND_BOUNDS`]'s Warp paragraph for that measurement.
+///
+/// **The Trencher repair round (2026-09-14): spring's series has variance
+/// again and the threshold below is now genuinely read.** Real `r = 0.99999`
+/// over this pool clears `0.6` with the same wide margin overhang's `0.5`
+/// and erratic's `0.5` already carry; verified by the same in-place mutation
+/// this file's tests use that the noise term is proven inert for spring (see
+/// [`KIND_BOUNDS`]'s Trencher paragraph), so `0.6` is retained unchanged
+/// rather than re-tuned for a discriminator this kind's own recipe no longer
+/// has.
 const AUTOCORR_BOUNDS: [(WeftKind, f64); 4] = [
-    // NOT READ while `SILENT_IN_THE_WALK_BAND`'s constant-zero arm stands:
-    // spring's series has no variance, so its correlation is `NaN` and this
-    // threshold is never compared against. Retained at the Weft's value so
-    // removing that arm restores a real bound rather than an invented one —
-    // but re-measure before trusting it.
     (WeftKind::Spring, 0.6),
     (WeftKind::Overhang, 0.5),
     (WeftKind::Thicket, 0.95),
@@ -517,31 +546,6 @@ fn prevalence_autocorrelation_is_not_address_hashed() {
         let var_y: f64 = ys.iter().map(|y| (y - mean_y).powi(2)).sum::<f64>() / m;
         let r = cov / (var_x.sqrt() * var_y.sqrt());
 
-        // THE WARP, Task 6 (2026-09-05): spring's series is a constant zero
-        // over this pool, so the correlation's denominator is zero and `r`
-        // is `NaN`. Assert the constant directly rather than a bound that
-        // cannot be evaluated — a `NaN >= 0.6` comparison is `false`, so
-        // leaving the generic arm to run would report "autocorrelation too
-        // low" for a series that has no autocorrelation to be low. The
-        // relation that moved is named in `KIND_BOUNDS`'s own Warp
-        // paragraph: spring's step opens at a cause of 0.35 and this pool's
-        // largest spring cause is ~0.244.
-        if kind == SILENT_IN_THE_WALK_BAND {
-            assert_eq!(
-                (var_x, var_y),
-                (0.0, 0.0),
-                "{kind:?}: the walk band's prevalence series is no longer the constant zero \
-                 the Warp measured (r={r}) — re-derive this arm and KIND_BOUNDS' spring row \
-                 together, and delete the special case if the band can see the kind again"
-            );
-            assert!(
-                xs.iter().chain(ys.iter()).all(|v| *v == 0.0),
-                "{kind:?}: a constant, non-zero prevalence series is not what the Warp \
-                 measured — it measured an exact zero everywhere off the kind's own cause"
-            );
-            continue;
-        }
-
         assert!(
             r >= min_r,
             "{kind:?}: lag-1 autocorrelation must stay high — position-continuous noise \
@@ -582,24 +586,6 @@ fn the_walk_is_not_degenerate() {
             }
         }
         let spread = max - min;
-
-        // THE WARP, Task 6 (2026-09-05) — the witness that keeps spring's
-        // two ZERO floors in `KIND_BOUNDS` from being a vacuous pass. A
-        // floor of zero can only ever be satisfied; this asserts the exact
-        // measurement the zeros stand for, so the row goes red (and is
-        // re-derived, with the special case deleted) the moment the walk
-        // band can see the kind again.
-        if kind == SILENT_IN_THE_WALK_BAND {
-            assert_eq!(
-                (min, max, occurs_count),
-                (0.0, 0.0, 0),
-                "{kind:?}: the walk band now sees this kind ({occurs_count} occurrences over \
-                 {total} facets, prevalence in [{min}, {max}]) — the Warp measured an exact \
-                 zero. Re-derive KIND_BOUNDS' row from this measurement and remove the \
-                 special case; see that constant's Warp paragraph."
-            );
-            continue;
-        }
 
         assert!(
             spread >= min_pooled_spread,

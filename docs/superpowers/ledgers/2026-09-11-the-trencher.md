@@ -4191,3 +4191,232 @@ writing the paragraphs explaining why they were wrong.
 **Ideonomy passes / overturns:** one — *diagnosing a defect class in prose
 confers no immunity to committing it; the campaign that logs the instance list
 is as likely to author the next instance as anyone.*
+
+## #49 [G5] — Task 17 shipped, and three things about GUARDS rather than about chemistry
+
+The chamber prose now carries the margin: a contested chamber reads *"drawn
+to the porous, water-logged carbonate, though a sulphide-laced seam runs it
+close"*. 28.0% of 29,305 readings are contested at `CONTESTED_SHARE = 0.80`,
+with both outcomes asserted to occur — a word that applied always or never
+would carry no information, which is the occupancy argument from #47 applied
+to a narrative distinction instead of a numeric one.
+
+`dominant_source` delegates to `source_standing` now, so the leader has one
+derivation rather than two that must agree.
+
+### 1. The equivalence check was large and missed the risky path
+
+The delegation is asserted against an **independent re-derivation** of the
+expression it replaced — not against itself — over 29,305 readings, because
+committed prose depends on the answer. It reported **0 exact ties**.
+
+So the tie-break, the one behaviour the rewrite most endangered, was exercised
+by **none** of those 29,305 readings. A large sample is not a covering one, and
+the number that made this visible was one the test prints rather than one it
+asserts. Covered now by a constructed case: `moisture = 0, drainage = 0` zeroes
+all seven sources, all seven tie, and the documented rule (the LAST source
+wins) is asserted directly.
+
+### 2. THE PROSE HAS NO COMMITTED WITNESS, and the seam registration was inert
+
+Checked across every path in `docs/generated-paths.txt`: **no committed
+artifact contains a chamber-resident line at all.** `possession-seed-42.md` has
+zero; every vessel fixture has zero. The walk those artifacts record never
+enters a chamber with a resident. So the rendering-drift check that normally
+catches a prose change is structurally blind here, and `source_phrase` could
+return one constant for all seven sources with every gate green.
+
+Registered as a seam — and **the registration did not work**. It reported
+*"(no call sites found)"*, because every call sat inside a `format!` and `syn`
+does not descend into macro token streams. A registration the tool cannot probe
+is worse than none: the committed roster reads healthy while nothing is
+checked, which is exactly the hazard the root `CLAUDE.md` describes, reached
+from a direction it does not name (not "nobody ran it" but "the scanner cannot
+see it"). Fixed by hoisting the calls into `let` bindings, with a comment
+saying why they must stay hoisted.
+
+**Verdict, run rather than predicted: `GUARDED` at both call sites, 2 ok, 0
+needing action.**
+
+### 3. A killed seam-guard leaves the mutation in the tree
+
+The first attempt was wrapped in `timeout 900` and the kill left
+`let leader_phrase = ("the rock");` in the working tree, unrestored. It
+surfaced only because the next run refused on a dirty tree and I read the diff
+instead of assuming the dirt was mine — a `git add -A` would have committed a
+neutralised seam whose own guard is the test it defeats.
+
+The tool's refusal message already prescribes the fix
+(`git checkout -- <file>`) and it is load-bearing, not boilerplate. **Do not
+wrap `seam-guard run` in a timeout**: two call sites at a full scoped vessel
+test run each exceed 15 minutes, and the cost of the kill is a silently
+mutated tree.
+
+### The absorb, folded in here because its result is a measurement
+
+118 commits, 13 merges, including The Coherence's 2,700-line `facet.rs`. Two
+conflicts, both generated audit reports, resolved by **regeneration** — a
+generated artifact's correct content is whatever its generator produces from
+the tree that lands, and hand-resolving invents a third version belonging to
+neither side.
+
+**The absorb is chemically neutral, and the drift guard is what says so.**
+Every axis reports byte-identical to its authored shape. The Coherence touches
+the renderer's ground patches, not the material buffer feeding chemosynthesis.
+That is #47's guard answering *positively* on its first real encounter rather
+than by silence — the difference between "nothing objected" and "the instrument
+looked and reported no movement".
+
+**Ideonomy passes / overturns:** one — *a guard can be defeated by the syntax
+its scanner cannot parse, not only by the case nobody wrote; check that a
+newly registered guard can SEE its subject before trusting its green.*
+
+## #50 [Q] — The absorb's 11 new failures are a COLLISION, not inherited debt. Measured, because the three possibilities need different responses.
+
+The 118-commit absorb took the workspace from 53 failures to 64. The eleven
+new ones had three possible owners and each implies a different response, so
+guessing was not available:
+
+1. **main landed red** — inherited debt, not mine to repair, and worth telling
+   main's operator about.
+2. **my branch was already red** — my debt, and the pre-merge baseline lied.
+3. **the merge product only** — a semantic collision between two campaigns,
+   mine to resolve because I am the one absorbing.
+
+**Measured.** A detached worktree at `origin/main`, cold-built, running exactly
+those eleven: **11 passed, 0 failed.** They also passed on this branch at
+`b97dbf3a8` before the merge. So it is (3), and there is no ambiguity left.
+
+This is the failure mode the root `CLAUDE.md` says has actually bitten — *"No
+gate has an opinion about whether two campaigns changed the same idea in
+incompatible ways"* — arriving on schedule. Both sides were green; the product
+is not.
+
+### The four clusters, and what each one is
+
+- **Spring (4 tests).** Task 13 widened carbonate and porosity, raising the
+  `Hydro::Spring` share; main's coherent-terrain work changed which ground the
+  walk band crosses. Neither alone moved it — together the band now sees spring
+  **65 times over 4,440 facets** where The Warp measured an exact zero.
+
+  **The Warp built for this moment and said so.** Its doc records that the zero
+  was *"a property of the SAMPLE, not of the world"* — spring occurs on ~1.3%
+  of locations, so 78 draws miss it entirely about a third of the time
+  (`(1 - 0.01337)^78 = 0.350`) — and it set spring's two floors to `0.0, 0`
+  **specifically so that deleting the witness could not leave a live bound
+  vacuously satisfied**, with the instruction to re-derive both in the same
+  edit. That is a guard written by someone who expected to be wrong later and
+  made the later reader's job possible. It is the best-designed thing this
+  campaign has collided with.
+
+- **World-moved baselines (5).** Byte goldens, founder drops, person facts,
+  seed 42 resolving 40,596 vertices against a pinned 40,585. One is explicitly
+  **not** a rebaseline: `the_client_fixtures_are_current` says *"the
+  vessel/session/v2 wire shape moved. Decide whether that is an epoch BEFORE
+  rebaselining."* That is a ruling.
+
+- **The Coherence's own `facet_scene` proof fixture (1)**, moved by this
+  branch's world.
+
+- **`survivorship_probe` (1)** — see below; a finding, not a repair.
+
+### The survivorship probe, and a correction that does NOT get vindicated
+
+`the_separation_survives_conditioning_on_tenure` now reads **stratified
+z = 0.435 against pooled 5.366**. This is the exact test of ledger **#27**,
+where I corrected myself for asserting three times that the §5.2 claim had
+stopped holding — I had restated a dead measurement without re-running it, and
+running it showed it passed.
+
+It fails now. Both facts stand and neither cancels the other: **the correction
+was right when made, and the claim has since genuinely stopped holding.** The
+tempting reading is that #27 was unnecessary and my original instinct was
+sound. That reading is wrong and worth naming, because it is the comfortable
+one: what #27 criticised was not the conclusion but **carrying a number I had
+not re-derived**. A stale measurement that later comes true was still stale
+when I used it. This is a NEW falsification, with a date, a cause (the absorb)
+and a fresh statistic — not a retroactive licence for the old one.
+
+**Ideonomy passes / overturns:** one — *a stale claim that later turns out true
+does not retroactively become evidence; provenance is a property of when it was
+asserted, not of whether it eventually held.*
+
+## #51 [G5] — The repair round: 64 → 54, and the count closes to the unit
+
+Ten of the eleven collision failures repaired; the eleventh left failing on
+purpose. **54 remain, and that number is exactly right rather than
+approximately right:**
+
+```
+53  pre-merge baseline (measured, ledger #43)
++1  survivorship_probe -- falsified by the absorb, deliberately unrepaired
+----
+54
+```
+
+`survivorship_probe` does **not** appear in the pre-merge 53, so the arithmetic
+closes to the unit with nothing unexplained. The implementer flagged the 54 as
+"one more than your 53, worth a quick look"; it is not a residue, it is the
+Cluster D finding counted once.
+
+### Cluster A — The Warp's instruction followed, and its CONTROL ran down
+
+`SILENT_IN_THE_WALK_BAND` and both special-case blocks removed, spring's two
+zero floors re-derived in the same edit exactly as The Warp's doc required:
+
+| bound | silent era | re-derived | measured | headroom |
+| --- | --- | --- | --- | --- |
+| `max_allowed_delta` | 0.010 | **0.02** | 0.01070 | 1.87x |
+| `min_pooled_spread` | 0.0 | **0.45** | 0.95000 | 2.11x |
+| `min_total_occurs` | 0 | **30** | 65 | 2.17x |
+
+Real margin on each, none fitted to the reading. The walk pool itself moved
+(74 walks / 4,440 facets, from 78 / 4,680) — the land mask shifted, which
+affects every kind.
+
+**The control golden moved too, and that was the thing worth chasing.**
+`thicket` and `erratic` are The Warp's non-regression controls; a moved control
+is a different and more serious claim than a moved subject. Diffed **by vertex
+id** rather than line position, since the land set itself moved (240 out, 221
+in of 11,218):
+
+- **`erratic`: changed at 0 of 10,978 common facets.** Its `macro_state` is a
+  bare constant with no pack dependency — the strongest available evidence that
+  the geometry and noise math are untouched.
+- **`thicket`: changed at 8,215 of 10,978 (75%)** — it reads
+  `pack.temperature`/`pack.moisture`, climate fields downstream of elevation,
+  which is exactly what main's coherent-terrain rework moves.
+- `git log` over `windows/worldgen/src/weft/` across the merge: **zero files
+  touched.**
+
+So: a world move, not a recipe move. The 75% figure looked alarming and
+resolved cleanly, which is the point of checking rather than regenerating.
+
+### Cluster B — three pins re-measured, shapes intact
+
+`founder_collision` `(1439, 0) -> (1439, 1)`; `kinship_facts` baseline
+`1,487 -> 1,635` facts over 242 persons (was 227), regenerated by the file's
+own documented mechanical procedure; `portolan_resolution`
+`40,585 -> 40,596` of 40,962. Every one keeps its `assert_eq!` shape — no pin
+became a range or an inequality — and each carries a **dated** provenance note
+saying what moved it, appended beside the previous entry rather than
+overwriting it.
+
+### Cluster C — a generator's own output, regenerated by the generator
+
+`surface-seed-42-proof.json` is written by `live_proof()` in the test itself.
+Regenerated by calling it, never hand-edited; confirmed no field added or
+removed at any level, only values.
+
+### Cluster D — untouched, and the reason restated
+
+`survivorship_probe::the_separation_survives_conditioning_on_tenure` is
+unmodified (`git status --porcelain` clean on that path) and still fails at
+stratified z = 0.435 against pooled 5.366. A preregistered claim the absorb
+falsified is a finding. Repairing it would be retuning to rescue a prediction,
+which decision 0016 forbids, and this project ships nulls as headlines.
+
+**Ideonomy passes / overturns:** one — *when a control moves alongside its
+subject, diff by identity rather than position: the population itself may have
+shifted, and a line-ordered diff then reports a recipe change that did not
+happen.*

@@ -105,10 +105,19 @@ fn build_seed_42_from_scratch(seed: Seed) -> (Geosphere, Vec<Feature>, VertexFea
 /// iteration order, a stray platform transcendental) — not via anything
 /// this file targets on purpose. It is included because the brief asks for
 /// it directly and it does add one real check for free: a fixed, printed
-/// positive-control count (40,585 of 40,962 vertices resolve, the figure this
-/// campaign has measured and recorded since Task 3) rules out the
-/// vacuous-pass shape where every vertex resolves to `None` in both builds
-/// and the loop below trivially agrees.
+/// positive-control count (40,596 of 40,962 vertices resolve — see the
+/// note below for why this moved from the figure recorded since Task 3)
+/// rules out the vacuous-pass shape where every vertex resolves to `None`
+/// in both builds and the loop below trivially agrees.
+///
+/// **The Trencher repair round (2026-09-14): 40,585 → 40,596.** This
+/// campaign absorbed 118 `origin/main` commits (main's coherent-terrain
+/// work), which moved `hornvale_terrain::generate`'s output for seed 42 at
+/// default pins — the same terrain surface `gazetteer_features` and
+/// `VertexFeatureIndex::build` resolve names against. 11 more vertices (of
+/// 40,962) now resolve than before the absorb; the shape of the claim is
+/// unchanged (an exact count, not a range) and re-measured directly on this
+/// tree rather than assumed.
 #[test]
 fn seed_42_resolution_is_stable_across_an_independent_rebuild() {
     let seed = Seed(42);
@@ -152,8 +161,10 @@ fn seed_42_resolution_is_stable_across_an_independent_rebuild() {
         "seed 42 at level {LEVEL} should have 40,962 vertices"
     );
     assert_eq!(
-        resolved, 40_585,
-        "seed 42 should resolve 40,585 of 40,962 vertices (measured, Task 3)"
+        resolved, 40_596,
+        "seed 42 should resolve 40,596 of 40,962 vertices (measured, Task 3; \
+         re-measured The Trencher repair round 2026-09-14 after absorbing \
+         main's coherent-terrain work — was 40,585)"
     );
 }
 

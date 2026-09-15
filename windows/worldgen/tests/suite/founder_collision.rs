@@ -312,6 +312,17 @@ fn previous_collision_seeds_build_to_full_depth_without_a_drop() {
 /// inheritance. It will lapse again at the next settlement-replacing epoch,
 /// which is what the `#[ignore]`d harness is for.
 ///
+/// **1439 rejoins the positive set (The Trencher repair round, 2026-09-14),
+/// and this is a single re-measured row, not a fresh sweep.** This campaign
+/// absorbed 118 `origin/main` commits (main's coherent-terrain work) on top
+/// of this campaign's own Task 13, and the merge product re-places
+/// settlements again — the same class of event every turnover above
+/// records. Only this one row was found to disagree (a workspace test run,
+/// not a dedicated `#[ignore]`d 0–2999 sweep, which costs ~800 s and is
+/// deliberately not run as part of an ordinary repair), so the completeness
+/// claim above is unchanged and still lapsed: this fixes the one measured
+/// discrepancy, not a claim about the rest of the range.
+///
 /// claim: structural(seed: [20, 42, 238, 514, 552, 1057, 1074, 1162, 1292,
 /// 1412, 1439, 1505, 1738, 1741, 1866, 1892, 2031, 2078, 2634, 2655, 2793,
 /// 2852, 2871, 2898]) — twenty-four named worlds with pinned per-seed values. Not a sweep and not a
@@ -335,7 +346,13 @@ fn the_dropped_founders_are_pinned_per_seed() {
         (238, 0),
         (514, 0),
         (1412, 0),
-        (1439, 0),
+        // Rejoins the positive set (The Trencher repair round, 2026-09-14):
+        // was 0 (cleared by The Underworld's Task 8 re-key). Absorbing 118
+        // origin/main commits (main's coherent-terrain work) atop this
+        // campaign's own Task 13 re-placed settlements again, and seed
+        // 1439 now drops one founder. See this test's own doc for why this
+        // is a single re-measured row, not a fresh 0-2999 sweep.
+        (1439, 1),
         (1505, 0),
         (1738, 0),
         (1741, 0),
