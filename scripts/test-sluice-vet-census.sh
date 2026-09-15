@@ -286,6 +286,29 @@ out="$(rivals x "$MINE" campaign/self)"
 printf '%s\n' "$out" | sed 's/^/    /'
 case "$out" in *"owns the reference"*) ok "a candidate is not its own rival" ;; *) bad "counted itself: $out" ;; esac
 
+echo "== a row this candidate has ABSORBED is history, not a rival"
+# THE CASE BRANCH-NAME MATCHING CANNOT SEE. A census DELIVERY branch is called
+# `census/<sha>-<stamp>`, not `campaign/<name>`, so on 2026-09-15
+# campaign/the-trencher's own held stage row was reported as a rival to
+# campaign/the-trencher's own census delivery. Its sha was already an ancestor
+# of that delivery. Ancestry is the honest test: it holds regardless of what
+# either branch is called.
+build_rivals
+OLDROW="$(censusing_branch campaign/old oldcsv)"
+# The delivery descends from the old row and carries a different branch name.
+g -C "$repo" checkout -q -b census/deliv-1 campaign/old
+echo delivcsv > "$repo/book/src/laboratory/generated/the-census/rows.csv"
+g -C "$repo" add -A; g -C "$repo" commit -q -m delivery
+DELIV="$(g -C "$repo" rev-parse HEAD)"
+RIVAL="$(censusing_branch campaign/genuine gencsv)"
+qrow 2026-01-01T00:00:00Z a campaign/old     "$OLDROW" held
+qrow 2026-01-02T00:00:00Z b campaign/genuine "$RIVAL"  held
+qrow 2026-01-03T00:00:00Z c census/deliv-1   "$DELIV"  queued
+out="$(rivals x "$DELIV" census/deliv-1)"
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *campaign/old*) bad "reported an ABSORBED row as a rival — the branch-name blind spot" ;; *) ok "an absorbed row is not a rival" ;; esac
+case "$out" in *campaign/genuine*) ok "ANTI-VACUITY: the genuine rival IS still reported" ;; *) bad "suppressed a real rival: $out" ;; esac
+
 echo "== a candidate shipping NO census says nothing at all"
 build_rivals
 g -C "$repo" checkout -q -b campaign/nocensus main

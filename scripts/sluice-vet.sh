@@ -406,7 +406,20 @@ census_rivals() {
     [ "$mine" -gt 0 ] || return 0
     while IFS=$'\t' read -r rb rs rstate; do
         [ -n "$rs" ] || continue
+        # NOT A RIVAL IF THIS CANDIDATE ALREADY CONTAINS IT. Two tests, and
+        # the second is the one that matters: same branch name, OR a sha this
+        # candidate has already absorbed.
+        #
+        # Name alone was wrong for the case it fires on most: a census
+        # DELIVERY branch is called `census/<sha>-<stamp>`, not
+        # `campaign/<name>`, so campaign/the-trencher's own held stage row was
+        # reported as a rival to campaign/the-trencher's own census delivery
+        # (2026-09-15). Its sha was already an ancestor of the delivery. A row
+        # you have absorbed is history, not competition — and ancestry is the
+        # honest test, since it is true regardless of what either branch is
+        # called.
         [ "$rb" = "$branch" ] && continue
+        git merge-base --is-ancestor "$rs" "$sha" 2>/dev/null && continue
         git rev-parse --verify --quiet "$rs^{commit}" >/dev/null 2>&1 || continue
         if [ "$(git diff --name-only "origin/main...$rs" 2>/dev/null \
             -- 'book/src/laboratory/generated/*/rows.csv' | grep -c .)" -gt 0 ]; then
