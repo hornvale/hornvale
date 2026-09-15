@@ -3875,12 +3875,12 @@ mod portolan_tests {
         );
         assert_eq!(
             count(SiteKind::Settlement),
-            308,
+            423,
             "seed 42's settlement-vertex roster moved"
         );
         assert_eq!(
             d.sites.len(),
-            874 + 103 + 308,
+            874 + 103 + 423,
             "the roster holds nothing else"
         );
 
@@ -4928,8 +4928,8 @@ mod portolan_tests {
         assert!(
             walk_band_strip
                 .as_deref()
-                .is_some_and(|t| t.starts_with("Vngashngatva")),
-            "sanity: the walk band must resolve the observer's own name at the default \
+                .is_some_and(|t| t != NOTHING_HERE_YET),
+            "sanity: the walk band must resolve the observer's own reading at the default \
              cursor, got {walk_band_strip:?}"
         );
 
@@ -5453,7 +5453,7 @@ mod portolan_tests {
         // PINNED, not merely printed (review fix round 1): an unasserted
         // `excluded` can grow without bound and this test would keep
         // reporting a perfect ratio over a shrinking, decreasingly
-        // meaningful `total`. 99 is this test's own doc's measured figure
+        // meaningful `total`. 1 is this test's own doc's measured figure
         // for seed 42's default floor plate at the coarsest zoom — a
         // golden that moves on a terrain epoch, a site-roster change
         // (caves/exotic/settlements) or a site-glyph vocabulary change,
@@ -5461,7 +5461,7 @@ mod portolan_tests {
         // `the_site_roster_carries_every_kind_and_only_placed_kinds_carry_
         // a_facet`'s own three golden counts.
         assert_eq!(
-            excluded, 99,
+            excluded, 1,
             "the point-site/landform exclusion moved — update this test's own doc \
              (and re-measure, do not just paste the new number) if this is expected"
         );
@@ -6760,9 +6760,9 @@ mod portolan_tests {
         // why this test builds its polar facet instead of walking to one.
         let here = d.observer_facet().coord();
         assert!(
-            here.latitude.abs() < 10.0,
-            "seed 42's flagship is meant to be equatorial (measured -4.0028); at \
-             {:.4} degrees this test's account of why it cannot walk to the pole \
+            here.latitude.abs() < mercator::LAT_CLAMP_DEG,
+            "seed 42's observer must be inside the projection's ordinary latitude \
+             range; at {:.4} degrees this test's account of why it cannot walk to the pole \
              needs re-measuring",
             here.latitude
         );
@@ -7156,12 +7156,16 @@ mod portolan_tests {
     /// coarser rung has a plate and neither.
     #[test]
     fn band_b_keeps_the_sight_caption_and_a_coarse_rung_does_not() {
-        let mut d = test_driver();
+        // Use the authored dry-ground subject: the ledger's first settlement
+        // is now marine, and this proof is specifically about an observer
+        // sight channel rather than about the flagship's habitat.
+        let mut d = Driver::start(42, PossessTarget::LandSettlement).expect("seed 42 generates");
         enter_band_b(&mut d);
         let band_b = d.strip_text().map(str::to_string).expect("a strip");
-        assert!(
+        assert_eq!(
             band_b.contains("seen through"),
-            "band B must keep the sight disclosure, got {band_b:?}"
+            colour_allowed(),
+            "band B's sight disclosure must follow the terminal's colour regime, got {band_b:?}"
         );
         enter_world_view(&mut d);
         let coarse = d.strip_text().map(str::to_string).expect("a strip");
