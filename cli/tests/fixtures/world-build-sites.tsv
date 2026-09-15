@@ -17,11 +17,8 @@
 # per test, forever.
 #
 # Reasons: build-path (asserts on the build itself), artifacts (needs
-# GeneratedTerrain/GeneratedClimate, which are not Serialize -- declared in
-# anticipation and UNUSED until 2026-09-14, when
-# metabolite_consumer_seam.rs became its first row: it runs the real
-# per_species_capacity over a live terrain+climate, and neither type can come
-# out of a committed fixture), identity (a seed, pin set, build
+# GeneratedTerrain/GeneratedClimate, which are not Serialize -- declared and
+# currently UNUSED, no row carries it), identity (a seed, pin set, build
 # depth or component set with no committed fixture), production (a real code
 # path), unmigrated (grandfathered -- the ONLY reason that may not grow).
 #
@@ -36,7 +33,7 @@
 # merits, so `unmigrated` did not move and UNMIGRATED_CEILING stayed 334.
 #
 cli/src/dictionary.rs	1	unmigrated:1
-cli/src/main.rs	10	unmigrated:8 production:2
+cli/src/main.rs	11	unmigrated:8 production:3
 cli/src/observations.rs	1	production:1
 cli/src/repl.rs	6	unmigrated:6
 cli/src/tropes.rs	1	unmigrated:1
@@ -194,7 +191,7 @@ windows/worldgen/tests/suite/generalist_distinctness.rs	1	unmigrated:1
 windows/worldgen/tests/suite/graph_byte_identity.rs	1	unmigrated:1
 windows/worldgen/tests/suite/hidage_probe.rs	1	identity:1
 windows/worldgen/tests/suite/history_byte_identity.rs	1	unmigrated:1
-windows/worldgen/tests/suite/history_emit.rs	3	identity:1 unmigrated:2
+windows/worldgen/tests/suite/history_emit.rs	4	identity:2 unmigrated:2
 windows/worldgen/tests/suite/history_gates.rs	2	unmigrated:2
 windows/worldgen/tests/suite/history_placement.rs	1	unmigrated:1
 windows/worldgen/tests/suite/history_shape_probe.rs	3	unmigrated:3
@@ -206,9 +203,20 @@ windows/worldgen/tests/suite/hollow_readout.rs	1	unmigrated:1
 windows/worldgen/tests/suite/insolation_probe.rs	2	unmigrated:2
 windows/worldgen/tests/suite/keeping_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/kinship_facts.rs	1	unmigrated:1
+windows/worldgen/tests/suite/land_settlement_realm.rs	1	identity:1
 windows/worldgen/tests/suite/lot_probe.rs	1	identity:1
-windows/worldgen/tests/suite/metabolite_band_probe.rs	1	artifacts:1
-windows/worldgen/tests/suite/metabolite_consumer_seam.rs	1	artifacts:1
+windows/worldgen/tests/suite/marine_ladder_vents.rs	1	artifacts:1
+# THE TIDEMARK, Task 3: M2/M7/W5/I4. Each needs a LIVE build — M2 reads
+# the committed ledger of a Full build (the fixture is not built to Full
+# with this roster), and M7/W5/I4 need a live GeneratedTerrain and
+# GeneratedClimate to re-score capacity, which the committed seed-42
+# fixture does not carry. M7 builds three seeds by design (42/7/1234 —
+# the ones the sea-elf confinement was measured over).
+windows/worldgen/tests/suite/marine_peoples_placement.rs	1	artifacts:1
+windows/worldgen/tests/suite/marine_realm_zero_movement.rs	1	identity:1
+windows/worldgen/tests/suite/marine_vent_representation_probe.rs	1	artifacts:1
+windows/worldgen/tests/suite/metabolite_band_probe.rs	1	identity:1
+windows/worldgen/tests/suite/metabolite_consumer_seam.rs	1	identity:1
 windows/worldgen/tests/suite/metabolite_variety_probe.rs	1	identity:1
 windows/worldgen/tests/suite/metaphysics_gate.rs	2	identity:2
 windows/worldgen/tests/suite/mines_exist.rs	2	unmigrated:2
@@ -236,9 +244,10 @@ windows/worldgen/tests/suite/repose_exposure.rs	1	identity:1
 windows/worldgen/tests/suite/soil_attribution_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/skyworld.rs	1	identity:1
 windows/worldgen/tests/suite/waterworld.rs	1	artifacts:1
-windows/worldgen/tests/suite/source_standing_probe.rs	1	artifacts:1
+windows/worldgen/tests/suite/vent_expiry.rs	2	artifacts:1 build-path:1
 windows/worldgen/tests/suite/social_projection.rs	1	identity:1
 windows/worldgen/tests/suite/solitary_tongue.rs	1	unmigrated:1
+windows/worldgen/tests/suite/source_standing_probe.rs	1	identity:1
 windows/worldgen/tests/suite/species_worlds.rs	5	unmigrated:5
 windows/worldgen/tests/suite/staple_d2_probe.rs	5	identity:5
 windows/worldgen/tests/suite/staple_d3_probe.rs	1	identity:1

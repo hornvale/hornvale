@@ -516,6 +516,22 @@ fn pathogen_hosts() -> Vec<(KindId, f64)> {
         "snow-elf",
         "wood-elf",
         "gnoll",
+        // THE TIDEMARK (Task 3): the five SETTLED marine peoples. This list
+        // has always been exactly the settling roster — a crowd disease is a
+        // disease of crowds, and the catalogue's `PathogenClass::Crowd` row
+        // says so — so it grows with that roster and by the same rule.
+        //
+        // `merfolk` is DELIBERATELY ABSENT, and the absence is the rule
+        // holding rather than an oversight: it is a people, and it forms no
+        // fixed place. Adding it would be the first row here that is not a
+        // settling kind, which is a modelling decision about whether a
+        // nomadic band sustains a crowd disease — a real question, and not
+        // one this campaign measured.
+        "abyssal-elf",
+        "kelp-tender",
+        "reef-mason",
+        "triton",
+        "vent-commensal",
     ]
     .into_iter()
     .map(|name| (KindId(name), 1.0))
@@ -2552,6 +2568,283 @@ fn wood_elf_condition_niche() -> ConditionNiche {
     }
 }
 
+/// The moisture and insolation responses **every obligate marine kind
+/// shares, byte for byte** (THE TIDEMARK, Task 3) — the abyssal elf
+/// excepted, which takes its family's pair for the reason its own doc gives.
+///
+/// One reading rather than six, and the reason is a measurement rather than
+/// a convenience. Neither of these two axes can carry a marine kind's
+/// identity, and each is blind for its own reason:
+///
+/// - **moisture.** A submerged sample's moisture is the constant
+///   `MARINE_MOISTURE` (`1.0`) at every band of every column, so nothing in
+///   the water varies on it. Worse, the value this response is actually
+///   evaluated against at PLACEMENT is not that constant at all:
+///   `windows/worldgen`'s `EraInvariantTolerance` precomputes the
+///   moisture/insolation half of the Liebig minimum from the **surface**
+///   `climate.moisture_at(vertex)`, with no band dimension, so a marine
+///   kind's moisture curve reads the sky above the water.
+/// - **insolation.** The pelagic light ladder is populated per band and read
+///   by nothing (`windows/worldgen::marine_habitat`'s module doc; spec
+///   §3.4's arriving-axis table). The value reaching placement is again the
+///   surface field, a function of latitude and obliquity.
+///
+/// So a per-kind difference here would be a difference the marine instrument
+/// cannot express, dressed as one it can — the exact shape spec §3.4 calls
+/// "a distinctness test satisfied by a distinction the engine cannot see".
+/// Authoring one value and sharing it makes that structural: the six cannot
+/// differ on these axes, so M5 cannot be satisfied by them even by accident.
+///
+/// The values themselves are `sea-elf`'s, and deliberately: it is the
+/// roster's shipped marine-adjacent people and its own row already argues
+/// them (ocean moisture is "a circulation-band artifact with no marine
+/// ecological meaning"; insolation "says nothing about depth-linked light in
+/// this model"). Both are **PREPARED** — wide and barely devoted, computed
+/// and discarded on every vertex.
+fn marine_prepared_climate() -> (ConditionResponse, ConditionResponse) {
+    (
+        ConditionResponse {
+            optimum: 0.75,
+            width: 0.40,
+            devotion: 0.20,
+        },
+        ConditionResponse {
+            optimum: 0.25,
+            width: 0.30,
+            devotion: 0.25,
+        },
+    )
+}
+
+/// Triton condition niche: **the column's baseline, and the row the other
+/// five marine kinds are read against.**
+///
+/// A hierarchic, martial people of the upper water column. Its elevation
+/// curve is the widest of the six — it claims no one stratum, which is what
+/// makes it the baseline rather than a competitor for any other kind's band.
+///
+/// **PREPARED climate**, like every people the roster ships: `devotion_elev`
+/// `0.30` against a sovereignty floor of `~0.44` at 82.0 kg, so
+/// `tolerance_liebig`'s elevation fast path returns before the three curves
+/// above are ever evaluated. The kind's environmental identity is carried by
+/// its `biome_affinity_registry` row, not by these numbers — see that row.
+fn triton_condition_niche() -> ConditionNiche {
+    let (moisture, insolation) = marine_prepared_climate();
+    ConditionNiche {
+        // the temperate-to-cool column, centred a little below sea-elf's
+        // shelf reading. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 14.0,
+            width: 16.0,
+            devotion: 0.30,
+        },
+        moisture,
+        insolation,
+        // THE axis that binds: the upper column, from the surface down past
+        // the mesopelagic entry (200 m) toward the bathypelagic one
+        // (1,000 m). Wide, because this kind's claim is the column and not a
+        // stratum of it.
+        elevation: ConditionResponse {
+            optimum: -200.0,
+            width: 1000.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Merfolk condition niche: the sunlit surface water a shoal is in.
+///
+/// The shallowest reading of the six and the narrowest, which is the
+/// elevation half of "follows the shoals": forage fish are an epipelagic
+/// phenomenon, so a people that eats nothing else lives where they are.
+///
+/// **PREPARED climate**: `devotion_elev` `0.30` against a floor of `~0.437`
+/// at 64.0 kg.
+fn merfolk_condition_niche() -> ConditionNiche {
+    let (moisture, insolation) = marine_prepared_climate();
+    ConditionNiche {
+        // the warm-temperate surface, the roster's warmest marine reading
+        // after the reef mason's. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 18.0,
+            width: 15.0,
+            devotion: 0.30,
+        },
+        moisture,
+        insolation,
+        // THE axis that binds: the epipelagic band and nothing under it.
+        elevation: ConditionResponse {
+            optimum: -60.0,
+            width: 400.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Abyssal elf condition niche: **wood-elf's three inherited curves, and one
+/// authored deep band.**
+///
+/// This is the drow move repeated, with the one inversion the realm forces,
+/// and the inversion is the point rather than a slip. Drow's separation from
+/// the surface elves is its realm gate alone, so its `elevation` response is
+/// wood-elf's *byte for byte* — depth is the thing the axis cannot say, so
+/// drow declines to say it there. In the ocean the same axis reads literally:
+/// depth **is** −(height above sea level), which is why `sea_elf_condition_niche`
+/// records that this is "the one elf whose elevation curve may honestly say
+/// shallow". So the abyssal elf authors **elevation** and inherits
+/// `temperature`, `moisture` and `insolation` from [`wood_elf_condition_niche`]
+/// unchanged — the same discipline, applied to the axis that is honest here
+/// instead of the one that is not.
+///
+/// **Read from the function rather than copied**, exactly as drow's elevation
+/// is, so the two cannot drift apart in a later edit.
+///
+/// **PREPARED climate**, like the rest of the family: `devotion_elev` `0.30`
+/// against a floor of `~0.428` at 54.0 kg, so the three inherited curves are
+/// computed and discarded on every vertex. That is *why* inheriting them
+/// costs nothing and says something: they are the family's reading, they are
+/// not this kind's identity, and this kind's identity is the band below.
+///
+/// The hazard drow did not carry is that the deep bands are the LARGE ones,
+/// so held-vertex count needs measuring rather than assuming (M7) — see this
+/// kind's `biome_affinity_registry` row, which is where the confinement lives.
+fn abyssal_elf_condition_niche() -> ConditionNiche {
+    let family = wood_elf_condition_niche();
+    ConditionNiche {
+        temperature: family.temperature,
+        moisture: family.moisture,
+        insolation: family.insolation,
+        // THE axis that binds, and the family's second negative optimum
+        // after sea-elf's: the abyssal plain, at the band-entry depth
+        // `windows/worldgen::waterworld::band_entry_depth_m` gives
+        // `Stratum::Abyssal` (4,000 m). Narrow enough (1,200 m) that the
+        // shelf reads near the floor, wide enough to reach the bathypelagic
+        // entry above it and the hadal one below.
+        elevation: ConditionResponse {
+            optimum: -4000.0,
+            width: 1200.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Vent commensal condition niche: the seabed, wherever the seabed is.
+///
+/// The one kind of the six whose habitat is not a *stratum* but a **feature**
+/// — a hydrothermal vent sits on the floor, and the floor is at a different
+/// depth at every vertex. So this is the widest elevation curve of the six by
+/// a long way: it must reach a seamount flank and a ridge on the abyssal
+/// plain with the same row, because both are seabed. What selects the vent
+/// out of all that seabed is the `CHEMOSYNTHATE` weight on this kind's
+/// resource vector and its `hydrothermal-vent` biome stronghold, neither of
+/// which is an elevation claim.
+///
+/// **PREPARED climate**: `devotion_elev` `0.30` against a floor of `~0.425`
+/// at 47.0 kg.
+fn vent_commensal_condition_niche() -> ConditionNiche {
+    let (moisture, insolation) = marine_prepared_climate();
+    ConditionNiche {
+        // the cold deep ocean's surface reading. PREPARED: never binds — and
+        // note what that saves this row from claiming. A vent's own heat IS
+        // carried to placement (`WaterWorld::at` folds a temperature delta
+        // into the seabed sample), but it arrives on an axis the elevation
+        // fast path discards, so authoring a thermophile optimum here would
+        // be authoring a preference nothing reads. The vent reaches this
+        // kind through `CHEMOSYNTHATE`, which is a supply and is summed, not
+        // minimised.
+        temperature: ConditionResponse {
+            optimum: 6.0,
+            width: 14.0,
+            devotion: 0.30,
+        },
+        moisture,
+        insolation,
+        // THE axis that binds, and the loosest of the six: the seabed is
+        // wherever the rock is, from a shelf-depth seamount to the abyssal
+        // plain.
+        elevation: ConditionResponse {
+            optimum: -2500.0,
+            width: 3000.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Kelp tender condition niche: the photic zone, said in the only vocabulary
+/// that reaches placement.
+///
+/// **THE KIND SPEC §3.4 CALLS ENDANGERED, and this doc is where the reason
+/// is recorded rather than rediscovered.** A phototrophic people of the
+/// photic zone is naturally differentiated by *light*, and light does not
+/// arrive: the pelagic light ladder is populated per band and read by
+/// nothing, and the insolation this row is evaluated against at placement is
+/// the surface field (see [`marine_prepared_climate`]). So the photic zone is
+/// stated here as **shallow depth** — a narrow elevation curve on the
+/// epipelagic band — and this kind's phototrophy is carried by
+/// [`TrophicMode::Phototrophic`] and a `PHOTOSYNTHATE` weight instead.
+///
+/// Whether that weight moves the score is a measured question, not an assumed
+/// one; the answer is in the campaign's ledger under Task 3's M-numbers.
+///
+/// **PREPARED climate**: `devotion_elev` `0.30` against a floor of `~0.426`
+/// at 51.0 kg.
+fn kelp_tender_condition_niche() -> ConditionNiche {
+    let (moisture, insolation) = marine_prepared_climate();
+    ConditionNiche {
+        // cool temperate water — the kelp band proper, below the 12 °C cut
+        // the marine classifier splits reef from kelp at, and the coldest
+        // marine optimum of the six. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 10.0,
+            width: 12.0,
+            devotion: 0.30,
+        },
+        moisture,
+        insolation,
+        // THE axis that binds: the epipelagic band, narrower than any other
+        // of the six. A canopy that must reach the light cannot be deep.
+        elevation: ConditionResponse {
+            optimum: -25.0,
+            width: 250.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Reef mason condition niche: the warm shallow shelf a reef stands on.
+///
+/// Shallow like the kelp tender and warm where that kind is cool, which is
+/// the pair spec §3.4 asks to be separated by "shallow depth and
+/// temperature" — and, because temperature is PREPARED on every people this
+/// roster ships, the separation that actually reaches placement is the
+/// `coral-reef` stronghold on this kind's affinity row against the
+/// `kelp-forest` one on the tender's.
+///
+/// **PREPARED climate**: `devotion_elev` `0.30` against a floor of `~0.445`
+/// at 96.0 kg, the highest floor of the six and therefore its widest margin.
+fn reef_mason_condition_niche() -> ConditionNiche {
+    let (moisture, insolation) = marine_prepared_climate();
+    ConditionNiche {
+        // the warm shelf, above the 20 °C cut the marine classifier splits
+        // reef from open shelf water at — the warmest marine optimum any
+        // kind in the roster carries. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 26.0,
+            width: 10.0,
+            devotion: 0.30,
+        },
+        moisture,
+        insolation,
+        // THE axis that binds: the shelf a reef can stand on, a little
+        // deeper and a little wider than the kelp tender's canopy.
+        elevation: ConditionResponse {
+            optimum: -40.0,
+            width: 350.0,
+            devotion: 0.30,
+        },
+    }
+}
+
 /// How a species regulates body temperature — the **demand** axis, and the
 /// only one allometry reads.
 ///
@@ -2820,8 +3113,10 @@ impl LifeSchedule {
 /// Which environmental frame a kind's carrying capacity is scored in (The
 /// Warren). `domains/climate` owns the richer `Realm { medium, access }`;
 /// this is deliberately NOT that type — a domain crate may not depend on a
-/// sibling domain, and what the placement layer needs is a two-valued
-/// question, not a realm vocabulary.
+/// sibling domain, and what the placement layer needs is a three-valued
+/// question (The Tidemark added `Marine` to what was a two-valued one), not
+/// a realm vocabulary — `windows/worldgen`'s bijection test is what proves
+/// the two enumerations still agree despite being declared twice.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HabitatRealm {
     /// Scored against the surface substrate — every kind not in the store.
@@ -2829,6 +3124,21 @@ pub enum HabitatRealm {
     /// Scored against the subterranean substrate, and gated by whether the
     /// vertex holds a cave at all. A void that does not exist is not habitat.
     Subterranean,
+    /// Scored against the marine substrate, and gated by whether the vertex
+    /// holds a water column at all — the mirror of `Subterranean`'s cave
+    /// gate, because the pelagic ladder is the delve ladder at a different
+    /// realm (`hornvale_climate::facets::Stratum`'s own doc).
+    ///
+    /// **Implemented since The Tidemark's Task 2** (Task 1 shipped the
+    /// variant with both availability arms unconditionally `0.0`; this
+    /// paragraph used to describe that deferral). A `Marine` kind is scored
+    /// at every band of `Realm::WATERWORLD`'s `strata()` and takes the best,
+    /// exactly as a `Subterranean` kind is scored at every rung of
+    /// `Band::habitation()`; `availability` is `1.0` where some band scored
+    /// and `0.0` where none did, which is the `{0.0, 1.0}` presence mask
+    /// rather than a tolerance. `windows/worldgen`'s `MarineHabitat` is the
+    /// field both consumers read.
+    Marine,
 }
 
 impl HabitatRealm {
@@ -2838,10 +3148,22 @@ impl HabitatRealm {
 
 impl Component for HabitatRealm {}
 
-/// The sparse habitat-realm component: **only** kinds that are not
-/// `Surface` appear. Two rows today, both re-homed by The Deep Realm, whose
-/// niches have been authored for darkness and near-saturation since that
-/// campaign and scored against sunlit surface vertices until this one.
+/// The sparse habitat-realm component: absence still means `Surface`, but
+/// **presence no longer implies non-`Surface`.** This doc used to say "only
+/// kinds that are not `Surface` appear", which The Tidemark's Task 1 makes
+/// false on purpose: `sea-elf` and `giant-crocodile` are listed below as
+/// EXPLICIT `Surface` rows, not because the default is wrong for them (it
+/// isn't) but because a reader meeting `HabitatRealm::Marine` for the first
+/// time will reasonably assume a sea elf belongs to it (spec §3.6) — so
+/// their classification is stated rather than left to an absence a new
+/// variant makes ambiguous to read. Fifteen rows today: two `Subterranean`
+/// beasts and one `Subterranean` people from The Deep Realm / The Radiation
+/// (`rust-monster`/`xorn`/`drow`, whose niches have been authored for
+/// darkness and near-saturation since that campaign and scored against
+/// sunlit surface vertices until it landed); four more `Subterranean`
+/// peoples from the Underworld Peoples campaign
+/// (`mountain-dwarf`/`duergar`/`kuo-toa`/`svirfneblin`); six `Marine`
+/// peoples from The Tidemark; and two explicit `Surface` rows (see above).
 ///
 /// Sparse rather than a `BiosphereTraits` field because this has a single
 /// consumer (`per_species_suitability`) which holds a slice, not a row —
@@ -2878,10 +3200,61 @@ pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
         // the surface, and the gate does that measurably. Drow's `elevation`
         // response is wood-elf's byte for byte, for exactly that reason.
         (KindId("drow"), HabitatRealm::Subterranean),
+        // THE UNDERWORLD PEOPLES: four more subterranean peoples on the drow's
+        // shape, landed on main while The Tidemark ran.
         (KindId("mountain-dwarf"), HabitatRealm::Subterranean),
         (KindId("duergar"), HabitatRealm::Subterranean),
+        // kuo-toa is `Subterranean` AND NOT `Marine`, and that is deliberate.
+        // It is the same shape as `sea-elf` below — residence in one realm,
+        // reach into another — read the other way round: it lives in the
+        // Underdark and carries `SWIM` (`locomotion_registry`) for the
+        // sunless water it hunts. The ambiguity only exists because The
+        // Tidemark adds the `Marine` variant, so resolving it is The
+        // Tidemark's job: `MAP-11` — the idea-registry parent of this
+        // campaign's own `WAT-sea-peoples` — names "sahuagin, merfolk,
+        // kuo-toa" as its aquatic-people examples, so a reader meeting
+        // `Marine` for the first time would reasonably "correct" this row.
+        // Do not. The availability mask is `{0.0, 1.0}` with no middle
+        // value, so that correction would strip a settled people of its
+        // Underdark home outright rather than softening it. `SWIM` is REACH,
+        // never residence (spec §3.8).
         (KindId("kuo-toa"), HabitatRealm::Subterranean),
         (KindId("svirfneblin"), HabitatRealm::Subterranean),
+        // THE TIDEMARK, Task 1: the registry is sparse and absence already
+        // means `Surface`, so these two rows are not needed for correctness
+        // — they are needed because a reader meeting `HabitatRealm::Marine`
+        // for the first time will reasonably assume a sea elf belongs to it
+        // (spec §3.6). Both are explicit and tested rather than left to the
+        // default, in the shape `environment_niche_registry` already uses
+        // for its own absence: "absence is load-bearing, and it is the
+        // campaign's positive control".
+        //
+        // sea-elf: settled and marine-dominant on its resource axis, and
+        // still `Surface` — its own shipped row (`sleep_grade_registry`,
+        // above) already states why: "a settled coastal people does not
+        // live entirely in the water", so it sleeps ashore, on what it
+        // built. Not `ALREADY_BUOYED`. Its terrestrial residue is the shore
+        // it builds on; §3.8 handles reach into the water separately from
+        // this residence question.
+        (KindId("sea-elf"), HabitatRealm::Surface),
+        // giant-crocodile: the roster's stated amphibious case — land-
+        // dominant at 0.6 `ANIMAL_PREY` (see `sleep_grade_registry`'s own
+        // comment on this row: "graded by its mass, not as a marine kind").
+        // A tonne of ectotherm that comes ashore is not a water-column kind.
+        (KindId("giant-crocodile"), HabitatRealm::Surface),
+        // THE TIDEMARK, Task 3: the six OBLIGATE marine peoples — the rows
+        // the variant was added for. Note what separates them from the two
+        // rows above, because it is the campaign's whole §3.6 argument: sea
+        // elf and giant crocodile REACH the water and come out of it, and
+        // the availability mask is `{0.0, 1.0}` with no middle value for a
+        // life lived across two media. These six cannot come ashore. That is
+        // something the model can say, and depth is not.
+        (KindId("abyssal-elf"), HabitatRealm::Marine),
+        (KindId("kelp-tender"), HabitatRealm::Marine),
+        (KindId("merfolk"), HabitatRealm::Marine),
+        (KindId("reef-mason"), HabitatRealm::Marine),
+        (KindId("triton"), HabitatRealm::Marine),
+        (KindId("vent-commensal"), HabitatRealm::Marine),
     ]
     .into_iter()
     .collect()
@@ -2943,7 +3316,22 @@ pub fn locomotion_registry() -> ComponentStore<KindId, Locomotion> {
         (KindId("giant-squid"), SWIM),
         (KindId("giant-crocodile"), SWIM),
         (KindId("sea-elf"), SWIM),
+        // kuo-toa: `SWIM` with a `Subterranean` realm row — the third kind
+        // whose reach and residence disagree, and the one that reads most
+        // like a `Marine` kind from here. See `habitat_realm_registry`'s
+        // comment on its row for why it is not one.
         (KindId("kuo-toa"), SWIM),
+        // THE TIDEMARK, Task 3: the six obligate marine peoples. `SWIM` is
+        // REACH, never residence (spec §3.8) — it says a body crosses deep
+        // water, which is as true of a sea elf diving as of a triton at
+        // home. What makes these six different is `habitat_realm_registry`
+        // above, and the two stores must not be read as one claim.
+        (KindId("abyssal-elf"), SWIM),
+        (KindId("kelp-tender"), SWIM),
+        (KindId("merfolk"), SWIM),
+        (KindId("reef-mason"), SWIM),
+        (KindId("triton"), SWIM),
+        (KindId("vent-commensal"), SWIM),
         (KindId("black-dragon"), FLY),
         (KindId("red-dragon"), FLY),
         (KindId("white-dragon"), FLY),
@@ -3611,6 +3999,178 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // all three read one authored source; editing it moves three kinds,
         // which is the intended coupling.
         (KindId("wood-elf"), wood),
+        // ---------------------------------------------------------------
+        // THE TIDEMARK (Task 3): the six obligate marine peoples.
+        //
+        // **THIS STORE IS WHY THE SIX ARE DISTINGUISHABLE AT ALL, and the
+        // reason is a measurement rather than a preference.** Spec §3.4's
+        // arriving-axis table says `temperature_c` reaches the placement
+        // path, and it does — but `tolerance_liebig`'s elevation fast path
+        // returns before temperature is ever evaluated whenever the kind's
+        // elevation reading sits at or below its sovereignty floor, and
+        // every people this roster ships is authored PREPARED
+        // (`devotion_elev` 0.30 against floors of 0.42-0.45). So for a
+        // people, temperature, moisture and insolation are computed and
+        // discarded on every vertex, and the only per-vertex environmental
+        // channel a people actually has is this one: a graded factor,
+        // resolved by biome NAME, multiplied outside the Liebig minimum.
+        //
+        // The sea has ten of those names (`hornvale_climate::Biome::name`),
+        // and they are the vocabulary these six differ in. Each row is the
+        // same three-rung ladder The Range built and The Radiation widened
+        // — stronghold / near / marginal, mapped through the kind's own
+        // sovereignty floor — and every unlisted class sits at that floor,
+        // which is the default and is NOT zero.
+        (
+            KindId("abyssal-elf"),
+            BiomeAffinity::from_preferences(
+                floor_of("abyssal-elf"),
+                vec![
+                    // Stronghold — this kind's own authored elevation
+                    // optimum is the band-entry depth of `Stratum::Abyssal`
+                    // (4,000 m), so the abyssal plain is its reading
+                    // classified, exactly as gnoll's desert is.
+                    ("abyssal", AFFINITY_STRONGHOLD),
+                    // Near: the two bands its 1,200 m sigma reaches — the
+                    // bathypelagic entry above (-2.5 sigma) and the hadal
+                    // one below (-1.7 sigma). Same dark, same cold, one
+                    // step of pressure either way.
+                    ("bathypelagic", AFFINITY_NEAR),
+                    ("hadal-trench", AFFINITY_NEAR),
+                    // Marginal: the twilight band. The shallowest water
+                    // this kind's curve reaches at all, and the last one
+                    // with any light in it.
+                    ("mesopelagic", AFFINITY_MARGINAL),
+                    // THE FOUR SHELF CLASSES AND `sea-ice` ARE UNLISTED AND
+                    // THEREFORE AT THE DEFAULT — the mirror image of
+                    // `sea-elf`'s row, which lifts exactly those four and
+                    // leaves these five at its own floor. The two rows
+                    // between them partition the ocean, which is what keeps
+                    // the family's marine pair from competing for one band,
+                    // and it is the M7 remedy applied BEFORE the
+                    // measurement rather than after it: the deep classes
+                    // are the LARGE ones, so a deep kind authored to the
+                    // whole ocean would take the map the way an unconfined
+                    // sea-elf would have (~27,000 vertices against wood's
+                    // ~800).
+                ],
+            ),
+        ),
+        (
+            KindId("kelp-tender"),
+            BiomeAffinity::from_preferences(
+                floor_of("kelp-tender"),
+                vec![
+                    // Stronghold — the stand this people tends. `classify_
+                    // marine` puts `KelpForest` on the shelf below 12 °C,
+                    // which is this kind's own authored reading (10 °C,
+                    // -25 m) classified.
+                    ("kelp-forest", AFFINITY_STRONGHOLD),
+                    // Near: the two other productive shelf communities.
+                    // Upwelling is the same cool nutrient-rich water with
+                    // no canopy standing in it yet; open shelf water is the
+                    // right depth and the right light.
+                    ("upwelling", AFFINITY_NEAR),
+                    ("epipelagic", AFFINITY_NEAR),
+                    // Marginal: the warm shelf. Right depth, wrong thermal
+                    // band — the ladder's "right climate in the wrong form"
+                    // clause read on temperature, and the reef mason's
+                    // stronghold.
+                    ("coral-reef", AFFINITY_MARGINAL),
+                ],
+            ),
+        ),
+        (
+            KindId("merfolk"),
+            BiomeAffinity::from_preferences(
+                floor_of("merfolk"),
+                vec![
+                    // Stronghold — where the fish are. `Upwelling` is the
+                    // high-productivity class climate documents and the
+                    // one `marine_forage_supply_field` grades highest
+                    // (1.0); a people that follows shoals follows this.
+                    ("upwelling", AFFINITY_STRONGHOLD),
+                    // Near: the rest of the sunlit surface. This kind's
+                    // claim is the epipelagic band as such, not any
+                    // community in it.
+                    ("epipelagic", AFFINITY_NEAR),
+                    ("coral-reef", AFFINITY_NEAR),
+                    ("kelp-forest", AFFINITY_NEAR),
+                    // Marginal: the twilight band. A shoal that sinks by
+                    // day is followed only so far.
+                    ("mesopelagic", AFFINITY_MARGINAL),
+                ],
+            ),
+        ),
+        (
+            KindId("reef-mason"),
+            BiomeAffinity::from_preferences(
+                floor_of("reef-mason"),
+                vec![
+                    // Stronghold — the structure this people builds and
+                    // lives inside. `classify_marine` puts `CoralReef` on
+                    // the shelf above 20 °C, which is this kind's own
+                    // authored reading (26 °C, -40 m) classified.
+                    ("coral-reef", AFFINITY_STRONGHOLD),
+                    // Near: the warm shelf with no reef on it yet — right
+                    // water, nothing built.
+                    ("epipelagic", AFFINITY_NEAR),
+                    // Marginal: the two cool shelf classes. Right depth,
+                    // wrong thermal band; carbonate does not set in cold
+                    // water the way it does in warm.
+                    ("upwelling", AFFINITY_MARGINAL),
+                    ("kelp-forest", AFFINITY_MARGINAL),
+                ],
+            ),
+        ),
+        (
+            KindId("triton"),
+            BiomeAffinity::from_preferences(
+                floor_of("triton"),
+                vec![
+                    // Stronghold — open shelf and slope water, which is what
+                    // "a people of the column" means once it has to be said
+                    // in biome names. `Epipelagic` is the sea's own default
+                    // community, and this kind is the slate's baseline.
+                    ("epipelagic", AFFINITY_STRONGHOLD),
+                    // Near: one step down the column, and the productive
+                    // water at the same depth. This kind's elevation sigma
+                    // (1,000 m) genuinely reaches the mesopelagic entry.
+                    ("mesopelagic", AFFINITY_NEAR),
+                    ("upwelling", AFFINITY_NEAR),
+                    // Marginal: the two standing shelf communities. A
+                    // triton passes through a reef and a kelp stand; the
+                    // peoples that hold them are the two below.
+                    ("coral-reef", AFFINITY_MARGINAL),
+                    ("kelp-forest", AFFINITY_MARGINAL),
+                ],
+            ),
+        ),
+        (
+            KindId("vent-commensal"),
+            BiomeAffinity::from_preferences(
+                floor_of("vent-commensal"),
+                vec![
+                    // Stronghold — and the roster's FIRST `hydrothermal-vent`
+                    // row. Climate derives that class straight from
+                    // `SeafloorFeature::Ridge`, so this is a ridge affinity
+                    // stated in the one vocabulary placement reads. It is
+                    // the coarser of the two vent representations M1
+                    // measured (the finer one, `WaterVent`, carries the
+                    // succession phase and reaches this kind through
+                    // `CHEMOSYNTHATE` instead) — they are separate
+                    // phenomena and this kind weights both, which is the
+                    // honest reading of a people that lives on vents.
+                    ("hydrothermal-vent", AFFINITY_STRONGHOLD),
+                    // Near: the deep seabed a ridge sits in.
+                    ("abyssal", AFFINITY_NEAR),
+                    ("bathypelagic", AFFINITY_NEAR),
+                    // Marginal: the deepest floor of all. Vents occur
+                    // there; a people is thinner on the ground for it.
+                    ("hadal-trench", AFFINITY_MARGINAL),
+                ],
+            ),
+        ),
     ]
     .into_iter()
     .collect()
@@ -4570,6 +5130,195 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 schedule: LifeSchedule::paced(5.0).unwrap(),
             },
         ),
+        // ---------------------------------------------------------------
+        // THE TIDEMARK (Task 3): the six obligate marine peoples.
+        //
+        // **READ THIS BEFORE AUTHORING A SEVENTH.** At an ocean vertex the
+        // only supply axes that pay anything are `MARINE_FORAGE` (graded off
+        // the vertex's marine biome class by `marine_forage_supply_field`:
+        // Upwelling 1.0, reef/kelp 0.85, epipelagic 0.45, mesopelagic 0.15,
+        // bathypelagic 0.05, abyssal/hadal/vent 0.02) and `CHEMOSYNTHATE`
+        // (on the `Marine` arm, `MarineHabitat::chemosynthate` — the
+        // vertex's `has_edifice` flag, plus a live vent's chemistry at the
+        // seabed band). `PLANT_FORAGE`, `ANIMAL_PREY`, `MINERAL` and
+        // `DETRITUS` are all land-masked at their own supply fields, and
+        // `axis_supply_with` is a **sum**: a weight on a land axis is not a
+        // diversification for a marine kind, it is a discount. So these rows
+        // spend their weight where the sea actually pays, and four of the
+        // six sit at `MARINE_FORAGE 1.0` — which is the sea's own poverty
+        // ("the sea's single trophic axis", `hornvale_kernel::MARINE_FORAGE`)
+        // showing through, not six rows that forgot to differ. Task 4's
+        // fauna is what widens it.
+        (
+            KindId("abyssal-elf"),
+            BiosphereTraits {
+                mass: Mass::new(54.0).unwrap(),
+                // THE FAMILY'S ONLY ECTOTHERM, and the slate's own
+                // discriminating assignment for this kind (spec §3.4). A
+                // body that never leaves 4 °C water does not pay to hold
+                // 37 °C in it.
+                thermal_strategy: ThermalStrategy::Ectothermic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
+                niche: ResourceVector::new(&[(MARINE_FORAGE, 1.00)]).unwrap(),
+                condition_niche: abyssal_elf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                // THE ELF FAMILY'S FACTOR, not a slow-living authorial
+                // choice: `coverage.rs::only_the_dwarf_and_elf_families_
+                // depart_from_pure_allometry` states the rule its list
+                // exists to hold — "long life is a family trait, not a
+                // habitat one" — and every elf carries 5.0. A paced
+                // non-elf among the other five would make a third family
+                // and contradict it, which is why the other five below are
+                // `Allometric`.
+                schedule: LifeSchedule::paced(5.0).unwrap(),
+            },
+        ),
+        (
+            KindId("kelp-tender"),
+            BiosphereTraits {
+                mass: Mass::new(51.0).unwrap(),
+                // The roster's fourth `Unmodelled` carrier and its first
+                // that is a PEOPLE: a phototroph's basal rate is
+                // surface-limited, so Kleiber's exponent does not apply and
+                // the axis declines to answer (see `ThermalStrategy::
+                // Unmodelled`). `treant`/`shrieker`/`twig-blight` are the
+                // precedent spec §3.4 names.
+                thermal_strategy: ThermalStrategy::Unmodelled,
+                energy_source: EnergySource::Phototrophic,
+                electron_donor: ElectronDonor::Lithotrophic,
+                carbon_source: CarbonSource::Autotrophic,
+                // THE PHOTOTROPHY, CARRIED ON THE SUPPLY AXIS — AND THE
+                // WEIGHT IS INERT TODAY, MEASURED RATHER THAN ASSUMED.
+                // `PHOTOSYNTHATE` is fed by `base_carrying`, the terrestrial
+                // NPP field, which is exactly `0.0` at every submerged
+                // vertex. Ablating this weight (replacing the niche with a
+                // pure `MARINE_FORAGE 0.60`, the same marine weight, so only
+                // the photosynthate term changes) moves capacity at **0 of
+                // 29,679** scoring vertices at seed 42, largest absolute
+                // move 0 —
+                // `windows/worldgen/tests/suite/marine_peoples_placement.rs::
+                // w5_the_kelp_tenders_photosynthate_weight_is_measured_not_assumed`
+                // is the standing measurement.
+                //
+                // **KEPT, and the reason is not optimism.** The weight is
+                // the honest statement of what this kind eats, on the axis
+                // the kernel reserves for exactly that, and what is missing
+                // is a marine PHOTOSYNTHATE supply — the sea has no
+                // primary-production field of its own, only
+                // `marine_forage_supply_field`, which is a photosynthesis
+                // supply already folded into a forage grade. Removing the
+                // weight would make the roster agree with the field by
+                // deleting the requirement, which is the wrong direction;
+                // the probe above is what keeps the gap visible, and it
+                // reports both poles rather than asserting either.
+                //
+                // The phototrophy itself is NOT inert: `TrophicMode` reaches
+                // production through `hornvale_worldgen::prey_pressure_from`,
+                // which excludes a phototroph from the prey base. So this
+                // kind is already something no other marine people is —
+                // it just cannot yet eat the sun for a living.
+                //
+                // The `MARINE_FORAGE` half is what a kelp tender eats that
+                // is not sunlight: the grazers and filterers its canopy
+                // feeds.
+                niche: ResourceVector::new(&[(PHOTOSYNTHATE, 0.40), (MARINE_FORAGE, 0.60)])
+                    .unwrap(),
+                condition_niche: kelp_tender_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
+            },
+        ),
+        (
+            KindId("merfolk"),
+            BiosphereTraits {
+                mass: Mass::new(64.0).unwrap(),
+                thermal_strategy: ThermalStrategy::Endothermic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
+                // the purest forager of the six: a people that follows the
+                // shoals eats the shoals.
+                niche: ResourceVector::new(&[(MARINE_FORAGE, 1.00)]).unwrap(),
+                condition_niche: merfolk_condition_niche(),
+                potency: 0.0,
+                // THE ROSTER'S FIRST MINDED `Gregarious` KIND (decision
+                // 0068's whole reason for existing, shipped with zero
+                // instances until now). A nomadic band is social without
+                // being sedentary; this kind forms no fixed place, so it
+                // never enters settlement genesis at all — placement filters
+                // on `Settled`, which is what M2's two-sided prediction
+                // measures.
+                social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
+            },
+        ),
+        (
+            KindId("reef-mason"),
+            BiosphereTraits {
+                // the heaviest of the six: a body that quarries and sets
+                // rock is a large body.
+                mass: Mass::new(96.0).unwrap(),
+                thermal_strategy: ThermalStrategy::Ectothermic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
+                niche: ResourceVector::new(&[(MARINE_FORAGE, 1.00)]).unwrap(),
+                condition_niche: reef_mason_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
+            },
+        ),
+        (
+            KindId("triton"),
+            BiosphereTraits {
+                mass: Mass::new(82.0).unwrap(),
+                thermal_strategy: ThermalStrategy::Endothermic,
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Organotrophic,
+                carbon_source: CarbonSource::Heterotrophic,
+                niche: ResourceVector::new(&[(MARINE_FORAGE, 1.00)]).unwrap(),
+                condition_niche: triton_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
+            },
+        ),
+        (
+            KindId("vent-commensal"),
+            BiosphereTraits {
+                mass: Mass::new(47.0).unwrap(),
+                thermal_strategy: ThermalStrategy::Ectothermic,
+                // THE ROSTER'S SECOND CHEMOTROPH, and its first that is a
+                // PEOPLE. `xorn` witnessed the variant from the rock;
+                // this kind witnesses it from the sea, which is the marine
+                // half of the Underworld Larder's rung 4 (spec §7). The
+                // underworld half stays open and belongs to THE TENANT.
+                energy_source: EnergySource::Chemotrophic,
+                electron_donor: ElectronDonor::Lithotrophic,
+                carbon_source: CarbonSource::Autotrophic,
+                // The weight is the campaign's headline dependency: on the
+                // `Marine` arm `CHEMOSYNTHATE` is fed by
+                // `MarineHabitat::chemosynthate`, which is the vertex's
+                // ambient edifice flag PLUS a live vent's chemistry folded
+                // in at the seabed band by `WaterWorld::at`. That second
+                // term is a function of vent PHASE, which is what makes
+                // this the one kind in the roster whose habitat can expire
+                // (spec §4). The `MARINE_FORAGE` quarter is the ordinary
+                // sea around the vent — a commensal is not sealed inside
+                // the plume.
+                niche: ResourceVector::new(&[(CHEMOSYNTHATE, 0.75), (MARINE_FORAGE, 0.25)])
+                    .unwrap(),
+                condition_niche: vent_commensal_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
+            },
+        ),
     ]
     .into_iter()
     .collect();
@@ -4669,6 +5418,17 @@ pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
         (KindId("sea-elf"), RATE),
         (KindId("snow-elf"), RATE),
         (KindId("wood-elf"), RATE),
+        // THE TIDEMARK, Task 3: the six marine peoples. `RATE` like every
+        // other metabolising kind — sleep debt accrues per LOCAL day awake,
+        // and nothing about living in water changes how long a body can be
+        // awake. What water changes is what a rest REPAYS, which is the
+        // sleep-grade table's question, not this one's.
+        (KindId("abyssal-elf"), RATE),
+        (KindId("kelp-tender"), RATE),
+        (KindId("merfolk"), RATE),
+        (KindId("reef-mason"), RATE),
+        (KindId("triton"), RATE),
+        (KindId("vent-commensal"), RATE),
     ]
     .into_iter()
     .collect();
@@ -4873,6 +5633,19 @@ pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
         (KindId("giant-octopus"), ALREADY_BUOYED),
         (KindId("giant-squid"), ALREADY_BUOYED),
         (KindId("killer-whale"), ALREADY_BUOYED),
+        // THE TIDEMARK, Task 3: the six obligate marine peoples take
+        // `ALREADY_BUOYED` for the reason this rung exists and NOT because
+        // they are marine kinds by classification — sea-elf is marine-
+        // dominant too and sits at `MADE_FOR_THE_BODY`, because it sleeps
+        // ashore on what it built. These six cannot. A body that never
+        // leaves the water is never carrying its own weight, so a built
+        // place has nothing left to relieve.
+        (KindId("abyssal-elf"), ALREADY_BUOYED),
+        (KindId("kelp-tender"), ALREADY_BUOYED),
+        (KindId("merfolk"), ALREADY_BUOYED),
+        (KindId("reef-mason"), ALREADY_BUOYED),
+        (KindId("triton"), ALREADY_BUOYED),
+        (KindId("vent-commensal"), ALREADY_BUOYED),
         // --- the floor: nothing to restore, or nothing to lie down --------
         (KindId("xorn"), NO_GAIN),
         (KindId("treant"), NO_GAIN),
@@ -4925,6 +5698,21 @@ pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
 /// peaks just short of bare rock. The reversal is between those two optima;
 /// the widths say how sharply each kind feels it, and the devotions how much
 /// of the kind's rest the substrate can account for at all.
+///
+/// A **marine** kind (The Tidemark, Task 1) follows the subterranean
+/// rationale one step further rather than starting a third story: its peak
+/// and its band are the specialist's, for the same reason a cave kind's are
+/// — a water-column kind that touches a seabed at all meets one substrate,
+/// not the whole scale a surface generalist does. What moves is devotion
+/// alone. `Subterranean`'s own doc says the habitat is the void and not the
+/// floor, which is already why its devotion (0.8) falls short of a surface
+/// kind's whole (1.0); a marine kind's habitat is the water column, and the
+/// seabed beneath it is less accountable for its rest still than a cave
+/// floor is for a cave kind's — the body is already held by the medium
+/// itself, the way no surface or subterranean body is. So devotion falls
+/// again, by the same increment: `SURFACE_DEVOTION` to
+/// `SUBTERRANEAN_DEVOTION` is `-0.2`, and `SUBTERRANEAN_DEVOTION` to
+/// `MARINE_DEVOTION` is `-0.2` again, landing at `0.6`.
 pub fn substrate_response(realm: HabitatRealm) -> ConditionResponse {
     /// The hardness a kind that lives above ground rests best on: the
     /// yielding end of the scale, on the endpoint rather than inside the
@@ -4953,6 +5741,26 @@ pub fn substrate_response(realm: HabitatRealm) -> ConditionResponse {
     /// most, but never all.
     /// plumb: per-species(a kind's own habitat realm sets how much of its rest the substrate accounts for -- HabitatRealm::Subterranean's own doc says the habitat is the void and not the floor, so the surface underneath can never account for the whole of a cave kind's rest the way open ground accounts for a surface kind's)
     const SUBTERRANEAN_DEVOTION: f64 = 0.8;
+    /// The hardness a kind that lives in the water column rests best on:
+    /// the same just-short-of-hard-end peak a subterranean kind's is, and
+    /// for the same reason. A marine kind that touches a seabed at all
+    /// meets one substrate — sediment over rock, not bare stone, just as
+    /// a cave floor is — so its optimum is the specialist's, unchanged
+    /// from `SUBTERRANEAN_OPTIMUM` rather than a third value invented for
+    /// its own sake.
+    /// plumb: per-species(a kind's own habitat realm sets which substrate it rests best on -- a marine kind's seabed, when it touches one at all, is sediment over rock rather than bare stone, the same physical shape a cave floor has, so its peak sits at the same just-short-of-hard-end point a subterranean kind's does)
+    const MARINE_OPTIMUM: f64 = SUBTERRANEAN_OPTIMUM;
+    /// How wide a band of substrates a marine kind can still rest on: the
+    /// same narrow specialist band a subterranean kind's is — its world is
+    /// one substrate, exactly as a cave kind's is, so nothing about being
+    /// wet instead of underground widens the band.
+    /// plumb: per-species(a kind's own habitat realm sets how wide a band of substrates it can rest on -- a marine kind meets one seabed the way a subterranean kind meets one cave floor, so it is a specialist by the same argument and its band is the same width)
+    const MARINE_WIDTH: f64 = SUBTERRANEAN_WIDTH;
+    /// How much of a marine kind's rest the substrate accounts for: less
+    /// than a subterranean kind's, and by the same step that separated
+    /// subterranean devotion from surface devotion in the first place.
+    /// plumb: per-species(a kind's own habitat realm sets how much of its rest the substrate accounts for -- HabitatRealm::Subterranean's own doc argues the habitat is the void and not the floor, and a marine kind's habitat is the water column rather than the seabed beneath it, held up by the medium itself in a way no surface or subterranean body is, so the seabed is less accountable for its rest still and devotion falls again by the same 0.2 step that separated subterranean from surface)
+    const MARINE_DEVOTION: f64 = 0.6;
     match realm {
         HabitatRealm::Surface => ConditionResponse {
             optimum: SURFACE_OPTIMUM,
@@ -4963,6 +5771,11 @@ pub fn substrate_response(realm: HabitatRealm) -> ConditionResponse {
             optimum: SUBTERRANEAN_OPTIMUM,
             width: SUBTERRANEAN_WIDTH,
             devotion: SUBTERRANEAN_DEVOTION,
+        },
+        HabitatRealm::Marine => ConditionResponse {
+            optimum: MARINE_OPTIMUM,
+            width: MARINE_WIDTH,
+            devotion: MARINE_DEVOTION,
         },
     }
 }
@@ -5195,6 +6008,82 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 time_horizon: 0.9,
             },
         ),
+        // THE TIDEMARK, Task 3: the six marine peoples.
+        (
+            KindId("abyssal-elf"),
+            MindVector {
+                // the family's most standing reading after high-elf's: there
+                // is nowhere to withdraw TO on an abyssal plain, so a threat
+                // met is a threat answered.
+                threat_response: 0.7,
+                // the family's slowest. Nothing is urgent at 4,000 m; the
+                // food falls when it falls.
+                deliberation_latency: 0.9,
+                time_horizon: 0.95,
+            },
+        ),
+        (
+            KindId("kelp-tender"),
+            MindVector {
+                // a people that tends rather than hunts, and withdraws into
+                // the canopy rather than meeting anything.
+                threat_response: 0.2,
+                deliberation_latency: 0.75,
+                // a canopy is a decade's work: this kind plans in the
+                // lifetimes of the stands it keeps.
+                time_horizon: 0.9,
+            },
+        ),
+        (
+            KindId("merfolk"),
+            MindVector {
+                // the lowest of the six: a band that follows a shoal leaves
+                // rather than holds, because it has nothing to hold.
+                threat_response: 0.25,
+                // the fastest of the six, for snow-elf's reason arrived at
+                // from the opposite climate — a shoal does not wait.
+                deliberation_latency: 0.4,
+                // the shortest of the six, and the one place `Gregarious`
+                // shows in the mind: a people with no fixed place has
+                // nothing that outlasts the season it is in.
+                time_horizon: 0.45,
+            },
+        ),
+        (
+            KindId("reef-mason"),
+            MindVector {
+                threat_response: 0.55,
+                deliberation_latency: 0.8,
+                // the longest of the six. A reef is built by a thousand
+                // years of small additions, and this kind's standing rests
+                // on knowing which addition comes next.
+                time_horizon: 0.97,
+            },
+        ),
+        (
+            KindId("triton"),
+            MindVector {
+                // the highest of the six: a hierarchic martial people meets
+                // what it meets.
+                threat_response: 0.8,
+                deliberation_latency: 0.5,
+                time_horizon: 0.7,
+            },
+        ),
+        (
+            KindId("vent-commensal"),
+            MindVector {
+                threat_response: 0.4,
+                deliberation_latency: 0.6,
+                // SHORT, AND IT IS THE CAMPAIGN'S CLAIM IN ONE NUMBER: a
+                // people whose ground can cool and clog inside a lifetime
+                // (spec §4) does not plan past the vent it is sitting on.
+                // The shortest of the six after merfolk's, and arrived at
+                // from the opposite direction — merfolk has no place,
+                // this one has a place with an end.
+                time_horizon: 0.5,
+            },
+        ),
     ]
     .into_iter()
     .collect();
@@ -5394,6 +6283,72 @@ pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
                 mind: 0.18,
                 society: 0.16,
                 perception: 0.13,
+            },
+        ),
+        // THE TIDEMARK, Task 3: the six marine peoples. Every minded kind
+        // carries a row (`coverage.rs::every_kind_with_a_mind_carries_a_
+        // dispersion`), merfolk included — dispersion is a property of being
+        // a distribution, not of settling.
+        (
+            KindId("abyssal-elf"),
+            Dispersion {
+                // the family's narrowest after high-elf's: an isolated deep
+                // hold reproduces itself closely.
+                mind: 0.11,
+                society: 0.09,
+                perception: 0.10,
+            },
+        ),
+        (
+            KindId("kelp-tender"),
+            Dispersion {
+                mind: 0.16,
+                society: 0.14,
+                perception: 0.12,
+            },
+        ),
+        (
+            KindId("merfolk"),
+            Dispersion {
+                // THE WIDEST IN THE ROSTER on all three axes, and it is the
+                // `Gregarious` reading rather than a free choice: a people
+                // with no fixed place has no institution to narrow it, so
+                // the band that went north and the band that went south are
+                // two draws from one distribution and nothing reconciles
+                // them.
+                mind: 0.26,
+                society: 0.24,
+                perception: 0.22,
+            },
+        ),
+        (
+            KindId("reef-mason"),
+            Dispersion {
+                // NARROW, and the narrowness is this kind's identity: spec
+                // §3.4 names "narrow `Dispersion`, high site fidelity" as
+                // the axis that makes a reef mason not another shelf
+                // people. A kind that spends a thousand years on one
+                // structure does not vary much between the people who
+                // spend it.
+                mind: 0.08,
+                society: 0.06,
+                perception: 0.07,
+            },
+        ),
+        (
+            KindId("triton"),
+            Dispersion {
+                mind: 0.13,
+                society: 0.10,
+                perception: 0.12,
+            },
+        ),
+        (
+            KindId("vent-commensal"),
+            Dispersion {
+                mind: 0.19,
+                society: 0.17,
+                perception: 0.15,
             },
         ),
     ]
@@ -5613,6 +6568,96 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
                 sociality: Sociality::Communal,
                 status_basis: StatusBasis::Generosity,
                 in_group_radius: 0.65,
+            },
+        ),
+        // THE TIDEMARK, Task 3: the six marine peoples. Merfolk is here
+        // BECAUSE OF decision 0068 and not in spite of it — the gate is
+        // `minded ∧ social`, and `Gregarious` is social ("a nomadic band is
+        // social without being sedentary"). This row is the first time that
+        // clause has had an occupant.
+        (
+            KindId("abyssal-elf"),
+            SocietyVector {
+                // drow's reading, arrived at from the sea: a hold that
+                // cannot be left rations what it has, and a society that
+                // must ration runs on ranked authority.
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+                // the narrowest of the six: the next hold is a different
+                // country however near it is in metres, and between them is
+                // four kilometres of black water.
+                in_group_radius: 0.3,
+            },
+        ),
+        (
+            KindId("kelp-tender"),
+            SocietyVector {
+                sociality: Sociality::Communal,
+                // a stand is tended for longer than a person lives, so
+                // standing goes to whoever leaves more canopy than they
+                // took.
+                status_basis: StatusBasis::Generosity,
+                in_group_radius: 0.6,
+            },
+        ),
+        (
+            KindId("merfolk"),
+            SocietyVector {
+                sociality: Sociality::Communal,
+                // where the fish are this season is the only thing worth
+                // knowing and the only thing worth having, and it cannot be
+                // held — so standing rests on knowing it.
+                status_basis: StatusBasis::Knowledge,
+                // THE WIDEST IN THE ROSTER: a band that meets another band
+                // at the same shoal has no reason to draw a line between
+                // them, because neither holds anything the other could
+                // take.
+                in_group_radius: 0.8,
+            },
+        ),
+        (
+            KindId("reef-mason"),
+            SocietyVector {
+                // ranked, and the rank is the craft's: who sets the next
+                // course is not a matter of consensus on a structure that
+                // falls down if it is set wrong.
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Knowledge,
+                // NARROW, and constrained as well as argued: the reef this
+                // people builds is the "us", and a neighbouring reef is a
+                // different work. The value is also inside
+                // `windows/vessel::housemark`'s `[0.0, 0.35]` band — that
+                // store partitions this axis into three INCLUSIVE bands with
+                // deliberate gaps (0.36-0.49 and 0.61-0.64 refuse), so an
+                // authored radius is a two-sided choice and a value in a gap
+                // panics the housemark roster rather than degrading quietly.
+                in_group_radius: 0.35,
+            },
+        ),
+        (
+            KindId("triton"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+                // wider than the abyssal elf's or the reef mason's: a martial
+                // hierarchy of the open column draws its "us" around
+                // everything it can reach, which in open water is a long way.
+                // In `housemark`'s middle band — see the reef mason's row.
+                in_group_radius: 0.5,
+            },
+        ),
+        (
+            KindId("vent-commensal"),
+            SocietyVector {
+                sociality: Sociality::Communal,
+                // the windfall reading gnoll, gully-dwarf, hill-dwarf and
+                // three elves already carry, reached from a seventh
+                // unrelated ecology: a vent is a windfall with an end date,
+                // and a people that knows its ground will fail shares what
+                // the ground gives while it gives it.
+                status_basis: StatusBasis::Generosity,
+                // in `housemark`'s middle band — see the reef mason's row.
+                in_group_radius: 0.55,
             },
         ),
     ]
@@ -5881,6 +6926,105 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
                 sky_attention: 0.25,
             },
         ),
+        // THE TIDEMARK, Task 3: the six marine peoples, every one of them a
+        // speaking kind, so every one needs a row (`speech ⊆ perception ⊆
+        // mind`).
+        //
+        // `sky_attention` is the axis this cohort tests hardest, and the
+        // honest reading is that it falls with depth: there is no sky under
+        // 200 m of water, and below 1,000 m there is not even a surface to
+        // infer one from. That is a claim about an eye, not about a theme.
+        //
+        // **EVERY `night_vision` BELOW IS A VALUE THE ROSTER ALREADY
+        // CARRIED, and that is a constraint rather than a coincidence.**
+        // `windows/worldgen`'s eye model reads this axis and nothing else,
+        // and it QUANTIZES: `beholding_probe::species_with_distinct_night_
+        // vision_see_distinctly` requires any two kinds with different
+        // values to render different swatches, and a first cut of this
+        // cohort authored `0.45` against goblin's `0.5` — two different
+        // numbers producing one identical eye, which reddened that guard.
+        // The lesson is the campaign's own M5 discipline arriving on a
+        // second axis: authoring a difference finer than the model can
+        // render is authoring a distinction the engine cannot see. So these
+        // six snap to values the registry already distinguishes, and a
+        // TIE is stated as a tie rather than disguised as a near-miss.
+        (
+            KindId("abyssal-elf"),
+            PerceptionVector {
+                // drow's reading again: there is no sun at 4,000 m to keep
+                // hours by.
+                activity: ActivityCycle::Nocturnal,
+                // DROW'S VALUE EXACTLY, and the tie is the honest reading:
+                // both are eyes that finished adapting to true darkness, and
+                // nothing in this model could justify ranking a cave against
+                // an abyss. See this registry's note on quantization above.
+                night_vision: 0.95,
+                // THE ROSTER'S FLOOR, below drow's 0.05: a cave at least has
+                // a mouth.
+                sky_attention: 0.02,
+            },
+        ),
+        (
+            KindId("kelp-tender"),
+            PerceptionVector {
+                // a phototroph's people keeps the sun's hours because the
+                // stand it tends does.
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.5,
+                // it watches the light, which is the surface: the highest
+                // of the six.
+                sky_attention: 0.55,
+            },
+        ),
+        (
+            KindId("merfolk"),
+            PerceptionVector {
+                // THE SLATE'S CREPUSCULAR SLOT, filled from the ecology
+                // rather than from the calendar: the forage fish this people
+                // follows rise at dusk and sink at dawn, so a band that eats
+                // them works the margins of the day. `ActivityCycle::
+                // Crepuscular` was authored as "an explicitly reserved empty
+                // slot"; this is its seventh witness and its first marine
+                // one.
+                activity: ActivityCycle::Crepuscular,
+                night_vision: 0.75,
+                sky_attention: 0.4,
+            },
+        ),
+        (
+            KindId("reef-mason"),
+            PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                // level with the kelp tender's and goblin's: a shallow,
+                // sunlit people has an ordinary eye. It was authored at
+                // 0.45 to sit just below its sibling and re-authored here —
+                // see this registry's note on quantization above.
+                night_vision: 0.5,
+                // the lowest of the three shallow kinds: this people reads
+                // the structure in front of it, not the water above it.
+                sky_attention: 0.2,
+            },
+        ),
+        (
+            KindId("triton"),
+            PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.6,
+                sky_attention: 0.35,
+            },
+        ),
+        (
+            KindId("vent-commensal"),
+            PerceptionVector {
+                // a vent field is lightless whatever the hour; the cycle is
+                // the vent's, and the vent has none.
+                activity: ActivityCycle::Nocturnal,
+                // kobold's value: dark, but not the finished dark of the
+                // abyssal elf or the drow — a vent field glows.
+                night_vision: 0.9,
+                sky_attention: 0.05,
+            },
+        ),
     ]
     .into_iter()
     .collect();
@@ -5965,8 +7109,28 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         (KindId("sea-elf"), "elf"),
         (KindId("snow-elf"), "elf"),
         (KindId("wood-elf"), "elf"),
+        // THE UNDERWORLD PEOPLES: two singleton families, landed on main
+        // while The Tidemark ran.
         (KindId("kuo-toa"), "kuo-toa"),
         (KindId("svirfneblin"), "svirfneblin"),
+        // THE TIDEMARK (Task 3): the elf family takes a SEVENTH member, and
+        // the other five marine peoples are singleton families on kobold's,
+        // gnoll's and human's shape. The programme's "last family" note
+        // above is about the C2 programme, not about the roster: a family
+        // grows whenever a campaign has a reason, and this one does —
+        // the abyssal elf is the drow move repeated at a second realm, so
+        // it is an ELF whose separation is a realm gate, not a new lineage
+        // that happens to live deep. `family_proto` already carries the
+        // `KindId("elf")` row, so no language-side row is added for it.
+        (KindId("abyssal-elf"), "elf"),
+        // The five singletons. `check_integrity` requires a `family_proto`
+        // entry only for a label held by >= 2 kinds, and none of these is,
+        // so none needs one.
+        (KindId("kelp-tender"), "kelp-tender"),
+        (KindId("merfolk"), "merfolk"),
+        (KindId("reef-mason"), "reef-mason"),
+        (KindId("triton"), "triton"),
+        (KindId("vent-commensal"), "vent-commensal"),
     ]
     .into_iter()
     .collect()
@@ -6056,8 +7220,26 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("sea-elf-kind", "a sea elf"),
     ("snow-elf-kind", "a snow elf"),
     ("wood-elf-kind", "a wood elf"),
+    // THE UNDERWORLD PEOPLES: landed on main while The Tidemark ran. Their
+    // cohort in `domains/language/src/accession.rs` sits at the EARLIER of
+    // the two appended indices, because that module orders by arrival and
+    // theirs arrived on main first.
     ("kuo-toa-kind", "a kuo-toa"),
     ("svirfneblin-kind", "a svirfneblin"),
+    // THE TIDEMARK (Task 3): the six obligate marine peoples. These six ids
+    // are what `domains/language/src/accession.rs`'s LAST cohort lists (its
+    // epoch index is that cohort's position in the array and is deliberately
+    // not restated here — see the comment there for why);
+    // `cli/tests/accession.rs` checks the two agree in BOTH directions, and
+    // commit `ee4e6a00` records that omitting the cohort also changes which
+    // proto-root each concept draws. Glosses are authored, not derived from
+    // the id.
+    ("abyssal-elf-kind", "an abyssal elf"),
+    ("kelp-tender-kind", "a kelp tender"),
+    ("merfolk-kind", "a merfolk"),
+    ("reef-mason-kind", "a reef mason"),
+    ("triton-kind", "a triton"),
+    ("vent-commensal-kind", "a vent commensal"),
 ];
 
 /// The `*-kind` concept naming `species`, or `None` when the species has no
@@ -6863,8 +8045,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            43,
-            "forty-three kinds compete for space, including the four Underworld peoples"
+            49,
+            "forty-nine kinds compete for space: thirty-nine before either of the two campaigns that landed together here, plus the four Underworld peoples (mountain-dwarf, duergar, kuo-toa, svirfneblin), plus The Tidemark's six marine peoples. The thirty-nine themselves: The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human, The Delvers added the three dwarves, The Radiation added the six elves"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -6880,11 +8062,21 @@ mod tests {
                 "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
             );
         }
-        assert_eq!(psy.len(), 22, "nineteen peoples + three minded dragons");
+        assert_eq!(
+            psy.len(),
+            28,
+            "twenty-five peoples + three minded dragons (fifteen peoples \
+             before the two campaigns that landed together here, plus the \
+             four Underworld peoples, plus The Tidemark's six — of which \
+             five settle and merfolk does not: peoplehood is a mind, not a \
+             settlement)"
+        );
         assert_eq!(
             per.len(),
-            22,
-            "perception is the nineteen peoples + the three dragons"
+            28,
+            "perception is the twenty-five peoples + the three dragons (The \
+             Vigil's key-set equality, widened by the Underworld peoples and \
+             by The Tidemark)"
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
@@ -6984,9 +8176,16 @@ mod tests {
         // elves land in six separate places, `high-elf` between `gully-dwarf`
         // and `hill-dwarf`, `wood-elf` between `white-dragon` and
         // `woolly-mammoth`.
+        //
+        // THE TIDEMARK adds the six marine peoples, and the scatter is worth
+        // seeing once: `abyssal-elf` sorts FIRST in the whole roster — ahead
+        // of `black-dragon` — while its five family members stay where they
+        // were, which is the clearest demonstration this file offers that a
+        // family label and a key order are unrelated things.
         assert_eq!(
             names,
             vec![
+                "abyssal-elf",
                 "black-dragon",
                 "bugbear",
                 "carrion-crawler",
@@ -7010,13 +8209,16 @@ mod tests {
                 "hill-dwarf",
                 "hobgoblin",
                 "human",
+                "kelp-tender",
                 "killer-whale",
                 "kobold",
                 "kuo-toa",
+                "merfolk",
                 "mountain-dwarf",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
+                "reef-mason",
                 "reef-shark",
                 "rhinoceros",
                 "rust-monster",
@@ -7025,7 +8227,9 @@ mod tests {
                 "snow-elf",
                 "svirfneblin",
                 "treant",
+                "triton",
                 "twig-blight",
+                "vent-commensal",
                 "white-dragon",
                 "wood-elf",
                 "woolly-mammoth",
@@ -7394,10 +8598,21 @@ mod tests {
 
     #[test]
     fn society_registry_holds_exactly_the_settled_peoples() {
+        // NAME CORRECTION, NOT A WIDENING OF SCOPE: the gate has read
+        // `minded ∧ social` since decision 0068, and `Settled` was only ever
+        // an extensional coincidence — "no minded Gregarious kind yet", as
+        // `components.rs::check_integrity` says at the same gate. THE
+        // TIDEMARK's `merfolk` ends that coincidence, so this list now holds
+        // twenty-five kinds against twenty-four `Settled` ones (the four
+        // Underworld peoples landed on main in the same window and all four
+        // settle; merfolk remains the single exception). The assertion is
+        // unchanged in kind; what it measures has simply stopped being
+        // expressible the narrower way.
         let society: Vec<_> = society_registry().ids().map(|k| k.0).collect();
         assert_eq!(
             society,
             vec![
+                "abyssal-elf",
                 "bugbear",
                 "desert-dwarf",
                 "desert-elf",
@@ -7410,12 +8625,17 @@ mod tests {
                 "hill-dwarf",
                 "hobgoblin",
                 "human",
+                "kelp-tender",
                 "kobold",
                 "kuo-toa",
+                "merfolk",
                 "mountain-dwarf",
+                "reef-mason",
                 "sea-elf",
                 "snow-elf",
                 "svirfneblin",
+                "triton",
+                "vent-commensal",
                 "wood-elf"
             ]
         );

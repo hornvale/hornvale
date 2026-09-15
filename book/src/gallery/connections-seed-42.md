@@ -47,5 +47,5 @@ travel divides this world into, the largest, and the rest.
 The reach of the map
 ---------------------
 
-Natural travel divides the known world into 31 real regions (below 2 vertices, a "region" is just an island vertex no sea-lane reaches -- not counted here). The largest spans 5531 vertices; the rest, smaller and cut off from it, run 1857, 1654, 914, 640, and 402 vertices -- plus 25 smaller still.
+Natural travel divides the known world into 31 real regions (below 2 vertices, a "region" is just an island vertex no sea-lane reaches -- not counted here). The largest spans 5531 vertices; the rest, smaller and cut off from it, run 1856, 1654, 915, 640, and 402 vertices -- plus 25 smaller still.
 ```

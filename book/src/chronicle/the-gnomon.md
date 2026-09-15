@@ -727,7 +727,88 @@ This is the twelfth canonical reading and another incomparable one. The six
 comparable readings remain within one standard error of the 0.60 bar, so the
 verdict remains “cannot tell.”
 
-## Postscript 11 — the surface shrinks, and the ablation stops working (The Trencher, 2026-09-13)
+## Postscript 11 — six marine peoples, and the first null ablation since The Winze (The Tidemark, 2026-09-13)
+
+The Tidemark added six obligate marine peoples and repaired the
+`land_settlement` selector, which had been filtering on biome where it needed
+habitat realm; together they widen every world by 39 settlements (396 → 435 on
+seed 42). The census was re-authored on lefford at `9b3bbfaa5d45` and all eight
+injection fixture arms were re-authored in the same delivery. The witness reads
+**65/120 = 0.5417**, with no void pairs: geothermal 20/20, unconformity 2/20,
+aquifer 20/20, karst 4/20, pantheon 5/20, phonology 14/20.
+
+This is the thirteenth canonical reading, and unlike the five before it, it is
+**comparable** — to the twelfth, and to that one only. The instrument's share
+was measured rather than assumed:
+
+- The report definition is byte-identical. `windows/lab/src/domesday/` is
+  untouched on the branch; `REPORT_SIZE` is 10 and `TAIL_DEPTH_BAR` is 0.01.
+- No metric family was registered. The census carries 295 columns before and
+  after, identical as a sorted set.
+- The evaluable surface holds at **181 / 51** on both censuses — unmoved in
+  size, with a symmetric one-in-one-out swap. `name-prefix-region-scope`
+  enters, having stopped being frozen; `first-day-person-died` leaves, now
+  tied at both rails. Both crossings are the worlds' value distributions
+  moving, not the report.
+- Ablating both boundary crossers out of the in-memory census gives a 180 / 50
+  surface and reads **65/120, arm for arm identical**. The instrument
+  contributed zero hits and zero counted pairs.
+
+The one instrument-side source change on the branch — `ELF_DAUGHTERS` growing
+6 → 7, which redefines `monophyly-elf` — cannot reach this witness at all:
+`monophyly-elf` is a flag column, and the evaluable surface admits only numeric
+and integer kinds. Ablated anyway, alone and with its siblings, the tally does
+not move; the column itself moved on zero of 1000 rows.
+
+### What this postscript adds to the ten before it: the positive control
+
+Every earlier ablation asserted a null and stopped there. A null from a probe
+that has not been shown to reproduce anything is the weakest possible evidence,
+because "the ablation changed nothing" and "the probe measures nothing" look
+identical. So this one was run backwards first: the same probe, scoring the
+**pre-refresh census against the pre-refresh fixtures**, reads **68/120 with
+arms 20, 1, 20, 3, 7, 17** — the twelfth reading's figure and its per-arm
+breakdown exactly, as Postscript 10 records them. Only then does the 65/120 it
+produces from the post-refresh inputs mean anything.
+
+That control is cheap and it belongs in the procedure from here on. It is the
+difference between "I ablated and nothing moved" and "my instrument reproduces
+the number I am comparing against, and then nothing moved."
+
+### What the null does not buy
+
+It licenses comparison with the immediately preceding reading — same report,
+same 181/51 surface, only the worlds moved — so the 68 → 65 step is three hits
+of world movement. It does **not** re-admit this reading to the six-epoch
+comparable series (0.5667 / 0.6083 / 0.6000 / 0.6083 / 0.6083 / 0.6000). That
+series lives on the **118-column** surface, and comparability with it broke at
+The Weft and has not been restored since; restoring it would need the full
+multi-family ablation back to 118 columns, which this campaign did not run
+because nothing here required it.
+
+Numerically 0.5417 sits 1.30 standard errors below the bar — the furthest below
+it any canonical reading has sat. At n = 120 that is still inside the band the
+underpower diagnosis describes, and it licenses nothing. The bar stays 0.60,
+the verdict stays "cannot tell", the fix stays more pairs, and the registry
+row's status is unchanged.
+## Postscript 12 — the surface shrinks, and the ablation stops working (The Trencher, 2026-09-13)
+
+> **Merge note (unresolved numbering collision, flagged for review rather than
+> silently fixed):** this postscript and Postscript 11 above (The Tidemark) were
+> both written independently against the state left by Postscript 10 (the
+> twelfth canonical reading), each calling its own census the "thirteenth"
+> reading. They cannot both be thirteenth. This postscript's census
+> (`06055072d639`) is The Trencher's own pre-merge measurement and predates
+> knowledge of The Tidemark's census (`9b3bbfaa5d45`), which landed on `main`
+> first — so the ordinal claims below ("thirteenth canonical reading", "the
+> twelfth reading" as antecedent) were accurate when written but are stale
+> relative to Postscript 11's now-earlier claim on the same ordinal. Left
+> unedited rather than guessed at renumbering the internal reading-count
+> claims changes what this postscript asserts happened, which is not a
+> mechanical merge decision. Needs a human call on whether to renumber this
+> to "fourteenth" and re-baseline its baseline reading to Postscript 11's
+> 65/120 rather than Postscript 10's 68/120.
+
 
 The Trencher's post-merge census (`06055072d639`) rewrote all 1,000 census rows
 and re-authored all eight injection arms at the same ref. The witness reads
@@ -801,3 +882,4 @@ changed in the direction ablation can undo. When it changed the other way, the
 test does not report “I cannot tell” — it reports “incomparable”, confidently
 and wrongly. Ask whether the delta is inert, not whether removing it reproduces
 a number.
+

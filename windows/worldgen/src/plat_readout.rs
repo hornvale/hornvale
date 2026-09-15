@@ -303,15 +303,18 @@ mod tests {
         let terrain = crate::terrain_of(&world).expect("seed 42 sculpts");
         let out = render_made_population(&world, &terrain);
         for needle in [
-            // 100 -> 60, 2026-09-12, The Trencher's repair pass (ledger
-            // #25/#26): the merged world seats 60 historical occupied
-            // underworld columns on seed 42. The count is deliberately kept
-            // in the needle rather than loosened to a bare prefix -- it is
-            // the SAME witness `delve_seating`'s
-            // `a_historically_settled_column_is_made_at_its_seated_rung_and_nowhere_else`
-            // pins, and pinning it in both places is what makes the two
+            // RE-PINNED, 2026-09-12 (The Trencher) then again on merge
+            // with The Tidemark, 2026-09-15: both campaigns' worldgen
+            // changes (The Trencher's per-metabolite supply change and four
+            // absorbed underworld peoples; The Tidemark's six marine
+            // peoples and the same four subterranean peoples) apply on the
+            // merged tree at once, so this needle is re-measured directly
+            // against the merged code rather than combined arithmetically
+            // from either branch's own pin (60, then 37). Kept in sync with
+            // the SAME witness `delve_seating`'s own re-pin note and test
+            // record -- pinning it in both places is what makes the two
             // readings of one number disagree loudly if they ever diverge.
-            "the Made population: 60 occupied columns",
+            "the Made population: 63 occupied columns",
             "heart decile <= 5:",
             "(frozen floor 0.6667; FROM Made levels TO the Heart's depth decile)",
             "doors on Made rungs:",

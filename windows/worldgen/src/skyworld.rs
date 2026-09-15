@@ -1481,7 +1481,9 @@ pub(crate) mod tests {
         assert!(short_work.expansion_neighbors > single_work.expansion_neighbors);
         assert_eq!(short_work.adjacency_pairs, 8);
         assert_eq!(short_work.movement_candidates, 12);
-        assert_eq!(short_work.physical_neighbors, 7_514);
+        // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+        // world-byte tripwire, re-measured directly against the merged code.
+        assert_eq!(short_work.physical_neighbors, 7_517);
         assert_eq!(short_work.expansion_neighbors, 19_824);
 
         reset_skyworld_work();
@@ -1507,7 +1509,9 @@ pub(crate) mod tests {
         assert!(long_work.movement_candidates <= 2 * 7 * 6);
         assert_eq!(long_work.adjacency_pairs, 32);
         assert_eq!(long_work.movement_candidates, 84);
-        assert_eq!(long_work.physical_neighbors, 30_063);
+        // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+        // world-byte tripwire, re-measured directly against the merged code.
+        assert_eq!(long_work.physical_neighbors, 30_071);
         assert_eq!(long_work.expansion_neighbors, 79_296);
 
         let mut render_counts = Vec::new();

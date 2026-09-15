@@ -137,10 +137,35 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     // `MARINE_FORAGE`, so every terrestrial supply axis contributes an exact
     // zero to their dot product regardless of that axis's land value — they
     // must be wholly submerged (dry == 0), the mirror of the land mask.
-    let marine_only: std::collections::BTreeSet<&str> =
-        ["giant-octopus", "giant-squid", "killer-whale", "reef-shark"]
-            .into_iter()
-            .collect();
+    //
+    // THE TIDEMARK (Task 3) adds four PEOPLES to this arm — the first
+    // members that are not fauna. Each weights `MARINE_FORAGE` at exactly
+    // 1.0, which is not laziness: `axis_supply_with` is a SUM and every
+    // terrestrial supply field is land-masked, so for an obligate marine
+    // kind a weight on a land axis is a discount rather than a
+    // diversification.
+    // ALL SIX marine peoples are here, including the two whose niche is
+    // MIXED (`kelp-tender` weights `PHOTOSYNTHATE` 0.40, `vent-commensal`
+    // weights `CHEMOSYNTHATE` 0.75) — and the reason is NOT their niches.
+    // They are `HabitatRealm::Marine`, so the realm gate's availability mask
+    // is exactly `0.0` at every land vertex, which zeroes their K there
+    // whatever the supply axes say. That is a stronger guarantee than the
+    // four fauna rows above have, and it is worth saying plainly so the next
+    // reader does not read this arm as a claim about their diets.
+    let marine_only: std::collections::BTreeSet<&str> = [
+        "abyssal-elf",
+        "giant-octopus",
+        "giant-squid",
+        "kelp-tender",
+        "killer-whale",
+        "merfolk",
+        "reef-mason",
+        "reef-shark",
+        "triton",
+        "vent-commensal",
+    ]
+    .into_iter()
+    .collect();
     // The amphibious proof cases (spec §3.4): a kind weighting BOTH a
     // terrestrial axis and `MARINE_FORAGE`, so its K must be nonzero in BOTH
     // media — the observable signature of the sparse-uptake, no-special-case
@@ -380,7 +405,12 @@ const BASELINE_DOMINANT_KINDS_42: usize = 2;
 /// which is a property of the deep-history bake (it seeds every Settled people
 /// its own proto-communities, which persist by lineage rather than by winning
 /// local dominance), not a claim that six new peoples all found good ground.
-const BASELINE_PEOPLED_KINDS_42: usize = 19;
+// Two campaigns re-pin this together, 15 -> 24: the Underworld Peoples' four
+// subterranean peoples and five of The Tidemark's six marine peoples (merfolk
+// is `Gregarious` and never enters this roster). MEASURED on the merged world,
+// not added from the two branches' separate pins (20 on one side, 19 on the
+// other).
+const BASELINE_PEOPLED_KINDS_42: usize = 24;
 /// BASELINE union (dominant ∪ peopled-by) distinct kind count at seed 42.
 const BASELINE_UNION_KINDS_42: usize = 4;
 
@@ -980,9 +1010,21 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // `100 * trop_mean` in disguise — which is the failure mode this line
     // has to keep proving it is not. Post-unblinding re-measure, declared
     // per decision 0016.
+    // Re-measured on the merged world: 10.1472 -> 10.1533, inside the band's
+    // own width. The scalar path reads the base carrying field, which neither
+    // the six marine peoples nor the four Underworld ones touch — this is the
+    // ordinary seed-42 drift a roster change carries through settlement
+    // placement, not a latitudinal mechanism moving. Post-unblinding
+    // re-measure, declared per 0016.
+    //
+    // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+    // 10.1533 -> 10.0610, re-measured directly against the merged code
+    // (both campaigns' worldgen changes plus the species metabolic-triple
+    // migration fix this merge also carries). `pole floored: false` still
+    // holds, so this remains a genuine tropics/poles ratio.
     assert!(
-        (ratio - 10.1537).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~10.1537). Check the \
+        (ratio - 10.0610).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~10.0610). Check the \
          printed decomposition above before assuming anything latitudinal moved — and \
          note that since The Glasshouse the polar term is OFF its floor, so this is a \
          real tropics/poles ratio and no longer 100 * trop_mean."

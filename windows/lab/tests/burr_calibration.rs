@@ -161,11 +161,33 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// and `docs/superpowers/ledgers/2026-09-06-the-murrain.md`. None of them
 /// asserts the CURRENT pin, so none of them is stale; rewriting another
 /// campaign's chronicle to carry this campaign's number would make them so.
-const BASELINE: f64 = 0.7633816908454227;
+///
+/// **TWO CAMPAIGNS MOVE THIS TOGETHER, AND THE DENOMINATOR MOVES WITH IT
+/// (`origin/main`'s independent history).** The Underworld Peoples authored
+/// four peoples and The Tidemark six, so the roster this classifier assigns
+/// over went from 18 tongues to 28 on main's own tree. A readout, not a
+/// target: nothing in either campaign touches the classifier or the
+/// typological stages. main's own re-measure landed at 0.7603930461073318.
+///
+/// MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15): neither
+/// branch's own value (0.7633816908454227 / 0.7603930461073318) is what the
+/// fully merged tree produces -- the dictionary is regenerated fresh from
+/// the merged code (`book/src/reference/dictionary-generated.md`, itself
+/// re-derived rather than hand-merged) and the roster now spans every
+/// people from both campaigns. Re-measured directly. The classifier and its
+/// typological claim remain unchanged.
+const BASELINE: f64 = 0.7563567362428842;
 
-/// The chance floor for a 22-way assignment. Reported alongside the baseline
+/// The chance floor for the assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.
-const CHANCE_FLOOR: f64 = 1.0 / 22.0;
+/// Derived from [`BASELINE_TONGUES`] rather than restated, so the two cannot
+/// disagree about how many tongues the accuracy is over — which is exactly
+/// what would have happened when the roster moved.
+const CHANCE_FLOOR: f64 = 1.0 / BASELINE_TONGUES as f64;
+
+/// The roster size the baseline and the chance floor are both taken over.
+/// 18 until the Underworld Peoples and The Tidemark took it to 28.
+const BASELINE_TONGUES: usize = 28;
 
 fn load() -> Vec<(String, Vec<String>)> {
     let md = std::fs::read_to_string(DICTIONARY).expect("read the committed dictionary");
@@ -216,12 +238,15 @@ fn the_baseline_sits_between_chance_and_certainty() {
 /// The roster the baseline was taken over, pinned so a later reading cannot
 /// silently compare against a different set of tongues.
 #[test]
-fn the_roster_is_twenty_two_tongues() {
+fn the_baseline_roster_is_the_pinned_tongue_count() {
     let lists = load();
     assert_eq!(
         lists.len(),
-        22,
-        "expected 22 tongues, got {}: {:?}",
+        BASELINE_TONGUES,
+        "expected {BASELINE_TONGUES} tongues, got {}: {:?}. The count is a \
+         constant rather than a literal here because CHANCE_FLOOR is derived \
+         from it — moving the roster without moving both is how an accuracy \
+         figure loses its denominator.",
         lists.len(),
         lists.iter().map(|(n, _)| n).collect::<Vec<_>>()
     );

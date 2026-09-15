@@ -1,5 +1,5 @@
-//! The believability readout (Task 3, spec §7): builds the full 15×15
-//! snap-judgment landscape over the real fifteen-people catalog and prints
+//! The believability readout (Task 3, spec §7): builds the full N×N
+//! snap-judgment landscape over the real people catalog and prints
 //! a human-readable report — the emotion matrix, the strongest pair per
 //! emotion, every people's weight-vector, and the axis-space coverage map
 //! (spec §7's roster-expansion shopping list). Assertions are LOOSE
@@ -8,6 +8,17 @@
 //! specific real pair's emotion or magnitude, only structural properties
 //! the law must have. The believability judgment itself is read from the
 //! printed report by a human, not asserted.
+//!
+//! **EVERY COUNT IN THE PROSE BELOW IS A READING AT THE FIFTEEN-PEOPLE
+//! ROSTER, AND THE ROSTER IS NOW TWENTY-ONE.** THE TIDEMARK added six marine
+//! peoples, and the catalogue is keyed off `society_registry`
+//! (`minded ∧ social`, decision 0068), so the matrix is 21×21 and the
+//! cross-pair denominator is 210 no longer. The structural tripwires below
+//! are population-independent and still hold; the specific figures in the
+//! doc comments — "0 of 210 cross-pairs", the named strongest pairs — were
+//! measured over fifteen and have NOT been re-taken. They are kept because a
+//! measurement with a stated population is a fact about that population;
+//! they are not claims about today's roster.
 //!
 //! **Population discipline (a design decision this task owns).** The
 //! printed matrix includes the diagonal (`snap_judgment(p, p)` for all 15
@@ -110,11 +121,13 @@ fn believability_readout() {
     let ids: Vec<PeopleId> = cat.keys().copied().collect();
     assert_eq!(
         ids.len(),
-        19,
-        "the catalog must hold exactly the nineteen settling peoples"
+        25,
+        "the catalog must hold exactly the minded, social peoples — \
+         `society_registry` is `minded ∧ social` (decision 0068), which was \
+         extensionally `Settled` until The Tidemark's Gregarious merfolk"
     );
 
-    // --- Step 1: the full 15x15 landscape --------------------------------
+    // --- Step 1: the full NxN landscape ----------------------------------
 
     let judgments: Vec<Vec<Judgment>> = ids
         .iter()
@@ -136,7 +149,7 @@ fn believability_readout() {
 
     println!();
     println!(
-        "--- Full 15x15 emotion matrix (row=judger, col=target; A=Admiration E=Envy P=Pity C=Contempt) ---"
+        "--- Full emotion matrix (row=judger, col=target; A=Admiration E=Envy P=Pity C=Contempt) ---"
     );
     let header: String = (0..ids.len()).map(|i| format!("{i:>3}")).collect();
     println!("{:>6}{header}", "");
@@ -185,8 +198,11 @@ fn believability_readout() {
     }
     assert_eq!(
         cross.len(),
-        19 * 18,
-        "the off-diagonal cross-pair population must be exactly 19*18=342"
+        ids.len() * (ids.len() - 1),
+        "the off-diagonal cross-pair population must be exactly n*(n-1) over \
+         the live catalogue — a literal here would have to be re-pinned every \
+         time the roster grows, and a re-pinned literal is how a population \
+         check stops meaning anything"
     );
 
     // --- Strongest pair per emotion (reported, never asserted; E4) -------

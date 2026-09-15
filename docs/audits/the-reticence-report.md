@@ -13,22 +13,28 @@ Computed once, at `Seed(42)` — see this function's own module doc for why a fu
 
 | people | cult-form | improvised-name | prior-openness | patience |
 |---|---|---|---|---|
+| abyssal-elf | folk | Spirit | Wary | 4 |
 | bugbear | organized | God | Guarded | 2 |
 | desert-dwarf | folk | Spirit | Wary | 4 |
 | desert-elf | folk | Spirit | Wary | 4 |
 | drow | organized | God | Guarded | 2 |
-| duergar | folk | Spirit | Wary | 4 |
+| duergar | organized | God | Guarded | 2 |
 | gnoll | folk | Spirit | Wary | 4 |
 | goblin | organized | God | Guarded | 2 |
-| gully-dwarf | folk | Spirit | Wary | 4 |
+| gully-dwarf | organized | God | Guarded | 2 |
 | high-elf | organized | God | Guarded | 2 |
 | hill-dwarf | organized | God | Guarded | 2 |
 | hobgoblin | organized | God | Guarded | 2 |
 | human | organized | God | Guarded | 2 |
+| kelp-tender | folk | Spirit | Wary | 4 |
 | kobold | organized | God | Guarded | 2 |
 | kuo-toa | folk | Spirit | Wary | 4 |
+| merfolk | — | Wordless (gap (experiential): merfolk has no exposure to 'god') | Open | 8 |
 | mountain-dwarf | organized | God | Guarded | 2 |
+| reef-mason | folk | Spirit | Wary | 4 |
 | sea-elf | folk | Spirit | Wary | 4 |
-| snow-elf | organized | God | Guarded | 2 |
+| snow-elf | folk | Spirit | Wary | 4 |
 | svirfneblin | folk | Spirit | Wary | 4 |
+| triton | folk | Spirit | Wary | 4 |
+| vent-commensal | folk | Spirit | Wary | 4 |
 | wood-elf | organized | God | Guarded | 2 |

@@ -335,7 +335,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5333 over 120 pairs; thirteenth canonical reading, incomparable because the Trencher's post-merge census re-seated the world and fixture inputs; the scorer is unchanged and the evaluable surface shrank 181 -> 179 with a measured share of exactly zero, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5417 over 120 pairs; thirteenth canonical reading. The Tidemark moved only the world: the scorer is byte-identical, the census column set holds at 295, the evaluable surface holds at 181/51, and ablating the two columns that swapped across that boundary reproduces 65/120 arm for arm, so the instrument's share is zero and this reading IS comparable to the twelfth. It is still NOT a seventh point in the six-epoch series, which lives on the retired 118-column surface. The battery still separates nothing. MERGE NOTE (The Trencher absorbing The Tidemark, 2026-09-15): this branch's own re-pin (0.5333, measured against its own pre-merge census) is superseded -- the committed injection fixtures and census in this merge are The Tidemark's, taken per the pin-resolution principle (a calibration pin asserts against the committed census; this branch's number asserted against a census that no longer exists). See book/src/chronicle/the-gnomon.md Postscript 11 vs Postscript 12 for both campaigns' full readings.)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -793,7 +793,96 @@ fn h1_recall_at_10() {
 /// 0.6083 / 0.6083 / 0.6000, the verdict stays "cannot tell", and the remedy
 /// is still more pairs rather than a moved bar.
 ///
-/// claim: invariant(the committed battery scores exactly 64 hits over 120
+/// **MERGE (The Trencher absorbing The Tidemark, 2026-09-15).** Both
+/// re-reads above measured the same antecedent (the twelfth reading,
+/// 68/120) independently, against different worlds (this branch's own
+/// post-merge census `06055072d639`/`0865b31bb`, vs. The Tidemark's
+/// `9b3bbfaa5d45`), and neither is what the committed fixtures in THIS
+/// merge actually hold. The committed injection fixtures and census in
+/// this merge are The Tidemark's (taken per the pin-resolution
+/// principle: a calibration pin asserts against the committed census,
+/// and The Trencher's own census no longer exists once this merge
+/// lands), so the operative claim below is the THIRTEENTH reading at
+/// 65/120, not this branch's own 64/120. The Trencher's finding above
+/// is kept as history -- it documents a real, separately-measured
+/// world and its own ablation evidence -- but it no longer describes
+/// the fixtures this test reads.
+///
+/// **RE-READ AT THE TIDEMARK'S CLOSE (2026-09-13), AND THE ABLATION READS
+/// NULL FOR THE FIRST TIME SINCE THE WINZE.** Six obligate marine peoples
+/// entered the roster and a `land_settlement` selector repair widened every
+/// world by 39 settlements (396 -> 435 on seed 42); the census was
+/// re-authored on lefford at `9b3bbfaa5d45` and all eight fixture arms
+/// re-authored in the same delivery. On that census the witness reads
+/// **65/120 = 0.5417**, zero void pairs. Arm for arm: geothermal 20/20,
+/// unconformity 2/20, aquifer 20/20, karst 4/20, pantheon 5/20, phonology
+/// 14/20. The bar is still 0.60 and this re-read does not move it.
+///
+/// **THE INSTRUMENT DID NOT MOVE, AND THAT WAS MEASURED RATHER THAN
+/// ASSERTED.** Every check the paragraphs above prescribe was run:
+///
+/// 1. *The report definition is byte-identical.* `windows/lab/src/domesday/`
+///    is untouched on this branch — `anomaly.rs` diffs empty against both the
+///    merge base and the pre-refresh commit, `REPORT_SIZE` is 10 and
+///    `TAIL_DEPTH_BAR` is 0.01.
+/// 2. *No metric family was registered.* The census column set is 295 before
+///    and 295 after, identical as a sorted set; the schema diff is one line,
+///    the rows hash.
+/// 3. *The evaluable surface holds at 181 / 51*, both before and after —
+///    unmoved in SIZE, with a symmetric one-in-one-out swap:
+///    `name-prefix-region-scope` enters (it was frozen, and now varies, 999
+///    rows at 1.0 against one at 2.0) and `first-day-person-died` leaves (it
+///    now ties at both rails, 964 at min and 36 at max). Both crossings are
+///    the worlds' value distributions moving, not the report.
+/// 4. *Ablating both boundary crossers changes nothing.* Dropping them from
+///    the in-memory `Census` gives a 180 / 50 surface and re-scoring the same
+///    committed fixtures reads **65/120 — and 20, 2, 20, 4, 5, 14 arm for
+///    arm**, identical in every arm. The instrument's share is zero hits and
+///    zero counted pairs.
+///
+/// **THE ONE INSTRUMENT-SIDE SOURCE EDIT ON THIS BRANCH IS NAMED RATHER THAN
+/// GLOSSED OVER**, because The Warp's lesson is to ablate every family that
+/// changed and not only the newest: `ELF_DAUGHTERS` grew 6 -> 7 in
+/// `windows/lab/src/metrics.rs`, which redefines `monophyly-elf`. It cannot
+/// reach this witness — `monophyly-elf` is a `flag` column, and
+/// [`anomaly::evaluable_columns`] admits only numeric and integer kinds, so
+/// it sits in neither the evaluable list nor the excluded one and can never
+/// appear in a report. Ablated anyway, alone and with its two siblings: the
+/// tally is 65/120 arm for arm both times, and the column moved on 0 of 1000
+/// rows.
+///
+/// **THE POSITIVE CONTROL IS WHAT MAKES THE NULL READABLE.** An ablation
+/// probe that reproduces nothing proves nothing, so the same probe was run on
+/// the PRE-refresh census against the PRE-refresh fixtures: it reads
+/// **68/120, arms 20, 1, 20, 3, 7, 17** — the twelfth reading's figure and its
+/// per-arm breakdown exactly, as recorded in the postscript above. The 65/120
+/// is therefore measured with an instrument demonstrated to reproduce the
+/// number it is being compared against.
+///
+/// **WHAT THE NULL LICENSES, STATED NARROWLY.** It licenses like-for-like
+/// comparison with the TWELFTH reading, 68/120 — same report, same 181/51
+/// surface, only the worlds moved — so the 68 -> 65 step is three hits of
+/// world movement and nothing else. It does **not** re-admit this reading to
+/// the six-epoch comparable series (0.5667 / 0.6083 / 0.6000 / 0.6083 /
+/// 0.6083 / 0.6000), and saying so is the whole point of the distinction The
+/// Weft introduced: that series lives on the **118-column** surface, and
+/// comparability with it broke at The Weft and has not been restored since.
+/// Restoring it would need the full multi-family ablation back to 118 columns
+/// — `warp-*`, `weft-*`, The Murrain's five, and the additions of The
+/// Wanderers and The Underworld Peoples — which this campaign did not run,
+/// because nothing here requires it. So this is the **thirteenth canonical
+/// reading**, comparable to the twelfth and to no earlier one.
+///
+/// Numerically 0.5417 sits (0.5417 - 0.60) / 0.04472 = **-1.30 SE** below the
+/// bar, the furthest below it any canonical reading has sat. That is worth
+/// one sentence and no more, for the reason The Winze's paragraph gives about
+/// landing exactly ON the bar: at n=120 this battery cannot separate "works"
+/// from "does not work" at a 0.60 line, and a reading 1.3 SE out is still
+/// inside the band the underpower diagnosis describes. The verdict remains
+/// "cannot tell"; the fix remains more pairs, not a moved bar; the registry
+/// row's status is unchanged, as it was unchanged by every re-read before it.
+///
+/// claim: invariant(the committed battery scores exactly 65 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
 #[test]
@@ -806,16 +895,18 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
             t.void_no_movement,
             t.void_unrankable_only
         ),
-        (64, 120, 0, 0),
+        (65, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's finding (recall@10 now reads 64/120 = 0.5333 against the \
+         Gnomon's finding (recall@10 now reads 65/120 = 0.5417 against the \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
-         adjudicate; this thirteenth reading is incomparable to the six-epoch \
-         series, as the seventh through twelfth were, but for the ORDINARY \
-         reason — moved world facts arriving with moved census and fixture \
-         inputs — and NOT for an instrument reason: the surface delta's share \
-         was measured at exactly ZERO in both directions, see the doc \
-         comment), and it is pinned so \
+         adjudicate; this THIRTEENTH reading is comparable to the twelfth and to \
+         no earlier one, because its ablation reads NULL — the scorer is \
+         byte-identical, the evaluable surface holds at 181/51, and ablating the \
+         two columns that swapped across that boundary reproduces 65/120 arm for \
+         arm — while the six-epoch series lives on the retired 118-column surface \
+         (this figure is The Tidemark's; The Trencher's own pre-merge re-read \
+         measured 64/120 = 0.5333 against a census this merge's committed \
+         fixtures no longer match, see the doc comment), and it is pinned so \
          that a change to \
          the report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable \
          surface, the census, or the fixtures — cannot silently turn the \
@@ -843,8 +934,18 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          `heavy tier` literally is exactly what makes a reader conclude the \
          site is gone. It is not. \
          \
-         THE PIN HAS NOW BEEN RE-STATED SEVEN TIMES, producing eight readings \
-         with The Gnomon's original: The Glasshouse (2026-08-15, overturned \
+         THE PIN HAS NOW BEEN RE-STATED TWELVE TIMES, producing thirteen \
+         readings with The Gnomon's original — and THAT COUNT IS TAKEN FROM \
+         THE DOC COMMENT'S OWN READING ORDINALS ('the eleventh canonical \
+         reading', 'the twelfth'), NOT by counting the campaigns named below, \
+         because this list is INCOMPLETE: two re-reads (the ninth and tenth \
+         readings) left no paragraph in the doc comment and no entry here. \
+         The count in this sentence has now rotted twice — it said FIVE while \
+         naming four campaigns, then SEVEN/eight while the doc comment above \
+         had already reached twelve — so treat the ordinal in the newest doc \
+         paragraph as authoritative and this sentence as a summary that \
+         decays. The campaigns that did leave a paragraph: The Glasshouse \
+         (2026-08-15, overturned \
          the verdict); The Underworld (2026-08-17, corroborated the withdrawal \
          at a third census epoch); The Burr (2026-08-18/19, reproduced The \
          Glasshouse's exact reading at a fourth); The Granary (2026-08-24, \
@@ -852,10 +953,11 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          host-divergent local pilot first said otherwise); The Winze \
          (2026-08-29, the sixth); The Weft (2026-09-04, the seventh and first \
          genuinely incomparable reading); and The Warp (2026-09-05, the \
-         eighth, incomparable for a compound reason). (This message previously said FIVE TIMES \
-         while naming four campaigns — it was counting readings in one clause \
-         and re-statements in the other. Both counts are given above so the \
-         next reader does not have to guess which is meant.) \
+         eighth, incomparable for a compound reason); The Murrain \
+         (2026-09-08, the eleventh, incomparable); The Underworld Peoples \
+         (2026-09-10, the twelfth, incomparable); and The Tidemark \
+         (2026-09-13, the thirteenth, and the first reading since The Winze \
+         whose ablation reads NULL). \
          \
          FIRST ASK WHETHER YOUR CHANGE TOUCHED THE REPORT. For the first four \
          re-statements the answer was no, and the number moved because the \
@@ -871,7 +973,21 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          scorer, and for The Winze both read null — the ablated tally is \
          72/120 arm for arm. See the doc comment for the full derivation. If \
          your own ablation does NOT read null, you have a genuinely \
-         incomparable reading, and THAT is when to stop and say so. The Weft \
+         incomparable reading, and THAT is when to stop and say so. The \
+         Tidemark is the second null: its census registered no new metric \
+         (295 columns before and after), the evaluable surface held at \
+         181/51 with one column swapping in each direction, and ablating both \
+         crossers reproduced 65/120 arm for arm — so its 68 -> 65 step is \
+         world movement and nothing else. RUN A POSITIVE CONTROL WHEN YOU DO \
+         THIS, which The Tidemark added and no earlier re-read recorded: \
+         score the PREVIOUS census against the PREVIOUS fixtures with the \
+         same probe and check it reproduces the pinned figure arm for arm \
+         (it read 68/120, 20, 1, 20, 3, 7, 17). An ablation probe that cannot \
+         reproduce the number it is being compared against proves nothing \
+         when it reads null. AND NOTE WHAT A NULL DOES NOT BUY: it licenses \
+         comparison with the IMMEDIATELY PRECEDING reading, not re-admission \
+         to the six-epoch series, which lives on the 118-column surface and \
+         has been out of reach since The Weft. The Weft \
          is that case: its full surface read 69/120 (20, 4, 20, 2, 6, 17 by \
          arm), while ablating the Weft family restored 72/120 (20, 4, 20, 2, \
          7, 19). \

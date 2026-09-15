@@ -11395,6 +11395,24 @@ mod tests {
         let mut reg = agent_at_reg();
         reg.register_predicate(DRANK, false, "drank").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // **AND THE ERRAND FAMILY, FROM ITS OWN TABLE** (The Tidemark, Task 3,
+        // fix round 1). Every hand-built registry in this module listed the
+        // five drive predicates above and stopped, so a tick that committed an
+        // errand panicked on `UnknownPredicate`. It never fired because the
+        // worlds these fixtures drive always found water they already knew
+        // (`errand/water-known`, registered by nobody either, but never
+        // reached); the marine peoples moved seed 42's first settlement into
+        // open sea, a body went thirsty where it knew no source, and
+        // `errand/water-blind` surfaced the gap.
+        //
+        // LOOPED, never listed: `errand_predicates` is the ONE table (its own
+        // doc says so), and a second hand-copy here would be the same defect
+        // with a longer fuse. Fixed at every site rather than the one that
+        // fired — a latent panic the default world no longer visits is worse
+        // than one it does, because nothing will find it again.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         reg.register_predicate(RESTED, false, "rested").unwrap();
         let mut ledger = Ledger::default();
         let (d_room, hazard, x) = phantom_triple();
@@ -11840,6 +11858,11 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            // The errand family too — see the first such loop in this module for
+            // why it is looped from `errand_predicates` rather than listed.
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             for (key, doc) in errand_predicates() {
                 r.register_predicate(key, false, doc).unwrap();
             }
@@ -12350,6 +12373,11 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            // The errand family too — see the first such loop in this module for
+            // why it is looped from `errand_predicates` rather than listed.
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             for (key, doc) in errand_predicates() {
                 r.register_predicate(key, false, doc).unwrap();
             }
@@ -12838,6 +12866,11 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            // The errand family too — see the first such loop in this module for
+            // why it is looped from `errand_predicates` rather than listed.
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             for (key, doc) in errand_predicates() {
                 r.register_predicate(key, false, doc).unwrap();
             }
@@ -12940,6 +12973,11 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            // The errand family too — see the first such loop in this module for
+            // why it is looped from `errand_predicates` rather than listed.
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             for (key, doc) in errand_predicates() {
                 r.register_predicate(key, false, doc).unwrap();
             }
@@ -13005,7 +13043,7 @@ mod tests {
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
         let mut ledger = world.ledger.clone();
-        let home = hornvale_settlement::village_info(&world).unwrap().id;
+        let home = hornvale_worldgen::land_settlement(&world).unwrap().id;
         let npcs = derive_npcs(&world, &ctx, &mut ledger, 3, home);
         assert_eq!(npcs.len(), 3);
         // distinct entities, and each has a VALID resource anchor: `derive_npcs`
@@ -13140,7 +13178,7 @@ mod tests {
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
         let mut ledger = world.ledger.clone();
-        let home = hornvale_settlement::village_info(&world).unwrap().id;
+        let home = hornvale_worldgen::land_settlement(&world).unwrap().id;
         let mut npcs = derive_npcs(&world, &ctx, &mut ledger, 3, home);
         let concentrations = wild_concentrations_of(&world, 4);
         npcs.extend(derive_wild_npcs(&world, &ctx, &mut ledger, concentrations));
@@ -13247,6 +13285,11 @@ mod tests {
             .unwrap();
         world_reg.register_predicate(SLEPT, false, "slept").unwrap();
         world_reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            world_reg.register_predicate(key, false, doc).unwrap();
+        }
         let world = hornvale_worldgen::build_world(
             Seed(42),
             &hornvale_astronomy::SkyPins::default(),
@@ -13256,7 +13299,7 @@ mod tests {
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
         let terrain = LocaleTerrain::new(&ctx);
-        let home_id = hornvale_settlement::village_info(&world).unwrap().id;
+        let home_id = hornvale_worldgen::land_settlement(&world).unwrap().id;
         let home = settlement_room(&world, &ctx, home_id);
         let npc = Body {
             entity: EntityId::new(1).unwrap(),
@@ -13341,7 +13384,7 @@ mod tests {
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
         let mut ledger = world.ledger.clone();
-        let home = hornvale_settlement::village_info(&world).unwrap().id;
+        let home = hornvale_worldgen::land_settlement(&world).unwrap().id;
         let npcs = derive_npcs(&world, &ctx, &mut ledger, 1, home);
         assert_eq!(npcs.len(), 1);
         let want_home_room = settlement_room(&world, &ctx, home);
@@ -13366,7 +13409,7 @@ mod tests {
         )
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
-        let home_id = hornvale_settlement::village_info(&world).unwrap().id;
+        let home_id = hornvale_worldgen::land_settlement(&world).unwrap().id;
         let home = settlement_room(&world, &ctx, home_id);
         let built = built_rooms(&world, &ctx);
         assert!(
@@ -13448,6 +13491,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         // no drank yet: rises from day 0
         assert!(
@@ -13505,6 +13553,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let other = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         // Another entity's drink must not affect `e`'s drive (subject-scoped fold).
@@ -13658,6 +13711,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         for day in [1.0, 4.0, 9.0] {
             ledger
@@ -13886,6 +13944,11 @@ mod tests {
             .unwrap();
         world_reg.register_predicate(SLEPT, false, "slept").unwrap();
         world_reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            world_reg.register_predicate(key, false, doc).unwrap();
+        }
         for (key, doc) in errand_predicates() {
             world_reg.register_predicate(key, false, doc).unwrap();
         }
@@ -14637,6 +14700,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         for (key, doc) in errand_predicates() {
             reg.register_predicate(key, false, doc).unwrap();
         }
@@ -14734,6 +14802,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         for (key, doc) in errand_predicates() {
             reg.register_predicate(key, false, doc).unwrap();
         }
@@ -14817,6 +14890,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         for (key, doc) in errand_predicates() {
             reg.register_predicate(key, false, doc).unwrap();
         }
@@ -15077,6 +15155,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         for (key, doc) in errand_predicates() {
             reg.register_predicate(key, false, doc).unwrap();
         }
@@ -15265,6 +15348,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         for (key, doc) in errand_predicates() {
             reg.register_predicate(key, false, doc).unwrap();
         }
@@ -15508,6 +15596,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         for (key, doc) in errand_predicates() {
             reg.register_predicate(key, false, doc).unwrap();
         }
@@ -16156,6 +16249,11 @@ mod tests {
         let reg = {
             let mut r = agent_at_reg();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            // The errand family too — see the first such loop in this module for
+            // why it is looped from `errand_predicates` rather than listed.
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             r
         };
         let home = raddr(1.0);
@@ -16823,6 +16921,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         for (key, doc) in errand_predicates() {
             reg.register_predicate(key, false, doc).unwrap();
         }
@@ -17486,6 +17589,11 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            // The errand family too — see the first such loop in this module for
+            // why it is looped from `errand_predicates` rather than listed.
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             for (key, doc) in errand_predicates() {
                 r.register_predicate(key, false, doc).unwrap();
             }
@@ -17586,6 +17694,11 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            // The errand family too — see the first such loop in this module for
+            // why it is looped from `errand_predicates` rather than listed.
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             for (key, doc) in errand_predicates() {
                 r.register_predicate(key, false, doc).unwrap();
             }
@@ -19501,6 +19614,11 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        // The errand family too — see the first such loop in this module for
+        // why it is looped from `errand_predicates` rather than listed.
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let at = |d: f64| WorldTime::from_std_days(d).expect("a day value is finite");
@@ -23004,8 +23122,9 @@ mod tests {
             checked += 1;
         }
         assert_eq!(
-            checked, 43,
-            "the roster is 43 rows; a smaller number means the loop is not \
+            checked, 49,
+            "the roster is 49 rows (39, plus four Underworld peoples, plus \
+             six marine peoples); a smaller number means the loop is not \
              seeing the table this assertion is about"
         );
     }

@@ -81,7 +81,7 @@ fn opts() -> PossessOpts {
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,
         lens: hornvale_vessel::lens::Lens::Off,
-        target: hornvale_vessel::PossessTarget::Flagship,
+        target: hornvale_vessel::PossessTarget::LandSettlement,
         tableau: None,
     }
 }

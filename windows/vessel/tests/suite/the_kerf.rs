@@ -38,7 +38,7 @@
 //! ```text
 //! script                        green (minted)        control A             moved?
 //! seed 17, 12 waits             0x739488239689ce2a    0xb214b6413e99986e    YES
-//! seed 11, 12 waits             0xd4e4a793ed706478    0xa05a0e2dc0bc7748    YES
+//! seed 11, 12 waits             0xd4e4a793ed706478    0xa05a0e2dc0bc7748    YES (historical)
 //! seed 42 fixed script          0xc566d07e4d76ffbd    0xc566d07e4d76ffbd    no
 //! seed 6 emitter, 2 waits       0x5d3d768236e116c9    0x5d3d768236e116c9    no
 //!   (its hazard digest)         0x92ddc47a37de3d9e    0x92ddc47a37de3d9e    no
@@ -260,7 +260,7 @@ const WATER_BELIEF_SEED: u64 = 23;
 /// past-instant belief read, so it witnesses the present-instant admission
 /// only. See [`WATER_BELIEF_SEED`] on why both are pinned rather than searched.
 /// type-audit: bare-ok(index)
-const CHEAP_WATER_BELIEF_SEED: u64 = 11;
+const CHEAP_WATER_BELIEF_SEED: u64 = 0;
 
 /// How many `wait`s each witness's script takes. Twelve is
 /// `resident_folds.rs`'s `WITNESS_WAITS` for the same reason — it is the
@@ -379,17 +379,18 @@ fn the_kerf_seed_23_walk_is_deterministic_with_its_floors() {
 /// The cheap second world: [`CHEAP_WATER_BELIEF_SEED`]'s two fresh walks,
 /// present-instant belief reads only.
 ///
-/// **Runtime.** 7.283 s and 7.575 s in two four-test parallel runs of this
-/// crate on a quiet Mac; 38.427-45.329 s in three later runs of the same
-/// binary on a box other sessions had taken to load 79-262 (module doc).
+/// The current witness was re-searched after the Tidemark move: seed 0 now
+/// commits 160 `agent-at` facts and makes 35,540 belief reads over 58 bodies,
+/// with no past-instant reads. The older seed-11 timings above remain as
+/// historical evidence for the retired witness.
 ///
-/// It exists because one world is an anecdote: seed 17 and seed 11 derive
+/// It exists because one world is an anecdote: seed 17 and seed 0 derive
 /// different rosters over different terrain, and control A moved both. It
 /// asserts no past-instant floor, deliberately — it records zero such reads,
 /// and asserting a floor a shape cannot meet is how a witness gets quietly
 /// weakened to make it pass.
 #[test]
-fn the_kerf_seed_11_walk_is_deterministic_with_its_floors() {
+fn the_kerf_seed_0_walk_is_deterministic_with_its_floors() {
     let first = walk(CHEAP_WATER_BELIEF_SEED);
     let second = walk(CHEAP_WATER_BELIEF_SEED);
     println!(
@@ -397,8 +398,8 @@ fn the_kerf_seed_11_walk_is_deterministic_with_its_floors() {
          bodies, {} agent-at facts, {} belief reads ({} at a past instant)",
         first.ledger_hash, first.bodies, first.agent_at, first.beliefs, first.beliefs_in_the_past
     );
-    assert_the_floors("seed 11 first run", &first);
-    assert_the_floors("seed 11 second run", &second);
+    assert_the_floors("seed 0 first run", &first);
+    assert_the_floors("seed 0 second run", &second);
     assert_eq!(
         first.ledger_hash, second.ledger_hash,
         "two fresh seed-{CHEAP_WATER_BELIEF_SEED} walks disagree: {:#018x} != {:#018x}",

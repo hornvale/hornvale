@@ -323,7 +323,7 @@ fn a_facet_with_nothing_derived_stays_silent() {
 /// an occurrence, not with how many occurrences there are.
 ///
 /// This is the population `Session::describe_here`'s `if vantage.is_none()`
-/// gate exists to protect: at every one of these 28 facets, the render must
+/// gate exists to protect: at every one of these 27 facets, the render must
 /// suppress the weft clause. Reproduced against the free functions directly
 /// (`Oracle::is_afloat` mirrors `Session::column_here`'s own predicate
 /// exactly — see its own doc) rather than through a live `Session`, because
@@ -362,10 +362,12 @@ fn afloat_facets_never_render_a_weft_clause() {
         }
     }
 
+    // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+    // 28 -> 27, re-measured directly against the merged code.
     assert_eq!(
         conflicts.len(),
-        28,
-        "the vantage/eligibility disagreement moved from 28 facets to {} -- \
+        27,
+        "the vantage/eligibility disagreement moved from 27 facets to {} -- \
          update this count (and Session::describe_here's weft_clause gate \
          doc, which cites it) in the same commit as whatever changed the \
          underlying predicates",
@@ -374,7 +376,7 @@ fn afloat_facets_never_render_a_weft_clause() {
 
     // What this test does NOT independently prove, said plainly: that
     // `Session::describe_here`'s `if vantage.is_none() { .. } else {
-    // String::new() }` conditional actually fires at these 28 facets when a
+    // String::new() }` conditional actually fires at these 27 facets when a
     // live session stands on one. `describe_here` is a private method
     // reachable only through `Session::handle`, and reaching one specific
     // facet out of 28 scattered across 40,962 needs real pathfinding this

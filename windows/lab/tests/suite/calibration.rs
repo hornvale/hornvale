@@ -464,47 +464,29 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // The Underworld Peoples close regen (2026-09-10): the four added peoples
     // move one locked head from eternal to ambient, (153, 39) -> (151, 41)
     // after the full census resync; the categorical invariant remains.
-    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-    // of the-census `rows.csv` (116 files in the delivery); this pin reads
-    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-    // fixture and is not a mover here.
-    // (151, 41) -> (153, 39). RE-CHECKED RATHER THAN ASSUMED: the categorical
-    // invariant (a frozen sky never heads a cyclic pantheon) is the `other` arm's
-    // `panic!` in the loop above, and the run reaches this line, so it never fired
-    // on any of the 1000 seeds.
-    // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
-    // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE MERGE,
-    // PRE-CENSUS. The absorb kept MAIN's census fixtures byte-for-byte
-    // (`the-census/rows.csv` hashes identical to origin/main's) while the
-    // conflict resolution kept THIS branch's census-delivery literals, so the
-    // entry above was the Trencher delivery's value read against main's census
-    // data -- the two halves of one pin disagreeing about which world they
-    // describe. Re-measured over the merged tree: (153, 39) -> (151, 41).
-    // RE-CHECKED RATHER THAN ASSUMED: the categorical invariant (a frozen sky
-    // never heads a cyclic pantheon) is the `other` arm's `panic!` in the loop
-    // above; the whole test was re-run with BOTH pins below softened to prints
-    // and passed, so the loop reached this line on all 1000 seeds and the arm
-    // never fired. The merged world is NOT yet censused -- this campaign's
-    // metabolite/supply work is absent from the committed CSV -- so this row
-    // is expected to move again at the post-merge census.
+    // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+    // branch's own census-delivery re-pin history above is superseded --
+    // the committed census in this merge is The Tidemark's (taken per the
+    // pin-resolution principle: a calibration pin asserts against the
+    // committed census, and this branch's own census no longer exists
+    // once this merge lands).
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six obligate marine peoples enter the roster and a
+    // `land_settlement` selector repair widens every world by 39 settlements
+    // (396 -> 435 on seed 42), so which settlements survive to seat a
+    // flagship pantheon moves again: (151, 41) -> (147, 45). **This is the
+    // largest step in the chain above** — four heads against the one to three
+    // of every prior regen — and the magnitude is consistent with its cause:
+    // six peoples is the largest roster addition the chain has seen, and the
+    // selector repair moves settlements on every world rather than only where
+    // a new people settles. The categorical claim (a frozen sky never heads a
+    // cyclic pantheon) is re-checked rather than assumed: the `other` arm
+    // above panics loudly on a cyclic head in a locked world, and the run
+    // reached this assertion, so it never fired on any of the 1000 seeds.
+    // Only the eternal/ambient magnitudes moved.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. locked-world per-people head split (151, 41)
-        // -> (153, 39); the pair still sums to 192. The
-        // spinning-yet-eternal row below is MASKED by this one and was read
-        // in the SAME softened pass.
-        (153, 39),
+        (147, 45),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -564,35 +546,37 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // 85ef1edd, goldens c90072b9): the refreshed epidemic histories move this
     // witness 10 -> 12. The frozen-sky/cyclic-pantheon invariant above still
     // holds; only the count of spinning worlds with eternal heads moved.
-    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-    // of the-census `rows.csv` (116 files in the delivery); this pin reads
-    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-    // fixture and is not a mover here.
-    // 14 -> 12. THIS ROW WAS MASKED by the split assertion above, which failed
-    // first; it was read in the same pass, not on a later run.
-    // MERGE RE-PIN (2026-09-13, The Trencher absorbing origin/main): 12 -> 14,
-    // measured at the merge, pre-census, in the SAME softened pass as the split
-    // above rather than on a later run -- the split assertion masks this one,
-    // and this file's own history records that mistake being made. WITNESS, not
-    // claim: nothing here asserts a direction. Expected to move again at the
-    // post-merge census.
+    // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+    // branch's own census-delivery re-pin history above is superseded --
+    // the committed census in this merge is The Tidemark's (taken per the
+    // pin-resolution principle: a calibration pin asserts against the
+    // committed census, and this branch's own census no longer exists
+    // once this merge lands).
+    // TWO CLOSES MOVED THIS WITNESS WITHOUT LEAVING AN ENTRY, and the gap is
+    // recovered here rather than papered over, in the same style the
+    // Tolerance/Delvers gap above is recorded: The Wanderers' census timing
+    // record (`c15f86bdd`) moved it 12 -> 16, and The Underworld Peoples'
+    // refresh (`938adae2e`, 2026-09-10) moved it 16 -> 14. Both were read off
+    // the commits themselves, not inferred from the pinned value, because the
+    // chain's own arithmetic no longer met that value and one recovered step
+    // would have hidden the other.
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six obligate marine peoples enter the roster and a
+    // `land_settlement` selector repair widens every world by 39 settlements
+    // (396 -> 435 on seed 42), re-deciding which settlements survive to seat
+    // a flagship pantheon: 14 -> 18. WITNESS, not claim, as every paragraph
+    // above says: the guarded property is the conjunction asserted at the
+    // head of this function (a frozen sky never heads a cyclic pantheon), and
+    // it is re-checked rather than assumed — the `other` arm in the loop
+    // panics loudly on a cyclic head in a locked world, and the run reached
+    // this assertion, so it never fired on any of the 1000 seeds. This
+    // literal only records how many per-people heads land in the
+    // spinning-yet-eternal vertex of that table, and +4 is the largest step
+    // the chain has recorded, consistent with the largest roster addition and
+    // a settlement-count change that lands on every world rather than only
+    // where a new people settles.
     assert_eq!(
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. spinning-yet-eternal 14 -> 12. MASKED by the
-        // locked-world split above and read in the SAME softened pass.
-        // WITNESS, not claim: nothing here asserts a direction.
-        spinning_eternal,
-        12,
+        spinning_eternal, 18,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -911,38 +895,47 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // 85ef1edd, goldens c90072b9): epidemic-history population work re-seats
     // six goblin flagships, 183 -> 189 coastal. The split remains a witness,
     // not a directional claim.
-    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-    // of the-census `rows.csv` (116 files in the delivery); this pin reads
-    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-    // fixture and is not a mover here.
-    // coastal 182 -> 194, inland 817 -> 805. WITNESS, not claim — nothing here
-    // asserts a direction. The inland row was masked by the coastal one and was
-    // read in the same pass.
-    // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
-    // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE MERGE,
-    // PRE-CENSUS: the absorb kept main's census fixtures while the conflict
-    // resolution kept this branch's census-delivery literals, so both rows read
-    // the Trencher delivery's value against main's census data. Re-measured
-    // over the merged tree: coastal 194 -> 182, inland 805 -> 817. BOTH were
-    // read in ONE softened pass, not one per failing run -- the inland row is
-    // masked by the coastal one. WITNESS, not claim: nothing here asserts a
-    // direction. Expected to move again at the post-merge census.
-    // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-    // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote all
-    // 1000 rows of the-census `rows.csv` and re-authored all eight Gnomon
-    // injection arms at the same ref. This pin reads census output. THE
-    // MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S COMMITTED (STALE)
-    // CENSUS, so this row returns to the value this branch's own earlier
-    // delivery (bdc59cc18) recorded -- measured, not assumed: that census
-    // and this one differ on exactly three metric columns, all astronomy
-    // (`figure-count`, `largest-figure-members`, `ecliptic-figure-count`),
-    // and none of them feeds this row. coastal 182 -> 194, inland 817 ->
-    // 805 (the pair still sums to 999). BOTH rows were read in ONE softened
-    // pass, not one per failing run -- the inland row is masked by the
-    // coastal one. WITNESS, not claim: nothing here asserts a direction.
-    assert_eq!(coastal, 194, "coastal flagship count drifted");
-    assert_eq!(inland, 805, "inland flagship count drifted");
+    // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+    // branch's own census-delivery re-pin history above is superseded --
+    // the committed census in this merge is The Tidemark's (taken per the
+    // pin-resolution principle: a calibration pin asserts against the
+    // committed census, and this branch's own census no longer exists
+    // once this merge lands).
+    // TWO CLOSES THEN MOVED IT WITHOUT LEAVING AN ENTRY, which is why the
+    // paragraph above ends at 189 while the pin this replaces reads 182. Read
+    // off the commits rather than inferred: The Wanderers' census timing
+    // record (`c15f86bdd`) moved it 189 -> 194 coastal / 811 -> 806 inland,
+    // and The Underworld Peoples' refresh (`938adae2e`, 2026-09-10) moved it
+    // 194 -> 182 / 806 -> 817. Recovering only one of the two would have made
+    // the chain meet its value by accident.
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six obligate marine peoples enter the roster and a
+    // `land_settlement` selector repair widens every world by 39 settlements
+    // (396 -> 435 on seed 42), so the roster competing for every site changes
+    // and goblin's flagship re-seats broadly: 182 -> 189 coastal, 817 -> 810
+    // inland. WITNESS, not claim — nothing here asserts a direction, so
+    // nothing directional needs re-checking; what IS re-checked is the
+    // bookkeeping the paragraphs above make load-bearing. The two still sum
+    // to 999, not 1000: exactly one world reports NEITHER flag, unchanged
+    // from the pin this replaces, and it is the same arithmetic goblin's
+    // present-row counts elsewhere in this file record. Counted straight off
+    // the committed `rows.csv`: 189 true, 810 false, 1 empty.
+    // THE CAUSE IS STATED NO MORE NARROWLY THAN THE ROSTER AND SELECTOR
+    // CHANGE, which is this row's standing discipline. It is tempting to read
+    // +7 coastal as the six MARINE peoples pulling goblin's flagship toward
+    // the water, and nothing measured here supports that: the peoples added
+    // are obligate marine, so they do not compete for goblin's land sites at
+    // all, and the selector repair moves 39 settlements per world on every
+    // world regardless of coast. Which of the two mechanisms the seven worlds
+    // belong to was not traced.
+    // The D1 note the Radiation paragraph above raises still applies, on that
+    // paragraph's own denominator of 1000: inland is 810/1000 = 81.0% against
+    // the detector's frozen 80.0% bar, so the D1 hit on
+    // `flagship-coastal`/`goblin-flagship-coastal` persists and is not
+    // sitting on the bar — 1.0 percentage point of margin, against the 1.9
+    // The Underworld recorded and the 0.4 The Radiation flagged as an edge.
+    assert_eq!(coastal, 189, "coastal flagship count drifted");
+    assert_eq!(inland, 810, "inland flagship count drifted");
 }
 
 #[test]
@@ -1167,12 +1160,36 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // nights" phrasing is stale prose from an earlier regen, not an assertion;
     // lunar has led solar in this pool since well before this campaign and
     // still does).
+    //
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six obligate marine peoples enter the roster and a
+    // `land_settlement` selector repair widens every world by 39 settlements
+    // (396 -> 435 on seed 42), re-deciding which worlds field a kobold head
+    // at all — the moonless-spinning pool moves 79 -> 73 solar, 66 -> 71
+    // lunar. All three structural invariants above this pool (a mooned kobold
+    // head is always lunar; goblin's head is always solar; a locked-world
+    // kobold head is always solar) are re-checked rather than assumed: each
+    // is an `assert_eq!` earlier in this test, the run reaches these recorded
+    // rows, so none of them fired. The `other` arm of the `match` that fills
+    // this pool is a `panic!`, and it did not fire either, so every moonless
+    // spinning kobold head is still one of the two domains counted here.
+    //
+    // ONE STALE SENTENCE ABOVE IS NOW FALSE AND IS CORRECTED HERE RATHER THAN
+    // LEFT TO ROT. The Range's paragraph ends "lunar has led solar in this
+    // pool since well before this campaign and still does". At this regen it
+    // does not: solar leads, 73 to 71. That is a REORDERING OF A RECORDED
+    // ROW, not a claim being broken — this pool carries no directional
+    // assertion, which is precisely why the sentence could go stale without
+    // any gate objecting. Counted independently off the committed `rows.csv`
+    // with the same three filters this loop applies (no refusal, not locked,
+    // `moons-admitted` in {"", "0"}): 73 solar, 71 lunar, which reproduces
+    // what the test reads.
     assert_eq!(
-        moonless_solar, 79,
+        moonless_solar, 73,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 66,
+        moonless_lunar, 71,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -1401,46 +1418,23 @@ fn blind_attribution_beats_chance_decisively() {
     // three attributable pairs to the correct side, 888 -> 891. The
     // directional claim remains intact: blind attribution still beats chance
     // decisively.
-    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-    // of the-census `rows.csv` (116 files in the delivery); this pin reads
-    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-    // fixture and is not a mover here.
-    // correct 871 -> 872, total 982 -> 983 (the DENOMINATOR moved this time).
-    // The directional claim (blind attribution beats chance decisively) HOLDS,
-    // re-checked rather than assumed: the 0.75 floor is asserted above and the run
-    // reaches here, so 872/983 = 0.887 cleared it. The mooned-pair invariant BELOW
-    // (perfect attribution among spinning, mooned pairs) was MASKED by this line
-    // and could not be assumed; it was re-run with both pins softened and passed.
-    // The total row was masked too and was read in the same pass.
-    // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
-    // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE MERGE,
-    // PRE-CENSUS: the absorb kept main's census fixtures while the conflict
-    // resolution kept this branch's census-delivery literals. Re-measured over
-    // the merged tree: correct 872 -> 871, total 983 -> 982; accuracy
-    // 871/982 = 0.887, so the 0.75 floor asserted ABOVE still clears by a wide
-    // margin. RE-CHECKED RATHER THAN ASSUMED: the run reaches this line with
-    // the floor armed, and the mooned-pair invariant BELOW (perfect attribution
-    // among spinning, mooned pairs) -- which these two lines mask -- was
-    // re-checked in the same softened pass and passed. Both rows were read in
-    // that one pass. Expected to move again at the post-merge census.
-    // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-    // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote all
-    // 1000 rows of the-census `rows.csv` and re-authored all eight Gnomon
-    // injection arms at the same ref. This pin reads census output. THE
-    // MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S COMMITTED (STALE)
-    // CENSUS, so this row returns to the value this branch's own earlier
-    // delivery (bdc59cc18) recorded -- measured, not assumed: that census
-    // and this one differ on exactly three metric columns, all astronomy
-    // (`figure-count`, `largest-figure-members`, `ecliptic-figure-count`),
-    // and none of them feeds this row. correct 871 -> 872, total 982 -> 983
-    // (872/983 = 0.887). BOTH rows were read in ONE softened pass. The 0.75
-    // floor asserted ABOVE stayed ARMED and cleared by a wide margin, and
-    // the mooned-pair invariant below (perfect attribution among spinning,
-    // mooned pairs) -- which these two lines mask -- stayed ARMED through
-    // the same pass and held.
+    // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+    // branch's own census-delivery re-pin history above is superseded --
+    // the committed census in this merge is The Tidemark's (taken per the
+    // pin-resolution principle: a calibration pin asserts against the
+    // committed census, and this branch's own census no longer exists
+    // once this merge lands).
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six marine peoples plus the `land_settlement` selector
+    // repair move one attributable pair to the correct side, 871 -> 872. The
+    // directional claim this test guards (blind attribution beats chance
+    // decisively) is re-checked rather than assumed: the 0.75 floor is
+    // asserted ABOVE this line and the run reached here, so it cleared, and
+    // against the ~0.5 binary chance the claim is really about it is near
+    // double. A one-pair move on a roster change this size is the reassuring
+    // direction — the attribution rule is not roster-sensitive.
     assert_eq!(correct, 872, "blind-attribution count drifted");
-    assert_eq!(total, 983, "attributable-pair count drifted");
+    assert_eq!(total, 982, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1492,11 +1486,11 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
     }
 }
 
-/// The two goblin worlds the detector cannot see (The Wearing, Task 11d).
+/// The diagnosed goblin worlds the detector cannot see (The Wearing, Task 11d).
 ///
 /// NOT a tolerance and NOT a threshold: an explicit, exhaustive list of the
 /// seeds whose `false` has been chased to a named cause. Any other seed
-/// reading false still fails, and so does either of these two turning true
+/// reading false still fails, and so does any diagnosed seed turning true
 /// — the list is pinned by equality, not by count, so it cannot silently
 /// absorb a third world.
 ///
@@ -1534,11 +1528,24 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
 /// two derivations now land on the same rung. The diagnosis above is kept
 /// rather than deleted: it records WHY the detector can go blind, and the
 /// mechanism can return the next time repair moves.
-const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 0] = [];
+///
+/// **The current census (2026-09-14, after the Tidemark close regeneration):**
+/// the mechanism returned at seed 935. Goblin belief 9 is the compound
+/// `day` + `gloom`: the committed epithet is `Shoeffepa`, while the
+/// honorific-free re-derivation is `Paefepa`. Re-deriving the two concepts
+/// independently gives `Pae` and `Fepa`; the committed form retains the
+/// honorific `shoef` and the second morpheme `Fepa`, but loses the front
+/// `Pae`. Therefore the full reference's consonant frame has no offset in
+/// the committed word, while removing the dropped morpheme recovers the
+/// affix exactly (`prepended_material("Shoeffepa", "Fepa", ...)` →
+/// `Some("shoef")`). This is the same front-divergence detector limit, not
+/// a missing honorific. The witness is pinned in
+/// `the_census_falses_are_front_divergence_and_not_a_missing_affix`.
+const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 1] = [935];
 
 /// claim: readout(preregistered, 0016) — reads the committed DRIFT census
-/// fixture; pinned counts, with `HONORIFIC_DETECTOR_BLIND_SEEDS` now empty
-/// (zero detector-limit exceptions, down from two)
+/// fixture; pinned counts, with `HONORIFIC_DETECTOR_BLIND_SEEDS` containing
+/// only the diagnosed seed 935 (one detector-limit exception)
 #[test]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
@@ -1617,9 +1624,9 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     }
     assert_eq!(
         g_false_seeds, HONORIFIC_DETECTOR_BLIND_SEEDS,
-        "the goblin epithet-honorific falses are no longer exactly the (now empty) \
-         diagnosed detector-blind roster — any false here is an UNDIAGNOSED world and \
-         must be chased, not added to the list"
+        "the goblin epithet-honorific falses are no longer exactly the diagnosed \
+         detector-blind roster — any false here is an UNDIAGNOSED world and must \
+         be chased, not added to the list"
     );
     // F11 discharge re-pin (2026-07-30, committed `rows.csv` at `4cd19ff9`):
     // goblin 764/2/234 -> 766/1/233, kobold 762/238 -> 760/240. The claim is
@@ -1727,7 +1734,7 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // moved; neither direction did.
     assert_eq!(
         (g_true, g_absent),
-        (999, 1),
+        (998, 1),
         "goblin epithet-honorific true/absent split drifted"
     );
     // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
@@ -1767,7 +1774,14 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
         // `g_false_seeds` roster-equality guard and the loop's inner
         // `assert!(!*v)` both stayed ARMED through the softened pass and
         // held, so every kobold world still reads FALSE.
-        (983, 17),
+        //
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own census-delivery history above is superseded -- the
+        // committed census in this merge is The Tidemark's (taken per the
+        // pin-resolution principle: a calibration pin asserts against the
+        // committed census, and this branch's own census no longer exists
+        // once this merge lands). (983, 17) -> (982, 18).
+        (982, 18),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -2430,21 +2444,33 @@ fn name_collision_rate_is_measured_and_pinned() {
         // The Orrery delivery gate (2026-09-12, current canonical merge
         // product): the same fixture reads 0.525_123_563_979_999; this is a
         // small re-pin, not a changed directional claim.
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. mean 0.525_123_563_979_999 ->
-        // 0.527_216_074_640_001. The zero/nonzero/absent count rows above
-        // did NOT move (0 / 1000 / 0) and stayed ARMED through the softened
-        // pass.
-        (mean - 0.527_216_074_640_001).abs() < 1e-6,
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own census-delivery re-pin history above is superseded --
+        // the committed census in this merge is The Tidemark's (taken per the
+        // pin-resolution principle: a calibration pin asserts against the
+        // committed census, and this branch's own census no longer exists
+        // once this merge lands).
+        // The Tidemark's close regen (2026-09-13, canonical census on
+        // lefford at 9b3bbfaa5d45): six obligate marine peoples enter the
+        // roster and a `land_settlement` selector repair widens every world
+        // by 39 settlements (396 -> 435 on seed 42), so a larger and
+        // different set of settlements is named on every world. Mean:
+        // 0.525_123_563_979_999 -> 0.521_266_445_920_000_5, a fall of
+        // 3.9e-3. Zero/nonzero/absent unmoved at 0/1000/0, checked against
+        // this fixture rather than assumed (counted off the committed
+        // `rows.csv`: 0 zero-collision, 1000 nonzero, 0 absent) — and they
+        // are asserted above this line, which the run reached, so the
+        // three-way partition still sums to 1000.
+        // A FALL IS WORTH ONE SENTENCE AND NO MORE, because the direction is
+        // the one decision 0024's note above tells readers not to chase: 39
+        // more settlements per world is MORE names drawn from the same
+        // lexeme space, which would ordinarily push collisions UP. It went
+        // down by less than a percent of its own value. Nothing here was
+        // tuned, no template weight was touched, and this row still carries
+        // no directional claim (H4 already failed and is recorded as such
+        // above); the tolerance is unchanged at 1e-6 and the rate stays
+        // inside the range decision 0024 sanctions.
+        (mean - 0.521_266_445_920_000_5).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2714,35 +2740,19 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 8.545_224_123_300_008. Still comfortably below the campaign's own
         // <10-character claim (spec 7) — 1.45 characters of margin —
         // re-checked rather than assumed.
-        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-        // of the-census `rows.csv` (116 files in the delivery); this pin reads
-        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-        // fixture and is not a mover here.
-        // goblin mean 8.492_322_954_254_249 -> 8.551_386_390_790_796; present unmoved
-        // at 999. Still far below the campaign's own <10-character claim (spec 7) —
-        // 1.45 characters of margin — re-checked rather than assumed.
-        // NOTE: goblin appears TWICE in this table (here and below). That duplication
-        // is PRE-EXISTING, not introduced by this re-pin; both arms are updated
-        // together, and the duplicate is reported rather than silently deleted.
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. goblin 8.492_322_954_254_249 ->
-        // 8.551_386_390_790_796 (present unmoved at 999); kobold
-        // 6.926_498_556_008_148 -> 6.918_919_202_238_042 and present 982 ->
-        // 983. ALL THREE table arms -- goblin is duplicated here,
-        // pre-existing and reported rather than deleted -- were read in ONE
-        // softened pass. The `present + absent == 1000` structural row
-        // stayed ARMED through that pass and held.
-        ("goblin", 999u32, 8.551_386_390_790_796),
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own census-delivery re-pin history above is superseded --
+        // the committed census in this merge is The Tidemark's (taken per the
+        // pin-resolution principle: a calibration pin asserts against the
+        // committed census, and this branch's own census no longer exists
+        // once this merge lands).
+        // The Tidemark's close regen (2026-09-13, canonical census on lefford
+        // at 9b3bbfaa5d45): 8.492_322_954_254_249 -> 8.487_414_956_156_156,
+        // present unmoved at 999. The cause, the re-check of the
+        // <10-character claim, and the reason both species were read in one
+        // pass are written once, at the kobold entry below, rather than
+        // duplicated here.
+        ("goblin", 999u32, 8.487_414_956_156_156),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2900,46 +2910,46 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 6.889_837_276_428_570. Still comfortably below the <10-character
         // claim — 3.11 characters of margin — re-checked rather than
         // assumed.
-        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-        // of the-census `rows.csv` (116 files in the delivery); this pin reads
-        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-        // fixture and is not a mover here.
-        // goblin mean 8.492_322_954_254_249 -> 8.551_386_390_790_796 (the duplicate
-        // goblin arm noted above); kobold present 982 -> 983 and mean
-        // 6.926_498_556_008_148 -> 6.918_919_202_238_042. THE KOBOLD ROW WAS MASKED
-        // by the goblin arm exactly as this file's own 2026-08-28 note warns; both
-        // were read in ONE pass with the pins softened, not one per failing run.
-        // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
-        // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE
-        // MERGE, PRE-CENSUS: the absorb kept main's census fixtures while the
-        // conflict resolution kept this branch's census-delivery literals.
-        // Re-measured over the merged tree -- goblin present unmoved at 999,
-        // mean 8.551_386_390_790_796 -> 8.492_322_954_254_249; kobold present
-        // 983 -> 982, mean 6.918_919_202_238_042 -> 6.926_498_556_008_148.
-        // BOTH SPECIES were read in ONE softened pass, not one per failing
-        // run: the goblin arm masks the kobold arm, and this file's own
-        // history records exactly that mistake. NOTE THE DUPLICATE GOBLIN ROW
-        // ABOVE -- it predates this merge and sits on BOTH sides of it, so it
-        // is left alone here, but it must be moved in step with this one or
-        // the test reds on whichever copy still holds the old mean.
-        // Re-checked rather than assumed: the `present + absent == 1000`
-        // structural row below stayed ARMED through the softened pass and
-        // held. Expected to move again at the post-merge census.
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. SECOND goblin arm of the duplicated pair --
-        // moved together with the first, above.
-        ("goblin", 999u32, 8.551_386_390_790_796),
-        ("kobold", 983u32, 6.918_919_202_238_042),
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own census-delivery re-pin history above is superseded --
+        // the committed census in this merge is The Tidemark's (taken per the
+        // pin-resolution principle: a calibration pin asserts against the
+        // committed census, and this branch's own census no longer exists
+        // once this merge lands).
+        // The Tidemark's close regen (2026-09-13, canonical census on lefford
+        // at 9b3bbfaa5d45): six obligate marine peoples enter the roster and
+        // a `land_settlement` selector repair widens every world by 39
+        // settlements (396 -> 435 on seed 42), so both species compound their
+        // names over a different set of sites. NEITHER present count moves
+        // (goblin 999 -> 999, kobold 982 -> 982): the six new peoples are
+        // obligate marine and take no flagship seat from either. Means:
+        // goblin 8.492_322_954_254_249 -> 8.487_414_956_156_156, kobold
+        // 6.926_498_556_008_148 -> 6.902_671_292_464_358.
+        // THE <10-CHARACTER CLAIM (spec §7) IS RE-CHECKED, NOT ASSUMED, and
+        // the way it is checked is worth stating because this row carries NO
+        // assertion of it: the claim lives only in this comment chain, so the
+        // check is arithmetic on the pinned values themselves — 8.4874 and
+        // 6.9027 against 10, leaving 1.51 and 3.10 characters of margin.
+        // Goblin's margin is the narrower of the two and it WIDENED this
+        // regen (1.508 -> 1.513), so the claim moved toward safety.
+        // BOTH MEANS WERE READ IN ONE PASS OFF THE REGENERATED `rows.csv`,
+        // for the reason the Precedence note below already records: this is a
+        // two-arm loop whose first arm is goblin, so a goblin drift masks
+        // kobold entirely and the failing run named only goblin.
+        // A DUPLICATE `("goblin", ...)` ENTRY SAT ON THIS LINE AND IS DELETED
+        // HERE. `938adae2e` (The Underworld Peoples' ledger-witness refresh,
+        // 2026-09-10) re-pinned the goblin entry at the head of this array
+        // AND inserted a second copy of it here, in place of the kobold line
+        // it was editing; both copies carried identical values, so the loop
+        // simply measured goblin twice and nothing went red. It is deleted
+        // rather than kept in sync because the harm is latent and specific:
+        // the next re-pin updates ONE of the two and the loop then fails on
+        // the stale copy while the failure message names the species it just
+        // re-pinned. That is not hypothetical — it happened to this very
+        // re-pin, which is how the duplicate was found. Traced by commit, not
+        // inferred: `ef6a8ae0a` and `c15f86bdd` carry one goblin entry here,
+        // `938adae2e` carries two.
+        ("kobold", 982u32, 6.902_671_292_464_358),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -3174,49 +3184,36 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // goblin 2.716_477_110_510_509 -> 2.720_362_562_599_999,
         // kobold 2.200_726_815_918_366_6 -> 2.209_761_443_265_304_3.
         // Both stay inside spec 8 criterion 2's 2-3 syllable range.
-        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-        // of the-census `rows.csv` (116 files in the delivery); this pin reads
-        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-        // fixture and is not a mover here.
-        // goblin mean 2.707_807_533_233_231_6 -> 2.723_809_030_930_932 (present unmoved
-        // at 999); kobold present 982 -> 983 and mean 2.219_112_594_602_85 ->
-        // 2.216_176_219_226_857. The kobold arm was MASKED by goblin and was read in
-        // the same softened pass. Both stay inside spec 8 criterion 2's 2-3 syllable
-        // range, and the per-row structural relation this loop asserts (a world reports
-        // a syllable count exactly when it reports a name length) never fired.
-        // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
-        // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE
-        // MERGE, PRE-CENSUS: the absorb kept main's census fixtures while the
-        // conflict resolution kept this branch's census-delivery literals.
-        // Re-measured over the merged tree -- goblin present unmoved at 999,
-        // mean 2.723_809_030_930_932 -> 2.707_807_533_233_231_6; kobold
-        // present 983 -> 982, mean 2.216_176_219_226_857 ->
-        // 2.219_112_594_602_85. Both arms read in ONE softened pass. The
-        // present counts still agree exactly with the name-length row's
-        // (999 / 982), which is the structural relation this row's own header
-        // says is worth asserting rather than assuming -- and the per-row
-        // absent-parity assertion inside the loop stayed ARMED through the
-        // softened pass and held. Expected to move again at the post-merge
-        // census.
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. goblin 2.707_807_533_233_231_6 ->
-        // 2.723_809_030_930_932 (present unmoved at 999); kobold
-        // 2.219_112_594_602_85 -> 2.216_176_219_226_857 and present 982 ->
-        // 983. BOTH species were read in ONE softened pass. The per-row
-        // absent-parity assertion inside the loop and the `present + absent
-        // == 1000` row stayed ARMED through that pass and held.
-        ("goblin", 999u32, 2.723_809_030_930_932),
-        ("kobold", 983u32, 2.216_176_219_226_857),
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own census-delivery re-pin history above is superseded --
+        // the committed census in this merge is The Tidemark's (taken per the
+        // pin-resolution principle: a calibration pin asserts against the
+        // committed census, and this branch's own census no longer exists
+        // once this merge lands).
+        // The Tidemark's close regen (2026-09-13, canonical census on lefford
+        // at 9b3bbfaa5d45): six obligate marine peoples enter the roster and
+        // a `land_settlement` selector repair widens every world by 39
+        // settlements (396 -> 435 on seed 42), so both species compound their
+        // names over a different set of sites. Present counts are unmoved
+        // (goblin 999, kobold 982), and they still agree exactly with the
+        // name-length row's — the structural relation this loop asserts row
+        // by row (a world reports a syllable count exactly when it reports a
+        // name length) is re-checked rather than assumed: the per-row
+        // `assert_eq!` on the two Absent patterns runs before these tallies
+        // and never fired. Means: goblin 2.707_807_533_233_231_6 ->
+        // 2.708_621_518_918_918, kobold 2.219_112_594_602_85 ->
+        // 2.213_988_364_663_95.
+        // SPEC 8 CRITERION 2 (mean syllable count in the 2-3 range) IS
+        // RE-CHECKED, NOT ASSUMED, and as with the name-length row the check
+        // is arithmetic rather than an assertion, because this row carries no
+        // assertion of the criterion: 2.7086 and 2.2140 both sit inside
+        // [2, 3], goblin 0.29 below the ceiling and kobold 0.21 above the
+        // floor. Goblin moved a hair toward the ceiling (+8.1e-4) and kobold
+        // a hair toward the floor (-5.1e-3); neither approaches either end.
+        // Both means read in one pass off the regenerated `rows.csv`, for the
+        // masking reason the name-length row records.
+        ("goblin", 999u32, 2.708_621_518_918_918),
+        ("kobold", 982u32, 2.213_988_364_663_95),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -3534,38 +3531,28 @@ fn name_transparency_is_measured_and_pinned() {
         // the pre-campaign 1.00 degenerate value, with the min/max spread
         // below still spanning 0.298 to 0.987. Nothing here licenses reading
         // it as an improvement; it is a roster change, recorded.
-        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-        // of the-census `rows.csv` (116 files in the delivery); this pin reads
-        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-        // fixture and is not a mover here.
-        // mean 0.694_843_139_979_999_5 -> 0.693_758_744_690_001; present/absent unmoved
-        // at 1000/0. The floor and ceiling rows below were MASKED by this line and were
-        // read in the same softened pass (see their own notes).
-        // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
-        // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE
-        // MERGE, PRE-CENSUS: the absorb kept main's census fixtures while the
-        // conflict resolution kept this branch's census-delivery literals.
-        // 0.693_758_744_690_001 -> 0.694_843_139_979_999_5. The present/absent
-        // rows above did NOT move (1000 / 0). The floor and ceiling rows below
-        // are MASKED by this line and were read in the SAME softened pass, not
-        // on later runs. Expected to move again at the post-merge census.
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. mean 0.694_843_139_979_999_5 ->
-        // 0.693_758_744_690_001. The present/absent rows above did NOT move
-        // (1000 / 0) and stayed ARMED through the softened pass. The floor
-        // and ceiling rows below are MASKED by this line and were read in
-        // the SAME softened pass, not on later runs.
-        (mean - 0.693_758_744_690_001).abs() < 1e-9,
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own census-delivery re-pin history above is superseded --
+        // the committed census in this merge is The Tidemark's (taken per the
+        // pin-resolution principle: a calibration pin asserts against the
+        // committed census, and this branch's own census no longer exists
+        // once this merge lands).
+        // The Tidemark's close regen (2026-09-13, canonical census on
+        // lefford at 9b3bbfaa5d45): six obligate marine peoples enter the
+        // roster and a `land_settlement` selector repair widens every world
+        // by 39 settlements (396 -> 435 on seed 42), so a different — and
+        // larger — set of settlements is named on every world and a
+        // different set of names has worn:
+        // 0.694_843_139_979_999_5 -> 0.693_710_846_790_000_4. Present/absent
+        // unmoved at 1000/0. This FELL, which is away from the pre-campaign
+        // 1.00 degenerate value the comment above warns about, so the
+        // direction needs no defending; the magnitude is 1.1e-3, the
+        // smallest step since The Precedence. Re-checked rather than
+        // assumed, and the check is the distribution rather than the mean:
+        // 196 of 1000 worlds still read below 0.60 (198 at the previous
+        // census), so the low tail carries essentially the same mass and the
+        // mean is not being held up by the tail thinning.
+        (mean - 0.693_710_846_790_000_4).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -3659,42 +3646,34 @@ fn name_transparency_is_measured_and_pinned() {
         // The Winze's close regen (2026-08-29, same census): the world
         // holding the most-worn name set changes with the roster —
         // 0.284_644_19 -> 0.298_181_82. The maximum below does NOT move.
-        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-        // of the-census `rows.csv` (116 files in the delivery); this pin reads
-        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-        // fixture and is not a mover here.
-        // floor 0.238_095_24 -> 0.340_659_34. MASKED by the mean assertion above.
-        // The floor RISES and the ceiling falls in the same refresh (below), so the
-        // spread narrows from BOTH ends; a 0.341-to-0.969 span around a 0.694 mean is
-        // still a real distribution over worlds, not the uniformity defect this row
-        // guards. Read the two together before treating either as a trend.
-        // MERGE RE-PIN (2026-09-13, The Trencher absorbing origin/main):
-        // floor 0.340_659_34 -> 0.238_095_24, measured at the merge,
-        // pre-census, in the same softened pass as the mean above. The floor
-        // FALLS and the ceiling below falls too, so the spread widens at the
-        // bottom and narrows at the top; a 0.238-to-0.961 span around a 0.695
-        // mean is still a real distribution over worlds, not the uniformity
-        // defect this row guards. Read the two together before treating
-        // either as a trend. Expected to move again at the post-merge census.
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. floor 0.238_095_24 -> 0.340_659_34. MASKED
-        // by the mean assertion above and read in the SAME softened pass.
-        // The floor RISES and the ceiling below rises too, so the spread
-        // narrows from both ends; a 0.341-to-0.969 span around a 0.694 mean
-        // is still a real distribution over worlds, not the uniformity
-        // defect this row guards. Read the two together before treating
-        // either as a trend.
-        (min - 0.340_659_34).abs() < 1e-8,
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own census-delivery re-pin history above is superseded --
+        // the committed census in this merge is The Tidemark's (taken per the
+        // pin-resolution principle: a calibration pin asserts against the
+        // committed census, and this branch's own census no longer exists
+        // once this merge lands).
+        // The Tidemark's close regen (2026-09-13, canonical census on
+        // lefford at 9b3bbfaa5d45): the world holding the most-worn name set
+        // changes with the roster and the 39-settlement widening —
+        // 0.238_095_24 -> 0.274_038_46. The maximum below ALSO moves this
+        // time, up, so both tails moved inward and the span narrows
+        // 0.7225 -> 0.6926.
+        // THE STANDING WARNING FIRES AND IS ANSWERED RATHER THAN ABSORBED.
+        // The Delvers' paragraph above flagged that "a floor that kept
+        // climbing toward the mean is exactly how this defect would come
+        // back, and it would be a finding to report, not a bound to widen".
+        // The floor did climb (+0.036) while the mean barely moved (-0.0011),
+        // so the floor-to-mean gap closed 0.4567 -> 0.4197. That is the
+        // flagged shape, and it is NOT the uniformity defect: the check that
+        // discriminates is low-tail MASS, not the extreme, and the mass is
+        // intact — 196 of 1000 worlds read below 0.60 against 198 at the
+        // previous census, 57 below 0.50, and the deciles still run
+        // 0.274 / 0.541 / 0.603 / 0.641 / 0.676 / 0.708 / 0.732 / 0.760 /
+        // 0.790 / 0.828. A distribution whose bottom fifth sits below 0.60
+        // is not one world's worth of uniformity in a new costume; the
+        // single most-worn world simply got less extreme. Counted off the
+        // committed `rows.csv`, not assumed.
+        (min - 0.274_038_46).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -3730,40 +3709,24 @@ fn name_transparency_is_measured_and_pinned() {
         // widened overall — a rising ceiling alongside a falling floor is a
         // widening distribution, not the uniformity defect this row guards;
         // it stays well clear of 1.0.
-        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-        // of the-census `rows.csv` (116 files in the delivery); this pin reads
-        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-        // fixture and is not a mover here.
-        // ceiling 0.960_612_69 -> 0.969_498_91. MASKED by the mean assertion above.
-        // This WALKS BACK UP toward 1.0, which the note above asks to be read against
-        // rather than re-pinned silently: it is a rise of 0.0089, the ceiling remains
-        // off 1.0, and no world reads fully transparent. Recorded, not read as a
-        // return of the defect — but a further rise toward 1.0 is the thing to watch.
-        // MERGE RE-PIN (2026-09-13, The Trencher absorbing origin/main):
-        // ceiling 0.969_498_91 -> 0.960_612_69, measured at the merge,
-        // pre-census, in the same softened pass as the mean above. This moves
-        // AWAY from 1.0, which is away from the defect this row guards rather
-        // than toward it; the standing instruction above asks a rise toward
-        // 1.0 to be read against, and this is not one. No world reads fully
-        // transparent. Expected to move again at the post-merge census.
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. ceiling 0.960_612_69 -> 0.969_498_91. MASKED
-        // by the mean assertion above and read in the SAME softened pass.
-        // The ceiling RISES while the floor above also rises, so the span
-        // narrows from BOTH ends; it is still short of 1.0, so no world
-        // reads fully transparent and the standing instruction above (read
-        // a rise TOWARD 1.0 against the defect) is not triggered.
-        (max - 0.969_498_91).abs() < 1e-8,
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own census-delivery re-pin history above is superseded --
+        // the committed census in this merge is The Tidemark's (taken per the
+        // pin-resolution principle: a calibration pin asserts against the
+        // committed census, and this branch's own census no longer exists
+        // once this merge lands).
+        // The Tidemark's close regen (2026-09-13, canonical census on
+        // lefford at 9b3bbfaa5d45): the ceiling RISES 0.960_612_69 ->
+        // 0.966_666_67 while the floor rose too (asserted above), so unlike
+        // The Granary's refresh this is not a widening — both tails moved
+        // inward. Read against the failure mode the notes above name: that
+        // mode is a ceiling pinned AT 1.0 with a floor climbing to meet it.
+        // Half of it is present (the floor climbed) and half is not — the
+        // ceiling is 0.033 clear of 1.0, and 13 of 1000 worlds read above
+        // 0.90, so nothing is bunching at the top. Re-checked rather than
+        // assumed; the discriminating evidence is at the minimum assertion
+        // above, which counts the low tail's mass.
+        (max - 0.966_666_67).abs() < 1e-8,
         "name-transparency maximum drifted: {max:.15}"
     );
 }
@@ -4011,7 +3974,25 @@ fn null_control_distributions_are_within_the_sampling_bound() {
         // campaign makes the two builds clones again by construction, and
         // the pantheon-size SMD below is still nonzero, so the
         // path-dependence the epoch introduced has not gone away.
-        (cult - 0.006_000_000_000_000_002).abs() < 1e-9,
+        // The Tidemark's close regen (2026-09-13, canonical census on
+        // lefford at 9b3bbfaa5d45, `census-of-the-meeting` refreshed
+        // alongside `the-census`): six obligate marine peoples enter the
+        // roster and a `land_settlement` selector repair widens every world
+        // by 39 settlements. NEITHER solo build contains a marine people —
+        // the two pin sets are `goblin-solo` and `goblin-twin-solo` — so the
+        // mover here is the same indirect one The Generalist's note in the
+        // sibling SMD row sets out: `register_concepts` registers the whole
+        // kind-concept set unconditionally, every lexicon is a total map over
+        // registered concepts, and the selector repair moves settlements in
+        // both builds alike. The cult-form TVD rises
+        // 0.006_000_000_000_000_002 -> 0.008_000_000_000_000_004, still two
+        // orders of magnitude inside the +/-0.15 directional bound asserted
+        // above, WHICH THE RUN REACHES WITHOUT FIRING — that bound is the
+        // assertion that would catch a broken control, and it sits earlier in
+        // this same function. The naming-independent invariant on the line
+        // above (head-domain TVD exactly 0) is likewise unmoved: recomputed
+        // straight off the refreshed fixture it is exactly 0.0.
+        (cult - 0.008_000_000_000_000_004).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
     // The Sundering (moving-sea epoch; lefford regen, 0063):
@@ -4281,7 +4262,21 @@ fn null_control_name_length_smd_is_pinned() {
         // The Orrery delivery gate (2026-09-12, current canonical merge
         // product): the same fixture reads -0.033_664_353_490_275_48; the
         // null remains comfortably inside the pre-registered bound.
-        (namelen - -0.033_664_353_490_275_48).abs() < 1e-9,
+        // The Tidemark's close regen (2026-09-13, canonical census on
+        // lefford at 9b3bbfaa5d45): the `land_settlement` selector repair
+        // moves which sites each solo build names, shifting both sides'
+        // salts alike in structure —
+        // -0.033_664_353_490_275_48 -> -0.033_196_682_211_244_985. The
+        // magnitude FELL by 4.7e-4 and the sign is unmoved, so this residual
+        // moved marginally CLOSER to zero, which is the direction the null
+        // hypothesis this row witnesses (INDISTINGUISHABLE FROM ZERO) reads
+        // as more true. Still ~6x inside the +/-0.2 sampling-theory bound
+        // `null_control_distributions_are_within_the_sampling_bound`
+        // asserts — re-checked rather than assumed: that test reaches its
+        // `namelen.abs() < 0.2` assertion and does not fire, and the same
+        // statistic recomputed independently off the refreshed fixture
+        // (500 rows a side, pooled-SD standardization) reproduces it.
+        (namelen - -0.033_196_682_211_244_985).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

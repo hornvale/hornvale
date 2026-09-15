@@ -889,55 +889,54 @@ fn homophony_count_is_measured_and_pinned() {
     // four sentient peoples and re-seats the naming population, moving the
     // means to 6.595, 6.856, 24.465, and 7.013. Bugbear remains highest by
     // more than 3x, so this re-pins the witnesses rather than the claim.
-    // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-    // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-    // of the-census `rows.csv` (116 files in the delivery); this pin reads
-    // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-    // fixture and is not a mover here.
-    // goblin 6.595 -> 6.52, hobgoblin 6.856 -> 6.76, bugbear 24.465 -> 24.188,
-    // kobold 7.013 -> 7.089. ALL FOUR were re-measured in ONE pass with the pins
-    // softened, not one per failing run — the failure named only goblin, and this
-    // file's own note above records that mistake being made before. Bugbear remains
-    // highest by more than 3x, so this re-pins the witnesses rather than the claim;
-    // the `mb > mg && mb > mh` invariant below was masked by these lines and was
-    // re-checked in the same pass rather than assumed.
-    // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
-    // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE MERGE,
-    // PRE-CENSUS: the absorb kept main's census fixtures byte-for-byte while
-    // the conflict resolution kept this branch's census-delivery literals, so
-    // all four rows read the Trencher delivery's values against main's census
-    // data. Re-measured over the merged tree: goblin 6.52 -> 6.595, hobgoblin
-    // 6.76 -> 6.856, bugbear 24.188 -> 24.465, kobold 7.089 -> 7.013. ALL FOUR
-    // were read in ONE softened pass, not one per failing run -- the failure
-    // named only goblin, and this file's own note above records that mistake
-    // being made before. Bugbear remains highest by more than 3x, so this
-    // re-pins the witnesses rather than the claim; the `mb > mg && mb > mh`
-    // invariant below stayed ARMED through the softened pass and held.
-    // Expected to move again at the post-merge census.
-    // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-    // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote all
-    // 1000 rows of the-census `rows.csv` and re-authored all eight Gnomon
-    // injection arms at the same ref. This pin reads census output. THE
-    // MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S COMMITTED (STALE)
-    // CENSUS, so this row returns to the value this branch's own earlier
-    // delivery (bdc59cc18) recorded -- measured, not assumed: that census
-    // and this one differ on exactly three metric columns, all astronomy
-    // (`figure-count`, `largest-figure-members`, `ecliptic-figure-count`),
-    // and none of them feeds this row. goblin 6.595 -> 6.52, hobgoblin
-    // 6.856 -> 6.76, bugbear 24.465 -> 24.188, kobold 7.013 -> 7.089. ALL
-    // FOUR were re-measured in ONE softened pass, not one per failing run
-    // -- the failure named only goblin, and this file's own note above
-    // records that mistake being made before. Bugbear remains highest by
-    // more than 3x, so this re-pins the witnesses rather than the claim;
-    // the `mb > mg && mb > mh` invariant below stayed ARMED through the
-    // softened pass and held.
-    assert!((mg - 6.52).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 6.76).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 24.188).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+    // branch's own census-delivery history (goblin/hobgoblin/bugbear/kobold
+    // re-pinned twice more, most recently to 6.52/6.76/24.188/7.089 at this
+    // branch's post-merge census `06055072d639`) is superseded -- the
+    // committed census in this merge is The Tidemark's (taken per the
+    // pin-resolution principle: a calibration pin asserts against the
+    // committed census, and this branch's own census no longer exists once
+    // this merge lands).
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six obligate marine peoples enter the roster and a
+    // `land_settlement` selector repair widens every world by 39 settlements
+    // (396 -> 435 on seed 42), so a larger and different set of settlements
+    // is named on every world and each daughter language's homophone tally
+    // rises with it: goblin 6.595 -> 7.389, hobgoblin 6.856 -> 7.527,
+    // bugbear 24.465 -> 27.326, kobold 7.013 -> 7.702.
+    //
+    // ALL FOUR WERE RE-MEASURED IN ONE PASS off the regenerated `rows.csv`,
+    // not one per failing run, for the reason the paragraphs above record:
+    // these asserts are sequential, so only goblin was ever reported. Each
+    // mean is still an exact integer count over the 1000-seed census divided
+    // by 1000 (7389, 7527, 27326, 7702), and every one of the four columns
+    // is present on all 1000 rows with none absent — checked, because a mean
+    // taken over 1000 when the column is absent somewhere would be a
+    // different statistic wearing the same name.
+    //
+    // A RISE ON ALL FOUR IS THE EXPECTED SIGN, which is why it is recorded
+    // rather than chased: homophony is counted over the names a world draws,
+    // and 39 more settlements per world is more names from the same lexeme
+    // space.
+    //
+    // THE DIRECTIONAL CLAIM THIS ROW CARRIES — bugbear's homophony mean is
+    // highest among the goblinoid daughters, by more than the 3x
+    // falsification line — is asserted BELOW these pins and is re-checked
+    // rather than assumed: bugbear leads goblin 3.6982x (27.326/7.389)
+    // against the prior regen's 3.7096x, and hobgoblin 3.6304x
+    // (27.326/7.527) against 3.5684x. The first narrowed a hair, the second
+    // WIDENED; both stay far above 3x, so the warning above stands unspent.
+    // Post-unblinding re-measure, declared per decision 0016.
+    assert!((mg - 7.389).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 7.527).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 27.326).abs() < 1e-9, "bugbear mean drifted: {mb}");
     // kobold 6.113 -> 6.279 (The Granary's re-pin, same mechanism as above).
     // Unmoved at 6.326 through The Foliot and The Sources' second and third
     // censuses; 6.326 -> 6.36 at The Precedence's, with the other three.
-    assert!((mk - 7.089).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Tidemark's close regen (2026-09-13): 7.013 -> 7.702, with the other
+    // three above and for the same cause; kobold carries no directional
+    // claim of its own here.
+    assert!((mk - 7.702).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

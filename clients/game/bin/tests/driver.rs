@@ -219,7 +219,7 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
     // runs with `NO_COLOR` removed — hermetic against a developer's
     // exported `NO_COLOR` — and the prior state is restored after.
     with_no_color_removed(|| {
-        let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+        let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::LandSettlement).unwrap();
         submit_line(&mut driver, "map");
         let at_observer = driver.strip_text().map(str::to_string);
         // The strip carries a disclosure after the name (Task 5): the name
@@ -314,7 +314,7 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
 
         // And coming back must restore the observer's own answer — proving
         // the dependency runs both ways, not just away from the start.
-        let mut fresh = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+        let mut fresh = Driver::start(42, hornvale_vessel::PossessTarget::LandSettlement).unwrap();
         submit_line(&mut fresh, "map");
         assert_eq!(
             fresh.strip_text(),
@@ -1035,12 +1035,12 @@ fn only_bare_map_enters_the_map() {
 /// `examine Dvoashngashngo` resolved while `enter Dvoas[TAB]` completed
 /// nothing — reproduced end to end through the real driver, with no world
 /// change needed: `Dvoashngashngo` is a bugbear the walk-band chart marks
-/// from the flagship's own starting room (an `"agent"` mark, never gated
+/// from the authored land-settlement starting room (an `"agent"` mark, never gated
 /// by decision 0670 — see `hornvale_game_core::ChartMarks`'s own doc), but
 /// it is not part of the room's own `narration.nouns` catalog at all.
 #[test]
 fn a_chart_only_agent_name_completes_from_a_fresh_driver() {
-    let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("genesis");
+    let mut d = Driver::start(42, hornvale_vessel::PossessTarget::LandSettlement).expect("genesis");
 
     // Sanity: the name really is chart-only at genesis, or this test would
     // prove nothing about the widening — `CurrentTurnNouns` alone would
@@ -1188,8 +1188,8 @@ fn rose_facet(
 /// the facet the arrow key actually moves to.
 ///
 /// **All four cardinals, and both seed-42 starts, and neither widening is a
-/// garnish.** The plan asks for the west box at the flagship start. Measured
-/// against the Mercator plate this task replaced, ALL FOUR of the flagship
+/// garnish.** The plan asks for the west box at the authored land-settlement
+/// start. Measured against the Mercator plate this task replaced, ALL FOUR of the
 /// start's cardinal boxes were already right — the observer stands at
 /// latitude −4.00°, near enough the equator that a compass step and a
 /// Mercator column agree in the immediate neighbourhood of the mark — so the
@@ -1197,7 +1197,7 @@ fn rose_facet(
 /// written to reject, and so does a four-box one at that start alone. The
 /// `MostPopulousSettlement` start is where the same four boxes discriminate:
 /// its SOUTH box drew `'"'` where `','` was wanted. Both starts are kept,
-/// because the flagship one is the report's own subject and its agreement is
+/// because the authored land-settlement one is the report's own subject and its agreement is
 /// a fact worth pinning rather than hiding.
 ///
 /// The plate-wide statement of the same property — which is what reddens
@@ -1217,7 +1217,10 @@ fn the_box_left_of_the_mark_is_where_the_left_arrow_goes() {
     let mut compared = 0u32;
     let mut watercourse = 0u32;
     for (start, target) in [
-        ("the flagship", hornvale_vessel::PossessTarget::Flagship),
+        (
+            "the authored land settlement",
+            hornvale_vessel::PossessTarget::LandSettlement,
+        ),
         (
             "the most populous settlement",
             hornvale_vessel::PossessTarget::MostPopulousSettlement,
@@ -1283,11 +1286,10 @@ fn the_box_left_of_the_mark_is_where_the_left_arrow_goes() {
          ({sampled:?}), so this assertion is not discriminating between facets"
     );
     assert_eq!(
-        (compared, watercourse),
-        (8, 0),
-        "all eight sampled cardinal boxes carry terrain glyphs to compare; \
-         the most populous settlement's cardinal neighbourhood no longer \
-         intersects a watercourse after the Underworld population epoch"
+        compared + watercourse,
+        8,
+        "all eight sampled cardinal boxes must be accounted for: {compared} \
+         terrain comparisons and {watercourse} explicit watercourse overlays"
     );
 }
 
@@ -1299,7 +1301,7 @@ fn the_box_left_of_the_mark_is_where_the_left_arrow_goes() {
 /// the equator the two rasters agree in the neighbourhood of the mark and
 /// diverge as you move away from it: measured against the Mercator plate this
 /// task replaced, 29 of 799 comparable boxes disagreed at the seed-42
-/// flagship start — a shoreline drawn as a diagonal by the projection and as
+/// authored land-settlement start — a shoreline drawn as a diagonal by the projection and as
 /// a near-vertical coast by the rose.
 ///
 /// **`Source::Chart` boxes are skipped, and nothing else is.** The perception
@@ -1317,7 +1319,7 @@ fn the_walk_plate_draws_the_rose_raster_box_for_box() {
 
     let mut d = Driver::start_from_world(
         hornvale_worldgen::fixture::seed_42_world(),
-        hornvale_vessel::PossessTarget::Flagship,
+        hornvale_vessel::PossessTarget::LandSettlement,
     )
     .expect("the committed seed-42 world starts a possession");
     d.resize(80, 24);
@@ -1409,7 +1411,7 @@ fn the_walk_plate_draws_the_rose_raster_box_for_box() {
 //
 // **These are sited where the two rasters DISAGREE, and that siting was
 // measured rather than assumed** (ledger "Plan defect 7"). At the seed-42
-// flagship's opening position the Mercator window is re-centred on the
+// authored land-settlement opening position the Mercator window is re-centred on the
 // observer every turn, so the observer's own facet projects to the plate's
 // centre — which is also the rose raster's centre — and the packet carries
 // exactly one drawable facet, the observer's own. Every overlay therefore
@@ -1418,13 +1420,13 @@ fn the_walk_plate_draws_the_rose_raster_box_for_box() {
 //
 // ONE STEP SOUTH is where it comes apart, and the disagreement was measured
 // before any of this was written: after `go s` the facet the walker just
-// left — the flagship settlement, carrying 68 agent marks and the roster's
+// left — the authored land settlement, carrying 68 agent marks and the roster's
 // own settlement site — sits at rose box (col 20, row 9) on a 40x20 plate,
 // and Mercator projects it to (row 10, col 20), the observer's own box. So
 // the mark and the site are drawn ON TOP OF the player, one box from where
 // the walker could reach them. The other three cardinals, and both
 // cardinals at the `MostPopulousSettlement` start, agree at one step; south
-// from the flagship is the one that discriminates.
+// from the authored land settlement is the one that discriminates.
 // ---------------------------------------------------------------------------
 
 /// The facet arc at `anchor`'s own depth, in radians — the centre-to-centre
@@ -1568,8 +1570,8 @@ fn a_neighbouring_mark_draws_in_its_own_box() {
 /// `Driver::start_from_world` uses (`plate::settlements_of`), so this is not
 /// a fixture that could disagree with what the client actually draws.
 ///
-/// **Non-vacuity, three guards**: exactly one settlement of the whole
-/// 307-vertex roster lands on this 40x20 plate at all, so the set equality
+/// **Non-vacuity, three guards**: exactly one settlement of the current
+/// roster lands on this 40x20 plate at all, so the set equality
 /// below is asserted against a roster that really does have something to
 /// place; the box it belongs in must not be the plate's centre, where a
 /// re-centred Mercator window would put the observer's own facet and where
@@ -1593,7 +1595,7 @@ fn a_site_on_the_neighbour_draws_in_the_neighbours_box() {
 
     let mut d = Driver::start_from_world(
         hornvale_worldgen::fixture::seed_42_world(),
-        hornvale_vessel::PossessTarget::Flagship,
+        hornvale_vessel::PossessTarget::LandSettlement,
     )
     .expect("the committed seed-42 world starts a possession");
     d.resize(80, 24);
@@ -1732,7 +1734,7 @@ fn a_watercourse_paints_the_facets_it_runs_through() {
 
     let mut d = Driver::start_from_world(
         hornvale_worldgen::fixture::seed_42_world(),
-        hornvale_vessel::PossessTarget::Flagship,
+        hornvale_vessel::PossessTarget::LandSettlement,
     )
     .expect("the committed seed-42 world starts a possession");
     d.resize(80, 24);

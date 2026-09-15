@@ -35,6 +35,7 @@ The shared ancestral language desert-dwarf, duergar, gully-dwarf, hill-dwarf, an
 | Concept | Gloss | Proto | IPA |
 |---|---|---|---|
 | `abyssal` | a biome class | *Tatash | /tataʃ/ |
+| `abyssal-elf-kind` | an abyssal elf | *Vabax | /vabax/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Nganash | /ŋanaʃ/ |
 | `affords-passage` | a seam between two rooms a body may pass through | *Saxag | /saxag/ |
 | `alcove` | a recessed space set into a wall | *Xaqas | /xaqas/ |
@@ -138,6 +139,7 @@ The shared ancestral language desert-dwarf, duergar, gully-dwarf, hill-dwarf, an
 | `island` | land the water surrounds | *Ngaqab | /ŋaqab/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Sasax | /sasax/ |
 | `kelp-forest` | a biome class | *Qaqas | /qaqas/ |
+| `kelp-tender-kind` | a kelp tender | *Shaban | /ʃaban/ |
 | `key` | a small tool shaped to work one particular lock | *Bazab | /bazab/ |
 | `kill` | to cause to cease living | *Qadag | /qadag/ |
 | `killer-whale-kind` | a killer whale | *Naqash | /naqaʃ/ |
@@ -160,6 +162,7 @@ The shared ancestral language desert-dwarf, duergar, gully-dwarf, hill-dwarf, an
 | `marine-snow` | Organic debris drifting endlessly down. | *Zadas | /zadas/ |
 | `marsh` | soft wet ground | *Nadaz | /nadaz/ |
 | `melt-pond` | A pool of meltwater on sea ice. | *Nashaz | /naʃaz/ |
+| `merfolk-kind` | a merfolk | *Qavab | /qavab/ |
 | `mesopelagic` | a biome class | *Saxan | /saxan/ |
 | `millet` | a staple crop | *Xasaz | /xasaz/ |
 | `moon` | a moon | *Vabat | /vabat/ |
@@ -197,6 +200,7 @@ The shared ancestral language desert-dwarf, duergar, gully-dwarf, hill-dwarf, an
 | `read` | to take meaning from written words — `consult` | *Dataz | /dataz/ |
 | `red` | the color term for red | *Zatat | /zatat/ |
 | `red-dragon-kind` | a red dragon | *Shanaq | /ʃanaq/ |
+| `reef-mason-kind` | a reef mason | *Vashab | /vaʃab/ |
 | `reef-rubble` | Broken coral debris behind a reef. | *Shangav | /ʃaŋav/ |
 | `reef-shark-kind` | a reef shark | *Zangas | /zaŋas/ |
 | `reg` | A desert floor of wind-swept gravel. | *Xagaq | /xagaq/ |
@@ -257,6 +261,7 @@ The shared ancestral language desert-dwarf, duergar, gully-dwarf, hill-dwarf, an
 | `tree` | a woody plant | *Najan | /najan/ |
 | `trench-floor` | The deepest floor of an ocean trench. | *Vaqang | /vaqaŋ/ |
 | `trench-wall` | The steep side of an ocean trench. | *Danash | /danaʃ/ |
+| `triton-kind` | a triton | *Saqag | /saqag/ |
 | `tropical-rainforest` | a biome class | *Jagaj | /jagaj/ |
 | `tropical-seasonal-forest` | a biome class | *Badad | /badad/ |
 | `tuber` | a staple crop | *Dashag | /daʃag/ |
@@ -269,6 +274,7 @@ The shared ancestral language desert-dwarf, duergar, gully-dwarf, hill-dwarf, an
 | `upwelling` | a biome class | *Zanav | /zanav/ |
 | `urchin-barren` | Seabed grazed bare of kelp. | *Najaq | /najaq/ |
 | `valley` | low ground between heights | *Shavax | /ʃavax/ |
+| `vent-commensal-kind` | a vent commensal | *Zaqaj | /zaqaj/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Bavad | /bavad/ |
 | `vessel` | a container shaped to hold liquid or goods | *Bashaq | /baʃaq/ |
 | `vine` | a staple crop | *Banang | /banaŋ/ |

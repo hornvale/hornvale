@@ -7431,8 +7431,9 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
 /// # The narrowing Task 11c did not go far enough on (The Wearing, 11d)
 ///
 /// Task 11c's sweep of seeds 0-199 saw no goblin world read false, and
-/// concluded the front was safe. The 1000-world census disagreed: two
-/// worlds, seeds **386** and **976**, read `false` for
+/// concluded the front was safe. The 1000-world census disagreed: seeds
+/// **386**, **976**, and, in the current close regeneration, **935**, read
+/// `false` for
 /// `epithet-honorific-goblin`. Both were chased, and both are THIS
 /// function's blind spot rather than a missing affix — the very same
 /// repair-ladder divergence described above, landing at the FRONT of the
@@ -7446,6 +7447,7 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
 /// |---|---|---|
 /// | 386 | `Zfaawmoffof` | `Foafmoffof` |
 /// | 976 | `Vabozhbzas`  | `Boozhbozhbzas` |
+/// | 935 | `Shoeffepa`   | `Paefepa`      |
 ///
 /// In both, the honorific-free form surfaced the `gloom` morpheme and the
 /// honorific-bearing form did not. That identification is not a guess: at
@@ -7464,6 +7466,14 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
 /// wear/repair ladder that runs downstream of reduction is not
 /// reduction-invariant and may surface a different number of morphemes in
 /// the two forms.
+///
+/// Seed 935 is the same shape with the other compound ordering: the
+/// honorific-free surfaces of `day` and `gloom` alone are `Pae` and `Fepa`,
+/// while the committed `Shoeffepa` retains `shoef` + `Fepa` and drops `Pae`.
+/// Against the full reference `Paefepa` no consonant frame aligns; against
+/// `Fepa`, `prepended_material` recovers `shoef`. The current census witness
+/// is therefore independently identified, not inferred from the metric's
+/// false result.
 ///
 /// **The error is one-directional, which is what keeps the metric usable.**
 /// A missing morpheme in the reference can only make an alignment fail, so
@@ -11435,7 +11445,11 @@ const DWARF_DAUGHTERS: [&str; 5] = [
 /// [`hornvale_worldgen::family_daughter_kinds`], because a derived list changes
 /// value on the Lab's synthetic rosters and moving a null control's value is a
 /// deliberate act rather than a refactor.
-const ELF_DAUGHTERS: [&str; 6] = [
+const ELF_DAUGHTERS: [&str; 7] = [
+    // THE TIDEMARK: the abyssal elf, the family's seventh daughter and its
+    // first outside the overworld's sibling realms. `family_of` is the
+    // authority and this list is drift-checked against it.
+    "abyssal-elf",
     "desert-elf",
     "drow",
     "high-elf",
@@ -12757,7 +12771,12 @@ mod tests {
             .into_iter()
             .next()
             .expect("locked world has beliefs");
-        assert_eq!(first.source_kind, "tide");
+        // THE TIDEMARK re-pin: "tide" -> "heat". Six marine peoples enter
+        // the settling roster, so which species commits the world's FIRST
+        // pantheon moves again — exactly the drift the paragraph above
+        // records for The Living Community. Goblin's OWN head, the property
+        // this test actually checks, is unchanged below.
+        assert_eq!(first.source_kind, "heat");
         let built = BuiltView::Full(view);
         let value = extract_from(&built, "belief-kind-goblin");
         assert_eq!(value, MetricValue::Text("eternal".to_string()));
@@ -14177,9 +14196,24 @@ mod tests {
         // refresh happens once, at pre-merge close on lefford, and has not
         // been run -- `census_sentinel` and `tripwire` are deliberately left
         // red for exactly that reason.
+        //
+        // MEANWHILE ON `origin/main`: THE MURRAIN re-pin (2026-09-07):
+        // 2.5 -> 2.4285714285714284; THE WANDERERS re-pin (2026-09-09):
+        // 2.4285714285714284 -> 2.4242424242424243; THE CURRENT MAIN re-pin
+        // (six marine peoples plus a settlement-selector repair):
+        // 2.4242424242424243 -> 2.3846153846153846. Same claim throughout
+        // (inside 2-3), different world.
+        //
+        // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+        // neither branch's own value (2.347826086956522 / 2.3846153846153846)
+        // is what the fully merged tree produces -- both worldgen changes
+        // apply at once, plus the species metabolic-triple migration fix
+        // this merge also carries. Re-measured directly against the merged
+        // code. Still inside the 2-3 target, which remains the row's actual
+        // claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.347826086956522)
+            MetricValue::Number(2.7941176470588234)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14427,9 +14461,20 @@ mod tests {
         // pinning several values in one test reveals them one run at a time.
         // NOT corroborated against a canonical census, for the same reason as
         // every pin above.
+        //
+        // MEANWHILE ON `origin/main`: THE MURRAIN re-pin (2026-09-07):
+        // 2.5067567567567566 -> 2.8; THE WANDERERS re-pin (2026-09-09):
+        // 2.8 -> 2.8157894736842106; THE CURRENT MAIN re-pin (six marine
+        // peoples plus a settlement-selector repair): 2.8157894736842106 ->
+        // 2.4. Same claim throughout (inside 2-3), different world.
+        //
+        // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+        // neither branch's own value (2.323529411764706 / 2.4) is what the
+        // fully merged tree produces. Re-measured directly against the
+        // merged code. Still inside the 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.323529411764706)
+            MetricValue::Number(2.508771929824561)
         );
     }
 
@@ -14694,7 +14739,24 @@ mod tests {
         //
         // **NOT corroborated against a canonical census** for the same reason
         // the syllable pin above is not.
-        assert_eq!(share, 0.6867469879518072, "seed 42 transparency drifted");
+        //
+        // MEANWHILE ON `origin/main`: THE MURRAIN re-pin (2026-09-07):
+        // 0.6102564102564103 -> 0.6905537459283387. TWO CAMPAIGNS RE-PIN IT
+        // TOGETHER on main (2026-09-11): the Underworld Peoples' four and The
+        // Tidemark's six re-place seed 42's settlements; the merged value on
+        // THAT tree was 0.5732323232323232, and a later settlement witness
+        // refresh measured 0.6137931034482759.
+        //
+        // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+        // neither branch's own share (0.6867469879518072 /
+        // 0.6137931034482759) is what the fully merged tree produces --
+        // both worldgen changes apply at once, plus the species
+        // metabolic-triple migration fix this merge also carries.
+        // Re-measured directly against the merged code. The distribution
+        // claim (a distribution, not a constant) remains unchanged; the open
+        // denominator-vs-share question this comment tracks is untouched by
+        // this merge.
+        assert_eq!(share, 0.5154639175257731, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -15074,12 +15136,11 @@ mod tests {
     /// committed form did not, so the reference holds material the committed
     /// word does not and no offset aligns.
     ///
-    /// **Neither seed is in that population any more** (F11 discharge,
-    /// 2026-07-30, census `4cd19ff9`): every belief of both worlds now detects
-    /// its affix unaided, because the committed form and the honorific-free
-    /// reference have landed back on the same rung of the wear/repair ladder
-    /// at both seeds. The census's sole `false` is seed 400, diagnosed at
-    /// `calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS`.
+    /// The old witnesses 386 and 976 are no longer false in the current
+    /// census, but remain as literal characterisation cases. Seed 935 is the
+    /// current live witness and is added below; keeping both kinds of witness
+    /// separate prevents a fixture re-pin from erasing the detector's known
+    /// alignment limit.
     ///
     /// This test is nonetheless kept, unchanged and passing, and the
     /// distinction matters: it operates on LITERAL word pairs, so it is a
@@ -15100,7 +15161,7 @@ mod tests {
     /// change puts both forms on the same rung of the wear/repair ladder,
     /// the first assertion of each pair fails and sends the reader here.
     #[test]
-    fn the_two_census_falses_are_a_front_divergence_and_not_a_missing_affix() {
+    fn the_census_falses_are_front_divergence_and_not_a_missing_affix() {
         // Seed 386, goblin, belief 5 (gloss "gloom-day"). The world's own
         // honorific-free surface for `gloom` alone is `Foaf` — beliefs 4
         // and 6 of this same world — and that is precisely the material
@@ -15133,6 +15194,23 @@ mod tests {
             prepended_material("Vabozhbzas", "bozhbzas", &g976).as_deref(),
             Some("va"),
             "with that morpheme gone from the reference, the affix is exactly where it should be"
+        );
+
+        // Seed 935, goblin, belief 9 (gloss "day-gloom"). The independent
+        // single-concept surfaces are `Pae` (day) and `Fepa` (gloom); the
+        // committed compound retains the honorific `shoef` plus `Fepa` but
+        // drops `Pae`.
+        let v935 = AstronomyView::build(Seed(935), &SkyPins::default()).unwrap();
+        let g935 = vowel_graphemes(&hornvale_worldgen::language_of(&v935.world, "goblin"));
+        assert_eq!(
+            prepended_material("Shoeffepa", "Paefepa", &g935),
+            None,
+            "seed 935's reference carries the dropped day morpheme, so nothing aligns"
+        );
+        assert_eq!(
+            prepended_material("Shoeffepa", "Fepa", &g935).as_deref(),
+            Some("shoef"),
+            "with the dropped day morpheme removed, seed 935's honorific is exactly where it should be"
         );
     }
 
@@ -15347,10 +15425,30 @@ mod tests {
             // independent exposure reading. The precondition remains
             // nonempty and the mutation still exercises the river and
             // karst/wetland gates.
-            // THE UNDERWORLD re-pin: "valley" leaves again after the four
-            // newly admitted peoples re-place the seed-7 settlement set;
-            // the remaining four concepts still exercise the mutation.
-            vec!["river", "ford", "marsh", "spring"],
+            // TWO CAMPAIGNS RE-PIN IT TOGETHER (2026-09-11), the TWELFTH
+            // oscillation: three — river, ford and spring — on that merged
+            // witness. A later settlement witness refresh measured five:
+            // river, ford, valley, marsh and spring. Re-pin the set, do not
+            // swap the seed; the non-empty precondition and mutation remain
+            // the claim.
+            //
+            // **SAY WHAT THE NARROWING COSTS, because the precedent above is
+            // about the SET and this is about COVERAGE.** The mutation below
+            // still bites — the precondition is nonempty and stripping the
+            // gates still flips the flag — and the current five cover river,
+            // elevation and karst/wetland classes.
+            // `the_independent_reading_steeps_island_and_hill_where_the_lexicon_roots_them`
+            // is the row that owns the flood-fill and elevation-maximum
+            // witnesses, and it carries them at (0, desert-dwarf); this row
+            // is not the only cover for those gates.
+            // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+            // five -> three ("river", "ford", "spring"; "valley" and "marsh"
+            // no longer root). Re-measured directly against the merged code
+            // (both campaigns' worldgen changes plus the species
+            // metabolic-triple migration fix this merge also carries). Still
+            // a nonempty precondition and the mutation below still bites;
+            // re-pin the set, do not swap the seed.
+            vec!["river", "ford", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -15655,20 +15753,25 @@ mod tests {
         // count, until the ninth pass gives the count a like-for-like
         // predecessor.
         //
-        // **THE SUBJECT MOVED, NOT A VALUE.** Seed 2 -> 1; the species stays
-        // bugbear. Witness is **(1, bugbear)** — the earliest qualifying pair,
-        // the same selection-free rule every pass above used. No same-seed
-        // second species at 1, so this witness is load-bearing alone; (2,
-        // gully-dwarf) is the nearest corroborator, and selecting it over the
-        // earliest pair would be a choice this test does not make.
-        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
+        // **THE SUBJECT MOVED AGAIN, NOT A VALUE** (the NINTH pass, 2026-09-11,
+        // absorbing `origin/main`'s four Underworld peoples into The
+        // Tidemark's six marine ones). Seed 1 -> 0; bugbear -> desert-dwarf.
+        // Ten new peoples re-place every world in the sweep, so the
+        // qualifying population moved with them: **45 qualifying pairs over
+        // 0..60**, against fifty-two on the previous pass, and (1, bugbear) is
+        // no longer among them — seed 1's bugbears stopped rooting `island`,
+        // which the precondition below caught, working exactly as designed.
+        // A later sweep over 0..60 measured 53 qualifying pairs. Its earliest
+        // witness is **(2, bugbear)**, with another qualifying species at the
+        // same seed, so the capability remains independently re-witnessed.
+        let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
         let steeped =
             independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
-        let lexicon = lex(&view, "bugbear").expect("seed 1 bugbears hold a lexicon");
+        let lexicon = lex(&view, "bugbear").expect("seed 2 bugbears hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 1 bugbears must root {concept} for this test to bite"
+                "seed 0 desert dwarfs must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),

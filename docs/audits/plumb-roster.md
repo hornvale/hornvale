@@ -13,7 +13,7 @@ of it has been judged; it does not guess a rung for anything.
 |------|-------|
 | Roots | `domains`, `windows` |
 | Default roots | `domains`, `windows` |
-| Files parsed | 365 |
+| Files parsed | 367 |
 | Constant types judged | every type except the non-quantities below |
 | Declared non-quantities | `str`, `String`, `bool`, `char`, `KindId`, `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`, `HabitatRealm`, `Transmission`, plus containers (generic, array, tuple, reference) and markers |
 | Directories pruned | `tests`, `examples`, `benches`, `target` |
@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 852 |
-| … file-level | 807 |
+| Quantity consts judged (the denominator) | 857 |
+| … file-level | 809 |
 | … associated (impl/trait) | 11 |
-| … inside a fn body | 34 |
+| … inside a fn body | 37 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
-| Excluded: declared non-quantity type | 561 |
-| **Every `const` the walk touched** | **1586** |
+| Excluded: declared non-quantity type | 562 |
+| **Every `const` the walk touched** | **1592** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **768**: file-level
+nor the whole `file-level` row — it is **770**: file-level
 constants of those five types. The `file-level` row itself is
-**807**, and the denominator is **852**; the difference is
+**809**, and the denominator is **857**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -69,14 +69,14 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 628 |
+| `f64` | 632 |
 | `i32` | 7 |
 | `i64` | 8 |
 | `u16` | 2 |
 | `u32` | 86 |
 | `u64` | 18 |
 | `u8` | 8 |
-| `usize` | 60 |
+| `usize` | 61 |
 
 ### Excluded as non-quantity, by type
 
@@ -101,7 +101,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `&[Role]` | 2 |
 | `&[VerbRow]` | 1 |
 | `&[u8; …]` | 1 |
-| `&str` | 301 |
+| `&str` | 302 |
 | `()` | 6 |
 | `(…)` | 10 |
 | `AffectLabel` | 1 |
@@ -161,14 +161,14 @@ bare count would hide a quantity someone had wrongly denied.
 | pending(wave-1) | 646 |
 | per-individual | 2 |
 | per-people | 1 |
-| per-species | 32 |
+| per-species | 35 |
 | per-world | 12 |
-| universal | 159 |
+| universal | 161 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 852 |
+| _total_ | 857 |
 
-Declared: **852 of 852**. Undeclared is backlog; a malformed
+Declared: **857 of 857**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -178,32 +178,35 @@ converted.** Every row below is a constant judged to vary along an axis
 the code does not yet have -- nothing about the world changed to produce
 this table, and nothing here is scheduled for conversion by this
 campaign. `universal` and `pending(wave-N)` constants are excluded; their
-counts are already the Coverage table above. 47 finding(s).
+counts are already the Coverage table above. 50 finding(s).
 
 | File:line | Constant | Rung | Reason |
 |------|------|------|------|
 | `domains/history/src/trajectory.rs:14` | `EPOCH_YEARS` | per-world | the bake's epoch length, BakeConfig::epoch_years; 25 is default_millennia's value |
 | `domains/species/src/allometry.rs:24` | `B0_ENDOTHERM` | per-species | a species' own metabolic normalization is a physiological trait -- module doc: universal exponents, per-CLASS coefficients; per-species is finer than the per-class granularity implemented today |
 | `domains/species/src/allometry.rs:26` | `ECTOTHERM_METABOLIC_FRACTION` | per-species | the same physiological-trait axis as B0_ENDOTHERM -- per-class today, finer than the per-species granularity the ladder asks about |
-| `domains/species/src/lib.rs:4625` | `RATE` | per-species | a creature's own physiology sets how fast fatigue accrues -- doc's own words: differentiating any OTHER kind's rate away from human's is a fidelity decision left for whoever authors it next; every kind but xorn shares this identical 0.3 |
-| `domains/species/src/lib.rs:4802` | `MADE_FOR_THE_BODY` | per-species | what a body gains from something to lie on is set by its own thermoregulation and by whether its kind builds bedding that fits it -- the settled endothermic peoples collect both halves and sit at the ceiling |
-| `domains/species/src/lib.rs:4806` | `INSULATION_ONLY` | per-species | a wild endotherm collects the thermal half of an afforded site and not the fit half -- ThermalStrategy::Endothermic is the trait that sets it |
-| `domains/species/src/lib.rs:4811` | `HABITUATION_ONLY` | per-species | a settled ectotherm collects the fit half of an afforded site and not the thermal half -- the ThermalStrategy and SocialForm pair is what sets it |
-| `domains/species/src/lib.rs:4815` | `CONTACT_ONLY` | per-species | a wild ectotherm collects neither the thermal nor the fit half and keeps only the residual worth of lying on a surface at all |
-| `domains/species/src/lib.rs:4820` | `TOO_LARGE_TO_FIT` | per-species | a kind's adult mass sets whether anything a room contains is scaled to it -- at or above a tonne nothing is |
-| `domains/species/src/lib.rs:4824` | `ALREADY_BUOYED` | per-species | a fully marine kind is already supported by the medium it lives in -- MARINE_FORAGE dominance in the kind's own niche is what marks it |
-| `domains/species/src/lib.rs:4828` | `NO_GAIN` | per-species | a kind with no metabolism or no lying posture collects nothing from an afforded site -- ThermalStrategy::Absent and SocialForm::Sessile are the two traits that reach this floor |
-| `domains/species/src/lib.rs:4933` | `SURFACE_OPTIMUM` | per-species | a kind's own habitat realm sets which substrate it rests best on -- for a kind that lives above ground the preference is monotone across the whole scale, because nothing that grows on the ground is ever too yielding to lie on, so the peak sits on the yielding endpoint and every increase in hardness is a loss |
-| `domains/species/src/lib.rs:4939` | `SURFACE_WIDTH` | per-species | a kind's own habitat realm sets how wide a band of substrates it can rest on -- a surface kind meets every substrate its world has, from mire to shield rock, and has to be able to lie on most of them, so it is the generalist of the two and its band is the wider one |
-| `domains/species/src/lib.rs:4943` | `SURFACE_DEVOTION` | per-species | a kind's own habitat realm sets how much of its rest the substrate accounts for -- a body lying in the open has nothing between it and the ground but what it found there, so what it lies on accounts for the whole of the fit and nothing is withheld from it |
-| `domains/species/src/lib.rs:4947` | `SUBTERRANEAN_OPTIMUM` | per-species | a kind's own habitat realm sets which substrate it rests best on -- a kind that lives in rock is habituated to lying on it, and the floor it is habituated to is stone under a skin of dust and damp clay rather than bare quarried rock, so its peak sits just short of the hard endpoint |
-| `domains/species/src/lib.rs:4951` | `SUBTERRANEAN_WIDTH` | per-species | a kind's own habitat realm sets how wide a band of substrates it can rest on -- a kind whose whole world is one substrate has no reason to tolerate the others and does not, so it is the specialist of the two and its band is the narrower one |
-| `domains/species/src/lib.rs:4955` | `SUBTERRANEAN_DEVOTION` | per-species | a kind's own habitat realm sets how much of its rest the substrate accounts for -- HabitatRealm::Subterranean's own doc says the habitat is the void and not the floor, so the surface underneath can never account for the whole of a cave kind's rest the way open ground accounts for a surface kind's |
-| `domains/species/src/lib.rs:6736` | `DROW_PHYSIOGNOMY` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/species/src/lib.rs:6740` | `DROW_ENERGY` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/species/src/lib.rs:6745` | `DROW_WATER` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/species/src/lib.rs:6750` | `DROW_SUBSTRATE` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/species/src/lib.rs:6754` | `DROW_LIGHT` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:5374` | `RATE` | per-species | a creature's own physiology sets how fast fatigue accrues -- doc's own words: differentiating any OTHER kind's rate away from human's is a fidelity decision left for whoever authors it next; every kind but xorn shares this identical 0.3 |
+| `domains/species/src/lib.rs:5562` | `MADE_FOR_THE_BODY` | per-species | what a body gains from something to lie on is set by its own thermoregulation and by whether its kind builds bedding that fits it -- the settled endothermic peoples collect both halves and sit at the ceiling |
+| `domains/species/src/lib.rs:5566` | `INSULATION_ONLY` | per-species | a wild endotherm collects the thermal half of an afforded site and not the fit half -- ThermalStrategy::Endothermic is the trait that sets it |
+| `domains/species/src/lib.rs:5571` | `HABITUATION_ONLY` | per-species | a settled ectotherm collects the fit half of an afforded site and not the thermal half -- the ThermalStrategy and SocialForm pair is what sets it |
+| `domains/species/src/lib.rs:5575` | `CONTACT_ONLY` | per-species | a wild ectotherm collects neither the thermal nor the fit half and keeps only the residual worth of lying on a surface at all |
+| `domains/species/src/lib.rs:5580` | `TOO_LARGE_TO_FIT` | per-species | a kind's adult mass sets whether anything a room contains is scaled to it -- at or above a tonne nothing is |
+| `domains/species/src/lib.rs:5584` | `ALREADY_BUOYED` | per-species | a fully marine kind is already supported by the medium it lives in -- MARINE_FORAGE dominance in the kind's own niche is what marks it |
+| `domains/species/src/lib.rs:5588` | `NO_GAIN` | per-species | a kind with no metabolism or no lying posture collects nothing from an afforded site -- ThermalStrategy::Absent and SocialForm::Sessile are the two traits that reach this floor |
+| `domains/species/src/lib.rs:5721` | `SURFACE_OPTIMUM` | per-species | a kind's own habitat realm sets which substrate it rests best on -- for a kind that lives above ground the preference is monotone across the whole scale, because nothing that grows on the ground is ever too yielding to lie on, so the peak sits on the yielding endpoint and every increase in hardness is a loss |
+| `domains/species/src/lib.rs:5727` | `SURFACE_WIDTH` | per-species | a kind's own habitat realm sets how wide a band of substrates it can rest on -- a surface kind meets every substrate its world has, from mire to shield rock, and has to be able to lie on most of them, so it is the generalist of the two and its band is the wider one |
+| `domains/species/src/lib.rs:5731` | `SURFACE_DEVOTION` | per-species | a kind's own habitat realm sets how much of its rest the substrate accounts for -- a body lying in the open has nothing between it and the ground but what it found there, so what it lies on accounts for the whole of the fit and nothing is withheld from it |
+| `domains/species/src/lib.rs:5735` | `SUBTERRANEAN_OPTIMUM` | per-species | a kind's own habitat realm sets which substrate it rests best on -- a kind that lives in rock is habituated to lying on it, and the floor it is habituated to is stone under a skin of dust and damp clay rather than bare quarried rock, so its peak sits just short of the hard endpoint |
+| `domains/species/src/lib.rs:5739` | `SUBTERRANEAN_WIDTH` | per-species | a kind's own habitat realm sets how wide a band of substrates it can rest on -- a kind whose whole world is one substrate has no reason to tolerate the others and does not, so it is the specialist of the two and its band is the narrower one |
+| `domains/species/src/lib.rs:5743` | `SUBTERRANEAN_DEVOTION` | per-species | a kind's own habitat realm sets how much of its rest the substrate accounts for -- HabitatRealm::Subterranean's own doc says the habitat is the void and not the floor, so the surface underneath can never account for the whole of a cave kind's rest the way open ground accounts for a surface kind's |
+| `domains/species/src/lib.rs:5752` | `MARINE_OPTIMUM` | per-species | a kind's own habitat realm sets which substrate it rests best on -- a marine kind's seabed, when it touches one at all, is sediment over rock rather than bare stone, the same physical shape a cave floor has, so its peak sits at the same just-short-of-hard-end point a subterranean kind's does |
+| `domains/species/src/lib.rs:5758` | `MARINE_WIDTH` | per-species | a kind's own habitat realm sets how wide a band of substrates it can rest on -- a marine kind meets one seabed the way a subterranean kind meets one cave floor, so it is a specialist by the same argument and its band is the same width |
+| `domains/species/src/lib.rs:5763` | `MARINE_DEVOTION` | per-species | a kind's own habitat realm sets how much of its rest the substrate accounts for -- HabitatRealm::Subterranean's own doc argues the habitat is the void and not the floor, and a marine kind's habitat is the water column rather than the seabed beneath it, held up by the medium itself in a way no surface or subterranean body is, so the seabed is less accountable for its rest still and devotion falls again by the same 0.2 step that separated subterranean from surface |
+| `domains/species/src/lib.rs:7918` | `DROW_PHYSIOGNOMY` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:7922` | `DROW_ENERGY` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:7927` | `DROW_WATER` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:7932` | `DROW_SUBSTRATE` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:7936` | `DROW_LIGHT` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/terrain/src/lithology.rs:689` | `LEY_REACH` | per-world | the width of a world's ley-lines is a property of that world's magic, not of this code |
 | `domains/terrain/src/lithology.rs:696` | `LEY_GAIN` | per-world | ley intensity is a property of a world's magic, not of this code |
 | `domains/terrain/src/lithology.rs:703` | `WELL_RADIUS_RAD` | per-world | the reach of a mana-well is a property of a world's magic, not of this code |
@@ -232,10 +235,10 @@ counts are already the Coverage table above. 47 finding(s).
 
 ## The contested middle
 
-395 of the 852 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 148 of the 365 files parsed —
+400 of the 857 constants sit in a file mentioning one of
+the kind-adjacency markers above, across 151 of the 367 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
-where `FATIGUE_RISE` lived. 395 of them are declared.
+where `FATIGUE_RISE` lived. 400 of them are declared.
 
 **This is a reading aid, not a gate.** The markers are substrings, and
 `Body` is shared with astronomy's celestial bodies, so the set is loose
@@ -262,7 +265,7 @@ in the inclusive direction on purpose.
 | scene | 9 | 0 | 0 | 9 |
 | sentiment | 8 | 0 | 0 | 8 |
 | settlement | 4 | 0 | 0 | 4 |
-| species | 39 | 0 | 0 | 39 |
+| species | 42 | 0 | 0 | 42 |
 | terrain | 163 | 0 | 0 | 163 |
 | vessel | 110 | 0 | 0 | 110 |
-| worldgen | 213 | 0 | 0 | 213 |
+| worldgen | 215 | 0 | 0 | 215 |

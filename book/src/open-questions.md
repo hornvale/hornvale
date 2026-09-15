@@ -1839,6 +1839,75 @@ what made it differentiate. Confidence rises because an independent mechanism
 reproduces the predicted capability; the claim remains a candidate until one
 mechanism supplies the inside/outside control.
 
+*Re-scored by [The Tidemark](./chronicle/the-tidemark.md) (2026-09-13), which
+answers the gate half of "does a realm's hard gate generalise past caves" in a
+third realm, and sharpens the confinement half by failing it a second way.*
+
+**First, a sentence three paragraphs up is now false twice over.** *"The
+shipped roster is still entirely of the surface"* was written on 2026-09-03;
+four subterranean peoples landed on `main` days later, and six marine peoples
+landed with this campaign. The habitat store is fifteen rows across three
+realms.
+
+**The gate generalises, and the marine case is the cleanest available test of
+it**, because the precondition this bet has been carrying was satisfied *on
+arrival* rather than built to suit. The withdrawal's demand — declare the realm
+as **places**, biomes and strata rather than a coordinate pushed through a
+tolerance curve — was already true of the sea: a marine biome classification,
+five pelagic strata, and an access mode, all shipped years of campaigns
+earlier. Six peoples were authored against it and they place: three, four,
+four, three and three settlements at seed 42, with the `Gregarious` merfolk at
+exactly zero, which is the two-sided half of the prediction and the first time
+the settlement gate has been shown to *refuse* a minded people rather than
+merely admit one. A hard `{0, 1}` availability mask over a different medium
+behaves exactly as the cave mask does.
+
+**The confinement half does not generalise, and it now has two structurally
+different failures rather than one.** The cave version is that nothing gives
+two underground kinds a *kind of place* to differ by. The marine version is
+worse in an instructive way: the sea *has* the vocabulary — five named strata,
+each pairing a community with a depth — and **the placement path does not read
+it.** Measured: the column is handed one temperature per vertex, moisture is a
+constant, and the light that genuinely does vary by band is read by nothing at
+all, so the five strata are distinguished at placement **by depth alone**,
+except at the seabed band of a vertex a vent is lighting. So the precondition
+splits a third time, and the new seam is the sharpest of them: *having a place
+vocabulary* and *the scoring path reading that vocabulary* are different
+requirements, and the sea satisfies the first while failing the second. A
+future campaign should not read "the underworld has biomes now" as discharging
+this bet, for the same reason it should not have read "the sea has strata".
+
+**And a failure mode the cave case could not exhibit: depth confines downward
+only.** Every ocean column has a surface band, so a shallow kind is
+near-optimal at *every* ocean vertex — the reef mason holds 26,344 / 18,213 /
+26,769 vertices under a strict argmax at three seeds, very nearly the ocean,
+while placing an entirely normal four settlements. Among shallow kinds the
+argmax then falls to a ~0.4% difference in the sovereignty floor, because a
+biome affinity's default *is* the kind's floor. A cave either exists at a cell
+or does not; a water column always contains its own top. **A realm gate
+excludes; it does not confine** — and this bet had been reading the two as one
+property because the only realm it had was a gate whose complement was empty.
+
+**One of the two known defects named at the head of this bet is narrower than
+stated and still not discharged.** *"`per_species_capacity` computes a
+fundamental niche while the bake reads it as a realized one; competition exists
+downstream without ever feeding back."* The competition machinery does exist
+and does reach world-facing deterministic fields: pairwise niche overlap
+parameterizes the coexistence pack's competition denominator, which becomes
+each kind's realized per-vertex density, which feeds the predator- and
+prey-pressure fields and the concentrations wild bodies are minted from.
+Whether it reaches the *ledger-committed settlement populations* was checked
+against the settlement stage's own body and left **undetermined** — that stage
+computes capacity over the settling roster through a separate path with no call
+into the overlap machinery. So competition feeds back into some committed
+surfaces, and, as far as anything has measured, not into where a people is put.
+
+The same measurement supplies the number that makes the defect concrete rather
+than architectural: among the ten marine kinds, pairwise niche overlap is
+**1.0000 for eight of them** — byte-identical niche vectors — so the
+realized-niche machinery, wherever it does reach, is being handed a roster on
+which it can express no preference at all.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
@@ -4166,6 +4235,26 @@ the territory overlap held (0.0466). It stays in the checkable tier; what it did
 vacant land and by peoples settling glacially-stable ground — it handed, with
 measurements, to conflict-as-criticality.
 
+**The prey-stronghold debt held against Stage 2 above is larger than "a field
+that has not been built yet," and [The Tidemark](./chronicle/the-tidemark.md)
+measured how much larger.** Asked to author a marine subsistence roster — a
+base under a predator guild, which is this debt in its marine instance — it
+measured the web first and found there is no marine chain to put a base under:
+**all ten marine kinds resolve to trophic height exactly 1.000**, and the food
+web holds none of them as a predator, because the model's predator test reads
+the animal-prey axis and every marine niche spends its weight on marine forage
+instead. Competition among them is meanwhile maximal: **eight of the ten carry
+byte-identical niche vectors**, overlap 1.0000. So the roster was not authored,
+and the debt is re-stated rather than paid: what is missing is not a field but
+the ability to express a *level* at all, because the resource basis indexes
+**which substance you draw from** rather than what eats what. The same readout
+shows six *terrestrial* detritivores pinned at 1.000 for the same reason, which
+is how a marine question turned out to be a basis question. The candidate
+answer on the register is diets as **receptors** over prey traits — with
+capability separated from realization, since a dragon can eat an abyssal elf
+and never meets one — which supersedes the marine axis split this debt would
+otherwise have bought.
+
 **And conflict-as-criticality has now been tested, and the bet lost.** This
 chapter has to be able to say that, or its scores are decoration. The wager was
 that organised conflict, once it emerged rather than being floored, would
@@ -5987,3 +6076,41 @@ the control's answer key. And twice, a number offered as confirmation turned
 out to have been produced by the thing being checked: a re-fetch of the source
 catalogue that reused the same parser, and a blind control that had read the
 target tally in a file its own procedure requires it to open.
+
+### A claim each campaign leaves standing and their merge does not (2026-09-13)
+
+[The Tidemark](./chronicle/the-tidemark.md) (2026-09-13) re-scores the realm
+bet above, and leaves a second finding that belongs here rather than in any
+graded row, because it is about what a preregistered claim on this project can
+be sensitive to.
+
+A conditioned claim from an earlier campaign — that breached delvings are
+deeper *for their tenure*, as distinct from the pooled fact that they are
+deeper — was green on `main`, green on this branch, and **red on the merge of
+the two.** Both campaigns had merely widened the species roster; neither
+touched the instrument, whose file is byte-identical on both sides. A third
+configuration, measured independently by a third campaign, produced a third
+verdict. That is the class this project's own guide names as ungated — no gate
+has an opinion about two campaigns interacting — arriving in the mildest
+possible form, since the two did not even change the same idea.
+
+**The root cause is not the merge and not either roster: the claim was never
+evaluable on its panel.** Conditioning on tenure cuts thirty-two breached
+workings five ways, and four of the five strata hold fewer than ten — two of
+them hold one and three observations while carrying a fifth of the pair mass.
+The verdict tracks which stratum the few observations fall into, and both the
+green and the red sit inside what such a panel can produce. The measured yield
+is 2.67 breaches per seed, so ten per stratum needs about nineteen seeds
+against the twelve the panel has.
+
+The chapter's interest is in what that implies for reading any conditioned
+result here. **A statistic that is sound in aggregate can be undefined in
+every cell it is conditioned into**, and nothing about the aggregate warns
+you: the pooled separation on the same data is unambiguous. The response that
+shipped is a power gate rather than a threshold change or a deletion — the
+assertion arms only when every stratum clears the floor, prints an explicit
+*unevaluated* report naming the shortfall and the seed count that would close
+it, and **re-arms itself** when the panel grows, with the significance
+threshold untouched. `refuted` was declined deliberately: it would assert a
+negative the data cannot carry, which on this page is the more expensive
+error of the two.

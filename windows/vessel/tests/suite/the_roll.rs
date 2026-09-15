@@ -1,8 +1,12 @@
 //! The Roll (spec §8): the company probe (M1), the roll's own properties
 //! (M3), dormancy (§3.7), and presence at scale (§4).
 
-use hornvale_settlement::village_info;
+// The Tidemark, Task 3: the DEMO subject, chosen rather than inherited —
+// `village_info` is "the first `is-settlement` fact in ledger order", which
+// was never a claim about where a walk stands. See
+// `hornvale_worldgen::land_settlement`'s own doc.
 use hornvale_vessel::{PossessOpts, Session};
+use hornvale_worldgen::land_settlement as village_info;
 
 use crate::common;
 use crate::session::{open_staged_dragons_session, say};
@@ -12,7 +16,7 @@ use crate::session::{open_staged_dragons_session, say};
 /// settlement's `population >= 2`?
 fn company_at(seed: u64) -> Option<(bool, bool)> {
     let world = common::build(seed)?;
-    let village = village_info(&world)?;
+    let village = hornvale_worldgen::land_settlement(&world)?;
     let (session, _) = Session::start(&world, &PossessOpts::default()).ok()?;
     let snap = session.snapshot().ok()?;
     Some((!snap.sensed.present.is_empty(), village.population >= 2))
@@ -861,6 +865,26 @@ fn a_settlement_coming_within_call_is_derived_once_and_only_appended() {
     let world = common::build(42).expect("seed 42 builds");
     let ctx = hornvale_locale::LocaleContext::build(&world).expect("a context builds");
     let flagship = village_info(&world).expect("seed 42 places a flagship");
+    // **THE NEIGHBOUR IS FOUND BY MEASUREMENT, NEVER BY POPULATION RANK, and
+    // both campaigns in this merge learned that the hard way.** The selection
+    // used to be simply "the most populous other settlement", which carried a
+    // silent premise: that its room is within call of it ALONE. Ten new
+    // peoples re-placed seed 42 from two directions at once (The Tidemark's
+    // six marine, the Underworld Peoples' four subterranean) and the most
+    // populous neighbour's room turned out to sit within call of a second
+    // settlement too — the exact-population assertion below then failed by 15
+    // bodies while the property it guards (derived ONCE, only appended) was
+    // perfectly intact.
+    //
+    // Both branches replaced the rank premise with a search for a settlement
+    // whose room window really does hold exactly one settlement. This is
+    // main's form of that search, kept because it scans the WHOLE roster
+    // rather than the twelve most populous, so it cannot run out of
+    // candidates as the roster grows again.
+    //
+    // Selecting by the measurement rather than re-pinning a number keeps the
+    // assertion below EXACT, which is what makes the deletion mutation named
+    // above fail: a `>=` would pass under a double-append.
     let settlements = hornvale_settlement::all_settlements(&world);
     let mut mesh_memo = RoomMeshMemo::new();
 
@@ -1267,16 +1291,58 @@ fn the_roster_never_reorders() {
 /// session, not from a second hardcoded total.
 const N_NAMED: usize = 4;
 
-/// Pull the `, and {n} others` count out of a `Here: …` line, panicking with
-/// the whole line if the shape does not hold — a parse failure here is
-/// itself a finding about the presence line's format, not a fixture bug.
-fn others_count(here_line: &str) -> usize {
-    here_line
-        .rsplit_once(", and ")
-        .and_then(|(_, tail)| tail.strip_suffix(" others."))
-        .unwrap_or_else(|| panic!("expected a `, and N others.` tail: {here_line:?}"))
-        .parse()
-        .unwrap_or_else(|e| panic!("the others count did not parse ({e}): {here_line:?}"))
+/// MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15): a single
+/// named group is no longer always the whole `Here: …` line.
+/// `Session::observed_here` joins MULTIPLE groups with `"; "` — the
+/// named-individuals group, then one per-species tally group per
+/// additional fauna kind present (see `windows/vessel/src/session.rs`'s
+/// `Some(format!("Here: {}.", rendered.join("; ")))`) — and the merged
+/// world now has enough distinct fauna at this room to populate those
+/// trailing groups where it did not before. [`total_sensed`] sums every
+/// group's own count rather than assuming the first is the entire line.
+///
+/// How many items `chamber_prose::listed`'s output names — the inverse of
+/// that function's join, over its two separators (`", "` between all but
+/// the last pair, `" and "` between the last pair). A single item carries
+/// no `" and "` at all.
+fn count_listed(s: &str) -> usize {
+    if !s.contains(" and ") {
+        return 1;
+    }
+    s.matches(", ").count() + 2
+}
+
+/// One group's own headcount — a resident group (named individuals, with an
+/// optional `", and K others"` tail) or a wild group (a single label, or
+/// `"N species"`). See `Session::observed_here`'s `rendered` construction
+/// for the exact three shapes this inverts.
+fn group_count(group: &str) -> usize {
+    if let Some((heads, tail)) = group.rsplit_once(", and ")
+        && let Some(n) = tail
+            .strip_suffix(" others")
+            .and_then(|n| n.parse::<usize>().ok())
+    {
+        return count_listed(heads) + n;
+    }
+    if let Some((num, _rest)) = group.split_once(' ')
+        && let Ok(n) = num.parse::<usize>()
+    {
+        return n;
+    }
+    count_listed(group)
+}
+
+/// The WHOLE `Here: …` line's headcount — every group's own count, summed.
+/// This is what the sensed roster's `len()` is actually compared against;
+/// `others_count` alone only ever covered the first (named) group, which
+/// silently equalled the whole line until a second group could appear.
+fn total_sensed(here_line: &str) -> usize {
+    let body = here_line
+        .strip_prefix("Here: ")
+        .unwrap_or(here_line)
+        .strip_suffix('.')
+        .unwrap_or(here_line);
+    body.split("; ").map(group_count).sum()
 }
 
 /// The one `Here: …` line of `text`, or `None` if it names nobody.
@@ -1319,7 +1385,7 @@ fn look_names_a_few_and_counts_the_rest() {
     );
     let line = here_line(&opening).unwrap_or_else(|| panic!("no presence line: {opening:?}"));
     assert_eq!(
-        others_count(line) + N_NAMED,
+        total_sensed(line),
         sensed,
         "named + counted must equal the whole sensed roll: {line:?}"
     );
@@ -1462,7 +1528,7 @@ fn the_count_is_the_sensed_roster() {
          (the sight gate `!needs`/`!examine` already enforce): {looked:?}"
     );
     let line = here_line(&looked).unwrap_or_else(|| panic!("no presence line: {looked:?}"));
-    let total = others_count(line) + N_NAMED;
+    let total = total_sensed(line);
     assert_eq!(
         total, sensed,
         "the presence line's total must equal the SENSED roster, not the \
@@ -1500,18 +1566,19 @@ fn the_count_is_the_sensed_roster() {
 ///
 /// **No natural seed conveniently isolates ONE wild group beside
 /// residents at a fresh look**, so this test builds the scene by hand
-/// rather than searching further. Seed 3 (`WILD_SEED` in
+/// rather than searching further. Seed 1 is the first current witness from
+/// the same search.
 /// `possession_moves.rs`) was the first candidate tried and rejected: its
 /// fresh flagship possession already shows all FOURTEEN of its wild
 /// species simultaneously (measured: `Here: <4 named>, and 52 others;
 /// black-dragon; carrion-crawler; …` — fifteen groups), which exercises the
 /// collapse but not a clean single-semicolon ordering check. So instead:
-/// walk seed 0's possession to an empty room (the same technique
+/// walk seed 1's possession to an empty room (the same technique
 /// `an_empty_room_says_nothing_about_company` uses — a dormant body's
 /// `agent-at` never follows), then place exactly the bodies wanted with
-/// `Session::place_creature_at_me`. Seed 0 was chosen because its roster
-/// derives two bodies of the SAME wild species within call — found by
-/// scanning seeds 0..40 for a species appearing at least twice among
+/// `Session::place_creature_at_me`. Seed 1 was chosen because its roster
+/// derives seven bodies of the SAME wild species within call — found by
+/// scanning seeds 0..64 for a species appearing at least twice among
 /// `village.is_none()` bodies, since a herd's individual members are not
 /// otherwise guaranteed to survive the roll's own within-call filter (most
 /// of seed 3's fourteen wild species have exactly one member within call).
@@ -1526,7 +1593,7 @@ fn the_count_is_the_sensed_roster() {
 /// and read off the live session, not hardcoded) — then reverted the edit.
 #[test]
 fn a_wild_group_collapses_and_follows_the_residents() {
-    let world = common::build(0).expect("seed 0 builds");
+    let world = common::build(1).expect("seed 1 builds");
     let mut session = flagship_session(&world);
     // Two bodies of one wild species within call — the precondition this
     // test needs to exercise the `n > 1` collapse. If this seed's roll ever
@@ -1548,7 +1615,7 @@ fn a_wild_group_collapses_and_follows_the_residents() {
         .map(|b| b.species.clone())
         .unwrap_or_else(|| {
             panic!(
-                "precondition: seed 0 must derive at least two wild bodies of                  the same species within call; if it does not, an epoch has                  moved the seed"
+                "precondition: seed 1 must derive at least two wild bodies of                  the same species within call; if it does not, an epoch has                  moved the seed"
             )
         });
     let same_species: Vec<hornvale_kernel::EntityId> = session

@@ -1695,12 +1695,31 @@ impl<'w> Session<'w> {
         // anchors that roster's derivation, so it shares `Flagship`'s
         // lookup here.
         let village = match opts.target {
-            PossessTarget::Flagship | PossessTarget::Creature(_) => {
+            PossessTarget::Flagship => {
                 hornvale_settlement::village_info(world).ok_or(VesselError::NoSettlement)?
+            }
+            // The Tidemark, Task 3: the walk fixtures' explicitly chosen
+            // subject. See `PossessTarget::LandSettlement`'s own doc for why
+            // a fixture must choose rather than inherit the flagship.
+            //
+            // **`Creature` anchors HERE, not at the flagship**, and that
+            // moved with this campaign. A caller naming a creature has READ
+            // that entity out of a roster, and that roster is overwhelmingly
+            // a `PossessOpts::default()` session's — so the two must share an
+            // anchor or the entity is not in the roster this call derives.
+            // They did share one while both were the flagship; the moment the
+            // default moved to dry ground, five tests failed with
+            // `NoSuchCreature` on an entity they had just been handed. Taking
+            // one anchor's entity into another anchor's roster is the defect,
+            // and matching the anchor to the default is what removes it.
+            PossessTarget::LandSettlement | PossessTarget::Creature(_) => {
+                hornvale_worldgen::land_settlement(world).ok_or(VesselError::NoSettlement)?
             }
             PossessTarget::MostPopulousSettlement => {
                 most_populous_settlement(world).ok_or(VesselError::NoSettlement)?
-            }
+            } // The Tidemark, Task 3: the walk fixtures' explicitly chosen
+              // subject. See `PossessTarget::LandSettlement`'s own doc for why
+              // a fixture must choose rather than inherit the flagship.
         };
         // `mint_at`'s fail-loud species check, kept byte-for-byte even though
         // nothing mints any more: `liveness::body_at` (below, via
@@ -2071,7 +2090,13 @@ impl<'w> Session<'w> {
                 .iter()
                 .position(|npc| npc.entity == entity)
                 .ok_or(VesselError::NoSuchCreature(entity))?,
-            PossessTarget::Flagship | PossessTarget::MostPopulousSettlement => 0,
+            // Every settlement-naming variant drives the home settlement's
+            // own entry, which `ordered_for_derivation` hoists to index 0.
+            // They differ in WHICH settlement is home, resolved above, never
+            // in which body of it is driven.
+            PossessTarget::Flagship
+            | PossessTarget::MostPopulousSettlement
+            | PossessTarget::LandSettlement => 0,
         };
         // Build the world's calendar once, for the NPC wake cycle's real-sun
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
@@ -6039,6 +6064,16 @@ impl<'w> Session<'w> {
         if column.is_empty() {
             return Turn::Out("There is no water here to go down into.".to_string());
         }
+        // REACH, asked of the BODY rather than of its realm (The Tidemark,
+        // spec §3.8). `Realm::WATERWORLD.access` is `Access::Dive`, and a
+        // body that cannot cross deep water wades the sunlit band and goes
+        // no further; a `sea-elf` carries `SWIM` and takes the whole column
+        // while still HOLDING only the shelf, which is the separation §3.8
+        // exists to make. The floor a body's own limit puts under it is
+        // named the same way the sea's own floor is, below — a refusal that
+        // does not say what stopped you reads as a parse failure.
+        let reach =
+            crate::vantage::deepest_reachable_band(column.len(), self.driven_body().locomotion());
         let next = match self.submerged {
             None => Some(column[0]),
             Some(at) => column
@@ -6046,11 +6081,18 @@ impl<'w> Session<'w> {
                 .position(|s| *s == at)
                 .and_then(|i| column.get(i + 1).copied()),
         };
+        let next = next.filter(|st| {
+            column
+                .iter()
+                .position(|s| s == st)
+                .is_some_and(|i| i < reach)
+        });
         match next {
             Some(st) => {
                 self.submerged = Some(st);
                 self.out(self.describe_here(Perceiving::Body))
             }
+            None if reach < column.len() => Turn::Out(CANNOT_SWIM_REFUSAL.to_string()),
             None => Turn::Out(format!(
                 "You are already as deep as this water goes; the floor is {}.",
                 stratum_word(*column.last().expect("a non-empty column has a last"))
@@ -11526,6 +11568,14 @@ const NO_CAVE_TO_DELVE_REFUSAL: &str = "There is no cave here to delve into.";
 /// they asked about.
 /// type-audit: bare-ok(prose)
 const NOTHING_TO_DESCEND_REFUSAL: &str = "There is nothing here to descend into.";
+
+/// `dive`'s refusal at the bottom of a body's OWN reach rather than at the
+/// sea's floor (The Tidemark, spec §3.8). Names the body's limit rather than
+/// the water's, because the water goes on and it is this body that cannot
+/// follow it down — the same reason `UNDERGROUND_DEEP_WATER_REFUSAL` names a
+/// flooded passage that "you cannot swim".
+const CANNOT_SWIM_REFUSAL: &str =
+    "The water below you goes on into the dark, and you cannot swim it.";
 
 /// `ascend`'s refusal at the walk band — there is no way up from ground
 /// level, so it says that rather than falling through to the unknown-verb

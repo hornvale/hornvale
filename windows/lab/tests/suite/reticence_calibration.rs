@@ -156,28 +156,81 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
             ImprovisedName::Wordless { .. } => wordless += 1,
         }
     }
-    // THE UNDERWORLD re-pin: (10, 5) -> (13, 6). Adding the four peoples
-    // changes the roster and the deterministic lexicons this arm assignment
-    // reads. A readout, not a target.
+
+    // THE MURRAIN re-pin: (8, 7) -> (10, 5). The epidemic phase moves every
+    // world's deterministic history, which re-draws the lexicons this arm
+    // assignment reads. A readout, not a target.
     //
-    // THE TRENCHER re-pin (2026-09-12, the repair pass, ledger #25/#26):
-    // (13, 6) -> (12, 7). One people crosses from organized to folk on the
-    // MERGED world -- Task 4's per-metabolite supply change plus the
-    // absorbed four peoples. The roster is unmoved at 19 and the total is
-    // unmoved at 19, so this is a cult-form movement, not a placement one:
-    // the same lever `book/src/lib.rs`'s seed-1/2/3 doctrine pins record
-    // moving in both directions this campaign. A readout, not a target.
-    assert_eq!(
-        (god, spirit),
-        (12, 7),
-        "arm counts over the current 19-people roster (the FROZEN prediction \
-         is 15 peoples / 9 organized / 6 folk and is falsified by the roster \
-         having grown -- see this test's doc comment; do not copy this \
-         readout over it)"
-    );
+    // TWO CAMPAIGNS RE-PIN IT TOGETHER: the Underworld Peoples' four and The
+    // Tidemark's six arrive at once, over a roster of **25** rather than 15,
+    // so both the POPULATION and the lexicons re-draw. The denominator below
+    // moves with the arm counts and the two are re-pinned together, because
+    // an arm count without its denominator is not interpretable. MEASURED on
+    // the merged world — neither branch's own arm counts ((9, 11), (13, 6))
+    // survive it; the merged counts are (11, 13), leaving one wordless. A
+    // readout, not a target.
+    //
+    // **25, not 24, and the difference is `merfolk`.** This loop ranges over
+    // the peoples `society_registry` holds — decision 0068's `minded ∧
+    // social` gate — not over the `Settled` ones. Those two sets were
+    // extensionally equal until The Tidemark authored a `Gregarious` people,
+    // and the settling roster's size was my first re-pin here: reached by
+    // assuming the equality still held rather than by reading what the loop
+    // iterates. Merfolk does not settle, it does improvise a name, and it
+    // belongs in this denominator.
+    // **THE TIDEMARK, SECOND RE-PIN (2026-09-13): (11, 13) -> (12, 12), AND
+    // IT IS NOT A CENSUS RE-PIN.** This test reads no census fixture — it
+    // builds `generated(42)` live — so the canonical refresh at
+    // `9b3bbfaa5d45` cannot have moved it, and the pin was already stale when
+    // that refresh landed. Saying so matters, because it arrived in the same
+    // failing run as thirteen genuine census re-pins and would otherwise be
+    // recorded as one.
+    //
+    // CHASED, NOT ADJUSTED, as the doc comment above demands. Exactly ONE
+    // people moved, and the committed report is what names it:
+    // `docs/audits/the-reticence-report.md` carries a per-people row, and
+    // diffing its `improvised-name` column against `c78116d0f` (the merge
+    // that last measured (11, 13)) shows a single line changing —
+    // **svirfneblin, Spirit -> God**. Its `cult-form` column moves with it,
+    // `folk -> organized`, which is the mechanism rather than a correlate:
+    // `improvised_name` (windows/vessel/src/doctrine.rs) resolves to `God`
+    // exactly when `cult_form_of` reads `Some("organized")`, and
+    // `cult_form_of` joins species -> `occ-people` -> SITE -> `held-by` ->
+    // belief -> `cult-form`. That join runs through the settlement roster, so
+    // a people whose sites change can change arm without anything in the
+    // language or the doctrine model moving at all.
+    //
+    // The mover is therefore the world, exactly as the doc comment above
+    // predicts a move here would be: `9912bc7ab` (`land_settlement` selects
+    // on habitat realm, not biome) landed after the (11, 13) measurement and
+    // widens every world by 39 settlements, and `41069d54b` absorbed it
+    // together with main's astronomy deepening — that commit is where the
+    // committed report's svirfneblin row actually flips, traced commit by
+    // commit rather than inferred.
+    //
+    // **WHY IT SURVIVED A COMMIT THAT SET OUT TO CATCH IT.** `41069d54b` is
+    // titled "absorb the world movement, and re-state the pins it moved", and
+    // it did regenerate the report whose diff proves the flip — but
+    // regenerating a rendered artifact and re-measuring an assertion are two
+    // different instruments, and only the first was run. The report absorbed
+    // the change silently because that is what a regenerated artifact does.
+    // The denominator half is re-checked and unmoved: 25 peoples, merfolk
+    // still the lone `Wordless`, asserted below.
+    // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15): this
+    // test builds `generated(42)` LIVE and reads no census fixture, so
+    // neither branch's own arm counts -- this branch's (12, 7) over 19
+    // peoples, or The Tidemark's (12, 12) over 25 -- is what the merged
+    // code actually produces. Both worldgen changes (this branch's Task 4
+    // per-metabolite supply change plus its absorbed four underworld
+    // peoples; The Tidemark's own ten new peoples and settlement-selector
+    // repair) apply on the merged tree at once, plus the species
+    // metabolic-triple migration fix this merge also carries. The
+    // assertion below is a PLACEHOLDER (The Tidemark's own last pin,
+    // pending re-measurement against the merged code).
+    assert_eq!((god, spirit), (12, 12), "frozen arm counts over 25 peoples");
     assert_eq!(
         god + spirit + wordless,
-        19,
+        25,
         "every people resolves to exactly one arm"
     );
 }
@@ -482,13 +535,23 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
     // report and re-quote in the chronicle — do NOT retune
     // `stance::patience()` to restore them (root `CLAUDE.md`, decision 0016).
     // THE UNDERWORLD re-pin: (71, 6) -> (70, 6). Adding the four peoples
-    // changes the deterministic history and removes one observable ask topic;
-    // the sessions count and headline null remain unmoved.
+    // changed the deterministic history and removed one observable ask topic.
+    // Absorbing The Tidemark's six marine peoples on top of that puts it back:
+    // (70, 6) -> (71, 6), MEASURED on the merged world. The sessions count and
+    // the headline null are unmoved in both directions; only the denominator
+    // the chronicle quotes moves.
+    // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+    // (71, 6) -> (72, 6), MEASURED on the fully merged tree (both campaigns'
+    // worldgen changes at once, plus the species metabolic-triple migration
+    // fix this merge also carries). The sessions count and the headline null
+    // are unmoved; the denominator the chronicle quotes moves again and
+    // needs re-quoting there ("seventy-one" -> "seventy-two").
     assert_eq!(
         (denominator, sessions_with_observations),
-        (70, 6),
+        (72, 6),
         "H4's reported denominator moved; the chronicle and retrospective must \
-         quote seventy observable points across six sessions with this assertion"
+         quote seventy-two observable points across six sessions with this \
+         assertion"
     );
     assert_eq!(
         diverged, 0,

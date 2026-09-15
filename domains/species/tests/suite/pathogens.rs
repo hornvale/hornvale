@@ -28,10 +28,21 @@ fn pathogen_catalogue_has_five_rows_and_two_epidemic_kinds() {
     }
 }
 
+/// The host list is exactly the SETTLING roster, and it grows with it.
+///
+/// THE TIDEMARK takes it from fifteen to twenty, adding the five `Settled`
+/// marine peoples. `merfolk` is deliberately absent: it is a people and it
+/// forms no fixed place, so admitting it would be the first non-settling row
+/// in this table — a modelling decision about whether a nomadic band
+/// sustains a crowd disease, which is a real question and not one that
+/// campaign measured. See `pathogen_hosts` in `domains/species/src/lib.rs`.
+///
+/// The name no longer carries the count: a count baked into a test name is
+/// how the next campaign inherits a wrong one.
 #[test]
-fn pathogen_host_weights_cover_all_fifteen_peoples() {
+fn pathogen_host_weights_cover_the_settling_roster() {
     for (_, traits) in pathogen_registry().iter() {
-        assert_eq!(traits.hosts.len(), 15);
+        assert_eq!(traits.hosts.len(), 20);
         assert!(traits.hosts.iter().all(|(_, weight)| *weight == 1.0));
     }
 }

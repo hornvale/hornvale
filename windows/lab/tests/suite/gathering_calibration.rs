@@ -206,9 +206,32 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // The Underworld Peoples delivery re-measurement moves the witness to
     // 18.0906; the
     // preregistered floor remains unchanged.
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six obligate marine peoples enter the roster and a
+    // `land_settlement` selector repair widens every world by 39 settlements
+    // (396 -> 435 on seed 42), re-deciding every seed's settlement placement
+    // and this capacity-by-latitude reading with it: 18.0906 -> 18.0950, a
+    // rise of 0.024%. THE SMALLEST STEP THIS ROW HAS EVER RECORDED, from the
+    // largest roster change it has seen — which is the reason the cause is
+    // stated no more narrowly than "the roster and the selector changed", as
+    // the Delvers and Radiation paragraphs above both insist. Nothing this
+    // campaign measured says where by latitude the six new peoples sit, and
+    // they are OBLIGATE MARINE, so they do not compete for the land capacity
+    // this metric integrates at all; the mover is more plausibly the
+    // selector repair, and that was not traced either.
+    //
+    // THE PREREGISTERED FLOOR IS RE-CHECKED, NOT ASSUMED, and it is a real
+    // assertion rather than a comment: `mean >= 3.0` sits ABOVE this line,
+    // the run reached here, so it cleared — at 18.0950 that is 6.03x the
+    // floor, against the 6.0x The Glasshouse recorded. THE FLOOR DID NOT
+    // MOVE AND MUST NOT: what drifted is the tripwire pin below it, and a
+    // breached floor would be a finding to report rather than a bound to
+    // widen. Decision 0106's circularity rule still applies on top of that —
+    // this is a drift tripwire, never evidence for the Earth-contingent
+    // gradient claim.
     assert!(
-        (mean - 18.0906).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.0906)"
+        (mean - 18.0950).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.0950)"
     );
 }
 
@@ -281,8 +304,19 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
         // uniform-sphere baseline of 32.7 -- still holds and stayed ARMED
         // through that pass. This is a re-pin with a stated cause, not a
         // failure, and nothing here was retuned to rescue a margin.
-        (margin_ratio - 1.8056).abs() < 5e-4,
-        "the margin ratio moved: {margin_ratio:.4}x (pinned 1.8530x, mean          {mean:.4} against baseline {UNIFORM_SPHERE_BASELINE}). This is a          re-pin with a stated cause, not a failure — but do not restate a          margin in prose without moving this number, which is the mistake          eleven entries below made."
+        //
+        // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+        // 1.8056x -> ~1.7849x, moving WITH the mean below (18.1105 ->
+        // 18.3200, The Tidemark's committed census value -- see that
+        // assertion's own merge note) in the SAME resolution, because
+        // `margin_ratio` is computed from the SAME `mean` this function
+        // pins twice and the two pins must stay numerically consistent
+        // with whichever census is actually committed. The margin narrows
+        // further and remains well under the 2x this file's history
+        // claimed eleven times; the directional claim asserted above --
+        // below the uniform-sphere baseline of 32.7 -- still holds.
+        (margin_ratio - 1.7849).abs() < 5e-4,
+        "the margin ratio moved: {margin_ratio:.4}x (pinned 1.7849x, mean          {mean:.4} against baseline {UNIFORM_SPHERE_BASELINE}). This is a          re-pin with a stated cause, not a failure — but do not restate a          margin in prose without moving this number, which is the mistake          eleven entries below made."
     );
     // Pinned calibration row (measured 2026-07-13, same 200-seed
     // census-of-the-gathering fixture the gradient calibration above uses).
@@ -510,105 +544,54 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // The Underworld Peoples delivery re-measurement moves the witness to
     // 17.6474; the
     // directional claim remains true.
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six obligate marine peoples enter the roster and a
+    // `land_settlement` selector repair widens every world by 39 settlements
+    // (396 -> 435 on seed 42), so the population carrying the latitude
+    // weighting is a different and larger one on every world:
+    // 17.6474 -> 18.3200. The margin against the baseline narrows
+    // 15.0526 -> 14.3800 degrees and the ratio falls 1.853x -> 1.785x.
+    //
+    // THIS IS BY FAR THE LARGEST STEP IN THE SEQUENCE — +0.6726 degrees,
+    // against a prior maximum single step of -0.089 (The Granary) and a
+    // typical step in the third decimal place. The magnitude is consistent
+    // with its cause and the consistency is the only claim made for it: a
+    // selector repair that adds 39 settlements to EVERY world changes the
+    // weighting population far more broadly than the "which settlements
+    // survive the bake" re-rolls every earlier entry in this chain records.
+    //
+    // THE STANDING INSTRUCTION IN THE WINZE'S PARAGRAPH ABOVE APPLIES AND
+    // ITS ANSWER IS UNCHANGED. That paragraph retired the practice of
+    // reading this chain as a trend at all: "A floor question needs an
+    // instrument that varies latitude deliberately; seven opportunistic
+    // readings off successive census refreshes cannot answer it, and this
+    // row should stop being read as if they could." An eighth reading, even
+    // one this large and in the opposite direction to the run of narrowings,
+    // does not change that. Recorded, not interpreted: nothing in this
+    // campaign biases where by latitude a settlement lands, and the six
+    // added peoples are obligate marine, so they hold no land settlement
+    // this metric weights.
+    //
+    // THE ASSERTED CLAIM IS UNCHANGED AND STILL HOLDS, re-checked rather
+    // than assumed: the preregistered directional assertion (mean below the
+    // uniform-sphere baseline of 32.7) sits ABOVE this line and the run
+    // reached here, so 18.3200 cleared it — by 14.38 degrees, better than
+    // 1.78x, and the margin has more than 14 degrees to give before the
+    // claim is in any danger.
     assert!(
-        // THE TRENCHER'S CENSUS DELIVERY (2026-09-13, canonical census on lefford
-        // at 1172e1069b43, goldens bdc59cc18): the delivery rewrote all 1000 rows
-        // of the-census `rows.csv` (116 files in the delivery); this pin reads
-        // census output. The absorb at c23bae9fd (The Cadastre) touched no census
-        // fixture and is not a mover here.
-        // 17.6474 -> 18.1105, a +0.4631-degree poleward step and the largest single
-        // movement this row has recorded.
-        //
-        // THE STANDING INSTRUCTION ABOVE FIRES, AND IS ANSWERED RATHER THAN DEFERRED.
-        // It asks that a further NARROWING of the margin be treated as a question about
-        // the floor of the trend rather than a quiet re-pin. The margin narrows again:
-        // 32.7 - 18.1105 = 14.5895 degrees (ratio 1.8056x), and this is now the THIRD
-        // consecutive narrowing, each step larger than the last
-        // (17.2377 -> 17.4432 -> 17.6474 -> 18.1105; +0.2055, +0.2042, +0.4631).
-        //
-        // WHAT IT SAYS ABOUT THE FLOOR IS STILL NOTHING, and that is the honest answer
-        // rather than an evasive one. The sole mover is the census delivery, whose
-        // content is this campaign's trophic/metabolite/subterranean-supply work plus
-        // an absorbed peoples roster — none of which carries a latitude term, and the
-        // authored biome affinities a roster change brings are exactly the
-        // authored-curve-read-as-finding this file has been caught on before. A floor
-        // question needs an instrument that varies latitude deliberately; eight
-        // opportunistic readings off successive refreshes cannot answer it.
-        //
-        // THE ASSERTED CLAIM IS UNCHANGED AND HOLDS: the preregistered directional
-        // assertion (below the uniform-sphere baseline of 32.7) sits ABOVE this line
-        // and the run reached here, so 18.1105 cleared it by better than 1.8x.
-        // REPORTED UPWARD rather than only recorded here: three accelerating
-        // narrowings is more than the single step the note above answered.
-        //
-        // AND THE CONTROLLER'S ANSWER, which found something the step itself
-        // does not show: THIS FILE CLAIMS "better than 2x" ELEVEN TIMES in the
-        // history above, AND THAT CLAIM IS NOW FALSE. 32.7 / 18.1105 = 1.806x.
-        // It went false BEFORE this campaign: 15.0340 read 2.175x, and the three
-        // steps this entry names (17.2377 / 17.4432 / 17.6474) are 1.897x /
-        // 1.875x / 1.853x. The crossing sits between 15.0340 and 17.2377 and
-        // belongs to neither The Trencher nor the three narrowings above it.
-        //
-        // NOTHING COULD HAVE CAUGHT IT. The assertion above this block pins the
-        // DIRECTION (mean < 32.7) and nothing pins the RATIO, so a margin claim
-        // repeated eleven times in prose lapsed silently while every run stayed
-        // green. The eleven historical lines were TRUE WHEN WRITTEN and are left
-        // exactly as they are -- rewriting them would falsify the record of what
-        // each campaign correctly observed. This note is the correction.
-        //
-        // FOR WHOEVER OWNS THIS ROW: the cheap repair is not prose. Pin the
-        // ratio, or print it, so the next lapse fires instead of accruing. Not
-        // done here -- The Trencher is cut to its supply half and adding a guard
-        // to another campaign's calibration row is not its call to make.
-        // MERGE RE-PIN (2026-09-13, The Trencher absorbing 41 commits of
-        // origin/main -- the Orrery/astronomy delivery). MEASURED AT THE
-        // MERGE, PRE-CENSUS: the absorb kept main's census fixtures
-        // byte-for-byte while the conflict resolution kept this branch's
-        // census-delivery literal, so the row above read the Trencher
-        // delivery's value against main's census data. Re-measured over the
-        // merged tree: 18.1105 -> 17.6474.
-        //
-        // THE THREE-NARROWING TREND THE BLOCK ABOVE REPORTED UPWARD IS
-        // PARTLY UNWOUND, AND SAYING SO IS THE HONEST READING. 18.1105 was
-        // the Trencher census delivery's value; against main's census the
-        // reading is 17.6474, which is the value the Underworld Peoples
-        // delivery already recorded two paragraphs up. So the largest of the
-        // three steps (+0.4631) belonged to the delivery this merge did not
-        // keep, and is NOT evidence about the floor either -- the same
-        // objection the block above makes applies unchanged: eight (now
-        // nine) opportunistic readings off successive refreshes cannot answer
-        // a floor question, and the merged world is not yet censused at all.
-        // The ratio correction above stands and is NOT walked back:
-        // 32.7 / 17.6474 = 1.853x, still short of the "better than 2x" this
-        // file claims eleven times, and the crossing still sits between
-        // 15.0340 and 17.2377 -- before this campaign, and owned by neither
-        // it nor the three narrowings.
-        //
-        // THE ASSERTED CLAIM IS UNCHANGED AND RE-CHECKED RATHER THAN
-        // ASSUMED: the preregistered directional assertion (mean < the
-        // uniform-sphere baseline of 32.7) sits ABOVE this line and stayed
-        // ARMED through the softened pass that took this measurement, so
-        // 17.6474 cleared it. Expected to move again at the post-merge
-        // census.
-        // THE TRENCHER'S POST-MERGE CENSUS (2026-09-13, canonical census on
-        // lefford at 06055072d639, goldens 0865b31bb): the delivery rewrote
-        // all 1000 rows of the-census `rows.csv` and re-authored all eight
-        // Gnomon injection arms at the same ref. This pin reads census
-        // output. THE MERGE RE-PIN ABOVE WAS MEASURED AGAINST MAIN'S
-        // COMMITTED (STALE) CENSUS, so this row returns to the value this
-        // branch's own earlier delivery (bdc59cc18) recorded -- measured,
-        // not assumed: that census and this one differ on exactly three
-        // metric columns, all astronomy (`figure-count`,
-        // `largest-figure-members`, `ecliptic-figure-count`), and none of
-        // them feeds this row. mean 17.6474 -> 18.1105. THE ASSERTED CLAIM
-        // IS UNCHANGED AND RE-CHECKED RATHER THAN ASSUMED: the
-        // preregistered directional assertion (mean < the uniform-sphere
-        // baseline of 32.7) sits ABOVE this line and stayed ARMED through
-        // the softened pass that took this measurement, so 18.1105 cleared
-        // it. The margin-ratio pin above moved WITH this row, in the same
-        // pass.
-        (mean - 18.1105).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.6474)"
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own census-delivery history for this row (culminating in
+        // 18.1105 at this branch's post-merge census `06055072d639`, with an
+        // eleven-times-repeated "better than 2x" prose claim corrected to
+        // ~1.85x along the way) is superseded -- the committed census in
+        // this merge is The Tidemark's (taken per the pin-resolution
+        // principle: a calibration pin asserts against the committed
+        // census, and this branch's own census no longer exists once this
+        // merge lands). The margin-ratio pin above MOVES WITH this row in
+        // the same resolution (1.8056x -> ~1.7849x), since it is computed
+        // from this same `mean` -- see that assertion's own merge note.
+        (mean - 18.3200).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~18.3200)"
     );
 }
 

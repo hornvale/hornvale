@@ -19,7 +19,7 @@ fn opts() -> PossessOpts {
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,
         lens: hornvale_vessel::lens::Lens::Off,
-        target: hornvale_vessel::PossessTarget::Flagship,
+        target: hornvale_vessel::PossessTarget::LandSettlement,
         tableau: None,
     }
 }
@@ -222,13 +222,19 @@ fn entering_a_name_that_is_not_here_is_refused() {
 }
 
 /// The other direction, and the one decision 0788 requires: the walk-band
-/// prose prints "You can enter the settlement of Doaba.", so `Doaba` must
+/// prose prints "You can enter the settlement of Bodoqa.", so `Bodoqa` must
 /// be typable.
+///
+/// MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15): the
+/// flagship's name moved from "Doaba" to "Bodoqa" -- a world-identity
+/// consequence of the merged code (both campaigns' worldgen changes plus
+/// the species metabolic-triple migration fix this merge also carries),
+/// not a change to what this test checks.
 #[test]
 fn entering_the_site_by_its_own_name_works() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-    assert!(say(&mut s, "enter Doaba").contains("[chamber"));
+    assert!(say(&mut s, "enter Bodoqa").contains("[chamber"));
 }
 
 /// Decision 0788's parity clause, taken MECHANICALLY off the game's own
@@ -443,7 +449,7 @@ fn the_stitch_law_end_to_end() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
-            target: hornvale_vessel::PossessTarget::Flagship,
+            target: hornvale_vessel::PossessTarget::LandSettlement,
             tableau: None,
         },
     )
@@ -503,7 +509,7 @@ fn the_stitch_law_end_to_end() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
-            target: hornvale_vessel::PossessTarget::Flagship,
+            target: hornvale_vessel::PossessTarget::LandSettlement,
             tableau: None,
         },
     )
@@ -590,7 +596,7 @@ fn run_drives_a_script_deterministically() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
-            target: hornvale_vessel::PossessTarget::Flagship,
+            target: hornvale_vessel::PossessTarget::LandSettlement,
             tableau: None,
         },
         std::io::Cursor::new(script),
@@ -605,7 +611,7 @@ fn run_drives_a_script_deterministically() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
-            target: hornvale_vessel::PossessTarget::Flagship,
+            target: hornvale_vessel::PossessTarget::LandSettlement,
             tableau: None,
         },
         std::io::Cursor::new(script),

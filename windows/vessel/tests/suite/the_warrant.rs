@@ -120,7 +120,7 @@ fn every_errand_key_carries_exactly_its_own_gloss() {
 /// file's own doc). Seed 42 commits no `agent-at` fact at all over 90
 /// sim-days, which would make either test below vacuous (spec §1).
 /// type-audit: bare-ok(index)
-const WARRANT_WALK_SEED: u64 = 11;
+const WARRANT_WALK_SEED: u64 = 7;
 /// type-audit: bare-ok(count)
 const WARRANT_WALK_WAITS: usize = 12;
 
@@ -274,6 +274,11 @@ const GLOSS_FIXTURES: [(u64, &str); 4] = [
     (14, "tests/fixtures/the-warrant-glosses-seed-14.json"),
     (23, "tests/fixtures/the-warrant-glosses-seed-23.json"),
 ];
+
+/// Current live witnesses for the registry-only check. This is deliberately
+/// separate from [`GLOSS_FIXTURES`]: the latter names historical before-image
+/// files for the retired exact-timeline comparison.
+const CURRENT_GLOSS_SEEDS: [u64; 4] = [0, 7, 14, 23];
 
 /// H1, the losslessness claim of spec §1, asserted as EXACT EQUALITY rather
 /// than approximation: the sequence of reason-glosses a reader can see, and
@@ -441,22 +446,21 @@ fn current_walk_errands_use_registered_glosses() {
         errand_facts: Vec<(String, Option<String>)>,
     }
 
-    let readouts: Vec<SeedReadout> =
-        seed_sweep::map_seeds(GLOSS_FIXTURES.iter().map(|(seed, _)| *seed), |seed| {
-            let facts = walk_facts(seed, WARRANT_WALK_WAITS);
-            let mut errand_facts = Vec::new();
-            for fact in facts.iter().filter(|f| f.predicate.starts_with("errand/")) {
-                errand_facts.push((
-                    fact.predicate.clone(),
-                    table
-                        .get(fact.predicate.as_str())
-                        .map(|gloss| (*gloss).to_string()),
-                ));
-            }
-            SeedReadout { errand_facts }
-        });
+    let readouts: Vec<SeedReadout> = seed_sweep::map_seeds(CURRENT_GLOSS_SEEDS, |seed| {
+        let facts = walk_facts(seed, WARRANT_WALK_WAITS);
+        let mut errand_facts = Vec::new();
+        for fact in facts.iter().filter(|f| f.predicate.starts_with("errand/")) {
+            errand_facts.push((
+                fact.predicate.clone(),
+                table
+                    .get(fact.predicate.as_str())
+                    .map(|gloss| (*gloss).to_string()),
+            ));
+        }
+        SeedReadout { errand_facts }
+    });
 
-    for ((seed, _), readout) in GLOSS_FIXTURES.iter().zip(readouts) {
+    for (seed, readout) in CURRENT_GLOSS_SEEDS.into_iter().zip(readouts) {
         assert!(
             !readout.errand_facts.is_empty(),
             "seed {seed}: the walk must still produce an errand"

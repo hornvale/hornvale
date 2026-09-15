@@ -167,7 +167,7 @@ mod tests {
 
     fn fixture() -> (World, WorldComponents, VillageInfo, String) {
         let w = world();
-        let village = hornvale_settlement::village_info(&w).expect("seed 42 places a flagship");
+        let village = crate::land_settlement(&w).expect("seed 42 places a flagship");
         let species =
             hornvale_species::species_of(&w, village.id).expect("the flagship is peopled");
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
@@ -264,6 +264,14 @@ mod tests {
     /// settlement (peopled by `bugbear`), resident ordinal 1 — the literals
     /// below are what `resident_draws` produced there on first green.
     ///
+    /// MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15): the
+    /// name, age and all three dials moved -- the flagship is still a
+    /// `bugbear` settlement (checked, not assumed), but the merged world
+    /// (both campaigns' worldgen changes plus the species metabolic-triple
+    /// migration fix this merge also carries) re-seats which vertex holds
+    /// it and re-draws its residents. Re-measured directly against the
+    /// merged code.
+    ///
     /// MUTATION THIS MUST FAIL AGAINST: move the `age_days` draw below the
     /// three dials; every pinned value moves.
     #[test]
@@ -271,11 +279,11 @@ mod tests {
         let (w, wc, village, species) = fixture();
         let draws = resident_draws(&w, &wc, &village, &species);
         let d = &draws[1];
-        assert_eq!(d.name, "Dvoashngashngo");
-        assert_eq!(d.age_days, 16993.545284545915);
-        assert_eq!(d.mind.threat_response, 0.6016664724049925);
-        assert_eq!(d.mind.deliberation_latency, 0.5346607350443859);
-        assert_eq!(d.mind.time_horizon, 0.5453806270496363);
+        assert_eq!(d.name, "Kvashngobvo");
+        assert_eq!(d.age_days, 9306.62809437562);
+        assert_eq!(d.mind.threat_response, 0.5677258414167665);
+        assert_eq!(d.mind.deliberation_latency, 0.27049646301132213);
+        assert_eq!(d.mind.time_horizon, 0.3168676102888087);
     }
 
     /// A settlement with no `cell-id` fact (lexicon: frozen predicate

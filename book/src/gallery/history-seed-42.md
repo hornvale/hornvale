@@ -7,95 +7,84 @@ today. Nothing here replays the deep-history bake; it is all a
 *present-as-query* over committed occupation facts, with the flesh
 (structures, residue) derived on demand and never committed.
 
-This is a real clearing on the world of seed 42 — vertex 39949 — where
-fourteen lives have passed over the ground, one settling atop the
-ruins of the last. The deepest layer is a bronze-working hobgoblin
-steading founded in the year 450, which did not last out its founding
-year; the standing one is a classical hobgoblin steading founded in the
-year 1750, some seventy-eight souls, which has stood 250 years and
-counting. Every layer is hobgoblin: this ground has only ever been
-taken from hobgoblins by hobgoblins, a single people displacing itself
-across fourteen settlements. The ground is occupied still -- there is
-no ruin to read on top, only smoke on the air.
+This is a real clearing on the world of seed 42 — vertex 1869 — and
+twelve lives have passed over it, one settling atop the ruins of
+the last. Every one of them is kobold: the deepest layer was founded
+in the year 250 by settlers fleeing the ice, and the lineage has
+returned to this clearing again and again across eight and a half
+centuries, sometimes put to flight, sometimes leaving of its own
+accord to carry the settlement onto ground it had just taken. The
+last layer was founded in the year 1100 and stands yet. There is no
+ruin to read — only a living settlement and smoke on the air.
 
 ```text
-The clearing at vertex 39949
-============================
+The clearing at vertex 1869
+===========================
 
-14 lives have passed over this ground, one settling atop the ruins of the last.
+12 lives have passed over this ground, one settling atop the ruins of the last.
 
-The deepest layer — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
-  Its founders fled the ice of the clearing at vertex 10019, hobgoblins looking for kinder ground.
-  Founded in the year 450, it held for 0 years, until the year 450.
-  They fled — put to flight by hobgoblins — and did not return.
+The deepest layer — a neolithic kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere five souls.
+  Its founders fled the ice of the clearing at vertex 30619, kobolds looking for kinder ground.
+  Founded in the year 250, it held for 25 years, until the year 275.
+  They fled — put to flight by kobolds — and did not return.
 
-Above it — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 75 souls.
-  Its founders fled the ice of the clearing at vertex 39950, hobgoblins looking for kinder ground.
-  Founded in the year 450, it held for 225 years, until the year 675.
-  They were not driven from this ground — they left it: in that same year they drove the hobgoblins off the clearing at vertex 39950, and carried the settlement onto the land they had taken.
+Above it — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 22 souls.
+  Its founders fled the ice of the clearing at vertex 30619, kobolds looking for kinder ground.
+  Founded in the year 275, it held for 100 years, until the year 375.
+  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at vertex 29134, and carried the settlement onto the land they had taken.
 
-Higher still — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 11 souls.
-  Its founders fled the ice of the clearing at vertex 39950, hobgoblins looking for kinder ground.
+Higher still — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
+  Its founders fled the ice of the clearing at vertex 29134, kobolds looking for kinder ground.
+  Founded in the year 375, it held for 0 years, until the year 375.
+  They fled — put to flight by kobolds — and did not return.
+
+Above that again — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 13 souls.
+  Its founders fled the ice of the clearing at vertex 29136, kobolds looking for kinder ground.
+  Founded in the year 375, it held for 125 years, until the year 500.
+  They fled — put to flight by kobolds — and did not return.
+
+And later — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 29 souls.
+  Its founders fled the ice of the clearing at vertex 29134, kobolds looking for kinder ground.
+  Founded in the year 500, it held for 100 years, until the year 600.
+  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at vertex 29134, and carried the settlement onto the land they had taken.
+
+And later — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some ten souls.
+  Its founders fled the ice of the clearing at vertex 29134, kobolds looking for kinder ground.
+  Founded in the year 600, it held for 0 years, until the year 600.
+  They fled — put to flight by kobolds — and did not return.
+
+And later — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 15 souls.
+  Its founders fled the ice of the clearing at vertex 30608, kobolds looking for kinder ground.
+  Founded in the year 600, it held for 75 years, until the year 675.
+  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at vertex 29136, and carried the settlement onto the land they had taken.
+
+And later — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
+  Its founders fled the ice of the clearing at vertex 29136, kobolds looking for kinder ground.
   Founded in the year 675, it held for 0 years, until the year 675.
-  They fled — put to flight by hobgoblins — and did not return.
+  They fled — put to flight by kobolds — and did not return.
 
-Above that again — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 13 souls.
-  Its founders fled the ice of the clearing at vertex 39951, hobgoblins looking for kinder ground.
-  Founded in the year 675, it held for 25 years, until the year 700.
-  They were not driven from this ground — they left it: in that same year they drove the hobgoblins off the clearing at vertex 39950, and carried the settlement onto the land they had taken.
+And later — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
+  Its founders fled the ice of the clearing at vertex 29149, kobolds looking for kinder ground.
+  Founded in the year 675, it held for 0 years, until the year 675.
+  They fled — put to flight by kobolds — and did not return.
 
-And later — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere four souls.
-  Its founders fled the ice of the clearing at vertex 39950, hobgoblins looking for kinder ground.
-  Founded in the year 700, it held for 0 years, until the year 700.
-  They fled — put to flight by hobgoblins — and did not return.
+And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 26 souls.
+  Its founders fled the ice of the clearing at vertex 30619, kobolds looking for kinder ground.
+  Founded in the year 675, it held for 425 years, until the year 1100.
+  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at vertex 29136, and carried the settlement onto the land they had taken.
 
-And later — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere seven souls.
-  Its founders fled the ice of the clearing at vertex 39951, hobgoblins looking for kinder ground.
-  Founded in the year 700, it held for 25 years, until the year 725.
-  They fled — put to flight by hobgoblins — and did not return.
+And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 11 souls.
+  Its founders fled the ice of the clearing at vertex 29136, kobolds looking for kinder ground.
+  Founded in the year 1100, it held for 0 years, until the year 1100.
+  They fled — put to flight by kobolds — and did not return.
 
-And later — an iron-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 29 souls.
-  Its founders fled the ice of the clearing at vertex 9998, hobgoblins looking for kinder ground.
-  Founded in the year 725, it held for 200 years, until the year 925.
-  They were not driven from this ground — they left it: in that same year they drove the hobgoblins off the clearing at vertex 40024, and carried the settlement onto the land they had taken.
-
-And later — an iron-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some ten souls.
-  Its founders fled the ice of the clearing at vertex 40024, hobgoblins looking for kinder ground.
-  Founded in the year 925, it held for 0 years, until the year 925.
-  They fled — put to flight by hobgoblins — and did not return.
-
-And later — an iron-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 14 souls.
-  Its founders fled the ice of the clearing at vertex 39951, hobgoblins looking for kinder ground.
-  Founded in the year 925, it held for 75 years, until the year 1000.
-  They fled — put to flight by hobgoblins — and did not return.
-
-And later — an iron-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 46 souls.
-  Its founders fled the ice of the clearing at vertex 39950, hobgoblins looking for kinder ground.
-  Founded in the year 1000, it held for 100 years, until the year 1100.
-  They were not driven from this ground — they left it: in that same year they drove the hobgoblins off the clearing at vertex 39950, and carried the settlement onto the land they had taken.
-
-And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 20 souls.
-  Its founders fled the ice of the clearing at vertex 39950, hobgoblins looking for kinder ground.
-  Founded in the year 1100, it held for 250 years, until the year 1350.
-  Plague emptied it — the dead outnumbered the living, and the rest walked away.
-
-And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 47 souls.
-  It was settled by hobgoblins sent out from the clearing at vertex 39950.
-  Founded in the year 1350, it held for 25 years, until the year 1375.
-  They were not driven from this ground — they left it: in that same year they drove the hobgoblins off the clearing at vertex 39950, and carried the settlement onto the land they had taken.
-
-And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 26 souls.
-  Its founders fled the ice of the clearing at vertex 39950, hobgoblins looking for kinder ground.
-  Founded in the year 1375, it held for 375 years, until the year 1750.
-  They fled — put to flight by hobgoblins — and did not return.
-
-The last of them — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 78 souls.
-  Its founders fled the ice of the clearing at vertex 39950, hobgoblins looking for kinder ground. It was founded by Vomnloxam.
-  Founded in the year 1750, it stands yet — 250 years and counting.
+The last of them — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 44 souls.
+  Its founders fled the ice of the clearing at vertex 30608, kobolds looking for kinder ground. It was founded by Rarara.
+  Founded in the year 1100, it stands yet — 900 years and counting.
   It has never ended; the people are there still.
 
 In the grass today
 ------------------
-At its height some 78 souls, the last hobgoblins here raised three huts and a granary.
+At its height some 44 souls, the last kobolds here raised a hut and a granary.
 They are living there yet — there is no ruin to read, only smoke on the air.
 ```

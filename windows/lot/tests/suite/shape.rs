@@ -122,6 +122,16 @@ fn every_seed_42_occupation_reconstructs_to_its_committed_integral() {
     // below, where no world movement can vacate it again; this count stays a
     // descriptive readout of the committed world, which is all its own doc
     // ever claimed it was.
+    // CONFIRMED INDEPENDENTLY ON `origin/main` (The Tidemark, merged
+    // here): absorbing The Tidemark's six marine peoples on top of the
+    // four underworld ones re-places seed 42 again on THAT tree too, and
+    // the clamped occupation is gone there as well -- both branches
+    // independently measured 0. This merge's own worldgen changes (both
+    // sets of peoples plus the species metabolic-triple migration fix)
+    // have not been re-measured against together, but 0 was the value on
+    // every branch that HAS been measured, and the dedicated hand-built
+    // test below covers the clamped arm regardless of what this count
+    // reads.
     assert_eq!(
         clamped_count, 0,
         "the ledger's own reading of seed 42 found 0 clamped occupations; if this moved, say so"

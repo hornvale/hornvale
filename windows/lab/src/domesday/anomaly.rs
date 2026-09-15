@@ -997,14 +997,24 @@ mod tests {
         // has ZERO commits between the previously pinned reading's tree
         // (0865b31bb~1) and this one, so the classifier that rendered both
         // verdicts is byte-identical and only its input moved.
+        // MERGE (The Trencher absorbing The Tidemark, 2026-09-15): this
+        // branch's own shrink (181 -> 179, excluded 51 -> 53, documented at
+        // length above) is superseded -- the committed census in this merge
+        // is The Tidemark's, taken per the pin-resolution principle (a
+        // calibration pin asserts against the committed census, and this
+        // branch's own census no longer exists once this merge lands). The
+        // Tidemark's own reading holds the surface at 181/51 (see
+        // `book/src/chronicle/the-gnomon.md` Postscript 11): no column was
+        // added, removed or reclassified between the two censuses' rails on
+        // ITS tree.
         assert_eq!(
             evaluable.len(),
-            179,
+            181,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            53,
+            51,
             "excluded count moved — re-measure and update this"
         );
     }

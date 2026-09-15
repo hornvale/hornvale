@@ -190,10 +190,20 @@ fn biosphere_row<'a>(
 mod tests {
     use super::*;
 
+    /// The catalogue is keyed off `society_registry`, which is
+    /// `minded ∧ social` (decision 0068) — NOT `Settled`. Those two were
+    /// extensionally equal until THE TIDEMARK's `merfolk`, so "the fifteen
+    /// peoples" was a true sentence about a coincidence; it is now
+    /// twenty-five against twenty-four settling kinds. The name no longer
+    /// carries the count.
     #[test]
-    fn catalog_holds_exactly_the_nineteen_peoples() {
+    fn catalog_holds_exactly_the_minded_social_peoples() {
         let cat = catalog();
-        assert_eq!(cat.len(), 19, "society_registry defines exactly 19 peoples");
+        assert_eq!(
+            cat.len(),
+            25,
+            "society_registry defines exactly 25 minded, social peoples"
+        );
     }
 
     #[test]

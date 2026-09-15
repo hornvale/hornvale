@@ -12,11 +12,13 @@ use hornvale_worldgen::components::WorldComponents;
 #[test]
 fn assemble_holds_every_kind_and_passes_integrity() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
-    // biosphere = the canonical entity set (all 39 kinds today — The Vacancy
+    // biosphere = the canonical entity set (all 49 kinds today — The Vacancy
     // T7 added seven, T8 added five (four marine plus the amphibious giant
     // crocodile), T9 added the gnoll, The Generalist added the human, The
-    // Delvers added the three dwarves, The Radiation added the six elves).
-    assert_eq!(wc.biosphere.len(), 43);
+    // Delvers added the three dwarves, The Radiation added the six elves,
+    // the Underworld Peoples added four subterranean peoples and The
+    // Tidemark added the six marine peoples).
+    assert_eq!(wc.biosphere.len(), 49);
     // Nested capacities (The Eremite, tightened by The Vigil): perception ⊆
     // psyche — every perceiver is minded — and psyche ⊆ biosphere. Since The
     // Vigil the dragons perceive too, so perception and psyche coincide at
@@ -28,13 +30,13 @@ fn assemble_holds_every_kind_and_passes_integrity() {
     }
     assert_eq!(
         wc.psyche.len(),
-        22,
-        "nineteen peoples + three minded dragons"
+        28,
+        "twenty-five peoples + three minded dragons"
     );
     assert_eq!(
         wc.perception.len(),
-        22,
-        "the nineteen peoples + the three dragons perceive (The Vigil)"
+        28,
+        "the twenty-five peoples + the three dragons perceive (The Vigil)"
     );
     for k in wc.psyche.ids() {
         assert!(
@@ -77,7 +79,12 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     // dragons — spelled out so a future non-speaking perceiver (an owl with
     // eyes and no words) reads as a real change to this list, not a passing
     // test that never looked.
+    //
+    // THE TIDEMARK adds six, and note that `merfolk` is among them despite
+    // settling nothing: this roster is the SPEAKING one, and speech follows
+    // mind and perception, never sedentism.
     let named_roster: Vec<hornvale_kernel::KindId> = [
+        "abyssal-elf",
         "black-dragon",
         "bugbear",
         "desert-dwarf",
@@ -91,13 +98,18 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
         "hill-dwarf",
         "hobgoblin",
         "human",
+        "kelp-tender",
         "kobold",
         "kuo-toa",
+        "merfolk",
         "mountain-dwarf",
         "red-dragon",
+        "reef-mason",
         "sea-elf",
         "snow-elf",
         "svirfneblin",
+        "triton",
+        "vent-commensal",
         "white-dragon",
         "wood-elf",
     ]
@@ -107,7 +119,8 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let perceivers: Vec<_> = wc.perception.ids().copied().collect();
     assert_eq!(
         perceivers, named_roster,
-        "perception must key exactly the fifteen peoples + three dragons, by name (The Vigil)"
+        "perception must key exactly the twenty-one peoples + three dragons, by \
+         name (The Vigil; The Tidemark widened the roster)"
     );
     assert_eq!(
         art.ids().copied().collect::<Vec<_>>(),

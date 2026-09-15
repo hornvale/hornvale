@@ -135,10 +135,24 @@ mod junctions;
 mod keeping_probe;
 #[path = "suite/kinship_facts.rs"]
 mod kinship_facts;
+#[path = "suite/land_settlement_realm.rs"]
+mod land_settlement_realm;
 #[path = "suite/lantern_probe.rs"]
 mod lantern_probe;
 #[path = "suite/lot_probe.rs"]
 mod lot_probe;
+#[path = "suite/marine_ladder_vents.rs"]
+mod marine_ladder_vents;
+#[path = "suite/marine_peoples_placement.rs"]
+mod marine_peoples_placement;
+#[path = "suite/marine_realm_agreement.rs"]
+mod marine_realm_agreement;
+#[path = "suite/marine_realm_zero_movement.rs"]
+mod marine_realm_zero_movement;
+#[path = "suite/marine_vent_representation_probe.rs"]
+mod marine_vent_representation_probe;
+#[path = "suite/marine_web_probe.rs"]
+mod marine_web_probe;
 #[path = "suite/metabolite_band_probe.rs"]
 mod metabolite_band_probe;
 #[path = "suite/metabolite_consumer_seam.rs"]
@@ -277,6 +291,8 @@ mod underworld_per_rung_switch;
 mod underworld_separation;
 #[path = "suite/underworld_water_table_probe.rs"]
 mod underworld_water_table_probe;
+#[path = "suite/vent_expiry.rs"]
+mod vent_expiry;
 #[path = "suite/warp_signs.rs"]
 mod warp_signs;
 #[path = "suite/warren_gate.rs"]

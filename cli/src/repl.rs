@@ -814,7 +814,16 @@ mod tests {
         // the flagship (entity 2, village Shngooshshngoash...) is
         // now peopled by bugbear, and the roles reported here are bugbear's own
         // words — "forager, omen-reader, headman", the top rung "headman".
-        assert!(out.contains("headman"));
+        //
+        // **THE TIDEMARK re-pin: "headman" -> "hold-lord".** The repl's
+        // `village` reads `village_info`, "the first `is-settlement` fact in
+        // ledger order", and that is PRODUCTION rather than a fixture — the
+        // campaign's ruling left it exactly as it was. Six marine peoples
+        // reordered the ledger, so seed 42's flagship is now the abyssal-elf
+        // hold Ṅooṅsroṅ and the rungs are that people's own words ("sifter,
+        // deepward, hold-lord"). The assertion is unchanged in kind: it names
+        // the flagship's TOP rung, whoever the flagship turns out to be.
+        assert!(out.contains("hold-lord"));
         assert!(out.contains("1."));
     }
 
@@ -1084,8 +1093,15 @@ mod tests {
         // bake re-placed every world and changed which people commits the
         // generated seed-42 world's first pantheon — it is bugbear now, so the
         // recount hops through bugbear's eyes.
+        //
+        // **THE TIDEMARK re-pin: bugbear -> abyssal-elf**, from the same
+        // cause as the caste re-pin above: the six marine peoples reorder the
+        // ledger, so the community holding the first pantheon is the
+        // abyssal-elf hold. What this test asserts — that the recount HOPS
+        // from a belief to the species of the community holding it — is
+        // untouched; only which species it lands on moved.
         assert!(
-            recounted.contains("Seen through bugbear eyes:"),
+            recounted.contains("Seen through abyssal-elf eyes:"),
             "the species hop is missing: {recounted}"
         );
         assert!(recounted.contains("night-sky acuity"));

@@ -525,6 +525,28 @@ type Row = (
 // the note above says of the previous three re-pins.
 // Post-unblinding re-measure, declared per decision 0016.
 const LADDER_TABLE: &[Row] = &[
+    // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15): the table
+    // below is regenerated wholesale via `dump_the_live_ladder_table` against the
+    // fully merged tree (this branch's Task 4 per-metabolite supply change plus
+    // its absorbed four underworld peoples; The Tidemark's own ten new peoples
+    // and land-settlement realm-vs-biome fix; and the species metabolic-triple
+    // migration fix this merge also carries) rather than reconciled by hand from
+    // either branch's own table. 120 rows total (25 peoples x 5 seeds, minus
+    // merfolk which is `Gregarious` and places nothing at any seed -- 24 x 5 =
+    // 120). 26 of the 106 rows comparable to the pre-merge placeholder moved;
+    // the remaining 14 rows are newly-present entries (peoples/seeds either
+    // branch's own table did not carry) rather than comparable moves. Every
+    // epoch-1 rung is still `Unknown`, `Predictive` still carries a prediction
+    // day in every case and `Counted` still carries `None` in every case, so
+    // the structural law asserted beside this table is intact.
+    (
+        1,
+        "abyssal-elf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        6472,
+        None,
+    ),
     (
         1,
         "bugbear",
@@ -561,9 +583,9 @@ const LADDER_TABLE: &[Row] = &[
         1,
         "duergar",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         6472,
-        Some(36531.74198950235),
+        None,
     ),
     (
         1,
@@ -623,6 +645,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         1,
+        "kelp-tender",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        4010,
+        None,
+    ),
+    (
+        1,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -641,8 +671,16 @@ const LADDER_TABLE: &[Row] = &[
         1,
         "mountain-dwarf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         6472,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "reef-mason",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        4010,
         None,
     ),
     (
@@ -665,9 +703,25 @@ const LADDER_TABLE: &[Row] = &[
         1,
         "svirfneblin",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         6472,
-        Some(36531.74198950235),
+        None,
+    ),
+    (
+        1,
+        "triton",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        4010,
+        None,
+    ),
+    (
+        1,
+        "vent-commensal",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        6472,
+        None,
     ),
     (
         1,
@@ -679,6 +733,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         2,
+        "abyssal-elf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
+    ),
+    (
+        2,
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -775,6 +837,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         2,
+        "kelp-tender",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        49,
+        None,
+    ),
+    (
+        2,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -799,6 +869,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         2,
+        "reef-mason",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        49,
+        None,
+    ),
+    (
+        2,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -809,13 +887,29 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         81,
-        Some(36337.174658835705),
+        None,
     ),
     (
         2,
         "svirfneblin",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
+    ),
+    (
+        2,
+        "triton",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        49,
+        None,
+    ),
+    (
+        2,
+        "vent-commensal",
         LadderRung::Unknown,
         LadderRung::Counted,
         81,
@@ -831,6 +925,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         3,
+        "abyssal-elf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -927,6 +1029,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         3,
+        "kelp-tender",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        32,
+        None,
+    ),
+    (
+        3,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -951,6 +1061,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         3,
+        "reef-mason",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        32,
+        None,
+    ),
+    (
+        3,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -968,6 +1086,22 @@ const LADDER_TABLE: &[Row] = &[
     (
         3,
         "svirfneblin",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
+        "triton",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        32,
+        None,
+    ),
+    (
+        3,
+        "vent-commensal",
         LadderRung::Unknown,
         LadderRung::Counted,
         53,
@@ -983,6 +1117,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         4,
+        "abyssal-elf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
+    ),
+    (
+        4,
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -1041,9 +1183,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "gully-dwarf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         2067,
-        None,
+        Some(36540.36159622378),
     ),
     (
         4,
@@ -1079,6 +1221,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         4,
+        "kelp-tender",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        2067,
+        None,
+    ),
+    (
+        4,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -1089,9 +1239,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "kuo-toa",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
@@ -1100,6 +1250,14 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Predictive,
         3785,
         Some(36540.36159622378),
+    ),
+    (
+        4,
+        "reef-mason",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        2067,
+        None,
     ),
     (
         4,
@@ -1120,6 +1278,22 @@ const LADDER_TABLE: &[Row] = &[
     (
         4,
         "svirfneblin",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
+    ),
+    (
+        4,
+        "triton",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        2067,
+        None,
+    ),
+    (
+        4,
+        "vent-commensal",
         LadderRung::Unknown,
         LadderRung::Counted,
         3785,
@@ -1135,6 +1309,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "abyssal-elf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        500,
+        None,
+    ),
+    (
+        5,
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -1161,17 +1343,17 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         500,
-        None,
+        Some(36556.47532198732),
     ),
     (
         5,
         "duergar",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,
@@ -1231,6 +1413,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "kelp-tender",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        304,
+        None,
+    ),
+    (
+        5,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -1255,6 +1445,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "reef-mason",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        304,
+        None,
+    ),
+    (
+        5,
         "sea-elf",
         LadderRung::Unknown,
         LadderRung::Counted,
@@ -1265,9 +1463,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         500,
-        None,
+        Some(36556.47532198732),
     ),
     (
         5,
@@ -1276,6 +1474,22 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Predictive,
         500,
         Some(36556.47532198732),
+    ),
+    (
+        5,
+        "triton",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        304,
+        None,
+    ),
+    (
+        5,
+        "vent-commensal",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        500,
+        None,
     ),
     (
         5,

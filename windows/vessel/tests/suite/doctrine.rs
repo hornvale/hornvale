@@ -45,7 +45,8 @@ fn the_least_equipped_people_is_the_most_open() {
 fn cult_form_is_uniform_within_every_people() {
     // The spec's section 3.2 takes the FIRST belief as decisive. That is only
     // sound because no people holds two cult-forms. Measured 0 of 15 on seed
-    // 42; this test is what keeps it true.
+    // 42, and 0 of 20 since THE TIDEMARK widened the settling roster; this
+    // test is what keeps it true.
     use hornvale_kernel::Value;
     use hornvale_religion::{CULT_FORM, HELD_BY};
     let (world, _ctx) = seed_42();
@@ -80,11 +81,12 @@ fn cult_form_is_uniform_within_every_people() {
         mixed.is_empty(),
         "cult-form must be uniform per SPECIES, mixed: {mixed:?}"
     );
-    // The Underworld Peoples delivery adds four belief-holding peoples to
-    // seed 42; the live roster is now nineteen.
+    // Two campaigns add belief-holding peoples to seed 42 at once: the
+    // Underworld Peoples' four and five of The Tidemark's six. MEASURED on
+    // the merged world, not added from the two branches' separate pins.
     assert_eq!(
         per_species.len(),
-        19,
-        "seed 42 has 19 species holding beliefs"
+        24,
+        "seed 42 has 24 species holding beliefs"
     );
 }

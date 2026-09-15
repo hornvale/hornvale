@@ -55,6 +55,9 @@ pub mod warp_prose;
 pub mod weft_prose;
 pub use agent::{most_populous_settlement, walk_depth};
 pub use brief::{Brief, brief_of};
+/// Re-exported from the composition root, where it must live: it needs
+/// `hornvale_settlement` and `hornvale_climate` at once. See its own doc.
+pub use hornvale_worldgen::land_settlement;
 // `brief_of`'s room-keyed occupation-register value is `OccupationRecord`
 // (`hornvale_history::record`); re-exported so a caller can name that map
 // without a direct dependency on `hornvale-history`.
@@ -182,7 +185,15 @@ pub enum PossessTarget {
     /// A specific, already-derived roster member, named by its ledger
     /// entity (The Hand, Task 4: "a creature on player-input" needs no
     /// new mechanism beyond naming which one). The roster itself is still
-    /// seeded exactly as [`PossessTarget::Flagship`] seeds it — this variant
+    /// seeded exactly as [`PossessOpts::default`]'s own target seeds it —
+    /// since The Tidemark that is [`PossessTarget::LandSettlement`] rather
+    /// than [`PossessTarget::Flagship`], and the change is forced rather than
+    /// stylistic: a caller naming a creature READ that entity out of a
+    /// roster, so the two calls must anchor at the same settlement or the
+    /// entity is not in the roster this one derives. Five tests failed with
+    /// `NoSuchCreature` on an entity they had just been handed, the moment
+    /// the two anchors diverged. See the note at the resolution site in
+    /// `session.rs`. This variant
     /// only SELECTS which already-derived body [`crate::Session::driven_body`]
     /// names, the same "select, never mint" discipline Task 3 established
     /// for the other two variants: resolution sets the session's `driven`
@@ -195,6 +206,63 @@ pub enum PossessTarget {
     /// [`VesselError::NoSuchCreature`] rather than falling back to the
     /// flagship.
     Creature(hornvale_kernel::EntityId),
+    /// The roster body at the first settlement whose own committed biome is
+    /// **not marine** — the subject every walk FIXTURE in this workspace
+    /// actually wants, stated once here instead of being assumed at each of
+    /// them (The Tidemark, Task 3, fix round 1; Nathan's ruling).
+    ///
+    /// # Why this variant exists, and what it is a correction to
+    ///
+    /// The walk fixtures did not choose a subject at all. They took
+    /// [`PossessTarget::Flagship`], which is `village_info` — "the first
+    /// `is-settlement` fact in ledger order" — and treated it as "the demo
+    /// village". **It never meant that.** It is an ordering artifact, and
+    /// nothing had ever moved it off land because every people the roster
+    /// carried lived on land.
+    ///
+    /// The Tidemark authored six obligate MARINE peoples, and at seed 42 the
+    /// first settlement committed became an abyssal-elf one on the
+    /// bathypelagic band. Roughly sixty tests then failed, and not as
+    /// re-pins: `there_is_nothing_to_dive_into_on_dry_land` cannot pass at a
+    /// vertex that is water, a sixty-four-seed hazard search stopped finding
+    /// a world, and the chart's cover and colour layers stopped varying
+    /// because the whole walk band was open sea. That was an assumption
+    /// riding on ledger ordering being exposed, not caused — and it would
+    /// have broken for ANY future campaign that added a people, marine or
+    /// not, because adding one reorders the ledger.
+    ///
+    /// **So: if you are adding a people and the walk suite has gone strange,
+    /// this is the paragraph you were looking for.** Choose the subject you
+    /// mean. A fixture that wants dry ground asks for it here.
+    ///
+    /// # What it does NOT change
+    ///
+    /// `Flagship` still means exactly what it meant and `village_info` is
+    /// untouched — the alternative remedies (give `village_info` a defined
+    /// flagship; teach the walk surface to render an ocean locale) were both
+    /// considered and declined for that campaign.
+    ///
+    /// **What DID move is the shipped default** (fix round 2). This
+    /// paragraph read "the default is unmoved ... marine villages are simply
+    /// not the default walk", and that was true of the library default and
+    /// FALSE of what a person saw: `cli/src/main.rs`'s no-flag arm still
+    /// resolved `Flagship`, so `possess --seed 42` opened in open blue water
+    /// with "Ways on: surface." Re-aiming the test fixtures alone had left
+    /// the half that was actually asked about untouched — this campaign's own
+    /// named hazard (a sentence true of the code and false of the world),
+    /// committed by the campaign that named it. The CLI's no-flag arm now
+    /// resolves here too, so the sentence is true of the program and not just
+    /// of the tests. `--target flagship` still reaches the ledger's first
+    /// settlement, marine or not.
+    ///
+    /// Resolution is `agent::land_settlement`: ledger order, exactly as the
+    /// flagship is, filtered on the settlement's own committed `biome` fact
+    /// against `hornvale_climate::Biome::is_marine`. A world whose
+    /// settlements are ALL marine resolves to `None` and fails with
+    /// [`VesselError::NoSettlement`], loudly — never a silent fall back to
+    /// the flagship, which would reintroduce the exact ambiguity this
+    /// variant exists to remove.
+    LandSettlement,
 }
 
 /// Options for a possession.
@@ -251,6 +319,33 @@ impl Default for PossessOpts {
     /// noon too (fraction 0.5, still inside the diurnal active band), so a
     /// default script actually crosses an active phase rather than landing
     /// on the midnight boundary every integer day would.
+    ///
+    /// **`target` is [`PossessTarget::LandSettlement`], which is deliberately
+    /// NOT [`PossessTarget`]'s own `Default`** (The Tidemark, Task 3) — the
+    /// same shape `lens` above already has, and for the same kind of reason:
+    /// the two defaults answer different questions. `PossessTarget::default()`
+    /// answers "if a caller names no variant, which variant is it" and stays
+    /// `Flagship`, the lookup that predates the enum. **This** answers "what
+    /// does a possession do when nobody has said anything", and its callers
+    /// are overwhelmingly FIXTURES — the walk suite, the scene probes, the
+    /// snapshot goldens — every one of which wants dry ground and none of
+    /// which was saying so. They were inheriting `village_info`, "the first
+    /// `is-settlement` fact in ledger order", which was never a claim about
+    /// where a demo should stand; The Tidemark's marine peoples moved it into
+    /// the water and about sixty of them failed at once. Choosing here states
+    /// the thing they all meant, in one place, with one reason.
+    ///
+    /// A caller that genuinely wants the ledger's first settlement, marine or
+    /// not, still names [`PossessTarget::Flagship`] and gets exactly what it
+    /// always got.
+    ///
+    /// **`cli/src/main.rs`'s no-flag arm resolves `LandSettlement` too**
+    /// (fix round 2), so the shipped `possess` command agrees with this
+    /// default rather than diverging from it. This doc previously said the
+    /// opposite — "which is what `cli/src/main.rs` does when no `--target`
+    /// flag is given, so the shipped `possess` command is unchanged" — and
+    /// that sentence was the reason `possess --seed 42` went on opening in
+    /// open water while every test claimed dry ground.
     fn default() -> Self {
         PossessOpts {
             day: hornvale_kernel::WorldTime::from_std_days(0.5).expect("a day value is finite"),
@@ -258,7 +353,7 @@ impl Default for PossessOpts {
             wild_agents: true,
             eyes: eyes::Eyes::Own,
             lens: lens::Lens::Off,
-            target: PossessTarget::Flagship,
+            target: PossessTarget::LandSettlement,
             tableau: None,
         }
     }

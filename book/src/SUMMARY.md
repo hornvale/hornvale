@@ -508,6 +508,7 @@
 - [The Kiln](./chronicle/the-kiln.md)
 - [The Cadastre](./chronicle/the-cadastre.md)
 - [The Trencher](./chronicle/the-trencher.md)
+- [The Tidemark](./chronicle/the-tidemark.md)
 
 # Appendix: The Frontier
 

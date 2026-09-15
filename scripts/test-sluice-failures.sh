@@ -123,6 +123,56 @@ else
     bad "no names in the diff"
 fi
 
+echo "== a LIBTEST log is read, not reported as zero failures"
+# THE DEFECT THIS FILE EXISTED TO PREVENT AND DID NOT. Two harnesses run in the
+# chamber: the workspace phases use nextest (`FAIL [ ... ] name`), and the
+# `clients` phase runs plain `cargo test`, because the clients are outside the
+# cargo workspace. libtest writes `test name ... FAILED` and
+# `test result: FAILED. P passed; F failed` instead, and this reader saw
+# neither.
+#
+# On 2026-09-15 campaign/the-tidemark died at `clients` with FOUR failing
+# portolan tests and this tool reported ZERO, printing "ok: the list is not
+# shorter than the run reported" underneath — because with no nextest summary
+# the cross-check compared 0 against 0 and was satisfied. A confident, silent,
+# wrong all-clear from the guard against exactly that.
+mklibtest() {  # mklibtest <file> <reported-failed> <how-many-FAILED-lines>
+    {
+        printf 'running 293 tests\n'
+        i=0; while [ "$i" -lt "$3" ]; do
+            printf 'test driver::portolan_tests::case_%s ... FAILED\n' "$i"
+            i=$((i+1))
+        done
+        printf 'test result: FAILED. 289 passed; %s failed; 0 ignored; 0 measured\n' "$2"
+    } > "$1"
+}
+mklibtest "$tmp/libtest.log" 4 4
+out="$(bash "$root/scripts/sluice-failures.sh" "$tmp/libtest.log" 2>&1)"; rc=$?
+printf '%s\n' "$out" | sed 's/^/    /'
+case "$out" in *"(4 distinct)"*) ok "reads libtest failure names" ;; *) bad "did not read libtest names: $out" ;; esac
+case "$out" in *"count in a Summary line: 4"*) ok "reads libtest's reported count" ;; *) bad "did not read libtest's count" ;; esac
+if [ "$rc" -eq 0 ]; then
+    ok "a complete libtest list is not refused"
+else
+    bad "refused a complete libtest list (rc=$rc)"
+fi
+
+echo "== a TRUNCATED libtest log is refused, like a nextest one"
+# Anti-vacuity: the case above must not pass because the reader accepts
+# anything. Report 9 failures, write 3 names.
+mklibtest "$tmp/libtrunc.log" 9 3
+set +e
+out="$(bash "$root/scripts/sluice-failures.sh" "$tmp/libtrunc.log" 2>&1)"; rc=$?
+set -e
+case "$rc" in 0) bad "accepted a libtest list shorter than the run reported" ;; *) ok "refuses a short libtest list (rc=$rc)" ;; esac
+case "$out" in *REFUSING*) ok "says it is refusing" ;; *) bad "refused without saying so" ;; esac
+
+echo "== a MIXED log counts both harnesses"
+# The real chamber shape: nextest phases then a libtest clients phase.
+cat "$tmp/good.log" "$tmp/libtest.log" > "$tmp/mixed.log"
+out="$(bash "$root/scripts/sluice-failures.sh" "$tmp/mixed.log" 2>&1)"
+case "$out" in *"(9 distinct)"*) ok "counts nextest and libtest names together (5+4)" ;; *) bad "lost one harness in a mixed log: $out" ;; esac
+
 echo "== a truncated PREVIOUS log is refused too"
 if bash "$S" "$tmp/good.log" "$tmp/truncated.log" >"$tmp/p.out" 2>&1; then
     bad "a truncated previous log was accepted — the diff would silently invent FIXED entries"

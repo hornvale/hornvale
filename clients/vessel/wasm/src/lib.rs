@@ -107,10 +107,12 @@ pub extern "C" fn hv_start(seed: u64) -> i32 {
         // client's business. Applying it here would put a look inside the
         // byte-identity smoke.
         lens: hornvale_vessel::lens::Lens::Off,
-        // The Casement possesses the flagship, the same default every
-        // committed transcript and this ABI's byte-identity smoke depend on
-        // (The Quire, Task 2).
-        target: hornvale_vessel::PossessTarget::Flagship,
+        // The Casement opens the same deliberately chosen dry-ground subject
+        // as the committed transcript. The ledger's first settlement is a
+        // valid explicit `Flagship`, but it can now be marine; the browser's
+        // opening contract is the land-settlement recording, not that
+        // ordering artifact (The Tidemark, Task 3).
+        target: hornvale_vessel::PossessTarget::LandSettlement,
         // No tableau at the ABI. A tableau is a STAGED situation, asserted
         // by its author rather than derived from the seed, and decision 0055
         // runs the determinism guarantee up to and including this boundary:

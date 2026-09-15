@@ -22,8 +22,19 @@ const VENT_ACTIVE_TICKS: i64 = 30 * WorldTime::TICKS_PER_STD_DAY;
 const VENT_WEAKENING_TICKS: i64 = 20 * WorldTime::TICKS_PER_STD_DAY;
 /// plumb: pending(wave-1)
 const VENT_FAILED_TICKS: i64 = 15 * WorldTime::TICKS_PER_STD_DAY;
+/// The full succession cycle, in exact ticks: the five finite intervals of
+/// spec section 3.2 summed — 20 days absent, 15 nascent, 30 active, 20
+/// weakening, 15 failed, so 100 standard days.
+///
+/// **Public because a measurement needs it and must not re-derive it.** The
+/// Tidemark's M3a negative control holds vent phase constant by sampling at
+/// instants spaced one whole cycle apart — `(t + offset) mod cycle` is
+/// invariant under adding a whole cycle — and a control that spelled `100 *
+/// TICKS_PER_STD_DAY` for itself would silently stop being a control the day
+/// one of the five intervals above moved.
 /// plumb: pending(wave-1)
-const VENT_CYCLE_TICKS: i64 = VENT_ABSENT_TICKS
+/// type-audit: bare-ok(count)
+pub const VENT_CYCLE_TICKS: i64 = VENT_ABSENT_TICKS
     + VENT_NASCENT_TICKS
     + VENT_ACTIVE_TICKS
     + VENT_WEAKENING_TICKS
@@ -320,6 +331,33 @@ impl WaterWorld {
     }
 }
 
+/// The present succession phase of one stable vent source at an exact instant.
+///
+/// The cheap read, and the one a caller with no globe-wide question wants:
+/// [`WaterWorld::at`] answers the same thing for every vent at once and costs
+/// a whole-overlay pass to do it, which is the wrong instrument for a history
+/// bake asking about the single vertex one community sits on. Both route
+/// through the same private `vent_phase`, so the two cannot disagree.
+///
+/// Draws nothing, mutates nothing — the succession is exact integer
+/// arithmetic over `(time, vent.phase_offset_ticks)`.
+#[must_use]
+pub fn vent_state_at(vent: &WaterVent, time: WorldTime) -> VentState {
+    vent_phase(vent, time).state
+}
+
+/// Where `vent`'s influence presently sits, given its own candidate ring.
+///
+/// `None` for an `Absent` or `Failed` source — a vent that is contributing
+/// nothing is nowhere, which is [`select_vent_position`]'s own rule and is
+/// what makes "the vent under this community" a question about the ring
+/// rather than about the present position (see [`crate::vent_tenancy`]).
+#[must_use]
+pub fn vent_position_at(vent: &WaterVent, ring: &[Vertex], time: WorldTime) -> Option<Vertex> {
+    let phase = vent_phase(vent, time);
+    select_vent_position(ring, phase.state, phase.cycle_index)
+}
+
 #[derive(Clone, Copy, Debug)]
 struct VentPhase {
     state: VentState,
@@ -401,16 +439,23 @@ fn seabed_sample_index(substrate: &[WaterSubstrate], vertex: Vertex) -> Option<u
         .map(|offset| start + offset)
 }
 
-/// Composition-root entry point for the Waterworld overlay.
-pub fn waterworld_from(
-    world: &World,
+/// Every ocean vertex's marine substrate column, in stable vertex/column
+/// order — the half of [`waterworld_from`] that **draws nothing**.
+///
+/// Extracted rather than inlined because this crate now has two consumers of
+/// the same column walk: [`waterworld_from`] itself, and
+/// [`crate::marine_habitat::MarineHabitat::ambient`], which is the marine
+/// reading a caller with no seed (and therefore no vents) can still take.
+/// Two independent walks would be two opportunities to disagree about which
+/// strata a column has or what depth a sample sits at — the same reason
+/// [`crate::subterranean_substrate_field`] exists as one derivation with two
+/// callers.
+///
+/// Pure: terrain and climate only, no stream, no draw.
+pub fn marine_columns(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
-    config: WaterWorldConfig,
-) -> WaterWorld {
-    if !config.enabled {
-        return WaterWorld::default();
-    }
+) -> Vec<WaterSubstrate> {
     assert_eq!(
         terrain.geosphere().vertex_count(),
         climate.geosphere().vertex_count(),
@@ -462,19 +507,61 @@ pub fn waterworld_from(
             });
         }
     }
-    let fields = substrate
+    substrate
+}
+
+/// The ambient fields of [`marine_columns`]' samples at
+/// [`WorldTime::GENESIS`] — no vent contribution, because a vent's
+/// contribution is a property of an *instant* and lives on
+/// [`WaterWorldSnapshot`], never on the stable overlay.
+///
+/// The same extraction rationale as [`marine_columns`]: one derivation,
+/// two callers. Pure — no stream, no draw.
+pub fn ambient_marine_fields(
+    climate: &GeneratedClimate,
+    substrate: &[WaterSubstrate],
+) -> Vec<WaterFields> {
+    substrate
         .iter()
         .map(|sample| {
             WaterFields::from_substrate(
                 sample,
                 climate.insolation(),
                 climate
-                    .temperature_at(sample.vertex, hornvale_kernel::WorldTime::GENESIS)
+                    .temperature_at(sample.vertex, WorldTime::GENESIS)
                     .get(),
                 climate.current_at(sample.vertex),
             )
         })
-        .collect::<Vec<_>>();
+        .collect()
+}
+
+/// The ambient stocks of [`marine_columns`]' samples — [`derive_stocks`] with
+/// no vent influence, local or transported. Pure; one derivation, two callers,
+/// as above.
+pub fn ambient_marine_stocks(
+    substrate: &[WaterSubstrate],
+    fields: &[WaterFields],
+) -> Vec<WaterStocks> {
+    substrate
+        .iter()
+        .zip(fields)
+        .map(|(sample, field)| derive_stocks(sample, field, 0.0, 0.0))
+        .collect()
+}
+
+/// Composition-root entry point for the Waterworld overlay.
+pub fn waterworld_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    config: WaterWorldConfig,
+) -> WaterWorld {
+    if !config.enabled {
+        return WaterWorld::default();
+    }
+    let substrate = marine_columns(terrain, climate);
+    let fields = ambient_marine_fields(climate, &substrate);
     let marine_vertices = substrate
         .iter()
         .filter(|sample| sample.is_seabed)
@@ -514,11 +601,7 @@ pub fn waterworld_from(
             sample.vertex,
         ));
     }
-    let stocks = substrate
-        .iter()
-        .zip(&fields)
-        .map(|(sample, field)| derive_stocks(sample, field, 0.0, 0.0))
-        .collect::<Vec<_>>();
+    let stocks = ambient_marine_stocks(&substrate, &fields);
     let propagation = WaterPropagation::from_substrate(&substrate, &fields);
     WaterWorld {
         substrate,

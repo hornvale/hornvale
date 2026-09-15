@@ -128,5 +128,7 @@ mod trope_witness;
 mod walk_depth_agreement;
 #[path = "suite/wash_byte_identity.rs"]
 mod wash_byte_identity;
+#[path = "suite/water_observation_cli.rs"]
+mod water_observation_cli;
 #[path = "suite/world_build_sites.rs"]
 mod world_build_sites;

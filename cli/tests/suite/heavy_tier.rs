@@ -454,11 +454,11 @@ fn the_heavy_roster_is_exactly_this_fixture() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 41] = [
+const EXPECTED_UNTOKENISED: [&str; 42] = [
     "...",
-    "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5333 over 120 pairs; thirteenth canonical reading, incomparable because the Trencher's post-merge census re-seated the world and fixture inputs; the scorer is unchanged and the evaluable surface shrank 181 -> 179 with a measured share of exactly zero, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)",
+    "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5417 over 120 pairs; thirteenth canonical reading. The Tidemark moved only the world: the scorer is byte-identical, the census column set holds at 295, the evaluable surface holds at 181/51, and ablating the two columns that swapped across that boundary reproduces 65/120 arm for arm, so the instrument's share is zero and this reading IS comparable to the twelfth. It is still NOT a seventh point in the six-epoch series, which lives on the retired 118-column surface. The battery still separates nothing. MERGE NOTE (The Trencher absorbing The Tidemark, 2026-09-15): this branch's own re-pin (0.5333, measured against its own pre-merge census) is superseded -- the committed injection fixtures and census in this merge are The Tidemark's, taken per the pin-resolution principle (a calibration pin asserts against the committed census; this branch's number asserted against a census that no longer exists). See book/src/chronicle/the-gnomon.md Postscript 11 vs Postscript 12 for both campaigns' full readings.)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
-    "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow's measured series is 14/60 -> 12/60 -> 10/60 -> 9/60 -> 7/60 -> 9/60 -> 18/60 across the named campaign closes, denominator held at 60; the latest increase followed four new Underworld peoples entering the roster, but its downstream attribution is not yet established, so the post-epoch witness is now at the 0.30 floor and is not lowered)",
+    "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow's measured series is 14/60 -> 12/60 -> 10/60 -> 9/60 -> 7/60 -> 9/60 -> 18/60 -> 12/60 across the named campaign closes and the current merge-product re-read, denominator held at 60; the increase followed four new Underworld peoples entering the roster, and the subsequent fall was observed after later world changes without downstream attribution established, so the post-epoch witness remains below the 0.30 floor and is not lowered)",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean vertices; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
@@ -475,6 +475,7 @@ const EXPECTED_UNTOKENISED: [&str; 41] = [
     "claim: readout(preregistered, 0016) — builds one seed-42 Climate-rung world and reads all 22 weft-* metrics off it (~524ms release-mode grid sweep, measured); see this file's module doc for the full table",
     "compiles the workspace in release; CI runs it with -- --ignored",
     "cost: 64 world builds (~4 min); run by hand at stage boundaries, results in the ledger",
+    "cost: builds 24 worlds (~5 min); a measurement, not a gate",
     "device-dependent: run explicitly via the pinned lavapipe proof runner",
     "failing — investigate later",
     "flaky after the refactor",

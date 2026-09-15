@@ -54,5 +54,6 @@ comment.
   - `windows/worldgen/src/history_emit.rs:638`
   - `windows/worldgen/src/person_promote.rs:343`
   - `windows/worldgen/src/person_promote.rs:434`
+  - `windows/worldgen/src/vent_tenancy.rs:175`
   - `windows/worldgen/tests/suite/tolerance_draw.rs:99`
 

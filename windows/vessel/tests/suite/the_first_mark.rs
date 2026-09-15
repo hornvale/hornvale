@@ -100,7 +100,7 @@ fn world() -> hornvale_kernel::World {
 /// fresh seed-42 session. It will keep moving with settlement placement
 /// exactly as before; what will NOT come back is the `"<species> of
 /// <village>"` shape, which spec §5 retires for residents.
-const GRIEVANCE_NPC: &str = "Dvoashngashngo";
+const GRIEVANCE_NPC: &str = "Kvashngobvo";
 
 /// Places the `GRIEVANCE_NPC` body at the possessed body's own room, through
 /// the test seam (`Session::place_creature_at_me`, see

@@ -85,6 +85,15 @@ fn a_uniform_affinity_is_flat_across_every_biome() {
 /// elves — the campaign that routes an entire family through this store rather
 /// than through condition curves. The list stays exhaustive and stays sorted by
 /// `KindId`, which is `ComponentStore`'s own iteration order.
+///
+/// **THE TIDEMARK (Task 3) TAKES IT TO FOURTEEN**, adding all six marine
+/// peoples — and unlike the elves, for whom this store SHARPENS a ranking the
+/// condition curves already state, for these six it is the only per-vertex
+/// environmental channel there is. A people is authored PREPARED
+/// (`devotion_elev` 0.30 against a sovereignty floor of 0.42-0.45), so
+/// `tolerance_liebig`'s elevation fast path returns before temperature,
+/// moisture or insolation is evaluated at all; the six marine kinds differ
+/// environmentally HERE or nowhere.
 #[test]
 fn the_registry_ships_exactly_the_declared_occupants() {
     let registry = biome_affinity_registry();
@@ -92,18 +101,24 @@ fn the_registry_ships_exactly_the_declared_occupants() {
     assert_eq!(
         occupants,
         vec![
+            "abyssal-elf",
             "desert-elf",
             "drow",
             "gnoll",
             "high-elf",
+            "kelp-tender",
+            "merfolk",
+            "reef-mason",
             "sea-elf",
             "snow-elf",
+            "triton",
+            "vent-commensal",
             "wood-elf",
             "woolly-mammoth",
         ],
-        "Eight occupants: The Range task 4's two — gnoll (Desert) and \
-         woolly-mammoth (Tundra/Ice) — plus The Radiation task 3's six elves. \
-         Adding or removing one moves every world, so it belongs in a commit \
-         that says so."
+        "Fourteen occupants: The Range task 4's two — gnoll (Desert) and \
+         woolly-mammoth (Tundra/Ice) — plus The Radiation task 3's six elves \
+         and The Tidemark task 3's six marine peoples. Adding or removing \
+         one moves every world, so it belongs in a commit that says so."
     );
 }

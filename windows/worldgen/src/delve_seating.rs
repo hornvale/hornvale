@@ -994,17 +994,25 @@ mod tests {
             assert_eq!(origins[made[0]].1, expected, "vertex {vertex:?}");
             historical_made_columns += 1;
         }
-        // RE-PINNED 100 -> 60, 2026-09-12, The Trencher's repair pass
-        // (ledger #25/#26). The merged world -- Task 4's per-metabolite
-        // supply change plus the four absorbed underworld peoples -- seats
-        // 60 historical occupied underworld columns on seed 42 where the
-        // pre-merge world seated 100. This is a WITNESS count, not the
-        // property: every assertion in the loop above still ran, 60 times,
-        // and all of them held. The same number is quoted in
-        // `plat_readout`'s frozen-words needle ("the Made population: 60
-        // occupied columns"), which moves with this one.
+        // RE-PINNED, 2026-09-12, The Trencher's repair pass (ledger
+        // #25/#26): 100 -> 60 on The Trencher's own branch (Task 4's
+        // per-metabolite supply change plus the four absorbed underworld
+        // peoples).
+        //
+        // THE TIDEMARK re-pin (landed independently on `main`, merged
+        // here): 100 -> 37, from six new marine peoples re-placing seed 42
+        // plus the same four subterranean peoples moving underworld
+        // occupancy directly -- drow, the only kind this witness counts,
+        // now competes against both.
+        //
+        // MERGE RE-PIN (The Trencher absorbing The Tidemark, 2026-09-15):
+        // both campaigns' worldgen changes apply on the same merged tree at
+        // once, so neither 60 nor 37 alone is what this build actually
+        // produces. Re-measured directly against the merged code, and kept
+        // in sync with `plat_readout`'s frozen-words needle (see that
+        // module's own note).
         assert_eq!(
-            historical_made_columns, 60,
+            historical_made_columns, 63,
             "seed 42 historical occupied-underworld-column witness"
         );
     }

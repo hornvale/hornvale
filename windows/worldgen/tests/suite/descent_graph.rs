@@ -89,7 +89,13 @@ fn a_genesis_occupation_is_its_own_clan_root_and_has_no_forebear() {
     // computed, for the same reason: 18 new roots over 6 new peoples is three
     // apiece on average, but the bake seeds by proto-community rather than by
     // people and the per-kind counts are not equal.
-    assert_eq!(genesis.len(), 58, "seed 42 has 58 genesis roots");
+    // Two campaigns re-pin this together: the Underworld Peoples' four
+    // subterranean peoples and The Tidemark's six marine peoples join as the
+    // sixteenth through twenty-fifth genesis-seeded kinds, 46 -> 75. MEASURED
+    // on the merged world, not computed and not added from the two branches'
+    // separate pins (63 on one side, 58 on the other): the bake seeds by
+    // proto-community, so new roots are not a fixed number per people.
+    assert_eq!(genesis.len(), 75, "seed 42 has 75 genesis roots");
     for o in genesis {
         assert_eq!(clan_root_of(&w, o.id), o.id);
         assert!(forebear_of(&w, o.id).is_none());

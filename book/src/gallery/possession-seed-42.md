@@ -31,7 +31,7 @@ You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > !whoami
-A bugbear of Bodoqa (agent 6295844690806112256), day 0, room 2843840067.
+A bugbear of Bodoqa (agent 6997748953821151232), day 0, room 2843840067.
 > enter
 [chamber — threshold]
 A small room in Bodoqa, holding a doorway, a screen, a bench and a stone ledge.
@@ -136,8 +136,8 @@ Twilight. The horizon glows gold. The vast moon is a smear of light. The small, 
   room/2843840067 = {"schema":"locale/room/v2","id":2843840067,"face":3,"path…
   room/2843840099 = {"schema":"locale/room/v2","id":2843840099,"face":3,"path…
   room/2843840387 = {"schema":"locale/room/v2","id":2843840387,"face":3,"path…
-  settlement/10760661430244474880/name = Bodoqa
-  settlement/10760661430244474880/population = 65
+  settlement/10760661430244474883/name = Bodoqa
+  settlement/10760661430244474883/population = 65
 > release
 You let go.
 ```

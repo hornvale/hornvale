@@ -42,12 +42,17 @@ use std::collections::BTreeSet;
 /// - **Photolithoautotrophy** — a plant-folk/fungal analogue: light energy,
 ///   an inorganic donor, fixed (inorganic) carbon. Every kind whose old
 ///   `TrophicMode` was `Phototrophic`.
-/// - **Chemolithoautotrophy** — `xorn` alone: chemical energy from a
-///   mineral/redox gradient, an inorganic donor, fixed carbon. Rung 2 of the
-///   Underworld Larder witnessed this as `(Absent, Chemotrophic)` under the
-///   old two-axis scheme; decision 0976 moved `xorn`'s thermal strategy to
-///   `Unmodelled` (a separate, thermal-axis-only fact) without touching this
-///   triple at all.
+/// - **Chemolithoautotrophy** — `xorn` and, since THE TIDEMARK,
+///   `vent-commensal`: chemical energy from a mineral/redox gradient, an
+///   inorganic donor, fixed carbon. Rung 2 of the Underworld Larder
+///   witnessed this as `(Absent, Chemotrophic)` under the old two-axis
+///   scheme; decision 0976 moved `xorn`'s thermal strategy to `Unmodelled`
+///   (a separate, thermal-axis-only fact) without touching this triple at
+///   all. THE TIDEMARK's `vent-commensal` (a body that eats a chemical
+///   gradient at a hydrothermal vent and does not pay to hold its own
+///   temperature — `ThermalStrategy::Ectothermic`) carries the SAME triple
+///   as `xorn`, so no new entry is needed here; only the per-kind witness
+///   count below moves.
 const SANCTIONED: &[(E, D, C)] = &[
     (E::Chemotrophic, D::Organotrophic, C::Heterotrophic),
     (E::Phototrophic, D::Lithotrophic, C::Autotrophic),
@@ -84,7 +89,8 @@ fn every_kind_carries_a_sanctioned_combination() {
     );
 }
 
-/// Chemolithoautotrophy is now WITNESSED, by exactly one kind.
+/// The chemolithoautotroph triple is now WITNESSED, by exactly two kinds
+/// since THE TIDEMARK (one before it).
 ///
 /// **THE DIRECTION THIS ENFORCES, STATED** (the discipline `is_ametabolic`'s
 /// doc uses): before rung 2 of the Underworld Larder, the trophic axis
@@ -93,7 +99,7 @@ fn every_kind_carries_a_sanctioned_combination() {
 /// mineral, which is a chemolithotroph — chemical energy, an inorganic
 /// donor, fixed carbon. The assertion inverts rather than deletes, because
 /// the triple still needs a witness-count guard going forward: exactly one
-/// kind today, and a second carrier appearing (or `xorn` losing the triple)
+/// kind then, and a second carrier appearing (or `xorn` losing the triple)
 /// is exactly as much a finding as zero carriers was before rung 2.
 ///
 /// **This is still true history, and it is about the METABOLIC triple, not
@@ -102,11 +108,23 @@ fn every_kind_carries_a_sanctioned_combination() {
 /// pairing an ametabolic thermal value with a live metabolic triple was
 /// never a stable resting point — a living kind with no metabolism at all is
 /// the category error). `xorn` carries `ThermalStrategy::Unmodelled` and the
-/// chemolithoautotroph triple today; only the thermal half changed, and this
-/// test's own claim (exactly one chemolithoautotroph carrier, named `xorn`)
-/// is unaffected.
+/// chemolithoautotroph triple today; only the thermal half changed.
+///
+/// **THE TIDEMARK ADDS THE SECOND CARRIER, WHICH IS THE EVENT THE ASSERTION
+/// ABOVE PREDICTED.** The message this test carried said a second carrier
+/// "is exactly as much a finding as zero carriers was before rung 2", and
+/// asked for a deliberate change with a reason rather than a silent
+/// widening. The reason: `vent-commensal` is the marine half of the
+/// Underworld Larder's rung 4 (spec §7). `xorn` eats a chemical gradient in
+/// rock and reads its supply from `chemical_per_rung`
+/// (`energy::chemical_supply_field_per_rung`, The Trencher Task 4's
+/// per-metabolite reading); this kind eats one in water and reads
+/// `MarineHabitat::chemosynthate`, whose seabed term is a live vent's
+/// chemistry and therefore a function of vent PHASE. Two carriers, two
+/// realms, one triple — and the underworld's own consumer-side half of
+/// rung 4 is still open and still belongs to THE TENANT.
 #[test]
-fn chemolithoautotrophy_is_witnessed_by_xorn_alone() {
+fn chemolithoautotrophy_is_witnessed_by_xorn_and_vent_commensal() {
     let carriers: Vec<&str> = biosphere_registry()
         .iter()
         .filter(|(_, b)| {
@@ -117,13 +135,15 @@ fn chemolithoautotrophy_is_witnessed_by_xorn_alone() {
         .collect();
     assert_eq!(
         carriers,
-        vec!["xorn"],
+        vec!["vent-commensal", "xorn"],
         "the chemolithoautotroph triple is carried by {carriers:?}; expected \
-         exactly [\"xorn\"]. Rung 2 of the Underworld Larder witnesses it \
-         through xorn alone — a thing that burrows through stone and eats \
-         only mineral is a chemolithotroph. If a second kind now carries it, \
-         or xorn no longer does, that is a deliberate change to say why; it \
-         is not something to silently widen this assertion for."
+         exactly [\"vent-commensal\", \"xorn\"]. Rung 2 of the Underworld \
+         Larder witnessed it through xorn alone — a thing that burrows \
+         through stone and eats only mineral is a chemolithotroph — and The \
+         Tidemark adds the marine consumer at a hydrothermal vent. A THIRD \
+         kind appearing, or either of these two losing the triple, is a \
+         deliberate change to say why; it is not something to silently widen \
+         this assertion for."
     );
     assert!(
         SANCTIONED.contains(&(E::Chemotrophic, D::Lithotrophic, C::Autotrophic)),
@@ -213,6 +233,51 @@ fn every_kind_is_pinned_to_its_metabolic_triple() {
             C::Heterotrophic,
         ),
         ("xorn", E::Chemotrophic, D::Lithotrophic, C::Autotrophic),
+        // THE TIDEMARK (Task 3): the six obligate marine peoples. Triples
+        // assigned by the same TrophicMode->triple mapping this migration
+        // applied everywhere else (see the `BiosphereTraits` literals in
+        // `hornvale_species::biosphere_registry`): an ordinary heterotroph
+        // maps to (Chemotrophic, Organotrophic, Heterotrophic); kelp-tender's
+        // phototrophy to (Phototrophic, Lithotrophic, Autotrophic);
+        // vent-commensal's chemolithoautotrophy to the SAME triple xorn
+        // carries (Chemotrophic, Lithotrophic, Autotrophic) -- no new
+        // SANCTIONED entry needed.
+        (
+            "abyssal-elf",
+            E::Chemotrophic,
+            D::Organotrophic,
+            C::Heterotrophic,
+        ),
+        (
+            "kelp-tender",
+            E::Phototrophic,
+            D::Lithotrophic,
+            C::Autotrophic,
+        ),
+        (
+            "merfolk",
+            E::Chemotrophic,
+            D::Organotrophic,
+            C::Heterotrophic,
+        ),
+        (
+            "reef-mason",
+            E::Chemotrophic,
+            D::Organotrophic,
+            C::Heterotrophic,
+        ),
+        (
+            "triton",
+            E::Chemotrophic,
+            D::Organotrophic,
+            C::Heterotrophic,
+        ),
+        (
+            "vent-commensal",
+            E::Chemotrophic,
+            D::Lithotrophic,
+            C::Autotrophic,
+        ),
         (
             "rust-monster",
             E::Chemotrophic,
@@ -430,6 +495,9 @@ fn every_kind_is_pinned_to_its_metabolic_triple() {
         "the split (THE TRENCHER) declared three sanctioned triples — \
          chemoorganoheterotrophy, photolithoautotrophy, and xorn's \
          chemolithoautotrophy; if this count moved, re-read this test's doc \
-         before adjusting the number"
+         before adjusting the number. THE TIDEMARK's vent-commensal (a \
+         second chemolithoautotroph carrier) needed no fourth entry here — \
+         it carries the same triple xorn does, so only the per-kind PINNED \
+         table and the witness-count test above moved."
     );
 }
