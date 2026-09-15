@@ -217,6 +217,8 @@ mod social_readout;
 mod soil_attribution_probe;
 #[path = "suite/solitary_tongue.rs"]
 mod solitary_tongue;
+#[path = "suite/source_standing_probe.rs"]
+mod source_standing_probe;
 #[path = "suite/species_worlds.rs"]
 mod species_worlds;
 #[path = "suite/staple_d2_probe.rs"]

@@ -8623,7 +8623,7 @@ impl<'w> Session<'w> {
         ug: &crate::underground::Underground,
     ) -> Option<(
         hornvale_kernel::KindId,
-        hornvale_worldgen::energy::EnergySource,
+        hornvale_worldgen::energy::SourceStanding,
         crate::lattice::Cell,
     )> {
         let terrain = self.wctx.terrain.as_ref()?;

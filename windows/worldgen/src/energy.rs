@@ -1095,6 +1095,49 @@ pub fn subterranean_energy(
     raw / (1.0 + raw)
 }
 
+/// A point's leading energy source, the runner-up, and both yields — see
+/// [`source_standing`].
+/// type-audit: bare-ok(ratio: leader_yield), bare-ok(ratio: runner_up_yield)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SourceStanding {
+    /// The source with the highest yield here.
+    pub leader: EnergySource,
+    /// The leader's own yield.
+    pub leader_yield: f64,
+    /// The source with the second-highest yield.
+    pub runner_up: EnergySource,
+    /// The runner-up's yield, floored at zero.
+    pub runner_up_yield: f64,
+}
+
+/// How close the runner-up must come, as a fraction of the leader, before a
+/// chamber's chemistry reads as CONTESTED rather than settled.
+///
+/// Authored against the measured distribution rather than picked: see
+/// `windows/worldgen/tests/suite/source_standing_probe.rs`, which asserts both
+/// outcomes actually occur. A threshold that made every chamber contested, or
+/// none, would be a word that carries no information — the same occupancy
+/// argument the metabolite bands are built on.
+/// plumb: universal(an authored narrative threshold on the leader-to-runner-up ratio -- the same everywhere by design, since a chamber should not change its description because an unrelated seed moved)
+/// type-audit: bare-ok(ratio: CONTESTED_SHARE)
+pub const CONTESTED_SHARE: f64 = 0.80;
+
+impl SourceStanding {
+    /// Whether the runner-up comes close enough to make the leader's hold
+    /// look provisional. False when nothing is supplied at all — an empty
+    /// chamber is not a contested one.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_contested(&self) -> bool {
+        self.leader_yield > 0.0 && self.runner_up_yield >= CONTESTED_SHARE * self.leader_yield
+    }
+
+    /// Whether anything is supplied here at all.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_barren(&self) -> bool {
+        self.leader_yield <= 0.0
+    }
+}
+
 /// Which source contributes the most yield at one point — the scalar this
 /// module retains beside [`subterranean_energy`]'s single ruler value, so
 /// the seven sources' *differences* (which `BIO-subterranean-energy-sources`
@@ -1115,14 +1158,66 @@ pub fn dominant_source(
     moisture: f64,
     drainage: f64,
 ) -> EnergySource {
-    EnergySource::ALL
-        .iter()
-        .copied()
-        .max_by(|a, b| {
-            a.yield_at(material, gradient, depth_m, moisture, drainage)
-                .total_cmp(&b.yield_at(material, gradient, depth_m, moisture, drainage))
-        })
-        .expect("EnergySource::ALL is non-empty")
+    source_standing(material, gradient, depth_m, moisture, drainage).leader
+}
+
+/// The leader at a point **and how far ahead it is** — what
+/// [`dominant_source`] returns, plus the runner-up it beat and both yields.
+///
+/// # Why the margin is worth keeping
+///
+/// `dominant_source` alone answers "which source feeds this chamber" and
+/// discards "by how much", which is the difference between a place with a
+/// character and a place that merely has a maximum. A chamber where
+/// methanogenesis leads sulphide oxidation by a hair is not the same place as
+/// one where it leads by a factor of three, and the first is the more
+/// interesting of the two — it is where a change in conditions would flip the
+/// chemistry.
+///
+/// This is the same "retained beside the scalar" move `dominant_source` itself
+/// makes against [`subterranean_energy`], one level further out.
+///
+/// # The tie-break is inherited, deliberately and exactly
+///
+/// [`dominant_source`] documented, and committed prose depends on, favouring
+/// the source listed **later** in [`EnergySource::ALL`] on an exact tie —
+/// `Iterator::max_by`'s behaviour. `dominant_source` now delegates here rather
+/// than deriving the leader a second time, so the two cannot disagree; the
+/// loop below reproduces `max_by`'s rule with `>=` on the leader comparison,
+/// which is what makes a later equal element win. Changing that `>=` to `>`
+/// would silently re-word chambers across every seed.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(ratio: moisture), bare-ok(diagnostic-value: drainage)
+pub fn source_standing(
+    material: &MaterialBuffer,
+    gradient: GeothermalGradient,
+    depth_m: f64,
+    moisture: f64,
+    drainage: f64,
+) -> SourceStanding {
+    let mut leader = EnergySource::ALL[0];
+    let mut leader_yield = leader.yield_at(material, gradient, depth_m, moisture, drainage);
+    let mut runner_up = leader;
+    let mut runner_up_yield = f64::NEG_INFINITY;
+    for source in EnergySource::ALL.iter().copied().skip(1) {
+        let y = source.yield_at(material, gradient, depth_m, moisture, drainage);
+        // `>=`, not `>`: a later equal element takes the lead, matching
+        // `max_by`'s documented tie-break that this function inherited.
+        if y >= leader_yield {
+            runner_up = leader;
+            runner_up_yield = leader_yield;
+            leader = source;
+            leader_yield = y;
+        } else if y > runner_up_yield {
+            runner_up = source;
+            runner_up_yield = y;
+        }
+    }
+    SourceStanding {
+        leader,
+        leader_yield,
+        runner_up,
+        runner_up_yield: runner_up_yield.max(0.0),
+    }
 }
 
 /// [`subterranean_energy`] over every band of the ladder and every vertex of
@@ -1516,6 +1611,51 @@ mod tests {
     /// Recomputed from the public `yield_at` in the routing table's own order
     /// rather than from `chemical_supply`'s internals, so a mis-routed source
     /// or a metabolite summed with the wrong partner fails here.
+    /// claim: invariant(tie-break-favours-the-later-source) — the one
+    /// behaviour `source_standing`'s rewrite most endangered, and the one a
+    /// real-world sample does NOT exercise: `source_standing_probe.rs`
+    /// measured **0 exact ties over 29,305 readings**, so its equivalence
+    /// check, however large, says nothing about this path.
+    ///
+    /// Constructed rather than sampled, because the case does not occur
+    /// naturally: with `moisture = 0` and `drainage = 0` every one of the
+    /// seven yields is exactly zero — each is a product or root of a product
+    /// containing a shut water gate or a zero drainage term — so all seven
+    /// tie, and `Iterator::max_by`'s documented rule ("if several elements are
+    /// equally maximum, the last element is returned") must return
+    /// `EnergySource::ALL`'s final entry.
+    ///
+    /// If this reads as an arbitrary preference: it is, and it is a load-
+    /// bearing one. Committed chamber prose names the dominant source, so
+    /// flipping the tie-break re-words every tied chamber in every seed.
+    #[test]
+    fn an_exact_tie_favours_the_source_listed_later() {
+        let m = buffer(0.5, 0.5, 0.5, 0.5);
+        let g = GeothermalGradient::new(25.0);
+        let standing = source_standing(&m, g, 1000.0, 0.0, 0.0);
+        assert_eq!(
+            standing.leader_yield, 0.0,
+            "a shut water gate and zero drainage should zero every source"
+        );
+        assert_eq!(
+            standing.leader,
+            *EnergySource::ALL.last().expect("ALL is non-empty"),
+            "on a total tie the LAST source in EnergySource::ALL must win -- this reproduces \
+             Iterator::max_by's documented behaviour, which dominant_source promised before it \
+             delegated to source_standing and which committed chamber prose depends on"
+        );
+        assert!(
+            standing.is_barren(),
+            "a reading where nothing is supplied is barren, and a barren chamber is not a \
+             contested one"
+        );
+        assert!(
+            !standing.is_contested(),
+            "is_contested must be false when there is nothing to contest -- otherwise every \
+             dead chamber would be described as a close-run thing"
+        );
+    }
+
     #[test]
     fn chemical_supply_sums_within_a_metabolite() {
         let m = buffer(0.5, 0.4, 0.3, 0.6);

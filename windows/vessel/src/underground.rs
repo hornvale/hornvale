@@ -1025,7 +1025,7 @@ pub(crate) fn chamber_conditions(
 ) -> (
     hornvale_worldgen::Substrate,
     f64,
-    hornvale_worldgen::energy::EnergySource,
+    hornvale_worldgen::energy::SourceStanding,
 ) {
     let gradient = terrain.geothermal_gradient_at(ug.vertex);
     let material = terrain.material_at(ug.vertex);
@@ -1058,7 +1058,7 @@ pub(crate) fn chamber_conditions(
         substrate.moisture,
         drainage,
     );
-    let source = hornvale_worldgen::energy::dominant_source(
+    let source = hornvale_worldgen::energy::source_standing(
         &material,
         gradient,
         depth_m,
@@ -1078,7 +1078,7 @@ pub(crate) fn chamber_resident(
     ug: &Underground,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
-) -> Option<(KindId, hornvale_worldgen::energy::EnergySource)> {
+) -> Option<(KindId, hornvale_worldgen::energy::SourceStanding)> {
     let (substrate, energy, source) = chamber_conditions(ug, terrain, climate);
     dominant_inhabitant(&substrate, energy).map(|kind| (kind, source))
 }
@@ -1148,19 +1148,34 @@ pub(crate) fn key_node_on(
 /// variant's name.
 pub(crate) fn inhabitant_datum(
     kind: KindId,
-    source: hornvale_worldgen::energy::EnergySource,
+    standing: hornvale_worldgen::energy::SourceStanding,
     tenancy: hornvale_worldgen::delve_seating::Tenancy,
     hoard: &[&str],
 ) -> String {
     let mut out = if tenancy == hornvale_worldgen::delve_seating::Tenancy::Inhabited {
-        format!("A {} is kept here, in {}", kind.0, source_phrase(source))
+        format!(
+            "A {} is kept here, in {}",
+            kind.0,
+            source_phrase(standing.leader)
+        )
     } else {
         format!(
             "A {} moves in the dark here, drawn to {}",
             kind.0,
-            source_phrase(source)
+            source_phrase(standing.leader)
         )
     };
+    // THE MARGIN, not just the leader (The Trencher, Task 17). A chamber where
+    // one reaction leads by a hair is a different place from one where it
+    // leads by a factor of three, and until now the prose said the same thing
+    // about both. `is_contested` is false for a barren reading, so a dead
+    // chamber is never described as a close-run thing.
+    if standing.is_contested() {
+        out.push_str(&format!(
+            ", though {} runs it close",
+            source_phrase(standing.runner_up)
+        ));
+    }
     if let Some(listed) = crate::chamber_prose::listed(hoard) {
         out.push_str(&format!(", sitting on: {listed}"));
     }
@@ -1170,6 +1185,25 @@ pub(crate) fn inhabitant_datum(
 
 /// [`inhabitant_datum`]'s own hand-map from [`hornvale_worldgen::energy::
 /// EnergySource`] to a short descriptive phrase.
+/// The seven sources' player-facing names — the ONLY place in Hornvale where
+/// a metabolite's identity reaches a human. `inhabitant_fit` and
+/// `dominant_inhabitant` both read the saturated SUM, so they cannot tell
+/// methane from hydrogen; this function can, and says so out loud.
+///
+/// # Registered as a seam, because nothing committed witnesses it
+///
+/// Checked over every path in `docs/generated-paths.txt` (The Trencher, Task
+/// 17): **no committed artifact contains a chamber-resident line at all** —
+/// `possession-seed-42.md` has zero, and so does every vessel fixture. The
+/// walk those artifacts record never enters a chamber with a resident. So the
+/// ordinary rendering-drift check, which is what normally catches a prose
+/// change, is structurally blind here: this function could return one constant
+/// for all seven sources and every gate would stay green.
+///
+/// The guard is therefore the mutation check plus
+/// `a_contested_chamber_names_the_runner_up_and_a_settled_one_does_not` and
+/// its sibling, which assert the exact rendered strings.
+/// seam-guard: returns("the rock") scope(hornvale-vessel)
 fn source_phrase(source: hornvale_worldgen::energy::EnergySource) -> &'static str {
     use hornvale_worldgen::energy::EnergySource;
     match source {
@@ -1533,6 +1567,19 @@ mod tests {
             .expect("seed 42 has a cave")
     }
 
+    /// A settled standing: `leader` well clear of `runner_up`, so
+    /// `is_contested` is false and the prose names one source.
+    fn settled(
+        leader: hornvale_worldgen::energy::EnergySource,
+    ) -> hornvale_worldgen::energy::SourceStanding {
+        hornvale_worldgen::energy::SourceStanding {
+            leader,
+            leader_yield: 1.0,
+            runner_up: hornvale_worldgen::energy::EnergySource::Radiolysis,
+            runner_up_yield: 0.1,
+        }
+    }
+
     /// The datum names the species and the source (The Gallery), and — The
     /// Plat — what lies in its region and whether it is kept.
     #[test]
@@ -1541,26 +1588,82 @@ mod tests {
         use hornvale_worldgen::energy::EnergySource;
         let k = KindId("xorn");
         assert_eq!(
-            inhabitant_datum(k, EnergySource::IronReduction, Tenancy::Wild, &[]),
+            inhabitant_datum(k, settled(EnergySource::IronReduction), Tenancy::Wild, &[]),
             "A xorn moves in the dark here, drawn to iron-bearing stone."
         );
         assert_eq!(
-            inhabitant_datum(k, EnergySource::IronReduction, Tenancy::Wild, &["a key"]),
+            inhabitant_datum(
+                k,
+                settled(EnergySource::IronReduction),
+                Tenancy::Wild,
+                &["a key"]
+            ),
             "A xorn moves in the dark here, drawn to iron-bearing stone, sitting on: a key."
         );
         assert_eq!(
-            inhabitant_datum(k, EnergySource::Geothermal, Tenancy::Inhabited, &[]),
+            inhabitant_datum(
+                k,
+                settled(EnergySource::Geothermal),
+                Tenancy::Inhabited,
+                &[]
+            ),
             "A xorn is kept here, in the warmth rising from below."
         );
         assert_eq!(
             inhabitant_datum(
                 k,
-                EnergySource::Geothermal,
+                settled(EnergySource::Geothermal),
                 Tenancy::Abandoned,
                 &["a key", "a loaf"]
             ),
             "A xorn moves in the dark here, drawn to the warmth rising from below, sitting on: a key and a loaf."
         );
+    }
+
+    /// The Trencher, Task 17: the datum reports the MARGIN, not only the
+    /// leader. A chamber where one reaction barely leads reads differently
+    /// from one where it dominates — which is the whole point of retaining
+    /// the runner-up beside the leader.
+    #[test]
+    fn a_contested_chamber_names_the_runner_up_and_a_settled_one_does_not() {
+        use hornvale_worldgen::delve_seating::Tenancy;
+        use hornvale_worldgen::energy::{EnergySource, SourceStanding};
+        let k = KindId("xorn");
+        let contested = SourceStanding {
+            leader: EnergySource::Methanogenesis,
+            leader_yield: 1.0,
+            runner_up: EnergySource::SulphideOxidation,
+            runner_up_yield: 0.95,
+        };
+        assert!(contested.is_contested());
+        assert_eq!(
+            inhabitant_datum(k, contested, Tenancy::Wild, &[]),
+            "A xorn moves in the dark here, drawn to the porous, water-logged carbonate, though \
+             a sulphide-laced seam runs it close."
+        );
+        // The hoard clause still follows the margin clause, in that order.
+        assert_eq!(
+            inhabitant_datum(k, contested, Tenancy::Wild, &["a key"]),
+            "A xorn moves in the dark here, drawn to the porous, water-logged carbonate, though \
+             a sulphide-laced seam runs it close, sitting on: a key."
+        );
+        // Just under the threshold: settled, and the runner-up goes unnamed.
+        let nearly = SourceStanding {
+            runner_up_yield: hornvale_worldgen::energy::CONTESTED_SHARE - 0.01,
+            ..contested
+        };
+        assert!(!nearly.is_contested());
+        assert_eq!(
+            inhabitant_datum(k, nearly, Tenancy::Wild, &[]),
+            "A xorn moves in the dark here, drawn to the porous, water-logged carbonate."
+        );
+        // A barren reading is not a contested one, however close the two zeroes.
+        let barren = SourceStanding {
+            leader_yield: 0.0,
+            runner_up_yield: 0.0,
+            ..contested
+        };
+        assert!(barren.is_barren() && !barren.is_contested());
     }
 
     // --- Task 4: the walk (The Brattice, spec §3.6) --------------------

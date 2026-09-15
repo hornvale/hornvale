@@ -12,7 +12,7 @@ never the verdicts (those cost a test run per site). Its job is to keep the
 survive a diff is harder to leave lying around than one buried in a doc
 comment.
 
-2 seam(s) registered; 0 declared unguarded.
+3 seam(s) registered; 0 declared unguarded.
 
 ## `conquest_victim`
 
@@ -23,6 +23,15 @@ comment.
 - Call sites:
   - `windows/almanac/src/history.rs:630`
   - `windows/almanac/src/history.rs:806`
+
+## `source_phrase`
+
+- Defined at `windows/vessel/src/underground.rs:1207`
+- Operator: `returns("the rock")`
+- Test scope: `hornvale-vessel`
+- No declaration: a survivor here fails the gate.
+- Call sites:
+  - _none found_
 
 ## `ledger_day_of_bake_year`
 
