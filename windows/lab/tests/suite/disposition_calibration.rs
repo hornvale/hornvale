@@ -735,7 +735,7 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// `RAID_DISPOSITION_MIN` re-seats its genesis flagship on at least
 /// `RAIDER_MIN` of the seed panel's worlds.
 #[test]
-#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow's measured series is 14/60 -> 12/60 -> 10/60 -> 9/60 -> 7/60 -> 9/60 -> 18/60 across the named campaign closes, denominator held at 60; the latest increase followed four new Underworld peoples entering the roster, but its downstream attribution is not yet established, so the post-epoch witness is now at the 0.30 floor and is not lowered)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow's measured series is 14/60 -> 12/60 -> 10/60 -> 9/60 -> 7/60 -> 9/60 -> 18/60 -> 12/60 across the named campaign closes and the current merge-product re-read, denominator held at 60; the increase followed four new Underworld peoples entering the roster, and the subsequent fall was observed after later world changes without downstream attribution established, so the post-epoch witness remains below the 0.30 floor and is not lowered)"]
 fn every_raider_clears_the_floor_preregistered_not_met() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     let (raiders, _) = raiders_and_abstainers(&wc);
@@ -945,6 +945,18 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// Re-stated rather than repaired: binary stellar topologies are the shipped
 /// Wanderers feature, and the single-star control preserves the pre-campaign
 /// reading. The deferred floor remains a re-fit question; it is not lowered.
+///
+/// **RE-READ AGAIN AT THE CURRENT MERGE PRODUCT (2026-09-15): 18/60 →
+/// 12/60.** The denominator still holds at 60, so the witness again moved by
+/// live re-seats rather than by a changed panel size. This is the exact
+/// candidate-plus-current-main product that the Sluice measured; the fall
+/// followed later world changes after the Underworld Peoples close, but no
+/// neutralising control has established which downstream epoch, placement or
+/// climate cascade accounts for it. That attribution remains open rather than
+/// being invented from the coincidence of the absorb.
+///
+/// Re-stated rather than repaired: the floor remains deferred and is not
+/// lowered; the live witness is now 12/60 = 0.200.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
@@ -954,14 +966,14 @@ fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
     println!("witness: drow re-seated {changed}/{worlds}");
     assert_eq!(
         (changed, worlds),
-        (18, 60),
-        "drow's flagship re-seating moved from the pinned 18/60. This is NOT a number to \
+        (12, 60),
+        "drow's flagship re-seating moved from the pinned 12/60. This is NOT a number to \
          update — re-read it, then re-state this witness, the #[ignore] reason on \
          every_raider_clears_the_floor_preregistered_not_met, its roster entry in \
          cli/tests/suite/heavy_tier.rs (the EXPECTED_UNTOKENISED ratchet, which holds a \
          VERBATIM copy of that reason string and will red if you touch one and not the \
          other) and the BIO-raid-partition-order-statistic registry row in the SAME \
-         commit. THIS HAS NOW HAPPENED SIX TIMES (The Underworld, 2026-08-18, 14/60 → \
+         commit. THIS HAS NOW HAPPENED SEVEN TIMES (The Underworld, 2026-08-18, 14/60 → \
          12/60; The Granary, landed 2026-08-24 and re-read at The Governor's close on \
          2026-08-28, 12/60 → 10/60, `eeaa011fd`'s BAKE v2 -> v3 epoch bump; The Winze, \
          2026-08-30, 10/60 → 9/60, the breach hazard and NOT the working placement, \
@@ -971,7 +983,8 @@ fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
          isolated by forcing only the topology back to Single and restoring 7/60; \
          The Underworld Peoples, 2026-09-11, 9/60 → 18/60 after four new \
          subterranean peoples entered the roster, with downstream attribution not yet \
-         established). \
+         established; current merge product, 2026-09-15, 18/60 → 12/60 after later \
+         world changes, with downstream attribution still not established). \
          BEFORE ASSUMING A CAUSE, MEASURE ONE — the Winze re-read is the worked example: \
          the obvious story (placement moved) was measured and refuted."
     );

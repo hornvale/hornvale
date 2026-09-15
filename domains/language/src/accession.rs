@@ -636,14 +636,57 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "the-pest",
         "the-pox",
     ],
-    // Epoch 23 — The Underworld Peoples: four new `*-kind` concepts from
-    // the species accession. Appended as a fresh cohort so existing concept
-    // roots remain stable.
+    // The Underworld Peoples: four new `*-kind` concepts from the species
+    // accession. Appended as a fresh cohort so existing concept roots remain
+    // stable.
     &[
         "duergar-kind",
         "kuo-toa-kind",
         "mountain-dwarf-kind",
         "svirfneblin-kind",
+    ],
+    // THE TIDEMARK, Task 3: the six obligate marine peoples. The LAST
+    // cohort at the time of writing; its epoch index is its position in this
+    // array and is deliberately not named here.
+    //
+    // **The number is withheld on purpose** (fix round 3). This comment read
+    // "Epoch 23", and `campaign/underworld-peoples` — closed and near merge —
+    // appends a cohort claiming the same number: whichever lands second takes
+    // 24, and the loser's comment becomes a false statement about its own
+    // code. Nothing breaks either way, because `concept_epoch` reads the
+    // POSITION and no index is hardcoded anywhere; only a comment would have
+    // been wrong, and only after a merge nobody had done yet. So it says what
+    // it can guarantee — that this cohort is appended, never inserted — and
+    // leaves the index to the array.
+    //
+    // **That merge has now happened, and this cohort sits SECOND of the two.**
+    // The Underworld Peoples' cohort is the one immediately above; ours
+    // follows it. The order is not a coin toss and not seniority: this module
+    // orders by ARRIVAL, and their cohort arrived on `main` first. Both are
+    // pure appends onto the same 23-cohort base, so neither ordering moves any
+    // pre-existing concept's proto-root — the order decides only which of the
+    // ten new kinds' own roots are drawn first, and arrival is the rule this
+    // file already applies to everything else in it.
+    //
+    // ONE cohort, not six, for the reason the dwarf and elf family cohorts
+    // give: the campaign is one arrival event and one epoch, and six cohorts
+    // would assert six successive language epochs — a stronger claim about
+    // the world's history than this campaign makes.
+    //
+    // **NOT folded into the elf family's own cohort even though one of the
+    // six is an elf.** `abyssal-elf-kind` belongs to the elf family in
+    // `family_of` and shares proto-Elvish, and it still appends HERE, because
+    // this module's absolute rule is about ARRIVAL, not about descent:
+    // re-sorting that earlier cohort would move the six existing elf-kind
+    // concepts' already assigned proto-roots, which are part of every saved
+    // world. A family is a shared ancestor, not a shared moment.
+    &[
+        "abyssal-elf-kind",
+        "kelp-tender-kind",
+        "merfolk-kind",
+        "reef-mason-kind",
+        "triton-kind",
+        "vent-commensal-kind",
     ],
 ];
 

@@ -236,8 +236,27 @@ impl Focalizer for TemplateFocalizer {
             v.sky
         );
         let mut nouns = vec![
+            // **THE DISPLAY IS `named`, NOT `biome`, AND THAT WAS A LATENT
+            // DEFECT UNTIL THE TIDEMARK.** The prose one block up renames a
+            // surface reading of a marine biome to "open water" — the sea's
+            // own name for the place an observer floating above a depth zone
+            // actually is — and this noun went on carrying the raw class
+            // ("bathypelagic"), so `look` printed a place the prose never
+            // mentioned and `examine bathypelagic` was the only handle for a
+            // word no player had been shown.
+            //
+            // It was unreachable for the life of that code: nothing put an
+            // observer on a marine vertex until The Tidemark authored six
+            // obligate marine peoples, at which point seed 42's FIRST
+            // settlement became an abyssal-elf one and
+            // `every_noun_appears_in_the_prose` went red on a real world.
+            // An inert branch is inert only until someone reads it.
+            //
+            // `nameable` stays the raw class, so the class name is still a
+            // typeable alias — the renaming narrows what is SHOWN, never
+            // what can be reached.
             Noun::new(
-                &biome,
+                &named,
                 &biome,
                 &format!(
                     "{:.1} °C the year round, moisture {:.2}, {}.",
@@ -351,7 +370,7 @@ mod tests {
     fn vantage_at(day: f64) -> Vantage {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let village = hornvale_settlement::village_info(&world).expect("seed 42 has a flagship");
+        let village = hornvale_worldgen::land_settlement(&world).expect("seed 42 has a flagship");
         let entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
         let npc = crate::liveness::body_at(&world, &ctx, &village, entity);
         let position = npc.home.clone();
@@ -363,6 +382,118 @@ mod tests {
             WorldTime::from_std_days(day).expect("a day value is finite"),
         )
         .unwrap()
+    }
+
+    /// A vantage standing on a MARINE settlement's own vertex, at the
+    /// surface — the branch `render` renames to "open water".
+    ///
+    /// Found by SEARCH rather than pinned: the first settlement whose own
+    /// committed biome is marine, with a loud precondition if the world has
+    /// none. Pinning a vertex or a seed would rot the moment placement
+    /// moved, and pinning `village_info` would tie this test to the very
+    /// ledger-order accident the campaign's other fixtures were re-aimed
+    /// away from.
+    fn marine_vantage() -> Vantage {
+        let world = seam_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let village = hornvale_settlement::all_settlements(&world)
+            .into_iter()
+            .find(|v| {
+                world
+                    .ledger
+                    .text_of(v.id, hornvale_settlement::BIOME)
+                    .and_then(|name| {
+                        hornvale_climate::Biome::catalog()
+                            .iter()
+                            .find(|b| b.name() == name)
+                            .copied()
+                    })
+                    .is_some_and(|b| b.is_marine())
+            })
+            .expect(
+                "seed 42 must place at least one MARINE settlement for this test to \
+                 exercise the branch it is about — if it no longer does, the marine \
+                 peoples have stopped placing and that is a far larger finding than \
+                 this test",
+            );
+        let entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
+        let npc = crate::liveness::body_at(&world, &ctx, &village, entity);
+        let position = npc.home.clone();
+        observable(
+            &world,
+            &ctx,
+            &npc,
+            &position,
+            WorldTime::from_std_days(0.0).expect("a day value is finite"),
+        )
+        .unwrap()
+    }
+
+    /// **The regression guard for `render`'s marine biome noun** (The
+    /// Tidemark, Task 3, fix round 2).
+    ///
+    /// `render` renames a SURFACE reading of a marine biome to "open water"
+    /// in the prose — the sea's own name for where an observer floating
+    /// above a depth zone actually is — and for the life of that code the
+    /// noun beside it went on carrying the raw class. `look` therefore
+    /// printed a place the prose never mentioned, and `examine bathypelagic`
+    /// was the only handle for a word nobody had been shown.
+    ///
+    /// **`every_noun_appears_in_the_prose` is what caught it, and that test
+    /// can no longer reach this branch**: its vantage was re-aimed to
+    /// `land_settlement` in the same commit that fixed the defect, so the fix
+    /// shipped with its own witness removed. Reverting `&named` to `&biome`
+    /// left the whole vessel suite green. This test is that witness, put
+    /// back where it cannot be re-aimed away: it stands on a marine
+    /// settlement by construction.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST, run against
+    /// `windows/vessel/src/focalize.rs`: the biome `Noun`'s first argument
+    /// back to `&biome`. Red at the display assertion — `"bathypelagic"`
+    /// against `"open water"`.
+    #[test]
+    fn a_marine_surface_room_shows_the_place_its_prose_names() {
+        let v = marine_vantage();
+        assert!(
+            v.locale.biome_kind.is_marine() && !v.submerged,
+            "precondition: this vantage must be a SURFACE reading of a marine \
+             biome — the one branch `render` renames — got marine={} submerged={}",
+            v.locale.biome_kind.is_marine(),
+            v.submerged
+        );
+        let f = TemplateFocalizer.render(&v);
+        let prose = f.prose.to_lowercase();
+
+        // The general property, at the branch the general test can no longer
+        // reach.
+        for n in &f.nouns {
+            assert!(
+                prose.contains(&n.display.to_lowercase()),
+                "noun '{}' must be mentioned by look: {}",
+                n.display,
+                f.prose
+            );
+        }
+
+        // And the specific one, so a future renaming cannot satisfy the loop
+        // above by renaming the PROSE to match a raw class.
+        let biome_noun = f
+            .nouns
+            .iter()
+            .find(|n| n.matches(&v.locale.biome))
+            .unwrap_or_else(|| {
+                panic!(
+                    "the biome class {:?} must stay a typeable handle — the renaming \
+                     narrows what is SHOWN, never what can be reached",
+                    v.locale.biome
+                )
+            });
+        assert_eq!(
+            biome_noun.display, "open water",
+            "a surface reading of the marine biome {:?} must DISPLAY as the place \
+             the prose names, not as the raw class",
+            v.locale.biome
+        );
     }
 
     #[test]
@@ -413,7 +544,18 @@ mod tests {
                 .unwrap_or_else(|| panic!("no noun named {display:?}"))
                 .kind
         };
-        assert_eq!(kind_of(&v.locale.biome), NounKind::Place);
+        // The biome noun is looked up by HANDLE, not by display: a surface
+        // reading of a marine biome displays as "open water" while keeping
+        // the class name as an alias (see `render`'s comment on that noun).
+        // Looking it up by display would have made this test pass only on a
+        // land vertex, which is how the defect that comment records stayed
+        // invisible.
+        let biome_noun = f
+            .nouns
+            .iter()
+            .find(|n| n.matches(&v.locale.biome))
+            .unwrap_or_else(|| panic!("no noun reachable as {:?}", v.locale.biome));
+        assert_eq!(biome_noun.kind, NounKind::Place);
         assert_eq!(kind_of(&v.locale.regime.descriptor), NounKind::Place);
         assert_eq!(kind_of(&v.village.name), NounKind::Place);
         assert_eq!(kind_of("sky"), NounKind::Thing);
@@ -446,11 +588,13 @@ mod tests {
     fn the_biome_datum_reports_height_above_sea_level() {
         let v = vantage_at(0.0);
         let f = TemplateFocalizer.render(&v);
+        // By HANDLE rather than by display — see
+        // `rendered_noun_kinds_match_each_entrys_role` for why.
         let n = f
             .nouns
             .iter()
-            .find(|n| n.display == v.locale.biome)
-            .expect("the biome is a noun");
+            .find(|n| n.matches(&v.locale.biome))
+            .expect("the biome is reachable as a noun");
         let datum = &n.datum;
         // Seed 42's sea level is -2936.17 m. Before The Benchmark this line read
         // "-2936 m elevation" for a tropical forest at the shoreline.

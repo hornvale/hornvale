@@ -14,10 +14,73 @@ fn world() -> hornvale_kernel::World {
     .expect("seed 42 builds")
 }
 
-/// The default is the flagship, and it is unchanged.
+/// **The two defaults are DIFFERENT, deliberately, and this pins both**
+/// (The Tidemark, Task 3).
+///
+/// `PossessTarget::default()` is still `Flagship` — the lookup that predates
+/// the enum, and what `cli/src/main.rs` selects when no `--target` flag is
+/// given, so the shipped command is unchanged. `PossessOpts::default()` is
+/// `LandSettlement`, because its callers are overwhelmingly FIXTURES and
+/// every one of them wanted dry ground without saying so; inheriting
+/// `village_info` put about sixty of them in open water the moment a marine
+/// people was authored.
+///
+/// Asserting them TOGETHER is the point: the divergence is the decision, so a
+/// later edit that quietly re-aligned them would be silently undoing it.
 #[test]
-fn the_default_target_is_the_flagship() {
-    assert_eq!(PossessOpts::default().target, PossessTarget::Flagship);
+fn the_opts_default_is_land_while_the_target_default_is_still_the_flagship() {
+    assert_eq!(PossessTarget::default(), PossessTarget::Flagship);
+    assert_eq!(PossessOpts::default().target, PossessTarget::LandSettlement);
+    assert_ne!(
+        PossessOpts::default().target,
+        PossessTarget::default(),
+        "the two defaults answer different questions and must not be \
+         re-aligned without re-reading PossessOpts::default's doc"
+    );
+}
+
+/// The land target must actually select a settlement that is not in the
+/// water, and it must differ from the flagship on a world where the flagship
+/// IS in the water — which seed 42 became when The Tidemark authored the
+/// marine peoples. Both halves, because a `LandSettlement` that merely
+/// happened to equal the flagship would prove nothing.
+#[test]
+fn the_land_target_selects_dry_ground_where_the_flagship_does_not() {
+    use hornvale_kernel::Value;
+    let w = world();
+    let biome_of = |id| match w.ledger.value_of(id, hornvale_settlement::BIOME) {
+        Some(Value::Text(t)) => t.clone(),
+        _ => panic!("a settlement carries a committed biome"),
+    };
+    let flagship = hornvale_settlement::village_info(&w).expect("seed 42 has a flagship");
+    let land = hornvale_vessel::land_settlement(&w).expect("seed 42 has a dry settlement");
+
+    let marine = |name: &str| {
+        hornvale_climate::Biome::catalog()
+            .iter()
+            .find(|b| b.name() == name)
+            .expect("a committed biome name is a known biome")
+            .is_marine()
+    };
+    assert!(
+        !marine(&biome_of(land.id)),
+        "land_settlement returned {} on {}, which is marine",
+        land.name,
+        biome_of(land.id)
+    );
+    assert!(
+        marine(&biome_of(flagship.id)),
+        "seed 42's flagship ({} on {}) is NOT marine, so this test is no \
+         longer exercising the case it was written for — the two targets \
+         would coincide and the assertion below would be vacuous. Re-read \
+         PossessTarget::LandSettlement's doc before weakening this.",
+        flagship.name,
+        biome_of(flagship.id)
+    );
+    assert_ne!(
+        land.id, flagship.id,
+        "the land target must not resolve to a marine flagship"
+    );
 }
 
 /// Selecting a target must actually change which settlement you are driven

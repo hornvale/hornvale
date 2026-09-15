@@ -994,8 +994,16 @@ mod tests {
             assert_eq!(origins[made[0]].1, expected, "vertex {vertex:?}");
             historical_made_columns += 1;
         }
+        // A WORLD-IDENTITY WITNESS, not a claim about the delve seating, and
+        // it has been re-pinned twice in one merge window. The Tidemark's six
+        // marine peoples re-place seed 42, and the Underworld Peoples' four
+        // subterranean peoples move the underworld occupancy directly — drow,
+        // the only kind this witness counts, now competes against both. The
+        // number below was MEASURED on the current world, not arithmetic over
+        // the two branches' separate pins. The expanded settlement roster
+        // and subsequent witness refresh leave 37 such columns.
         assert_eq!(
-            historical_made_columns, 100,
+            historical_made_columns, 37,
             "seed 42 historical occupied-underworld-column witness"
         );
     }

@@ -619,6 +619,155 @@ pub mod speech {
                     exotic: ExoticManner::Trill,
                 },
             ),
+            // THE TIDEMARK (Task 3): the six obligate marine peoples.
+            //
+            // ONE ARGUMENT RUNS THROUGH ALL SIX AND IT IS PHYSICAL, not
+            // thematic: these tongues are spoken UNDERWATER. Water carries
+            // sound four and a half times faster than air and attenuates the
+            // high end far less, so a submerged inventory leans on carrying
+            // low-frequency voicing and away from sibilance, which is an
+            // airstream turbulence a mouth full of water cannot make the
+            // same way. Every row below is therefore high `voicing` and low
+            // `sibilance`; what differs between them is what their own
+            // habitat does to the signal.
+            (
+                KindId("abyssal-elf"),
+                ArticulationVector {
+                    // proto-Elvish's own labiality, almost unmoved: this
+                    // tongue has drifted least of the seven, because an
+                    // isolated deep hold has the least contact to drift
+                    // against. The family's narrowest vowel space even so —
+                    // a wide vowel space is a mouth's geometry doing work,
+                    // and at 400 atmospheres it does less of it.
+                    labiality: 0.45,
+                    vowel_space: 0.45,
+                    // the roster's highest, and the submerged argument at
+                    // its strongest.
+                    voicing: 0.90,
+                    sibilance: 0.05,
+                    // LOUD, and it is the deep speaking rather than the
+                    // people: sound carries a very long way down there, and
+                    // a tongue that evolved where it carries is a tongue
+                    // that uses the range.
+                    voice_loudness: 0.75,
+                    tonality: 0.0,
+                    // the family's fourth independent innovation, beside
+                    // drow's Ejective, snow's Click and wood's Trill. An
+                    // ejective needs a glottal closure and an air pocket to
+                    // compress, which is exactly what a body at depth has
+                    // and a body at the surface spends; drow arrived at it
+                    // from a cave and this kind from four kilometres of
+                    // water, which is what an independent innovation looks
+                    // like.
+                    exotic: ExoticManner::Ejective,
+                },
+            ),
+            (
+                KindId("kelp-tender"),
+                ArticulationVector {
+                    labiality: 0.60,
+                    // the widest of the six: a canopy is a quiet, still,
+                    // acoustically cluttered place, and a wide vowel space
+                    // is what survives clutter.
+                    vowel_space: 0.80,
+                    voicing: 0.80,
+                    sibilance: 0.10,
+                    // the quietest of the six. A people that does not move
+                    // far from the stand it tends is a people mostly
+                    // speaking to someone within reach.
+                    voice_loudness: 0.30,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("merfolk"),
+                ArticulationVector {
+                    labiality: 0.30,
+                    vowel_space: 0.70,
+                    voicing: 0.85,
+                    sibilance: 0.10,
+                    // THE ROSTER'S LOUDEST, above hobgoblin's 0.8 and level
+                    // with the dragons' 0.9: a band strung out along a
+                    // moving shoal is a band whose members are rarely
+                    // within arm's reach of each other, and open water is
+                    // the one place in this world where a voice genuinely
+                    // reaches that far.
+                    voice_loudness: 0.90,
+                    // THE ROSTER'S SECOND TONAL TONGUE, after draconic's
+                    // 0.7 — and the second is what makes the tier a tier
+                    // rather than a draconic peculiarity. The argument is
+                    // the same shape as draconic's and reaches it from a
+                    // different direction: where place contrasts (labial,
+                    // dental) degrade over distance in water, PITCH does
+                    // not, so a tongue built for calling across open water
+                    // puts its contrast where the medium keeps it. 0.6
+                    // clears `tone_count`'s 0.25 threshold for a second
+                    // contrastive tone without reaching draconic's reading,
+                    // which keeps the roster's tonal maximum where its own
+                    // campaign put it.
+                    tonality: 0.6,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("reef-mason"),
+                ArticulationVector {
+                    labiality: 0.55,
+                    // the narrowest of the six alongside the abyssal elf's,
+                    // and for the opposite reason: a reef is a hard, highly
+                    // reverberant structure, and reverberation smears
+                    // vowels. What survives it is consonant timing, not
+                    // vowel quality.
+                    vowel_space: 0.45,
+                    voicing: 0.75,
+                    // the highest sibilance of the six, and still low by the
+                    // roster's standards: the one habitat of the six where a
+                    // sharp transient is legible, because a reef reflects it
+                    // instead of swallowing it.
+                    sibilance: 0.35,
+                    voice_loudness: 0.50,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("triton"),
+                ArticulationVector {
+                    // the slate's baseline tongue, and authored as one: no
+                    // value here is the roster's maximum or minimum on any
+                    // dimension. A baseline that was extreme somewhere
+                    // would not be a baseline.
+                    labiality: 0.50,
+                    vowel_space: 0.60,
+                    voicing: 0.80,
+                    sibilance: 0.15,
+                    voice_loudness: 0.65,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("vent-commensal"),
+                ArticulationVector {
+                    labiality: 0.40,
+                    vowel_space: 0.50,
+                    voicing: 0.85,
+                    sibilance: 0.05,
+                    // LOUD for a reason no other row has: a vent field is a
+                    // noisy place. Superheated fluid venting under pressure
+                    // is broadband noise, continuously, and a tongue spoken
+                    // beside one is a tongue spoken over it.
+                    voice_loudness: 0.80,
+                    tonality: 0.0,
+                    // the roster's second `Trill`, after wood-elf's, and
+                    // independent of it: a trill is periodic, and a
+                    // periodic signal is what a listener can pull out of
+                    // broadband noise when a single transient would be
+                    // lost in it.
+                    exotic: ExoticManner::Trill,
+                },
+            ),
         ]
         .into_iter()
         .collect();
@@ -867,6 +1016,95 @@ pub mod speech {
                     // Generosity in a people with no hall: the word names what
                     // is given, not who governs.
                     top: "boughgiver",
+                },
+            ),
+            // THE TIDEMARK (Task 3): the six obligate marine peoples. Each
+            // `top` word is read off the kind's own `StatusBasis` the way
+            // every row above it is — Rank names who commands, Knowledge
+            // names who knows, Generosity names what is given.
+            (
+                KindId("abyssal-elf"),
+                Lexicon {
+                    noun: "hold",
+                    worker_override: Some("sifter"),
+                    warrior: "deepward",
+                    artisan: "pressurewright",
+                    shaman: "darkspeaker",
+                    // Rank: a hold that cannot be left is a hold with one
+                    // voice.
+                    top: "hold-lord",
+                },
+            ),
+            (
+                KindId("kelp-tender"),
+                Lexicon {
+                    noun: "stand",
+                    worker_override: Some("tender"),
+                    warrior: "frondward",
+                    artisan: "holdfast-wright",
+                    shaman: "lightreader",
+                    // Generosity: a stand outlives whoever planted it, so
+                    // the word names the leaving rather than the holding.
+                    top: "canopy-giver",
+                },
+            ),
+            (
+                KindId("merfolk"),
+                Lexicon {
+                    // NOT A SETTLEMENT WORD, because this people founds no
+                    // settlement: `SocialForm::Gregarious` keeps it out of
+                    // placement entirely (M2's two-sided prediction). The
+                    // row exists because `articulation.ids == lexicon.ids`
+                    // is an enforced invariant and a speaking kind owes one
+                    // — the same footing as the dragons' "hoard" row above.
+                    // "shoal" is the group, not the place.
+                    noun: "shoal",
+                    worker_override: Some("netless"),
+                    warrior: "outrider",
+                    artisan: "cordwright",
+                    shaman: "tidesinger",
+                    // Knowledge: where the fish are this season.
+                    top: "shoalreader",
+                },
+            ),
+            (
+                KindId("reef-mason"),
+                Lexicon {
+                    noun: "course",
+                    worker_override: Some("quarrier"),
+                    warrior: "buttress",
+                    artisan: "reefwright",
+                    shaman: "stonereader",
+                    // Knowledge, the craft reading: who sets the next
+                    // course is whoever knows where it goes.
+                    top: "master-mason",
+                },
+            ),
+            (
+                KindId("triton"),
+                Lexicon {
+                    noun: "current",
+                    worker_override: Some("driver"),
+                    warrior: "spearward",
+                    artisan: "shellwright",
+                    shaman: "deepherald",
+                    // Rank: the slate's one martial hierarchy.
+                    top: "tide-marshal",
+                },
+            ),
+            (
+                KindId("vent-commensal"),
+                Lexicon {
+                    // A vent is a hearth that goes out — the campaign's
+                    // whole claim in a settlement noun.
+                    noun: "smoke",
+                    worker_override: Some("gleaner"),
+                    warrior: "plumeward",
+                    artisan: "tubewright",
+                    shaman: "ember-reader",
+                    // Generosity: a windfall with an end date is shared
+                    // while it lasts.
+                    top: "sharer",
                 },
             ),
         ]

@@ -974,6 +974,18 @@ pub struct BakeConfig {
     pub epidemics: Vec<crate::plague_bake::EpidemicKind>,
     /// Authored/allometric lifespan by settling people, in years.
     pub lifespans: BTreeMap<KindId, f64>,
+    /// Which vertices depend on a hydrothermal source, and what that source
+    /// is doing at a named instant (The Tidemark, spec §4).
+    ///
+    /// **Rides the config rather than widening [`bake`]'s arity, on the
+    /// precedent the four authored maps above set**: the composition root is
+    /// the only layer that holds a Waterworld overlay, every other caller of
+    /// `bake` in this file and its batteries holds none, and
+    /// [`VentTenancy::default`] is an exact no-op — `failed_at` returns on its
+    /// first line for an empty index. So a bake given no sea behaves exactly
+    /// as it did before this mechanism existed, which is the same fail-quiet
+    /// direction `disposition` documents for a people it has never heard of.
+    pub vent_tenancy: crate::vent_tenancy::VentTenancy,
 }
 
 impl BakeConfig {
@@ -992,6 +1004,7 @@ impl BakeConfig {
             time_horizon: BTreeMap::new(),
             epidemics: Vec::new(),
             lifespans: BTreeMap::new(),
+            vent_tenancy: crate::vent_tenancy::VentTenancy::default(),
         }
     }
 }
@@ -2770,6 +2783,11 @@ struct Bake<'a> {
     /// construction so [`Bake::live_an_epoch`] reads the same number [`bake`]'s
     /// own epoch loop steps by, rather than a second literal.
     epoch_years: f64,
+    /// Which vertices a hydrothermal source underlies, borrowed off the
+    /// [`BakeConfig`] — the input [`Bake::maybe_vent_failure`] reads. Empty
+    /// for every bake without a Waterworld overlay, which makes that rule an
+    /// exact no-op there.
+    vent_tenancy: &'a crate::vent_tenancy::VentTenancy,
 }
 
 #[cfg(test)]
@@ -5332,6 +5350,101 @@ impl<'a> Bake<'a> {
         // then, so a target whose granary bottoms out mid-year becomes
         // beatable exactly when its hoard is gone, not at the epoch boundary.
         self.grow(idx, era, year, pressure);
+        // THE TIDEMARK (spec §4): the ground itself can go out from under a
+        // marine people. Asked LAST, after `grow` has taken every draw it
+        // takes, for exactly [`Bake::maybe_breach`]'s reason — a close that
+        // returned early would skip `grow`'s daughter throw off the
+        // SEQUENTIAL bake stream and re-order every subsequent community's
+        // history, which is the failure the keyed legs exist to avoid,
+        // reintroduced through control flow.
+        self.maybe_vent_failure(idx, era, year);
+    }
+
+    /// **The expiring habitat's ending** (The Tidemark, spec §4).
+    ///
+    /// A community whose site every hosting hydrothermal source has left
+    /// [`VentState::Failed`] at this epoch's instant does not go on living on
+    /// a dead vent: the occupation closes, by [`Ended::Nature`] and with a
+    /// cause. Which cause is the spec's own two-branch mapping, and it is the
+    /// same fork [`Bake::step_community_with_subsistence_shortfall`] already
+    /// takes when the land goes poor, deliberately rather than coincidentally
+    /// — a people that must leave has exactly two outcomes, and inventing a
+    /// third shape for this one would make the same event read two ways
+    /// depending on what drove it:
+    ///
+    /// - somewhere to go, and enough of them left to hold it →
+    ///   [`CauseOfEnd::Migrated`] by [`Ended::Nature`], and they refound.
+    ///   This is the "people following a migrating vent" half: the source has
+    ///   moved on around its ring or gone out, and they move with the water
+    ///   that still feeds them. `domains/history`'s `flesh.rs` already pairs
+    ///   `Migrated` with a `Departure`, so the ending narrates itself.
+    /// - nowhere to go, or too few to survive the road →
+    ///   [`CauseOfEnd::Famine`] by `Ended::Nature`. "The community starved
+    ///   out", which is what a chemosynthetic commensal does when its
+    ///   chemistry stops.
+    ///
+    /// # No new variant, and never `Breached`
+    ///
+    /// [`CauseOfEnd`] has six variants and this campaign authors none. In
+    /// particular `Breached` is not ours: its own doc restricts it to a
+    /// [`Function::Mine`], "because only a working cuts rock". This function
+    /// writes two of the six by name and matches on none of them, so there is
+    /// no wildcard here to silently reclassify a breached delving.
+    ///
+    /// # `Ended::Nature`, never `By`
+    ///
+    /// `By` names an antagonist entity and a failing vent is not one — this
+    /// is the same reading [`Bake::maybe_breach`] arrived at independently,
+    /// and `Ended::Nature`'s own doc ("no antagonist entity — famine, plague,
+    /// or an orderly departure") covers both causes above exactly.
+    ///
+    /// # It draws nothing
+    ///
+    /// The succession is exact integer arithmetic over `(instant, phase
+    /// offset)` and the tenancy is a prebuilt index, so this rule consumes no
+    /// stream at all. The `open` on the migrate branch takes its disposition
+    /// off its own keyed leg, as every `open` does.
+    fn maybe_vent_failure(&mut self, idx: usize, era: &EraClimate, year: f64) {
+        if !self.communities[idx].alive {
+            return;
+        }
+        let (site, pidx) = {
+            let c = &self.communities[idx];
+            (c.site, c.people_idx)
+        };
+        if !self.vent_tenancy.failed_at(
+            site,
+            crate::vent_tenancy::VentTenancy::instant_of_bake_year(year),
+        ) {
+            return;
+        }
+        let (record, pop, lineage, offset, migrant_id) = {
+            let c = &self.communities[idx];
+            (c.record, c.population, c.lineage, c.tech_offset, c.id)
+        };
+        let people = self.records[record].core.people;
+        match self.nearest_dest(era, site, pidx) {
+            Some(dest) if pop * MIGRATE_SURVIVAL >= VIABLE_MIN => {
+                let carried = self.lift_portfolio(idx);
+                self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
+                let new_idx = self.open(
+                    people,
+                    dest,
+                    year,
+                    pop * MIGRATE_SURVIVAL,
+                    Founding::From(migrant_id),
+                    Some(lineage),
+                    offset,
+                );
+                self.carry_portfolio_to(new_idx, carried, year);
+                self.touch(new_idx, year);
+                self.tally.migrated += 1;
+            }
+            _ => {
+                self.close(idx, year, CauseOfEnd::Famine, Ended::Nature);
+                self.tally.collapsed += 1;
+            }
+        }
     }
 
     /// Resolve one production epoch in its load-bearing order: growth,
@@ -6506,6 +6619,7 @@ pub fn bake(
         subsistence_diagnostics: Vec::new(),
         portfolio_diagnostics: Vec::new(),
         epoch_years: cfg.epoch_years,
+        vent_tenancy: &cfg.vent_tenancy,
     };
 
     // 1. Seed the ancient world at each people's OWN best ground — one alive
@@ -6679,6 +6793,7 @@ pub fn interleaved_rehit_history(site: Vertex) -> History {
             .expect("zero is a valid reference elevation"),
         ice_fraction: 0.0,
     };
+    let no_vents = crate::vent_tenancy::VentTenancy::default();
     let mut bake = Bake {
         geo: &geo,
         biomes: &biomes,
@@ -6714,6 +6829,7 @@ pub fn interleaved_rehit_history(site: Vertex) -> History {
         subsistence_diagnostics: Vec::new(),
         portfolio_diagnostics: Vec::new(),
         epoch_years: 25.0,
+        vent_tenancy: &no_vents,
     };
     let occupation = bake.open(
         KindId("goblin"),
@@ -6823,6 +6939,7 @@ mod tests {
         // One ore-bearing vertex at a time, so the answer names the ring.
         let ore_at = |v: Vertex| VertexMap::from_fn(&geo, |x| if x == v { 1.0 } else { 0.0 });
         let run = |field: &VertexMap<f64>| {
+            let no_vents = crate::vent_tenancy::VentTenancy::default();
             let bake = Bake {
                 geo: fixture_geo(),
                 biomes: grassland_biomes(),
@@ -6858,6 +6975,7 @@ mod tests {
                 subsistence_diagnostics: Vec::new(),
                 portfolio_diagnostics: Vec::new(),
                 epoch_years: 25.0,
+                vent_tenancy: &no_vents,
             };
             bake.working_site(&era, from, 0)
         };
@@ -7033,6 +7151,7 @@ mod tests {
         let people = KindId("goblin");
         let caps = caps_from_fn(&geo, |_| 100.0);
 
+        let no_vents = crate::vent_tenancy::VentTenancy::default();
         let mut bake = Bake {
             geo: fixture_geo(),
             biomes: grassland_biomes(),
@@ -7068,6 +7187,7 @@ mod tests {
             subsistence_diagnostics: Vec::new(),
             portfolio_diagnostics: Vec::new(),
             epoch_years: 25.0,
+            vent_tenancy: &no_vents,
         };
 
         // Genesis: R1 opens at vertex 5. A genesis community is its own
@@ -7186,6 +7306,7 @@ mod tests {
         };
         let people = KindId("goblin");
 
+        let no_vents = crate::vent_tenancy::VentTenancy::default();
         let mut bake = Bake {
             geo: fixture_geo(),
             biomes: grassland_biomes(),
@@ -7221,6 +7342,7 @@ mod tests {
             subsistence_diagnostics: Vec::new(),
             portfolio_diagnostics: Vec::new(),
             epoch_years: 25.0,
+            vent_tenancy: &no_vents,
         };
 
         // Raider on poor vertex 0 (population 30, no stores); target on the
@@ -7574,7 +7696,21 @@ mod tests {
             subsistence_diagnostics: Vec::new(),
             portfolio_diagnostics: Vec::new(),
             epoch_years: 25.0,
+            vent_tenancy: no_vents(),
         }
+    }
+
+    /// The `vent_tenancy` a hand-built [`Bake`] uses when the test is not
+    /// about the expiring habitat: EMPTY, so [`Bake::maybe_vent_failure`]
+    /// returns on `failed_at`'s first line and the rule is an exact no-op.
+    ///
+    /// Same idiom and same reason as [`no_disposition`] beside it, and the
+    /// same fail-quiet direction: a bake handed no sea must behave exactly as
+    /// it did before this mechanism existed.
+    fn no_vents() -> &'static crate::vent_tenancy::VentTenancy {
+        static NONE: std::sync::OnceLock<crate::vent_tenancy::VentTenancy> =
+            std::sync::OnceLock::new();
+        NONE.get_or_init(crate::vent_tenancy::VentTenancy::default)
     }
 
     #[test]
@@ -8315,6 +8451,278 @@ mod tests {
         assert_eq!(south_peak, expected_south);
     }
 
+    /// A hand-built [`Bake`] whose one community sits at `site`, on a world
+    /// whose capacity is `capacity_of` and whose tenancy is `tenancy`.
+    ///
+    /// Everything but those three is the module's default fixture, so the
+    /// only thing that differs between the vent tests below is the thing
+    /// under test.
+    struct VentFixture {
+        graphs: Vec<ConnectionGraph>,
+        capacity: Vec<Vec<hornvale_kernel::ecology::CapacityMap>>,
+        river_prox: VertexMap<f64>,
+        refugia: VertexMap<bool>,
+    }
+
+    impl VentFixture {
+        fn new(capacity_of: impl Fn(Vertex) -> f64) -> Self {
+            VentFixture {
+                graphs: vec![full_land_graph(fixture_geo())],
+                capacity: caps_from_fn(fixture_geo(), capacity_of),
+                river_prox: VertexMap::from_fn(fixture_geo(), |_| 0.0),
+                refugia: VertexMap::from_fn(fixture_geo(), |_| false),
+            }
+        }
+
+        /// The module's own [`hand_bake`] with exactly one field overridden.
+        /// Built through the shared helper rather than as a second literal so
+        /// a future field cannot be added to one and forgotten on the other,
+        /// which is how a fixture quietly stops reproducing production.
+        fn bake<'a>(&'a self, tenancy: &'a crate::vent_tenancy::VentTenancy) -> Bake<'a> {
+            let mut bake = hand_bake(
+                &self.graphs,
+                &self.capacity,
+                &self.river_prox,
+                &self.refugia,
+                no_disposition(),
+            );
+            bake.vent_tenancy = tenancy;
+            bake
+        }
+    }
+
+    /// A one-vent tenancy whose ring is `site` alone, placed in a chosen phase
+    /// at `year`.
+    ///
+    /// The offset is computed from the instant the bake will actually ask
+    /// about, not from genesis, so the fixture cannot silently drift out of
+    /// the phase it names when the year under test moves:
+    /// `vent_phase` reads `(ticks + offset) mod cycle`, so setting
+    /// `offset = target - ticks` puts the cycle position at `target` exactly.
+    /// type-audit: bare-ok(count: year), bare-ok(count: cycle_day)
+    fn tenancy_in_phase(
+        site: Vertex,
+        year: f64,
+        cycle_day: i64,
+    ) -> crate::vent_tenancy::VentTenancy {
+        let ticks = crate::vent_tenancy::VentTenancy::instant_of_bake_year(year).ticks();
+        let target = cycle_day * WorldTime::TICKS_PER_STD_DAY;
+        let water = crate::waterworld::WaterWorld {
+            vents: vec![crate::waterworld::WaterVent {
+                id: 0,
+                vertex: site,
+                strength: 1.0,
+                temperature_delta: 50.0,
+                chemistry: 1.0,
+                phase_offset_ticks: target - ticks,
+            }],
+            vent_candidate_rings: vec![vec![site]],
+            ..crate::waterworld::WaterWorld::default()
+        };
+        let tenancy = crate::vent_tenancy::VentTenancy::from_overlay(&water);
+        assert!(
+            tenancy.is_hosted(site),
+            "the fixture's own site must be hosted, or every assertion below is vacuous"
+        );
+        tenancy
+    }
+
+    /// **The expiring habitat's ending, exercised directly** (The Tidemark,
+    /// Task 5; spec §4).
+    ///
+    /// The plan asks for this "regardless of M3b": M3b measures how often the
+    /// real bake PRODUCES this situation, which is a different question from
+    /// whether the mechanism is right when it occurs. A mechanism that is
+    /// correct and rarely exercised still needs a test that exercises it.
+    ///
+    /// The site's neighbours are barren (capacity `0.0`), so `nearest_dest`
+    /// finds nowhere to go and the ending takes the outright-failure branch.
+    #[test]
+    fn a_failed_vent_starves_an_occupation_that_has_nowhere_to_go() {
+        let site = Vertex(0);
+        let fixture = VentFixture::new(|c| if c == site { 100.0 } else { 0.0 });
+
+        // THE PAIRED CONTROL, over THIS fixture rather than a neighbouring
+        // one. `a_live_vent_and_unhosted_ground_both_leave_an_occupation_alone`
+        // runs on a world whose ground is uniformly rich, so on its own it
+        // could not rule out the barren neighbours below doing the killing
+        // here. Same world, same community, same year — only the phase
+        // differs, which is what makes the phase the discriminator.
+        let lit = tenancy_in_phase(site, 0.0, 40);
+        let mut control = fixture.bake(&lit);
+        let control_idx = control.open(
+            KindId("goblin"),
+            site,
+            0.0,
+            10.0,
+            Founding::Genesis(site),
+            None,
+            0.0,
+        );
+        control.step_community(control_idx, &era_at(0.0), 0.0);
+        assert!(
+            control.communities[control_idx].alive,
+            "barren neighbours alone must not end this occupation, or the failure below is not \
+             attributable to the vent"
+        );
+
+        // 90 days into the 100-day cycle: inside the failed interval (85..100).
+        let tenancy = tenancy_in_phase(site, 0.0, 90);
+        let mut bake = fixture.bake(&tenancy);
+        let idx = bake.open(
+            KindId("goblin"),
+            site,
+            0.0,
+            10.0,
+            Founding::Genesis(site),
+            None,
+            0.0,
+        );
+        assert!(
+            bake.communities[idx].alive,
+            "the community must be alive before the step, or the close below proves nothing"
+        );
+        let record = bake.communities[idx].record;
+
+        bake.step_community(idx, &era_at(0.0), 0.0);
+
+        assert!(
+            !bake.communities[idx].alive,
+            "a dead vent ends the occupation"
+        );
+        assert_eq!(
+            bake.records[record].core.cause,
+            Some(CauseOfEnd::Famine),
+            "an outright failure with nowhere to go is `Famine` -- `the community starved out`"
+        );
+        assert!(
+            matches!(bake.records[record].ended_by, Ended::Nature),
+            "a failing vent is not an antagonist entity; `By` would name one the model has not got"
+        );
+        assert_eq!(
+            bake.records[record].core.ended,
+            Some(0.0),
+            "the ending is stamped at the epoch year it happened in"
+        );
+    }
+
+    /// The same mechanism's other branch: somewhere to go, and enough of them
+    /// to hold it, so the people follow the water rather than starving on it.
+    #[test]
+    fn a_failed_vent_moves_an_occupation_that_has_somewhere_to_go() {
+        let site = Vertex(0);
+        let fixture = VentFixture::new(|_| 100.0);
+        let tenancy = tenancy_in_phase(site, 0.0, 90);
+        let mut bake = fixture.bake(&tenancy);
+        let idx = bake.open(
+            KindId("goblin"),
+            site,
+            0.0,
+            10.0,
+            Founding::Genesis(site),
+            None,
+            0.0,
+        );
+        let record = bake.communities[idx].record;
+        let before = bake.communities.len();
+
+        bake.step_community(idx, &era_at(0.0), 0.0);
+
+        assert!(
+            !bake.communities[idx].alive,
+            "the occupation on the dead vent ends"
+        );
+        assert_eq!(
+            bake.records[record].core.cause,
+            Some(CauseOfEnd::Migrated),
+            "a people that follows the water migrated onward -- the cause `flesh.rs` already \
+             pairs with a `Departure`"
+        );
+        assert!(matches!(bake.records[record].ended_by, Ended::Nature));
+        assert_eq!(
+            bake.communities.len(),
+            before + 1,
+            "they refound somewhere: an ending that erased the people would be a different claim"
+        );
+        let refounded = &bake.communities[before];
+        assert!(refounded.alive);
+        assert_ne!(refounded.site, site, "the refuge is not the dead vent");
+    }
+
+    /// **The negative control for the mechanism, in both directions.** An
+    /// occupation on a LIT vent is untouched, and an occupation on ground no
+    /// vent hosts at all is untouched — so neither the phase test nor the
+    /// tenancy lookup can be passing for a reason unrelated to the vent.
+    #[test]
+    fn a_live_vent_and_unhosted_ground_both_leave_an_occupation_alone() {
+        let site = Vertex(0);
+        let fixture = VentFixture::new(|_| 100.0);
+
+        // 40 days in: inside the active interval (35..65).
+        let lit = tenancy_in_phase(site, 0.0, 40);
+        let mut bake = fixture.bake(&lit);
+        let idx = bake.open(
+            KindId("goblin"),
+            site,
+            0.0,
+            10.0,
+            Founding::Genesis(site),
+            None,
+            0.0,
+        );
+        bake.step_community(idx, &era_at(0.0), 0.0);
+        assert!(
+            bake.communities[idx].alive,
+            "a lit vent ends nothing -- if this dies, the rule is firing on tenancy alone and \
+             the phase is not being read"
+        );
+
+        // The same failed vent, hosting a DIFFERENT vertex than the one the
+        // community sits on.
+        let elsewhere = tenancy_in_phase(Vertex(1), 0.0, 90);
+        let mut bake = fixture.bake(&elsewhere);
+        let idx = bake.open(
+            KindId("goblin"),
+            site,
+            0.0,
+            10.0,
+            Founding::Genesis(site),
+            None,
+            0.0,
+        );
+        bake.step_community(idx, &era_at(0.0), 0.0);
+        assert!(
+            bake.communities[idx].alive,
+            "a failed vent somewhere else ends nothing -- if this dies, the rule is firing on \
+             phase alone and the site is not being read"
+        );
+    }
+
+    /// The default tenancy is an exact no-op, which is what lets every other
+    /// hand-built bake in this module — and every bake of a world with no sea
+    /// — behave exactly as it did before this mechanism existed.
+    #[test]
+    fn an_empty_tenancy_ends_nothing_however_long_the_bake_runs() {
+        let site = Vertex(0);
+        let fixture = VentFixture::new(|_| 100.0);
+        let none = crate::vent_tenancy::VentTenancy::default();
+        let mut bake = fixture.bake(&none);
+        let idx = bake.open(
+            KindId("goblin"),
+            site,
+            0.0,
+            10.0,
+            Founding::Genesis(site),
+            None,
+            0.0,
+        );
+        for epoch in 0..40 {
+            let year = epoch as f64 * 25.0;
+            bake.step_community(idx, &era_at(year), year);
+        }
+        assert!(bake.communities[idx].alive);
+    }
+
     #[test]
     fn a_community_curve_amplitude_is_its_biome_class_amplitude() {
         // The Granary T2: the amplitude half of the curve key comes from the
@@ -8335,6 +8743,7 @@ mod tests {
                 hornvale_culture::BiomeClass::Grassland
             }
         });
+        let no_vents = crate::vent_tenancy::VentTenancy::default();
         let mut bake = Bake {
             geo: fixture_geo(),
             biomes: &biomes,
@@ -8370,6 +8779,7 @@ mod tests {
             subsistence_diagnostics: Vec::new(),
             portfolio_diagnostics: Vec::new(),
             epoch_years: 25.0,
+            vent_tenancy: &no_vents,
         };
 
         let north_idx = bake.open(

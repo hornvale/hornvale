@@ -21,6 +21,13 @@ use std::collections::BTreeSet;
 const SANCTIONED: &[(T, M)] = &[
     (T::Endothermic, M::Heterotrophic),
     (T::Ectothermic, M::Heterotrophic),
+    // THE TIDEMARK: the vent commensal. A body that eats a chemical gradient
+    // and does not pay to hold its own temperature is a coherent pair, and it
+    // is the only new one this campaign needs — `xorn` reached chemotrophy
+    // from `Absent` (ametabolic, eats mineral), which is a different claim
+    // about a different kind of thing. Deliberately not widened further: the
+    // other combinations `Chemotrophic` admits are still unmeaningful.
+    (T::Ectothermic, M::Chemotrophic),
     (T::Unmodelled, M::Phototrophic),
     (T::Absent, M::Absent),
     (T::Absent, M::Chemotrophic),
@@ -47,7 +54,7 @@ fn every_kind_carries_a_sanctioned_pair() {
     );
 }
 
-/// `Chemotrophic` is now WITNESSED, by exactly one kind.
+/// `Chemotrophic` is WITNESSED, by exactly two kinds since THE TIDEMARK.
 ///
 /// **THE DIRECTION THIS ENFORCES, STATED** (the discipline `is_ametabolic`'s
 /// doc uses): before rung 2, this test asserted the variant was carried by
@@ -60,8 +67,19 @@ fn every_kind_carries_a_sanctioned_pair() {
 /// witness-count guard going forward: exactly one kind today, and a second
 /// carrier appearing (or `xorn` losing the variant) is exactly as much a
 /// finding as zero carriers was before rung 2.
+/// **THE TIDEMARK ADDS THE SECOND CARRIER, WHICH IS THE EVENT THE ASSERTION
+/// BELOW PREDICTED.** The message this test carried said a second carrier
+/// "is exactly as much a finding as zero carriers was before rung 2", and
+/// asked for a deliberate change with a reason rather than a silent
+/// widening. The reason: `vent-commensal` is the marine half of the
+/// Underworld Larder's rung 4 (spec §7). `xorn` eats a chemical gradient in
+/// rock and reads its supply from `chemosynthate_per_rung`; this kind eats
+/// one in water and reads `MarineHabitat::chemosynthate`, whose seabed term
+/// is a live vent's chemistry and therefore a function of vent PHASE. Two
+/// carriers, two realms, one axis — and the underworld's own consumer-side
+/// half of rung 4 is still open and still belongs to THE TENANT.
 #[test]
-fn chemotrophic_is_declared_and_unwitnessed() {
+fn chemotrophic_is_witnessed_by_the_two_realms_that_have_a_gradient() {
     let carriers: Vec<&str> = biosphere_registry()
         .iter()
         .filter(|(_, b)| b.trophic_mode == M::Chemotrophic)
@@ -69,13 +87,15 @@ fn chemotrophic_is_declared_and_unwitnessed() {
         .collect();
     assert_eq!(
         carriers,
-        vec!["xorn"],
+        vec!["vent-commensal", "xorn"],
         "TrophicMode::Chemotrophic is carried by {carriers:?}; expected \
-         exactly [\"xorn\"]. Rung 2 of the Underworld Larder witnesses the \
-         variant through xorn alone — a thing that burrows through stone and \
-         eats only mineral is a chemolithotroph. If a second kind now carries \
-         it, or xorn no longer does, that is a deliberate change to say why; \
-         it is not something to silently widen this assertion for."
+         exactly [\"vent-commensal\", \"xorn\"]. Rung 2 of the Underworld \
+         Larder witnessed the variant through xorn alone — a thing that \
+         burrows through stone and eats only mineral is a chemolithotroph — \
+         and The Tidemark adds the marine consumer at a hydrothermal vent. A \
+         THIRD kind appearing, or either of these two losing the variant, is \
+         a deliberate change to say why; it is not something to silently \
+         widen this assertion for."
     );
     assert!(
         SANCTIONED.iter().any(|(_, m)| *m == M::Chemotrophic),
@@ -134,6 +154,13 @@ fn sanctioned_thermal_keys_are_pairwise_distinct() {
         ("giant-goat", M::Heterotrophic),
         ("otyugh", M::Heterotrophic),
         ("xorn", M::Chemotrophic),
+        // THE TIDEMARK (Task 3): the six obligate marine peoples.
+        ("abyssal-elf", M::Heterotrophic),
+        ("kelp-tender", M::Phototrophic),
+        ("merfolk", M::Heterotrophic),
+        ("reef-mason", M::Heterotrophic),
+        ("triton", M::Heterotrophic),
+        ("vent-commensal", M::Chemotrophic),
         ("rust-monster", M::Heterotrophic),
         ("white-dragon", M::Heterotrophic),
         ("red-dragon", M::Heterotrophic),
@@ -207,9 +234,10 @@ fn sanctioned_thermal_keys_are_pairwise_distinct() {
 
     assert_eq!(
         SANCTIONED.len(),
-        5,
-        "rung 1 declared four sanctioned pairs and rung 2 adds \
-         (Absent, Chemotrophic); if this count moved again, re-read this \
-         test's doc before adjusting the number"
+        6,
+        "rung 1 declared four sanctioned pairs, rung 2 added \
+         (Absent, Chemotrophic), and The Tidemark adds \
+         (Ectothermic, Chemotrophic) for the vent commensal; if this count \
+         moved again, re-read this test's doc before adjusting the number"
     );
 }

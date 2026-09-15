@@ -44,12 +44,17 @@ usage:
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
                                             [--tableau <PATH>]
                                             [--lens off|lantern]
-                                            [--target flagship|most-populous-settlement]
+                                            [--target flagship|most-populous-settlement|land-settlement]
                                             [--creature <ID>]
                                             [--snapshot <PATH>]
                                             walk a frozen world as its flagship settler
                                             (--target most-populous-settlement instead drives the
-                                            agent at the world's most-populous settlement; --creature
+                                            agent at the world's most-populous settlement, and
+                                            --target land-settlement the first settlement that is not
+                                            in the water — which is what the committed transcripts
+                                            pass, so the demo walk is a chosen subject rather than
+                                            whichever settlement the ledger committed first;
+                                            --creature
                                             drives a specific already-derived roster member by its
                                             ledger entity id, settled or wild — mutually exclusive
                                             with --target, and an id outside the derived roster fails
@@ -157,6 +162,11 @@ usage:
   hornvale circuit --seed <N>              dump one seed's descent-plan readouts (The Crosscut and
                                             Brattice witness, plus The Plat's Made population --
                                             which is why this also builds to BuildDepth::Full)
+  hornvale water --seed <N> [--diagnostic] [--day <N>]
+                          observe one seed's Waterworld overlay at a named day. Ordinary output
+                                            reports what the water is DOING; --diagnostic adds the
+                                            inferred vent phase and marks it uncertain (The Living
+                                            Vent's split, The Tidemark's first caller for it)
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
   hornvale proto [FAMILY]                  dump a language family's proto inventory/phonotactics/proto-root table
@@ -236,6 +246,7 @@ fn main() -> ExitCode {
         Some("streams") => cmd_streams(),
         Some("underworld") => cmd_underworld(&args),
         Some("circuit") => cmd_circuit(&args),
+        Some("water") => cmd_water(&args),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
         Some("proto") => cmd_proto(&args),
@@ -820,15 +831,32 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 .ok_or_else(|| "--creature must be a nonzero u64 entity id".to_string())?;
             hornvale_vessel::PossessTarget::Creature(entity)
         }
-        (None, None) => hornvale_vessel::PossessTarget::Flagship,
+        // **THE SHIPPED DEFAULT IS DRY GROUND** (The Tidemark, Task 3, fix
+        // round 2). It was `Flagship` — `village_info`, "the first
+        // `is-settlement` fact in ledger order" — and after the marine
+        // peoples landed that meant `possess --seed 42` opened in open blue
+        // water with "Ways on: surface." Re-aiming the test fixtures alone
+        // left the thing a PERSON runs untouched, which is the half that was
+        // actually asked about.
+        //
+        // `--target flagship` still says exactly what it always said, so
+        // nothing is lost: the ledger's first settlement is one flag away,
+        // and it is now a choice rather than what you get by not choosing.
+        (None, None) => hornvale_vessel::PossessTarget::LandSettlement,
         (Some("flagship"), None) => hornvale_vessel::PossessTarget::Flagship,
         (Some("most-populous-settlement"), None) => {
             hornvale_vessel::PossessTarget::MostPopulousSettlement
         }
+        // The Tidemark, Task 3: the first settlement in ledger order that is
+        // not in the water. `scripts/regenerate-artifacts.sh` passes it for
+        // the committed transcripts, so the demo walk is a CHOSEN subject
+        // rather than whichever settlement the ledger happened to commit
+        // first — see `PossessTarget::LandSettlement`'s own doc.
+        (Some("land-settlement"), None) => hornvale_vessel::PossessTarget::LandSettlement,
         (Some(other), None) => {
             return Err(format!(
                 "--target: unknown target '{other}'; known targets: flagship, \
-                 most-populous-settlement"
+                 most-populous-settlement, land-settlement"
             ));
         }
     };
@@ -1792,6 +1820,97 @@ fn cmd_circuit(args: &[String]) -> Result<(), String> {
     print!(
         "{}",
         world_builder::plat_readout::render_made_population(&world, &terrain)
+    );
+    Ok(())
+}
+
+/// Observe one seed's Waterworld overlay at a named instant (The Tidemark,
+/// Task 5; spec §4).
+///
+/// **This is `observe_waterworld_snapshot`'s first production caller.** The
+/// Living Vent authored that split — ordinary output reports present
+/// consequences, diagnostic output names the inferred source phase and marks
+/// it uncertain — and it has been reachable only from tests ever since, which
+/// is the shape spec §3.4 of The Tidemark's own design records about the whole
+/// overlay ("no `BuildDepth` rung constructs the overlay, no CLI command
+/// reaches it, no window renders it"). A split nobody can reach is a
+/// discipline nobody is held to.
+///
+/// **A thin command, deliberately**, on `cmd_underworld`'s pattern: every
+/// word it prints comes from `observe_waterworld` and
+/// `observe_waterworld_snapshot`, and this function only builds the world,
+/// names the instant, and hands them over.
+///
+/// `--day` is what makes the ordinary/diagnostic split worth having here
+/// rather than a single frozen readout: vent succession is a function of
+/// `WorldTime`, so the same world at two days is two different reports, and
+/// a reader can watch a source go through `Nascent -> Active -> Weakening ->
+/// Failed` by moving one number. It defaults to genesis, which is the instant
+/// placement itself reads.
+///
+/// `BuildDepth::Terrain`, not `Full` — the overlay needs terrain and climate
+/// and reads no committed ledger at all, so this is the shallowest sufficient
+/// rung (`windows/CLAUDE.md`'s standing rule). It writes no committed
+/// artifact, so unlike `cmd_underworld` there is no `>` redirect in
+/// `scripts/regenerate-artifacts.sh` behind it and nothing here can drift.
+// Named construction site (decision 0092): a CLI handler — builds the world
+// once, fits one climate over that terrain, and hands both to the overlay.
+// The Waterworld overlay needs a `GeneratedClimate` and no `BuildDepth` rung
+// hands one back, so the fit happens here rather than being reached for
+// twice.
+#[allow(clippy::disallowed_methods)]
+fn cmd_water(args: &[String]) -> Result<(), String> {
+    let seed: u64 = flag_value(args, "--seed")
+        .ok_or("water requires --seed <N>")?
+        .parse()
+        .map_err(|e| format!("--seed must be a u64: {e}"))?;
+    let day: f64 = match flag_value(args, "--day") {
+        None => 0.0,
+        Some(v) => v
+            .parse()
+            .map_err(|e| format!("--day must be a number of standard days: {e}"))?,
+    };
+    let at = hornvale_kernel::WorldTime::from_std_days(day)
+        .map_err(|e| format!("--day must name a representable instant: {e:?}"))?;
+    let diagnostic = args.iter().any(|a| a == "--diagnostic");
+
+    let wc = world_builder::WorldComponents::assemble().map_err(|e| e.to_string())?;
+    let artifacts = world_builder::build_world_to_with_artifacts(
+        Seed(seed),
+        &SkyPins::default(),
+        &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
+        &wc,
+        world_builder::BuildDepth::Terrain,
+    )
+    .map_err(|e| e.to_string())?;
+    let world_builder::BuildArtifacts { world, terrain, .. } = artifacts;
+    let terrain = terrain.ok_or("BuildDepth::Terrain must hand back a terrain")?;
+    let climate = world_builder::climate_from(&world, &terrain).map_err(|e| e.to_string())?;
+    let water = world_builder::waterworld::waterworld_from(
+        &world,
+        &terrain,
+        &climate,
+        world_builder::WaterWorldConfig { enabled: true },
+    );
+    let snapshot = water.at(&climate, at);
+    println!(
+        "{}",
+        world_builder::observe_waterworld(
+            &water,
+            world_builder::WaterWorldDetail::Planet,
+            diagnostic
+        )
+    );
+    println!(
+        "at day {day}: {}",
+        world_builder::observe_waterworld_snapshot(
+            &water,
+            &snapshot,
+            world_builder::WaterWorldDetail::Planet,
+            diagnostic
+        )
+        .text
     );
     Ok(())
 }
@@ -3215,6 +3334,17 @@ mod tests {
     #[test]
     fn usage_mentions_star_chart() {
         assert!(USAGE.contains("star-chart"));
+    }
+
+    /// The Tidemark, Task 5: the Waterworld observation has a way in.
+    #[test]
+    fn usage_mentions_water_and_its_diagnostic_half() {
+        assert!(USAGE.contains("hornvale water --seed"));
+        assert!(
+            USAGE.contains("--diagnostic"),
+            "the ordinary/diagnostic split is the point of this command; a usage line that hid \
+             the opt-in would leave the inferred-cause half unreachable in practice"
+        );
     }
 
     #[test]

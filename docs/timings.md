@@ -7321,6 +7321,76 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T03:06:04Z | sluice:gate | 853.676 | 25716.965 | 887.091 | 31.16 | 0 | 64e79b2fe |  | lefford | 40 |
 | 2026-09-11T03:09:33Z | sluice:clients | 209.135 | 3227.205 | 342.234 | 17.07 | 0 | 1eb0522b4 |  | lefford | 40 |
 | 2026-09-11T03:17:12Z | sluice:heavy | 458.265 | 12936.512 | 279.283 | 28.84 | 0 | 1c9471ef9 |  | lefford | 40 |
+| 2026-09-11T12:27:01Z | prewarm | 206.089 | 1584.397 | 53.270 | 7.95 | 0 | f22860af3 | campaign/the-shoal | MacBookPro | 10 |
+| 2026-09-11T14:49:42Z | census-tail-chorus | 50.535 | 221.854 | 13.106 | 4.65 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:49:43Z | census-tail-domesday | 0.370 | 0.322 | 0.032 | 0.96 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:49:43Z | census-tail-anomalies | 0.323 | 0.270 | 0.032 | 0.93 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:49:56Z | rebaseline | 214.766 | 522.052 | 27.086 | 2.56 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:51:24Z | gate-commit | 43.736 | 82.454 | 19.607 | 2.33 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:52:53Z | gate-commit | 44.976 | 83.177 | 20.348 | 2.30 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T14:54:22Z | gate-commit | 41.892 | 80.870 | 19.725 | 2.40 | 0 | bbbd41004 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T15:15:55Z | gate-commit | 60.089 | 179.208 | 36.201 | 3.58 | 0 | fccf875ff | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T15:18:23Z | gate-commit | 40.549 | 80.158 | 19.441 | 2.46 | 0 | fccf875ff | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T15:58:40Z | census-tail-chorus | 57.931 | 229.395 | 12.736 | 4.18 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T15:58:41Z | census-tail-anomalies | 0.519 | 0.350 | 0.045 | 0.76 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T15:58:41Z | census-tail-domesday | 0.882 | 0.469 | 0.047 | 0.59 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:00:21Z | gate-commit | 7.686 | 8.796 | 0.947 | 1.27 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:00:49Z | gate-commit | 18.439 | 35.755 | 4.768 | 2.20 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:01:18Z | gate-commit | 17.578 | 28.587 | 4.371 | 1.87 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:02:15Z | gate-commit | 23.119 | 35.054 | 4.556 | 1.71 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:04:19Z | gate-commit | 108.733 | 446.229 | 42.110 | 4.49 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:05:25Z | gate-commit | 48.809 | 86.429 | 20.954 | 2.20 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:06:27Z | gate-commit | 45.364 | 84.210 | 20.303 | 2.30 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:08:07Z | gate-commit | 56.029 | 85.532 | 21.301 | 1.91 | 0 | 09d9718b8 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:37:18Z | gate-commit | 72.947 | 207.060 | 43.115 | 3.43 | 0 | d1b9d9910 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T16:39:26Z | gate-commit | 41.430 | 80.578 | 19.528 | 2.42 | 0 | d1b9d9910 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T18:02:52Z | census-tail-chorus | 76.217 | 254.774 | 13.133 | 3.52 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T18:02:53Z | census-tail-domesday | 0.382 | 0.333 | 0.034 | 0.96 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T18:02:53Z | census-tail-anomalies | 0.310 | 0.263 | 0.032 | 0.95 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T18:03:09Z | rebaseline | 262.901 | 584.194 | 27.001 | 2.32 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T18:53:17Z | gate-commit | 69.487 | 209.629 | 39.181 | 3.58 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:01:35Z | census-tail-chorus | 100.029 | 253.387 | 9.264 | 2.63 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:01:36Z | census-tail-domesday | 0.495 | 0.401 | 0.038 | 0.89 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:01:36Z | census-tail-anomalies | 0.365 | 0.298 | 0.036 | 0.92 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:02:00Z | rebaseline | 298.768 | 601.804 | 24.241 | 2.10 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:05:38Z | gate-commit | 117.011 | 235.286 | 44.738 | 2.39 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:15:40Z | gate-commit | 40.611 | 80.364 | 19.072 | 2.45 | 0 | d8d8a2312 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:20:18Z | census-tail-chorus | 52.670 | 266.730 | 13.690 | 5.32 | 0 | e3cbf8180 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:20:19Z | census-tail-domesday | 0.365 | 0.324 | 0.027 | 0.96 | 0 | e3cbf8180 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:20:19Z | census-tail-anomalies | 0.309 | 0.261 | 0.033 | 0.95 | 0 | e3cbf8180 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:20:34Z | rebaseline | 176.779 | 585.702 | 25.987 | 3.46 | 0 | e3cbf8180 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T19:21:25Z | gate-commit | 40.947 | 80.511 | 18.576 | 2.42 | 0 | e3cbf8180 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T20:22:55Z | census-tail-chorus | 87.785 | 254.841 | 11.099 | 3.03 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T20:22:56Z | census-tail-anomalies | 0.498 | 0.345 | 0.036 | 0.77 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T20:22:56Z | census-tail-domesday | 0.737 | 0.441 | 0.037 | 0.65 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T20:23:21Z | rebaseline | 256.600 | 618.207 | 28.046 | 2.52 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T20:48:39Z | census-tail-chorus | 100.559 | 251.606 | 10.134 | 2.60 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T20:48:40Z | census-tail-domesday | 0.523 | 0.374 | 0.035 | 0.78 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T20:48:40Z | census-tail-anomalies | 0.366 | 0.275 | 0.033 | 0.84 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T20:49:02Z | rebaseline | 346.556 | 597.858 | 24.975 | 1.80 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T23:15:00Z | census-tail-chorus | 102.781 | 249.754 | 10.286 | 2.53 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T23:15:02Z | census-tail-domesday | 0.928 | 0.426 | 0.043 | 0.51 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T23:15:02Z | census-tail-anomalies | 0.795 | 0.364 | 0.040 | 0.51 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T23:15:31Z | rebaseline | 268.039 | 572.633 | 25.488 | 2.23 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T23:17:07Z | gate-commit | 7.280 | 11.503 | 4.079 | 2.14 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T23:17:28Z | gate-commit | 11.247 | 11.414 | 2.811 | 1.26 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T23:18:37Z | gate-commit | 60.345 | 105.281 | 35.504 | 2.33 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-11T23:21:23Z | gate-commit | 43.262 | 81.859 | 19.290 | 2.34 | 0 | fed53031f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T00:46:43Z | gate-commit | 47.783 | 82.275 | 19.117 | 2.12 | 0 | 2b8a82627 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T00:47:35Z | gate-commit | 41.885 | 80.716 | 19.206 | 2.39 | 0 | 2b8a82627 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T01:16:39Z | census-tail-chorus | 69.165 | 264.127 | 14.614 | 4.03 | 0 | 1aed3de3c | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T01:16:39Z | census-tail-domesday | 0.410 | 0.354 | 0.031 | 0.94 | 0 | 1aed3de3c | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T01:16:39Z | census-tail-anomalies | 0.330 | 0.282 | 0.033 | 0.95 | 0 | 1aed3de3c | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T01:17:01Z | rebaseline | 224.029 | 582.120 | 29.155 | 2.73 | 0 | 1aed3de3c | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T01:51:35Z | gate-commit | 124.856 | 126.806 | 41.264 | 1.35 | 0 | 1aed3de3c | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T01:55:03Z | gate-commit | 146.603 | 92.485 | 20.771 | 0.77 | 0 | 1aed3de3c | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:46:53Z | census-tail-chorus | 68.095 | 252.062 | 13.188 | 3.90 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:46:53Z | census-tail-domesday | 0.390 | 0.342 | 0.033 | 0.96 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:46:53Z | census-tail-anomalies | 0.318 | 0.268 | 0.034 | 0.95 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:47:09Z | rebaseline | 221.223 | 580.563 | 28.035 | 2.75 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:48:55Z | gate-commit | 79.797 | 200.343 | 51.697 | 3.16 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:50:01Z | gate-commit | 44.023 | 81.870 | 19.175 | 2.30 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T02:51:19Z | gate-commit | 44.478 | 82.308 | 19.672 | 2.29 | 0 | 46d9fe516 | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-11T12:04:00Z | gate-commit | 143.893 | 518.752 | 47.056 | 3.93 | 0 | 921381907 | campaign/the-planetarium | MacBookPro | 10 |
 | 2026-09-11T12:08:15Z | census-tail-chorus | 55.441 | 172.835 | 6.917 | 3.24 | 0 | 644f043a1 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-11T12:08:16Z | census-tail-domesday | 0.355 | 0.310 | 0.028 | 0.95 | 0 | 644f043a1 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
@@ -7464,6 +7534,65 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-11T23:40:16Z | sluice:gate | 929.426 | 27032.358 | 898.376 | 30.05 | 0 | 1325703d0 |  | lefford | 40 |
 | 2026-09-11T23:44:48Z | sluice:clients | 271.687 | 4029.700 | 334.748 | 16.06 | 0 | bbfb9a865 |  | lefford | 40 |
 | 2026-09-11T23:53:14Z | sluice:heavy | 505.720 | 14512.122 | 300.457 | 29.29 | 0 | 22358dda4 |  | lefford | 40 |
+| 2026-09-12T03:16:52Z | census-tail-chorus | 63.130 | 296.:00 | 17.568 | 4.97 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T03:16:53Z | census-tail-domesday | 0.388 | 0.335 | 0.031 | 0.94 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T03:16:53Z | census-tail-anomalies | 0.328 | 0.279 | 0.029 | 0.94 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T03:17:09Z | rebaseline | 212.512 | 635.133 | 31.216 | 3.14 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T03:20:41Z | census-tail-chorus | 36.769 | 300.941 | 17.774 | 8.67 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T03:20:42Z | census-tail-domesday | 0.393 | 0.333 | 0.029 | 0.92 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T03:20:42Z | census-tail-anomalies | 0.341 | 0.279 | 0.032 | 0.91 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T03:20:58Z | rebaseline | 166.141 | 634.633 | 30.891 | 4.01 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T04:38:08Z | census-tail-chorus | 44.060 | 290.254 | 17.412 | 6.98 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T04:38:09Z | census-tail-domesday | 0.361 | 0.318 | 0.029 | 0.96 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T04:38:09Z | census-tail-anomalies | 0.309 | 0.262 | 0.032 | 0.95 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T04:38:25Z | rebaseline | 171.719 | 618.560 | 30.702 | 3.78 | 0 | 2cf803c41 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T04:48:09Z | gate-commit | 45.762 | 89.128 | 31.068 | 2.63 | 0 | c78116d0f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T04:49:06Z | gate-commit | 43.470 | 82.005 | 18.961 | 2.32 | 0 | c78116d0f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-12T05:11:13Z | gate-commit | 40.644 | 79.042 | 18.090 | 2.39 | 0 | 1b1897fca | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T01:32:51Z | gate-commit | 134.512 | 212.648 | 44.705 | 1.91 | 0 | 750be0be2 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T01:34:30Z | gate-commit | 78.415 | 87.224 | 19.991 | 1.37 | 0 | 750be0be2 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T02:19:15Z | gate-commit | 46.264 | 84.275 | 18.962 | 2.23 | 0 | 2781330b0 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T02:20:32Z | gate-commit | 54.931 | 84.228 | 19.295 | 1.88 | 0 | 2781330b0 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T02:31:30Z | gate-commit | 46.804 | 83.565 | 19.036 | 2.19 | 0 | 0684adcbc | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T03:08:12Z | gate-commit | 57.899 | 48.645 | 11.722 | 1.04 | 0 | 321d09280 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T03:09:48Z | gate-commit | 69.470 | 171.393 | 39.081 | 3.03 | 0 | 321d09280 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T03:11:17Z | gate-commit | 53.658 | 84.961 | 19.725 | 1.95 | 0 | 321d09280 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T03:13:27Z | gate-commit | 96.602 | 90.673 | 20.629 | 1.15 | 0 | 321d09280 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T13:21:31Z | gate-commit | 44.708 | 82.352 | 19.316 | 2.27 | 0 | 4f0af2f77 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T13:22:24Z | gate-commit | 42.162 | 81.253 | 20.277 | 2.41 | 0 | 4f0af2f77 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:23:36Z | gate-commit | 11.575 | 21.798 | 12.446 | 2.96 | 0 | d3df86198 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:24:07Z | gate-commit | 20.485 | 22.136 | 2.201 | 1.19 | 0 | d3df86198 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:25:18Z | gate-commit | 61.037 | 154.349 | 44.181 | 3.25 | 0 | d3df86198 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:26:22Z | gate-commit | 43.757 | 81.980 | 18.908 | 2.31 | 0 | d3df86198 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:27:21Z | gate-commit | 40.555 | 79.487 | 18.633 | 2.42 | 0 | d3df86198 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:38:36Z | gate-commit | 21.327 | 42.099 | 13.285 | 2.60 | 0 | 0566d5f75 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:39:10Z | gate-commit | 25.672 | 37.526 | 13.966 | 2.01 | 0 | 0566d5f75 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:39:49Z | gate-commit | 29.093 | 28.452 | 0.510 | 1.00 | 0 | 0566d5f75 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:41:22Z | gate-commit | 85.048 | 371.461 | 43.524 | 4.88 | 0 | 0566d5f75 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:42:16Z | gate-commit | 44.191 | 82.519 | 18.544 | 2.29 | 0 | 0566d5f75 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T14:43:21Z | gate-commit | 41.108 | 79.974 | 18.319 | 2.39 | 0 | 0566d5f75 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:12:22Z | gate-commit | 13.657 | 26.414 | 15.435 | 3.06 | 0 | 96f2abe91 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:12:50Z | gate-commit | 18.588 | 17.955 | 0.700 | 1.00 | 0 | 96f2abe91 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:13:30Z | gate-commit | 30.003 | 29.013 | 0.691 | 0.99 | 0 | 96f2abe91 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:14:42Z | gate-commit | 64.776 | 188.390 | 41.759 | 3.55 | 0 | 96f2abe91 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:15:56Z | gate-commit | 59.843 | 113.712 | 34.717 | 2.48 | 0 | 96f2abe91 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:16:52Z | gate-commit | 45.724 | 83.211 | 19.587 | 2.25 | 0 | 96f2abe91 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:18:02Z | gate-commit | 42.327 | 80.216 | 18.825 | 2.34 | 0 | 96f2abe91 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:34:55Z | census-tail-chorus | 80.491 | 292.561 | 15.270 | 3.82 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:34:56Z | census-tail-domesday | 0.401 | 0.349 | 0.036 | 0.96 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:34:56Z | census-tail-anomalies | 0.334 | 0.284 | 0.035 | 0.96 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:35:22Z | rebaseline | 245.817 | 642.396 | 31.092 | 2.74 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:48:53Z | gate-commit | 56.408 | 78.743 | 16.448 | 1.69 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:50:23Z | gate-commit | 63.576 | 101.262 | 18.540 | 1.88 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:54:14Z | census-tail-chorus | 34.332 | 290.924 | 16.695 | 8.96 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:54:15Z | census-tail-domesday | 0.363 | 0.322 | 0.028 | 0.96 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:54:15Z | census-tail-anomalies | 0.312 | 0.266 | 0.032 | 0.96 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T15:54:32Z | rebaseline | 164.109 | 634.466 | 30.207 | 4.05 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T16:02:40Z | gate-commit | 42.005 | 76.074 | 17.417 | 2.23 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T16:10:20Z | gate-commit | 4.120 | 3.697 | 0.327 | 0.98 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T16:10:28Z | gate-commit | 4.104 | 3.730 | 0.329 | 0.99 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T16:18:37Z | gate-commit | 50.013 | 117.185 | 20.168 | 2.75 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T16:27:59Z | gate-commit | 52.934 | 92.161 | 20.165 | 2.12 | 0 | 1b14bf2e4 | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-12T02:01:02Z | gate-commit | 445.502 | 812.527 | 58.629 | 1.96 | 0 | 628877c9e | campaign/the-kiln | MacBookPro | 10 |
 | 2026-09-12T02:21:56Z | gate-commit | 96.091 | 93.104 | 20.988 | 1.19 | 0 | 722c55e69 | campaign/the-kiln | MacBookPro | 10 |
 | 2026-09-12T02:26:43Z | gate-commit | 88.547 | 88.923 | 20.241 | 1.23 | 0 | 44ac00934 | campaign/the-kiln | MacBookPro | 10 |
@@ -7539,6 +7668,13 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-13T15:55:21Z | sluice:gate | 1138.893 | 31548.965 | 1125.042 | 28.69 | 0 | dc4e1b451 |  | lefford | 40 |
 | 2026-09-13T16:00:57Z | sluice:clients | 336.215 | 4995.644 | 401.435 | 16.05 | 0 | 9cf52dbf0 |  | lefford | 40 |
 | 2026-09-13T16:10:14Z | sluice:heavy | 556.296 | 15661.857 | 321.057 | 28.73 | 0 | 27c065872 |  | lefford | 40 |
+| 2026-09-13T16:33:15Z | census-tail-chorus | 67.316 | 334.874 | 15.493 | 5.20 | 0 | 49f57de28 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T16:33:16Z | census-tail-domesday | 0.360 | 0.319 | 0.028 | 0.96 | 0 | 49f57de28 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T16:33:16Z | census-tail-anomalies | 0.308 | 0.261 | 0.032 | 0.95 | 0 | 49f57de28 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T16:33:34Z | rebaseline | 274.625 | 765.975 | 32.812 | 2.91 | 0 | 49f57de28 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T16:45:01Z | gate-commit | 122.410 | 542.100 | 65.378 | 4.96 | 0 | 49f57de28 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T17:00:24Z | gate-commit | 42.299 | 73.022 | 15.765 | 2.10 | 0 | be5fe7826 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T17:07:52Z | gate-commit | 44.364 | 83.860 | 20.384 | 2.35 | 0 | be5fe7826 | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-13T16:14:32Z | census-tail-chorus | 29.933 | 559.210 | 15.676 | 19.21 | 0 | 953bb760e |  | lefford | 40 |
 | 2026-09-13T16:14:33Z | census-tail-domesday | 1.126 | 0.991 | 0.135 | 1.00 | 0 | 953bb760e |  | lefford | 40 |
 | 2026-09-13T16:14:34Z | census-tail-anomalies | 0.919 | 0.782 | 0.138 | 1.00 | 0 | 953bb760e |  | lefford | 40 |
@@ -7547,6 +7683,18 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-13T16:32:01Z | sluice:gate | 925.398 | 28702.789 | 860.306 | 31.95 | 0 | 4fda09c84 |  | lefford | 40 |
 | 2026-09-13T16:36:42Z | sluice:clients | 280.737 | 4153.973 | 308.175 | 15.89 | 0 | 5153f33db |  | lefford | 40 |
 | 2026-09-13T16:45:32Z | sluice:heavy | 530.056 | 15851.280 | 334.384 | 30.54 | 0 | ab7447400 |  | lefford | 40 |
+| 2026-09-13T18:07:19Z | gate-commit | 48.130 | 91.112 | 25.433 | 2.42 | 0 | 4d18f957e | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-13T19:21:09Z | census-tail-chorus | 78.329 | 1067.177 | 32.310 | 14.04 | 0 | 9b3bbfaa5 |  | lefford | 40 |
+| 2026-09-13T19:38:49Z | census-study-the-census | 1059.771 | 39004.656 | 330.960 | 37.12 | 0 | 9b3bbfaa5 |  | lefford | 40 |
+| 2026-09-13T19:45:22Z | census-study-the-meeting | 392.796 | 14050.995 | 175.068 | 36.22 | 0 | 9b3bbfaa5 |  | lefford | 40 |
+| 2026-09-13T19:45:24Z | census-tail-domesday | 1.364 | 1.171 | 0.131 | 0.95 | 0 | 9b3bbfaa5 |  | lefford | 40 |
+| 2026-09-13T19:45:24Z | census-tail-anomalies | 0.979 | 0.835 | 0.145 | 1.00 | 0 | 9b3bbfaa5 |  | lefford | 40 |
+| 2026-09-13T19:46:06Z | census | 1778.736 | 55145.977 | 578.657 | 31.33 | 0 | 9b3bbfaa5 |  | lefford | 40 |
+| 2026-09-13T19:55:42Z | gnomon-injection | 569.822 | 6544.608 | 185.832 | 11.81 | 0 | 9b3bbfaa5 |  | lefford | 40 |
+| 2026-09-14T00:44:27Z | gate-commit | 43.416 | 71.677 | 8.450 | 1.85 | 0 | c3e45424e | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-14T13:20:40Z | gate-commit | 52.797 | 76.449 | 22.246 | 1.87 | 0 | c3e45424e | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-14T13:22:21Z | gate-commit | 40.732 | 75.884 | 21.938 | 2.40 | 0 | c3e45424e | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-14T13:30:29Z | gate-commit | 39.573 | 74.950 | 20.794 | 2.42 | 0 | c3e45424e | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-13T18:40:23Z | census-tail-chorus | 71.408 | 957.583 | 25.775 | 13.77 | 0 | 594850b06 |  | lefford | 40 |
 | 2026-09-13T18:40:24Z | census-tail-domesday | 1.402 | 1.210 | 0.129 | 0.96 | 0 | 594850b06 |  | lefford | 40 |
 | 2026-09-13T18:40:25Z | census-tail-anomalies | 1.066 | 0.926 | 0.140 | 1.00 | 0 | 594850b06 |  | lefford | 40 |
@@ -7577,6 +7725,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-14T00:19:39Z | sluice:gate | 941.085 | 28745.069 | 931.422 | 31.53 | 0 | 6545dc29c |  | lefford | 40 |
 | 2026-09-14T00:24:19Z | sluice:clients | 279.827 | 4179.668 | 297.259 | 16.00 | 0 | db2aee6f4 |  | lefford | 40 |
 | 2026-09-14T00:33:47Z | sluice:heavy | 567.890 | 15934.998 | 379.206 | 28.73 | 0 | 8751526d6 |  | lefford | 40 |
+| 2026-09-14T13:31:46Z | gate-commit | 40.322 | 74.305 | 21.208 | 2.37 | 0 | 627911aed | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-14T15:34:03Z | census-tail-chorus | 66.733 | 901.824 | 23.717 | 13.87 | 0 | 969bb7210 |  | lefford | 40 |
 | 2026-09-14T15:34:05Z | census-tail-domesday | 1.296 | 1.091 | 0.151 | 0.96 | 0 | 969bb7210 |  | lefford | 40 |
 | 2026-09-14T15:34:05Z | census-tail-anomalies | 0.681 | 0.577 | 0.104 | 1.00 | 0 | 969bb7210 |  | lefford | 40 |
@@ -7633,6 +7782,14 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-15T00:46:23Z | sluice:gate | 1044.067 | 32075.958 | 1087.339 | 31.76 | 0 | ecbadc170 |  | lefford | 40 |
 | 2026-09-15T01:01:38Z | sluice:clients | 915.294 | 5505.629 | 395.992 | 6.45 | 0 | c33c942c9 |  | lefford | 40 |
 | 2026-09-15T01:10:40Z | sluice:heavy | 541.677 | 15737.593 | 322.474 | 29.65 | 0 | 47fc81634 |  | lefford | 40 |
+| 2026-09-15T01:17:05Z | gate-commit | 33.311 | 58.501 | 18.607 | 2.31 | 0 | ad6055df6 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T01:20:30Z | gate-commit | 155.914 | 890.220 | 63.202 | 6.12 | 0 | ad6055df6 | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T02:00:59Z | gate-commit | 61.608 | 84.197 | 21.970 | 1.72 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T11:32:04Z | census-tail-chorus | 65.370 | 278.972 | 11.397 | 4.44 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T11:32:05Z | census-tail-domesday | 0.509 | 0.365 | 0.041 | 0.80 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T11:32:05Z | census-tail-anomalies | 0.367 | 0.249 | 0.033 | 0.77 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T11:32:33Z | rebaseline | 229.195 | 618.265 | 28.634 | 2.82 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T12:02:00Z | gate-commit | 41.049 | 76.614 | 21.567 | 2.39 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
 | 2026-09-15T12:08:02Z | census-tail-chorus | 66.472 | 925.925 | 24.658 | 14.30 | 0 | 26dea9798 |  | lefford | 40 |
 | 2026-09-15T12:08:04Z | census-tail-domesday | 1.352 | 1.182 | 0.113 | 0.96 | 0 | 26dea9798 |  | lefford | 40 |
 | 2026-09-15T12:08:04Z | census-tail-anomalies | 0.790 | 0.676 | 0.114 | 1.00 | 0 | 26dea9798 |  | lefford | 40 |
@@ -7641,3 +7798,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-15T12:29:45Z | sluice:gate | 1029.005 | 31723.153 | 1024.897 | 31.82 | 0 | fa1b43e3e |  | lefford | 40 |
 | 2026-09-15T12:44:50Z | sluice:clients | 904.172 | 5558.576 | 365.594 | 6.55 | 0 | 15aae4da5 |  | lefford | 40 |
 | 2026-09-15T12:53:52Z | sluice:heavy | 542.091 | 15733.080 | 313.318 | 29.60 | 0 | 2b6518d79 |  | lefford | 40 |
+| 2026-09-15T14:00:24Z | gate-commit | 41.373 | 70.862 | 17.566 | 2.14 | 0 | 7e302bc7f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T14:01:34Z | gate-commit | 39.787 | 74.535 | 20.721 | 2.39 | 0 | 7e302bc7f | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T12:02:50Z | gate-commit | 39.703 | 75.642 | 21.030 | 2.43 | 0 | 537322d3b | campaign/the-tidemark | MacBookPro | 10 |
+| 2026-09-15T14:02:58Z | gate-commit | 41.281 | 75.495 | 21.037 | 2.34 | 0 | 7e302bc7f | campaign/the-tidemark | MacBookPro | 10 |

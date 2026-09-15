@@ -206,9 +206,32 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // The Underworld Peoples delivery re-measurement moves the witness to
     // 18.0906; the
     // preregistered floor remains unchanged.
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six obligate marine peoples enter the roster and a
+    // `land_settlement` selector repair widens every world by 39 settlements
+    // (396 -> 435 on seed 42), re-deciding every seed's settlement placement
+    // and this capacity-by-latitude reading with it: 18.0906 -> 18.0950, a
+    // rise of 0.024%. THE SMALLEST STEP THIS ROW HAS EVER RECORDED, from the
+    // largest roster change it has seen — which is the reason the cause is
+    // stated no more narrowly than "the roster and the selector changed", as
+    // the Delvers and Radiation paragraphs above both insist. Nothing this
+    // campaign measured says where by latitude the six new peoples sit, and
+    // they are OBLIGATE MARINE, so they do not compete for the land capacity
+    // this metric integrates at all; the mover is more plausibly the
+    // selector repair, and that was not traced either.
+    //
+    // THE PREREGISTERED FLOOR IS RE-CHECKED, NOT ASSUMED, and it is a real
+    // assertion rather than a comment: `mean >= 3.0` sits ABOVE this line,
+    // the run reached here, so it cleared — at 18.0950 that is 6.03x the
+    // floor, against the 6.0x The Glasshouse recorded. THE FLOOR DID NOT
+    // MOVE AND MUST NOT: what drifted is the tripwire pin below it, and a
+    // breached floor would be a finding to report rather than a bound to
+    // widen. Decision 0106's circularity rule still applies on top of that —
+    // this is a drift tripwire, never evidence for the Earth-contingent
+    // gradient claim.
     assert!(
-        (mean - 18.0906).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.0906)"
+        (mean - 18.0950).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.0950)"
     );
 }
 
@@ -467,9 +490,43 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // The Underworld Peoples delivery re-measurement moves the witness to
     // 17.6474; the
     // directional claim remains true.
+    // The Tidemark's close regen (2026-09-13, canonical census on lefford at
+    // 9b3bbfaa5d45): six obligate marine peoples enter the roster and a
+    // `land_settlement` selector repair widens every world by 39 settlements
+    // (396 -> 435 on seed 42), so the population carrying the latitude
+    // weighting is a different and larger one on every world:
+    // 17.6474 -> 18.3200. The margin against the baseline narrows
+    // 15.0526 -> 14.3800 degrees and the ratio falls 1.853x -> 1.785x.
+    //
+    // THIS IS BY FAR THE LARGEST STEP IN THE SEQUENCE — +0.6726 degrees,
+    // against a prior maximum single step of -0.089 (The Granary) and a
+    // typical step in the third decimal place. The magnitude is consistent
+    // with its cause and the consistency is the only claim made for it: a
+    // selector repair that adds 39 settlements to EVERY world changes the
+    // weighting population far more broadly than the "which settlements
+    // survive the bake" re-rolls every earlier entry in this chain records.
+    //
+    // THE STANDING INSTRUCTION IN THE WINZE'S PARAGRAPH ABOVE APPLIES AND
+    // ITS ANSWER IS UNCHANGED. That paragraph retired the practice of
+    // reading this chain as a trend at all: "A floor question needs an
+    // instrument that varies latitude deliberately; seven opportunistic
+    // readings off successive census refreshes cannot answer it, and this
+    // row should stop being read as if they could." An eighth reading, even
+    // one this large and in the opposite direction to the run of narrowings,
+    // does not change that. Recorded, not interpreted: nothing in this
+    // campaign biases where by latitude a settlement lands, and the six
+    // added peoples are obligate marine, so they hold no land settlement
+    // this metric weights.
+    //
+    // THE ASSERTED CLAIM IS UNCHANGED AND STILL HOLDS, re-checked rather
+    // than assumed: the preregistered directional assertion (mean below the
+    // uniform-sphere baseline of 32.7) sits ABOVE this line and the run
+    // reached here, so 18.3200 cleared it — by 14.38 degrees, better than
+    // 1.78x, and the margin has more than 14 degrees to give before the
+    // claim is in any danger.
     assert!(
-        (mean - 17.6474).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.6474)"
+        (mean - 18.3200).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~18.3200)"
     );
 }
 

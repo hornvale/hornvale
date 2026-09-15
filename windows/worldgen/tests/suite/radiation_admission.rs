@@ -109,10 +109,22 @@ fn every_elf_clears_the_affinity_precondition() {
     }
 }
 
-/// Drow is the ONLY elf in the sparse realm store, and every other elf must be
-/// absent from it (absence means `Surface`). Asserted in both directions
+/// Drow is the ONLY elf whose REALM resolves to anything but `Surface`, and
+/// every other elf must resolve to `Surface`. Asserted in both directions
 /// because the Wood/Drow contrast — the family's realm isolate — is only a
-/// single-variable contrast if exactly one of the two carries a realm row.
+/// single-variable contrast if exactly one of the six resolves off `Surface`.
+///
+/// **Resolved realm, not row presence** (The Tidemark, Task 1). Before this
+/// task every non-drow elf was absent from the store and absence meant
+/// `Surface`, so "absent" and "resolves to Surface" were the same fact and
+/// this test could check either. They no longer are: sea-elf now carries an
+/// EXPLICIT `Surface` row (spec §3.6 — stated rather than left to the
+/// default, because a reader meeting `HabitatRealm::Marine` for the first
+/// time would otherwise reasonably assume a sea elf belongs to it). That
+/// change does not touch the isolation property this test exists to pin —
+/// sea-elf's realm is still `Surface`, exactly as before — so the fix is to
+/// check the RESOLVED realm (present-and-Surface or absent-and-default-
+/// Surface both pass), not row presence.
 #[test]
 fn drow_alone_is_subterranean() {
     let realm = hornvale_species::habitat_realm_registry();
@@ -123,11 +135,16 @@ fn drow_alone_is_subterranean() {
          separation from the surface elves (spec §3.5)"
     );
     for name in ELVES.into_iter().filter(|n| *n != "drow") {
-        assert!(
-            realm.get(&KindId(name)).is_none(),
-            "{name} appears in the habitat-realm store; every elf but drow \
-             must be absent from it (absence means Surface), or Wood/Drow \
-             stops isolating the realm variable"
+        let resolved = realm
+            .get(&KindId(name))
+            .copied()
+            .unwrap_or(HabitatRealm::SURFACE);
+        assert_eq!(
+            resolved,
+            HabitatRealm::Surface,
+            "{name} resolves to {resolved:?}, not Surface — every elf but drow must \
+             resolve to Surface (whether by an explicit row or by absence), or \
+             Wood/Drow stops isolating the realm variable"
         );
     }
 }

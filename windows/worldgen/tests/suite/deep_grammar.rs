@@ -319,6 +319,17 @@ fn depth_landscape_measured() {
     // The two behave differently under a roster change and this row-for-row
     // equality is the cleanest evidence of it in the suite.
     let expect: Vec<(u64, &str, MorphDepth, MorphDepth)> = vec![
+        // THE TIDEMARK re-pin (Task 3, 2026-09-11): 45 -> 60 rows, five settling
+        // marine peoples placed on each of seeds 1..=3 (merfolk is `Gregarious`
+        // and places nothing, so it is absent here as it is everywhere placement
+        // is the subject). **Not one of the 45 pre-existing rows moved**, which
+        // is the fourth consecutive roster change at which that has held — and
+        // it is worth restating rather than assuming, because the neighbouring
+        // re-pins in this suite (the ladder table, the exposure sets, the
+        // toponymy) ALL moved for existing peoples this time. A tongue's
+        // morphology depth is drawn per SPECIES from its own labels; settlement
+        // placement is not. That is the difference, measured again.
+        (1, "abyssal-elf", MorphDepth::None, MorphDepth::None),
         (1, "bugbear", MorphDepth::Affix, MorphDepth::None),
         (1, "desert-dwarf", MorphDepth::None, MorphDepth::None),
         (1, "desert-elf", MorphDepth::Affix, MorphDepth::Affix),
@@ -331,13 +342,23 @@ fn depth_landscape_measured() {
         (1, "hill-dwarf", MorphDepth::None, MorphDepth::None),
         (1, "hobgoblin", MorphDepth::Particle, MorphDepth::Particle),
         (1, "human", MorphDepth::Affix, MorphDepth::Affix),
+        (1, "kelp-tender", MorphDepth::Particle, MorphDepth::Affix),
         (1, "kobold", MorphDepth::None, MorphDepth::None),
         (1, "kuo-toa", MorphDepth::None, MorphDepth::None),
         (1, "mountain-dwarf", MorphDepth::None, MorphDepth::Affix),
+        (1, "reef-mason", MorphDepth::None, MorphDepth::Affix),
         (1, "sea-elf", MorphDepth::None, MorphDepth::None),
         (1, "snow-elf", MorphDepth::None, MorphDepth::None),
         (1, "svirfneblin", MorphDepth::None, MorphDepth::None),
+        (1, "triton", MorphDepth::Affix, MorphDepth::None),
+        (
+            1,
+            "vent-commensal",
+            MorphDepth::Particle,
+            MorphDepth::Particle,
+        ),
         (1, "wood-elf", MorphDepth::Particle, MorphDepth::None),
+        (2, "abyssal-elf", MorphDepth::None, MorphDepth::None),
         (2, "bugbear", MorphDepth::Affix, MorphDepth::Particle),
         (2, "desert-dwarf", MorphDepth::Particle, MorphDepth::None),
         (2, "desert-elf", MorphDepth::None, MorphDepth::Affix),
@@ -350,13 +371,18 @@ fn depth_landscape_measured() {
         (2, "hill-dwarf", MorphDepth::Particle, MorphDepth::Particle),
         (2, "hobgoblin", MorphDepth::Particle, MorphDepth::Affix),
         (2, "human", MorphDepth::None, MorphDepth::None),
+        (2, "kelp-tender", MorphDepth::None, MorphDepth::Particle),
         (2, "kobold", MorphDepth::None, MorphDepth::None),
         (2, "kuo-toa", MorphDepth::None, MorphDepth::None),
         (2, "mountain-dwarf", MorphDepth::None, MorphDepth::Affix),
+        (2, "reef-mason", MorphDepth::None, MorphDepth::Affix),
         (2, "sea-elf", MorphDepth::None, MorphDepth::Affix),
         (2, "snow-elf", MorphDepth::None, MorphDepth::None),
         (2, "svirfneblin", MorphDepth::None, MorphDepth::None),
+        (2, "triton", MorphDepth::Particle, MorphDepth::None),
+        (2, "vent-commensal", MorphDepth::Particle, MorphDepth::None),
         (2, "wood-elf", MorphDepth::None, MorphDepth::Affix),
+        (3, "abyssal-elf", MorphDepth::None, MorphDepth::Affix),
         (3, "bugbear", MorphDepth::None, MorphDepth::Affix),
         (3, "desert-dwarf", MorphDepth::Affix, MorphDepth::None),
         (3, "desert-elf", MorphDepth::Particle, MorphDepth::Particle),
@@ -369,12 +395,21 @@ fn depth_landscape_measured() {
         (3, "hill-dwarf", MorphDepth::None, MorphDepth::None),
         (3, "hobgoblin", MorphDepth::None, MorphDepth::Affix),
         (3, "human", MorphDepth::Particle, MorphDepth::None),
+        (3, "kelp-tender", MorphDepth::Particle, MorphDepth::None),
         (3, "kobold", MorphDepth::None, MorphDepth::Affix),
         (3, "kuo-toa", MorphDepth::Affix, MorphDepth::None),
         (3, "mountain-dwarf", MorphDepth::Particle, MorphDepth::None),
+        (3, "reef-mason", MorphDepth::None, MorphDepth::Affix),
         (3, "sea-elf", MorphDepth::Affix, MorphDepth::Particle),
         (3, "snow-elf", MorphDepth::Particle, MorphDepth::None),
         (3, "svirfneblin", MorphDepth::None, MorphDepth::None),
+        (3, "triton", MorphDepth::Particle, MorphDepth::None),
+        (
+            3,
+            "vent-commensal",
+            MorphDepth::Particle,
+            MorphDepth::Particle,
+        ),
         (3, "wood-elf", MorphDepth::None, MorphDepth::None),
     ];
     assert_eq!(

@@ -589,10 +589,30 @@ fn gnoll_mean_correlation(seed: u64, arm: Arm) -> (f64, Vec<(String, f64)>) {
         .map(|(kind, _)| wc.biome_affinity.get(kind).cloned())
         .collect();
 
+    // **LAND-DWELLING settling peoples only** (The Tidemark, Task 3). The
+    // correlation below is taken over LAND vertices, and a `Marine` people's
+    // suitability there is exactly `0.0` at every one of them — the realm
+    // gate's availability mask, working. A constant column has no correlation
+    // with anything, which `pearson` refuses outright rather than returning
+    // `NaN`, so including the five settling marine peoples panicked this
+    // helper (`variances were 2.505634e0 and 0.000000e0`).
+    //
+    // Excluded at the ROSTER rather than by catching the panic: the question
+    // P2 asks is whether gnoll's field is spatially distinct from the other
+    // peoples competing for the same ground, and a people that competes for
+    // none of it is not in that population. `pearson`'s refusal stays exactly
+    // as strict for everyone who is.
     let peoples: Vec<&'static str> = wc
         .biosphere
         .iter()
         .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
+        .filter(|(kind, _)| {
+            wc.habitat_realm
+                .get(kind)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+                != hornvale_species::HabitatRealm::Marine
+        })
         .map(|(kind, _)| kind.0)
         .collect();
 

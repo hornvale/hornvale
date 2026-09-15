@@ -480,7 +480,7 @@ fn run_scan_shape(
         "seed {seed}'s predator field must build, or this shape has no frightening ground"
     );
     let ctx = &wctx.ctx;
-    let home_settlement = hornvale_settlement::village_info(&world)
+    let home_settlement = hornvale_worldgen::land_settlement(&world)
         .expect("the flagship always exists")
         .id;
     let day_ticks = hornvale_worldgen::sky_of(&world)

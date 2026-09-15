@@ -61,7 +61,15 @@ pub fn genesis() -> World {
 /// is the deliberate choice here.
 pub fn baseline_band(world: &World) -> SurroundsScene {
     let ctx = LocaleContext::build(world).expect("seed 42 builds a locale context");
-    let village = hornvale_settlement::village_info(world).expect("seed 42 has a village");
+    // The Tidemark, Task 3: the DEMO subject, chosen rather than inherited.
+    // `village_info` is "the first `is-settlement` fact in ledger order",
+    // which was never a claim about where a band should be sampled — and
+    // when the marine peoples moved it into open sea, this band went all
+    // water and the cover and colour layers stopped varying at all (H1's
+    // mixture arm and its bedrock control both collapsed to ONE colour, so
+    // the differential could not fire in either direction). See
+    // `hornvale_worldgen::land_settlement`'s own doc.
+    let village = hornvale_worldgen::land_settlement(world).expect("seed 42 has a dry village");
     let lat = match world
         .ledger
         .value_of(village.id, hornvale_settlement::LATITUDE)

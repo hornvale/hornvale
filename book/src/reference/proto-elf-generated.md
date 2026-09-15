@@ -2,7 +2,7 @@
 
 # Proto-elf
 
-The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and wood-elf all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v4` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. **Excepted:** a concept the registry itself records as objectively unnameable (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence) reserves no proto-root at all and is omitted from this table entirely — the ancestor cannot have spoken of a referent no culture here has ever had the concept to name (see `hornvale_language::GapReason::Unnameable`). The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
+The shared ancestral language abyssal-elf, desert-elf, drow, high-elf, sea-elf, snow-elf, and wood-elf all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v4` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. **Excepted:** a concept the registry itself records as objectively unnameable (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence) reserves no proto-root at all and is omitted from this table entirely — the ancestor cannot have spoken of a referent no culture here has ever had the concept to name (see `hornvale_language::GapReason::Unnameable`). The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
 
 ## Inventory
 
@@ -37,6 +37,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | Concept | Gloss | Proto | IPA |
 |---|---|---|---|
 | `abyssal` | a biome class | *Dang | /daŋ/ |
+| `abyssal-elf-kind` | an abyssal elf | *Pengsraung | /peŋsrauŋ/ |
 | `abyssal-plain` | The flat floor of the deep ocean. | *Dong | /doŋ/ |
 | `affords-passage` | a seam between two rooms a body may pass through | *Baung | /bauŋ/ |
 | `alcove` | a recessed space set into a wall | *Gaongngong | /gaoŋŋoŋ/ |
@@ -140,6 +141,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `island` | land the water surrounds | *Ngeengsreng | /ŋeeŋsreŋ/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Ngengngoeng | /ŋeŋŋoeŋ/ |
 | `kelp-forest` | a biome class | *Zreangbung | /zreaŋbuŋ/ |
+| `kelp-tender-kind` | a kelp tender | *Ngangsruang | /ŋaŋsruaŋ/ |
 | `key` | a small tool shaped to work one particular lock | *Daangshrueng | /daaŋʃrueŋ/ |
 | `kill` | to cause to cease living | *Shrungsreung | /ʃruŋsreuŋ/ |
 | `killer-whale-kind` | a killer whale | *Nguangtang | /ŋuaŋtaŋ/ |
@@ -162,6 +164,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `marine-snow` | Organic debris drifting endlessly down. | *Tang | /taŋ/ |
 | `marsh` | soft wet ground | *Gongsroang | /goŋsroaŋ/ |
 | `melt-pond` | A pool of meltwater on sea ice. | *Baungngoung | /bauŋŋouŋ/ |
+| `merfolk-kind` | a merfolk | *Zrung | /zruŋ/ |
 | `mesopelagic` | a biome class | *Puongzraong | /puoŋzraoŋ/ |
 | `millet` | a staple crop | *Zronggong | /zroŋgoŋ/ |
 | `moon` | a moon | *Taangzroeng | /taaŋzroeŋ/ |
@@ -199,6 +202,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `read` | to take meaning from written words — `consult` | *Shraang | /ʃraaŋ/ |
 | `red` | the color term for red | *Gungngong | /guŋŋoŋ/ |
 | `red-dragon-kind` | a red dragon | *Pangdong | /paŋdoŋ/ |
+| `reef-mason-kind` | a reef mason | *Dangshrang | /daŋʃraŋ/ |
 | `reef-rubble` | Broken coral debris behind a reef. | *Beng | /beŋ/ |
 | `reef-shark-kind` | a reef shark | *Ngangzrong | /ŋaŋzroŋ/ |
 | `reg` | A desert floor of wind-swept gravel. | *Bungngeung | /buŋŋeuŋ/ |
@@ -259,6 +263,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `tree` | a woody plant | *Dengshreng | /deŋʃreŋ/ |
 | `trench-floor` | The deepest floor of an ocean trench. | *Zhrengsreng | /ʒreŋsreŋ/ |
 | `trench-wall` | The steep side of an ocean trench. | *Ngeong | /ŋeoŋ/ |
+| `triton-kind` | a triton | *Buengzreeng | /bueŋzreeŋ/ |
 | `tropical-rainforest` | a biome class | *Ngoangngong | /ŋoaŋŋoŋ/ |
 | `tropical-seasonal-forest` | a biome class | *Dungzhraung | /duŋʒrauŋ/ |
 | `tuber` | a staple crop | *Zhrongbeng | /ʒroŋbeŋ/ |
@@ -271,6 +276,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `upwelling` | a biome class | *Paongngoung | /paoŋŋouŋ/ |
 | `urchin-barren` | Seabed grazed bare of kelp. | *Zhrengngaeng | /ʒreŋŋaeŋ/ |
 | `valley` | low ground between heights | *Toongdung | /tooŋduŋ/ |
+| `vent-commensal-kind` | a vent commensal | *Zrongzrang | /zroŋzraŋ/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Ngungshruong | /ŋuŋʃruoŋ/ |
 | `vessel` | a container shaped to hold liquid or goods | *Poangshreeng | /poaŋʃreeŋ/ |
 | `vine` | a staple crop | *Guongshrueng | /guoŋʃrueŋ/ |

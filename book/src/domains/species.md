@@ -35,17 +35,27 @@ six-dimension psychology vector is, since *The Cloister* (Campaign 4 of the
 Dragons program), two closed vectors cleaved along who carries them. The
 **mind vector** — three scalars bounded in `[0, 1]` (threat response,
 deliberation latency, time horizon) — is carried by every minded kind: the
-fifteen settling peoples and, since *The Eremite*, the three solitary dragons
+twenty-five peoples and, since *The Eremite*, the three solitary dragons
 too. The **society vector** — one scalar (in-group radius, `[0, 1]`) and two
 enumerations (sociality mode: hierarchic or communal; status basis: rank,
 knowledge, or generosity) — is carried by a minded kind that lives
 *socially* (a `Gregarious` or `Settled` kind), and by no other; a `Solitary`
 creature (a dragon) carries none. The gate is sociality, not settlement — a
-nomadic band would carry a society without ever settling — though today that
-set is exactly the fifteen settling peoples, since no `Gregarious` kind is yet
-minded (decision 0068 refines 0067) — a vacancy *The Vacancy* deliberately
-left open and recorded rather than filled, because a settlement-free people
-is unaudited everywhere downstream of a settlement.
+nomadic band would carry a society without ever settling.
+
+**That last clause stopped being hypothetical at [The
+Tidemark](../chronicle/the-tidemark.md).** This passage used to add that "today
+that set is exactly the fifteen settling peoples, since no `Gregarious` kind is
+yet minded" — a vacancy *The Vacancy* deliberately left open and recorded
+rather than filled, because a settlement-free people is unaudited everywhere
+downstream of a settlement. The marine roster filled it: **merfolk** are minded
+and `Gregarious`, so they carry a society row and place no settlement at all.
+The gate has read *minded ∧ social* since decision 0068 and `Settled` was only
+ever an extensional coincidence; the two sets now differ by exactly one, at
+twenty-five society rows against twenty-four settling kinds. The correction
+matters beyond the count, because anything that read "the settling peoples" as
+"the kinds carrying a society row" was reading a coincidence — and two such
+sites were found by being wrong, not by being audited.
 
 Both vectors are read against a **manikin**: a reference vector belonging to
 no creature. Every scalar is a bare ratio in `[0, 1]` whose `0.5` is the
@@ -252,20 +262,24 @@ worldgen. `domains/species` authors the universal **biosphere** component
 (`BiosphereTraits` — mass, thermal strategy, trophic mode, resource niche,
 condition niche, potency, social organization, life schedule — the row every
 kind carries and the packer and habitat model read), plus a **sparse**
-habitat-realm component carried only by kinds that do not live on the
-surface: three today, the xorn, the rust monster, and the drow, gated on
-whether the cell holds a cave at all
+habitat-realm component, **fifteen rows today across three realms** — seven
+`Subterranean` (the xorn and the rust monster, the drow, and the four
+Underworld peoples), six `Marine` (the marine peoples
+[The Tidemark](../chronicle/the-tidemark.md) authored), and two explicit
+`Surface` rows — gated on whether the cell holds a cave at all, or holds a
+water column at all,
 and, since *The Cloister*, two psychology components where there used to be
 one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
 the **perception** (3) component is carried by every kind that *speaks* — a
 chain, not a settlement gate: speech presupposes perception presupposes a
-mind — so the three chromatic dragons carry it alongside the fifteen settling
+mind — so the three chromatic dragons carry it alongside the twenty-five
 peoples, though nothing settles a dragon does. The **society** vector (3 —
 sociality, status basis, in-group radius) stays gated differently, on
 *sociality* rather than speech: only a minded kind that lives socially (a
-`Gregarious` or `Settled` kind) carries it, which today is exactly the fifteen
-settling peoples — a `Solitary` dragon carries none.
+`Gregarious` or `Settled` kind) carries it, which today is the twenty-five
+peoples — twenty-four that settle plus the `Gregarious` merfolk, which do
+not — while a `Solitary` dragon carries none.
 
 **The habitat-realm gate gained a second dimension.** *The Sources* changed
 how the three subterranean kinds' conditions are read, not how many of them
@@ -278,6 +292,40 @@ derived from the surrounding rock and thermal gradient rather than from
 sunlight, and rewired the xorn's niche to draw on it — the one kind of the
 three whose capacity moved, because the rust monster and the drow weight
 nothing on that new term at all.
+
+**And then a third realm ([The Tidemark](../chronicle/the-tidemark.md)).** The
+enumeration is two-valued no longer: a `Marine` kind is scored at every band of
+the sea's pelagic ladder and credited with the best of them, exactly as a
+subterranean kind is scored at every rung of its column, behind an availability
+mask that is `{0, 1}` on whether the vertex carries a water column at all
+rather than a graded tolerance. Because a domain may not depend on a sibling,
+this enumeration is the same axis climate already expresses as a realm and a
+medium, so the two are pinned against each other by a **two-directional**
+agreement test at the composition root — forward over the realms and backward
+over the media, since a one-directional round trip cannot see a new realm that
+reuses an existing medium. Adding the variant was deliberately done by letting
+the compiler produce the site list rather than a grep, which found seven sites,
+three of them in places nobody had enumerated.
+
+Presence in this store consequently stopped meaning what it used to.
+**Absence still means `Surface`; presence no longer implies non-`Surface`** —
+the sea elf and the giant crocodile carry explicit `Surface` rows, not because
+the default is wrong for them but because a reader meeting `Marine` for the
+first time would reasonably assume a sea elf belongs to it, and the mask has no
+middle value with which to be half right. The kuo-toa is the same shape read
+from the other side: residence subterranean, reach aquatic, authored that way
+by a parallel campaign that did not yet have the vocabulary.
+
+Two limits of the new realm are measured rather than suspected, and both are
+about the *ladder* rather than the gate. The five pelagic strata are
+distinguished at placement **by depth alone**, except at the seabed band of a
+vertex a vent is lighting: the column is handed one temperature per vertex,
+moisture is a constant, and the light that does vary by band is read by
+nothing. And **depth confines downward only** — every ocean column has a
+surface band, so a shallow kind is near-optimal at *every* ocean vertex, and
+the argmax among shallow kinds then falls to a fraction of a percent of
+difference in the sovereignty floor. A kind whose identity is a pelagic *zone*
+is expressible; a kind whose identity is "warmer water at depth" is not yet.
 
 `domains/language` authors the **articulation** (6) and the social
 **lexicon** — the speech a kind that speaks carries. Since *The Vigil*, a
@@ -364,7 +412,9 @@ that claims one.
 Housemark* reads sociality as command versus common seating and bands
 `in_group_radius` into inward, plain and outward threshold postures. The two
 readings remain independent, producing six reachable chamber signatures over
-the current fifteen peoples. This is a vessel-owned, seedless reading of the
+the fifteen peoples that campaign measured. The roster is twenty-five now, and
+the reachable count has not been re-measured against it. This is a
+vessel-owned, seedless reading of the
 authored vector; it does not move society into the vessel or make culture a
 species-name table.
 
@@ -428,7 +478,7 @@ sentence was only ever sayable because a people was a point. Once a people
 became a distribution, the gate's input became a *draw*: each settlement takes
 its own threat response from its people's authored mean and dispersion, keyed
 on where and when it was founded. Every one of the six settling peoples the
-campaign measured — the roster has since grown to fifteen, which that
+campaign measured — the roster has since grown to twenty-five, which that
 measurement does not cover — now has
 settlements on both sides of the threshold — the assertive ones mostly above it
 and the neutral ones mostly below, but none wholly either. Warlikeness became a
@@ -542,6 +592,25 @@ giant squid alone holds 30,971 of them, 51.9% of the unfiltered total. A
 reader taking "the roster is entirely terrestrial" as a live fact would
 mis-scope any land-only statistic by more than half.
 
+**And the sea is now *peopled*, not merely inhabited ([The
+Tidemark](../chronicle/the-tidemark.md)).** Six marine peoples carry minds,
+speech and — for the five that settle — society rows, and they place
+settlements in the water column rather than on the shore. The same campaign
+measured what the sea's roster does *not* have, before authoring the
+subsistence roster its own design called for, and stopped on the answer:
+**every marine kind resolves to trophic height exactly 1.000** — six peoples
+and four fauna alike — and the food web omits all ten as keys, because the
+model's predator test reads the animal-prey axis and marine niches spend
+their weight on marine forage, photosynthate and chemosynthate instead. By
+this model's own classifier a killer whale is not a heterotroph. Competition
+is the half that *is* real, and it is saturated: pairwise niche overlap is
+**1.0000 for eight of the ten**, identical niche vectors, so a 5,400 kg
+whale and a merfolk settlement compete at exactly the coefficient two merfolk
+would. The sea has one axis where the land has two and the underworld three,
+which is a fact about the *vocabulary* rather than about the sea, and the same
+readout shows six terrestrial detritivores pinned at height 1.000 for the same
+underlying reason: one axis standing in for a structure.
+
 *The Vacancy* took both of those unfinished halves. The marine axis is real,
 its supply derived from what climate already computes (the marine biome class,
 sea-surface temperature, depth through the euphotic zone), and nine of the ten
@@ -591,8 +660,8 @@ religion across more than a pair, once a third people exists to make
 variation, both per-species and eventually per-individual, in place of one
 authored point per people; a physiology this vector does not yet have, so
 habitat affinity and temperance stay shared rather than species-derived;
-inter-species politics, trade, and conflict; and, past fifteen, however many
-further peoples the registry is asked to hold.
+inter-species politics, trade, and conflict; and, past twenty-five, however
+many further peoples the registry is asked to hold.
 
 One limit was measured rather than suspected. Carrying capacity is a supply
 term spanning orders of magnitude multiplied by a condition product bounded in

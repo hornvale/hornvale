@@ -230,7 +230,7 @@ mod tests {
         world: &World,
         ctx: &LocaleContext,
     ) -> (crate::body::Body, hornvale_kernel::Facet) {
-        let village = hornvale_settlement::village_info(world).expect("seed 42 has a flagship");
+        let village = hornvale_worldgen::land_settlement(world).expect("seed 42 has a flagship");
         let entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
         let npc = crate::liveness::body_at(world, ctx, &village, entity);
         let position = npc.home.clone();

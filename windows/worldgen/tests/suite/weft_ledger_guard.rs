@@ -26,9 +26,47 @@ use hornvale_worldgen::seed_42_world;
 /// `seed_42_world()`'s own fact count, measured directly (not `build_world`,
 /// which `fixture.rs`'s own `the_fixture_equals_a_live_build` already keeps
 /// honest against the fixture) — the number this test pins.
-// The Underworld Peoples delivery adds the four peoples' committed facts;
-// seed 42 now carries 21,524 ledger facts.
-const SEED_42_FACT_COUNT: usize = 21_525;
+/// TWO CAMPAIGNS MOVE THIS TOGETHER, and the merged number is MEASURED on the
+/// merged world rather than added from their separate pins (22_835 on The
+/// Tidemark's side, 21_524 on the Underworld Peoples' — both from 20_109;
+/// the merged world carries 23_431).
+/// Ten new peoples enter the roster and nine of them settle, so the committed
+/// world carries more settlements, more occupations, more people and more
+/// species rows. A deliberate, reviewed move of the byte golden itself, not a
+/// weft change.
+///
+/// **23_431 -> 25_280 at The Tidemark's close (2026-09-13).** Attribution was
+/// MEASURED off the golden's own predicate histogram rather than reasoned
+/// from which commits landed — `"predicate": "x"` counts, old fixture against
+/// new:
+///
+/// ```text
+///   is-settlement    396 -> 435   (+39)
+///   is-place         396 -> 435   (+39)
+///   is-occupation   1148 -> 1259  (+111)
+///   is-ruin          752 -> 824   (+72)
+///   is-person        260 -> 255   (-5)
+/// ```
+///
+/// That shape is a SETTLEMENT-PLACEMENT move, and the bulk of it is
+/// `land_settlement selects on habitat realm, not biome` (9912bc7ab), which
+/// widened the eligible vertex set by 39 settlements. The campaign's headline
+/// mechanism — a failing vent ending the occupation it was holding up — is a
+/// small minority of the occupation delta: its own measurement (M3b,
+/// `vent_expiry.rs`) counts **2** occupations ending on a vent's failure, plus
+/// the refounds those trigger. Do not read the +1,849 as the vent ending's
+/// cost; two of the +111 occupations are its, and the rest is the realm fix.
+///
+/// **AND THE SAME THING HAPPENED AGAIN AT THE ABSORB.** main had meanwhile
+/// re-taken this pin to 21_525 (the Underworld Peoples delivery), so the merge
+/// conflicted here — two campaigns moving one number, the exact case the
+/// paragraph above was written for. The merged value below is MEASURED on the
+/// merged world, not chosen between the two sides and not added from them:
+/// this branch carried 25_280, `origin/main` carried 21_525, and the world
+/// built from the merge product carries **25_281** — main contributes exactly
+/// one fact on top of this branch's side. Adding the two sides' deltas would
+/// have given a number no world has.
+const SEED_42_FACT_COUNT: usize = 25_281;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

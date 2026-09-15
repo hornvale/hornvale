@@ -5,11 +5,11 @@ the same world in your browser — same crates, same bytes.)*
 
 ```text
 [room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Underfoot, pale limestone; the ground is level.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 > look
 [room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Underfoot, pale limestone; the ground is level.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 > map
 [lens: colour · depth 13 · radius 4 · north-up]
@@ -31,7 +31,7 @@ You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > !whoami
-A bugbear of Doaba (agent 3286669968037249024), day 0, room 3733133217.
+A bugbear of Doaba (agent 4144796844782321664), day 0, room 3733133217.
 > enter
 [chamber — threshold]
 A small room in Doaba, holding a doorway, a screen, a bench and a stone ledge.
@@ -94,11 +94,11 @@ A recess cut back from the main space, deep enough to sit in.
 Set close and plumb, with no gap in it wide enough to pass.
 > out
 [room — buttressed canopy]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Underfoot, pale limestone; the ground is level.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 > go n
 [room — a liana tangle]
-Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
 > map out 2
 [lens: colour · depth 11 · radius 4 · north-up]
   placement: north-up, one row per ring, east doubled for the character cell — 53 of 81 cells drawn, 28 occluded where two fell in one box (the more salient kept it).
@@ -118,15 +118,15 @@ Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — i
 There is nothing here to enter.
 > look
 [room — a liana tangle]
-Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
 > out
 You are already out of doors.
 > go ne
 [room — a liana tangle]
-Tropical seasonal forest — a liana tangle, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
+Tropical seasonal forest — a liana tangle, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
 > back
 [room — a liana tangle]
-Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
 > wait 90
 Time passes. You sense movement nearby (4623 stirred).
 > examine sky
@@ -136,8 +136,8 @@ Twilight. The horizon glows gold. The vast moon is a smear of light. The small, 
   room/3733133217 = {"schema":"locale/room/v2","id":3733133217,"face":1,"path…
   room/3733134593 = {"schema":"locale/room/v2","id":3733134593,"face":1,"path…
   room/3733134689 = {"schema":"locale/room/v2","id":3733134689,"face":1,"path…
-  settlement/10760661430244474881/name = Doaba
-  settlement/10760661430244474881/population = 68
+  settlement/10760661430244474884/name = Doaba
+  settlement/10760661430244474884/population = 68
 > release
 You let go.
 ```

@@ -233,9 +233,20 @@ fn the_dial_separates_the_poles() {
             // naive `!= Kept` miscount this row exists to forbid would read
             // 4/19.
             if seed == 2 && voice.kind == "kobold" {
+                // TWO CAMPAIGNS RE-PIN IT TOGETHER: 19 -> 28 entries, for
+                // the same reason The Radiation's note above gives. Five of
+                // The Tidemark's six marine peoples and all four Underworld
+                // peoples settle and are placed at seed 2, so kobold's
+                // account gains nine more `instance-of`/Kept entries.
+                // MEASURED on the merged world — neither branch's own
+                // denominator (24, 23) survives it. The LOST count is still
+                // 3, so `loss_fraction` moves 3/19 -> 3/28, and the naive
+                // `!= Kept` miscount this row forbids would read 4/28 —
+                // still a different number, which is what keeps the
+                // assertion discriminating.
                 assert_eq!(
                     loss_shipped,
-                    3.0 / 23.0,
+                    3.0 / 28.0,
                     "seed 2 kobold's loss_fraction must read THROUGH its Explained \
                      moon-count entry (underlying: Kept) rather than counting it lost"
                 );

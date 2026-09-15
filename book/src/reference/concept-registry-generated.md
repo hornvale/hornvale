@@ -201,6 +201,7 @@
 | Concept | Domain | Kind | Meaning |
 |---|---|---|---|
 | `abyssal` | climate | terrain | a biome class |
+| `abyssal-elf-kind` | species | living | an abyssal elf |
 | `abyssal-plain` | climate | substance | The flat floor of the deep ocean. |
 | `affords-passage` | language | quality | a seam between two rooms a body may pass through |
 | `alcove` | thing | object | a recessed space set into a wall |
@@ -307,6 +308,7 @@
 | `island` | terrain | terrain | land the water surrounds |
 | `kelp-canopy` | climate | substance | The floating canopy of a kelp forest. |
 | `kelp-forest` | climate | terrain | a biome class |
+| `kelp-tender-kind` | species | living | a kelp tender |
 | `key` | thing | object | a small tool shaped to work one particular lock |
 | `kill` | language | act | to cause to cease living |
 | `killer-whale-kind` | species | living | a killer whale |
@@ -330,6 +332,7 @@
 | `marine-snow` | climate | substance | Organic debris drifting endlessly down. |
 | `marsh` | terrain | terrain | soft wet ground |
 | `melt-pond` | climate | substance | A pool of meltwater on sea ice. |
+| `merfolk-kind` | species | living | a merfolk |
 | `mesopelagic` | climate | terrain | a biome class |
 | `millet` | climate | substance | a staple crop |
 | `moon` | astronomy | celestial | a moon |
@@ -373,6 +376,7 @@
 | `red-dragon-kind` | species | living | a red dragon |
 | `red-dwarf` | astronomy | celestial | the commonest and faintest main-sequence star |
 | `red-giant` | astronomy | celestial | a cool, vast star late in its life |
+| `reef-mason-kind` | species | living | a reef mason |
 | `reef-rubble` | climate | substance | Broken coral debris behind a reef. |
 | `reef-shark-kind` | species | living | a reef shark |
 | `reg` | climate | substance | A desert floor of wind-swept gravel. |
@@ -436,6 +440,7 @@
 | `tree` | language | living | a woody plant |
 | `trench-floor` | climate | substance | The deepest floor of an ocean trench. |
 | `trench-wall` | climate | substance | The steep side of an ocean trench. |
+| `triton-kind` | species | living | a triton |
 | `tropical-rainforest` | climate | terrain | a biome class |
 | `tropical-seasonal-forest` | climate | terrain | a biome class |
 | `tuber` | climate | substance | a staple crop |
@@ -448,6 +453,7 @@
 | `upwelling` | climate | terrain | a biome class |
 | `urchin-barren` | climate | substance | Seabed grazed bare of kelp. |
 | `valley` | terrain | terrain | low ground between heights |
+| `vent-commensal-kind` | species | living | a vent commensal |
 | `vent-plume` | climate | substance | Shimmering hot water rising from a vent. |
 | `vessel` | thing | object | a container shaped to hold liquid or goods |
 | `vine` | climate | substance | a staple crop |

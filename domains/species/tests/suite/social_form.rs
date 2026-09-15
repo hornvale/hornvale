@@ -56,6 +56,16 @@ fn every_kind_has_the_authored_social_form() {
         ("desert-dwarf", SocialForm::Settled),
         ("gully-dwarf", SocialForm::Settled),
         ("hill-dwarf", SocialForm::Settled),
+        // THE TIDEMARK (Task 3): the six obligate marine peoples. Five
+        // settle; `merfolk` is `Gregarious`, and that ONE row is the whole
+        // of M2's second pole — a people that forms no fixed place must not
+        // form one.
+        ("abyssal-elf", SocialForm::Settled),
+        ("kelp-tender", SocialForm::Settled),
+        ("merfolk", SocialForm::Gregarious),
+        ("reef-mason", SocialForm::Settled),
+        ("triton", SocialForm::Settled),
+        ("vent-commensal", SocialForm::Settled),
     ];
     for (name, sf) in expected {
         assert_eq!(social_form_of(name), *sf, "{name}");
@@ -70,7 +80,10 @@ fn settled_kinds_are_exactly_the_settling_peoples() {
     // the original four. The Vacancy T9 adds the gnoll, a fifth; The
     // Generalist (C2-0) adds the human, a sixth; The Delvers (C2c) adds the
     // three dwarves, taking the roster to nine; The Radiation (C2d) adds the
-    // six elves, taking it to fifteen. After The Eremite the
+    // six elves, taking it to fifteen; The Tidemark adds FIVE of its six
+    // marine peoples, taking it to twenty — merfolk is the sixth and is
+    // `Gregarious`, so it stays out of this list and out of settlement
+    // genesis. After The Eremite the
     // dragons carry a mind while staying Solitary, so psyche is a SUPERSET of
     // Settled (Settled ⊆ psyche), not equal — hence a named pin.
     //
@@ -87,6 +100,7 @@ fn settled_kinds_are_exactly_the_settling_peoples() {
     assert_eq!(
         settled,
         [
+            "abyssal-elf",
             "bugbear",
             "desert-dwarf",
             "desert-elf",
@@ -99,12 +113,16 @@ fn settled_kinds_are_exactly_the_settling_peoples() {
             "hill-dwarf",
             "hobgoblin",
             "human",
+            "kelp-tender",
             "kobold",
             "kuo-toa",
             "mountain-dwarf",
+            "reef-mason",
             "sea-elf",
             "snow-elf",
             "svirfneblin",
+            "triton",
+            "vent-commensal",
             "wood-elf"
         ],
         "Settled is exactly the settling peoples (ascending KindId)"

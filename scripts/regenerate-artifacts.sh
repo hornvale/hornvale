@@ -239,10 +239,19 @@ reap
 # 0052): the possess dump replaces the whole file, so re-emit the preamble
 # here rather than losing it on every regen — it was clobbered twice by
 # earlier regen runs before this step carried it.
+# EVERY `possess` CALL BELOW PASSES `--target land-settlement`, AND IT IS A
+# CHOICE RATHER THAN A DEFAULT (The Tidemark, Task 3). Without it the subject
+# is `--target flagship` = `village_info` = "the first `is-settlement` fact in
+# ledger order", which was never meant to mean "the demo village": it is an
+# ordering artifact that stayed on land only because every people in the
+# roster lived on land. The Tidemark's six marine peoples moved it into the
+# water at seed 42, and the committed transcripts opened in open blue water
+# with "Ways on: surface." See `PossessTarget::LandSettlement`'s own doc.
 gen_possession_day0() {
     local possess_tmp
     possess_tmp="$(mktemp)"
-    run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt > "$possess_tmp"
+    run -p hornvale -- possess --world "$wsky" --target land-settlement \
+        --script scripts/possession-walk.txt > "$possess_tmp"
     head -n 1 "$possess_tmp"
     printf '\n*(This transcript is frozen. [The live pane](./possession-live.md) derives\nthe same world in your browser — same crates, same bytes.)*\n'
     tail -n +2 "$possess_tmp"
@@ -267,7 +276,8 @@ gen_possession_day0() {
 gen_possession_overtime() {
     local possess_ot_tmp
     possess_ot_tmp="$(mktemp)"
-    run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
+    run -p hornvale -- possess --world "$wsky" --target land-settlement \
+        --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
     # Both transcripts start at day 0, so `possess`'s own H1 is identical for
     # the two pages (The Running Head). Override it here rather than teaching
     # `possess` about the book's page layout: the day-0 page above keeps the
@@ -376,7 +386,8 @@ gen_possession_overtime() {
 gen_possession_carry() {
     local possess_tmp
     possess_tmp="$(mktemp)"
-    run -p hornvale -- possess --seed 14 --script scripts/possession-carry.txt \
+    run -p hornvale -- possess --seed 14 --target land-settlement \
+        --script scripts/possession-carry.txt \
         --snapshot clients/game/core/tests/fixtures/session-seed-14-carrying.json \
         > "$possess_tmp"
     # Retitled at this seam rather than in the command, the same move
@@ -396,10 +407,19 @@ gen_possession_carry() {
 # golden reads a committed artifact instead of the hand-pasted raw-string
 # literal it replaces — a replica of the sim's answer that only a doc comment
 # kept anyone re-deriving correctly. This reproduces exactly what that doc
-# comment already told a human to do by hand: type `map` at the flagship
-# possession's opening room and keep the five grid lines between the `sight:`
-# caption and the `ways on:` footer — the same "terrain"/"colour" render this
-# module's own comment already established as identical for this fixture.
+# comment already told a human to do by hand: type `map` at the opening room
+# of a `--target land-settlement` possession and keep the grid lines between
+# the `sight:` caption and the `ways on:` footer — the same "terrain"/"colour"
+# render this module's own comment already established as identical for this
+# fixture.
+#
+# THE TARGET IS PASSED EXPLICITLY, and this comment used to say "the flagship"
+# (The Tidemark, fix round 3). It relied on the no-flag default, which that
+# campaign moved from `Flagship` to `LandSettlement` — so the sentence became
+# false and the capture kept working, because the session fixture beside it
+# is pinned to the same target and the two shapes agreed anyway. A fixture
+# captured at whatever a default resolves to is a fixture that moves when the
+# default moves, silently. Name the target.
 #
 # Captured through a command substitution, which strips the trailing newline
 # `sed` leaves after its last printed line, so the fixture is byte-identical
@@ -414,7 +434,8 @@ gen_chart_reference() {
     local script_tmp shape
     script_tmp="$(mktemp)"
     printf 'map\n' >"$script_tmp"
-    shape="$(run -p hornvale -- possess --seed 42 --script "$script_tmp" |
+    shape="$(run -p hornvale -- possess --seed 42 --target land-settlement \
+        --script "$script_tmp" |
         sed -n '/^  sight:/,/^  ways on:/p' | sed '1d;$d')"
     printf '%s' "$shape"
     rm -f "$script_tmp"
@@ -669,12 +690,32 @@ gen_chart_reference() {
 # shorter arc than before: bronze at the base, then iron, then classical, with
 # no neolithic layer left. The standing sixth was founded in 800 by
 # Venggomnjen and holds 84 souls.
-# RE-READ 2026-09-09 (The Underworld Peoples): the expanded settled roster
-# emptied the former camera cell. Vertex 6659 now carries seventeen layers,
-# including mountain-dwarf and kuo-toa strata, and ends with two living
-# mountain-dwarf and kuo-toa settlements. The framing below states only facts
-# present in the live render.
-history_site=6659
+# RE-READ 2026-09-06 (The Murrain, Task 2): history/bake/v4 changes the
+# seed-42 epoch. Vertex 10626 now carries one living human layer, founded in
+# 1775; the camera remains on a non-empty real column.
+#
+# REPOINTED TWICE IN ONE MERGE WINDOW, AND THAT IS THE POINT. The Underworld
+# Peoples moved the camera 10626 -> 6659 and The Tidemark moved it 10626 ->
+# 9884, each because the OTHER'S kind of roster growth had emptied the cell it
+# inherited: an expanded settled roster re-places seed 42 wholesale, and a
+# stratigraphy SHOWCASE pointed at "Nothing ever settled here" is the one
+# thing this page must never render.
+# `docs_consistency::the_history_page_prose_names_the_vertex_it_renders` is
+# what catches it, and it caught it on both branches independently. The
+# vertex below is MEASURED on the MERGED world — 10472, the deepest column it
+# carries (18 layers), counted from `occ-site` facts in the committed fixture
+# rather than guessed — and the framing states only facts present in the live
+# render.
+# THE FRAMING PROSE BELOW STATES NUMBERS ON PURPOSE, AND IT WILL ROT AGAIN.
+# `docs_consistency::the_history_page_prose_names_the_vertex_it_renders` guards
+# it, but CONDITIONALLY: it checks that every people the prose names and every
+# `the year N` the prose cites also appears in the rendered column. Prose that
+# names no people and cites no year satisfies it VACUOUSLY — and the test's own
+# comment records that dormancy happening for a whole campaign. So a campaign
+# that moves seed 42's history must re-state these numbers, not generalise them
+# into safety. Last re-stated by The Tidemark (2026-09-13), whose vent-expiry
+# ending moved the site from 18 lives founded in 350 to 15 founded in 1225.
+history_site=10472
 gen_history() {
     printf '# A Living Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -684,12 +725,15 @@ gen_history() {
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — vertex %s — where\n' "$history_site"
-    printf 'seventeen lives have passed over the ground. The deepest layer was a\n'
-    printf 'mountain-dwarf steading founded in year 0; the standing layers are a\n'
-    printf 'kuo-toa steading founded in year 1750 and a mountain-dwarf steading\n'
-    printf 'founded in year 1950. The ground is still occupied, with smoke on the\n'
-    printf 'air and ruins beneath it.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — vertex %s — and\n' "$history_site"
+    printf 'fifteen lives have passed over it, one settling atop the ruins of\n'
+    printf 'the last. Every one of them is kobold: the deepest layer was founded\n'
+    printf 'in the year 1225 by settlers fleeing the ice, and the lineage has\n'
+    printf 'returned to this clearing again and again across seven centuries,\n'
+    printf 'sometimes put to flight, sometimes leaving of its own accord to\n'
+    printf 'carry the settlement onto ground it had just taken. The last layer\n'
+    printf 'was founded in the year 1950 and stands yet. There is no ruin to\n'
+    printf 'read — only a living settlement and smoke on the air.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
@@ -1118,7 +1162,8 @@ gen_glyph_specimen_sheet() {
 spawn gen_glyph_specimen_sheet > docs/audits/glyph-specimen-sheet.txt
 
 mkdir -p clients/game/core/tests/fixtures
-spawn run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt \
+spawn run -p hornvale -- possess --seed 42 --target land-settlement \
+    --script scripts/possession-empty.txt \
     --snapshot clients/game/core/tests/fixtures/session-seed-42-turn-0.json > /dev/null
 
 # The committed CHAMBER-band fixture (The Quire, Task 4 fix round): the
@@ -1132,7 +1177,8 @@ spawn run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt
 # `possession-walk.txt` makes. `--script` is required for the same reason
 # as the turn-0 call above: without it `possess` blocks on `stdin.lock()`.
 # (Same note as above: `--seed 42` is self-contained, no Group A dependency.)
-spawn run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.txt \
+spawn run -p hornvale -- possess --seed 42 --target land-settlement \
+    --script scripts/possession-chamber.txt \
     --snapshot clients/game/core/tests/fixtures/session-seed-42-chamber.json > /dev/null
 
 spawn gen_chart_reference > clients/game/core/tests/fixtures/chart-reference-seed-42.txt

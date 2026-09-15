@@ -921,7 +921,25 @@ fn culvert_real_pairs(shape: Shape) -> Vec<(Facet, Facet)> {
             // possession constants already follow) — see [`Shape::Lab`]'s
             // own doc for why this, and not [`Shape::LabAt200Ticks`], is the
             // correctness-testing default.
-            let lab = crate::the_detent::bench_shape(17, 10, 50);
+            // **SEED 3 SINCE THE TIDEMARK (Task 3), re-pinned by measurement
+            // rather than by preference.** It was seed 17, and the six marine
+            // peoples re-placed every world: seed 17's lab shape now yields
+            // 32 pairs of which **0** are unreachable, so the `None` arm this
+            // module exists to exercise — 95.1% of the real cost — became
+            // untestable and `lab_unreachable > 0` went red.
+            //
+            // Five seeds were scanned at the SAME cheap shape (10 ticks, 50
+            // agents), read off this test's own printed line:
+            //   42 ->  7 pairs,  6 reachable, 1 unreachable
+            //    3 -> 24 pairs, 20 reachable, 4 unreachable   <- taken
+            //   11 -> 14 pairs, 14 reachable, 0 unreachable
+            //   17 -> 32 pairs, 32 reachable, 0 unreachable
+            // Seed 3 restores exactly the four-unreachable population
+            // `Shape::LabAt200Ticks`'s own doc calls the fallback, at none of
+            // its 129 s. Re-pin the SEED, never the assertion: a
+            // `lab_unreachable >= 0` would be green on every one of those
+            // rows, which is the whole defect.
+            let lab = crate::the_detent::bench_shape(3, 10, 50);
             let mesh = lab.mesh_memo.clone();
             let terrain =
                 liveness::LocaleTerrain::with_fields(&lab.ctx, None, None, None, None, Some(&mesh));
